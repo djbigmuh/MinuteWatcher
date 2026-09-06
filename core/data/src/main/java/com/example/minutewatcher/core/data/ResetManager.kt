@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.CancellationException
@@ -120,7 +121,7 @@ class ResetManager
         }
 
         private suspend fun processSingleSimReset(
-            simInfo: com.example.minutewatcher.core.model.ActiveSimInfo,
+            simInfo: ActiveSimInfo,
             now: Long,
             nowElapsed: Long,
             resetIdentities: MutableSet<String>,
@@ -138,37 +139,39 @@ class ResetManager
                     }
                 }
 
-            var success = false
-            if (shouldCheck) {
-                try {
-                    val usage =
-                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                            simUsageRepository.getSimUsage(identity).first()
-                        }
+            if (!shouldCheck) return true // Skip or already pending is not a failure of the coordinator
 
-                    if (usage == null) {
-                        AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
-                    } else {
-                        val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
-
-                        if (resetPerformed) {
-                            resetIdentities.add(identity)
-                        }
-                        success = true
-                    }
-
-                    if (success) {
-                        resetMutex.withLock {
-                            lastResetCheck[identity] = nowElapsed
-                        }
-                    }
-                } finally {
-                    pendingResets.remove(identity)
+            return try {
+                checkAndPerformSingleReset(simInfo, now, resetIdentities)
+            } finally {
+                resetMutex.withLock {
+                    lastResetCheck[identity] = nowElapsed
                 }
-            } else {
-                success = true // Skip or already pending is not a failure of the coordinator
+                pendingResets.remove(identity)
             }
-            return success
+        }
+
+    private suspend fun checkAndPerformSingleReset(
+        simInfo: ActiveSimInfo,
+        now: Long,
+        resetIdentities: MutableSet<String>,
+    ): Boolean {
+        val identity = simInfo.identity.stableId
+        val usage =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                simUsageRepository.getSimUsage(identity).first()
+            }
+
+        if (usage == null) {
+            AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
+            return false
+        }
+
+        val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
+        if (resetPerformed) {
+            resetIdentities.add(identity)
+        }
+        return true
         }
 
         private suspend fun cleanupStaleCheckTimestamps(

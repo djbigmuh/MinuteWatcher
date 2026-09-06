@@ -48,7 +48,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * @Suppress("MaxLineLength") is required because:
  * 1. Long comments in Russian describing complex concurrent test scenarios.
  */
-@Suppress("MaxLineLength")
+@Suppress("MaxLineLength", "LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class UpdateCoordinatorTest {
@@ -178,7 +178,7 @@ class UpdateCoordinatorTest {
             // Should call updateAll immediately (total 2)
             verify(widgetUpdater, times(2)).updateAll()
 
-            // 3. Setup the s2 snapshot with suppressWidgetUpdate=true as if it came from repository after notifyRefresh
+            // 3. Set up the s2 snapshot with suppressWidgetUpdate=true as if it came from repository after notifyRefresh
             val s2Suppressed = s2.copy(suppressWidgetUpdate = true)
             snapshotFlow.tryEmit(s2Suppressed)
 
@@ -237,7 +237,7 @@ class UpdateCoordinatorTest {
     }
 
     @Test
-    fun `suppressWidgetUpdate updates hash and prevents update for subsequent identical snapshot`() {
+    fun `suppressWidgetUpdate does NOT update hash and allows update for subsequent identical snapshot`() {
         runTest {
             val stateFlow =
                 snapshotFlow.stateIn(
@@ -269,15 +269,14 @@ class UpdateCoordinatorTest {
             verify(widgetUpdater, times(0)).updateAll()
 
             // 2. Emit identical snapshot but with suppressWidgetUpdate = false
-            // Note: createSnapshot uses content for SchemaVersion hash, but we also care about the content itself.
             val s2 = createSnapshot(timestamp = 2000L, content = "A", suppressUpdate = false)
             snapshotFlow.tryEmit(s2)
             testScheduler.runCurrent()
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            // Should STILL NOT call updateAll because hash was updated during step 1
-            verify(widgetUpdater, times(0)).updateAll()
+            // Should NOW call updateAll because hash was not updated during step 1
+            verify(widgetUpdater, times(1)).updateAll()
 
             // 3. Emit different snapshot with suppressWidgetUpdate = false
             val s3 = createSnapshot(timestamp = 3000L, content = "B", suppressUpdate = false)
@@ -286,8 +285,8 @@ class UpdateCoordinatorTest {
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            // Should call updateAll now
-            verify(widgetUpdater, times(1)).updateAll()
+            // Should call updateAll again
+            verify(widgetUpdater, times(2)).updateAll()
         }
     }
 
@@ -554,7 +553,7 @@ class UpdateCoordinatorTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
 
             val localWidgetUpdater: WidgetUpdater = mock()
-            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw RuntimeException("Unexpected") }
+            whenever(localWidgetUpdater.updateAll()).thenAnswer { throw IllegalStateException("Unexpected") }
 
             val coordinator =
                 UpdateCoordinator(
@@ -935,7 +934,9 @@ class UpdateCoordinatorTest {
                         return WidgetUpdateResult.Success()
                     }
 
-                    override suspend fun recover() {}
+                    override suspend fun recover() {
+                        // No-op for test
+                    }
                 }
 
             val coordinator =
@@ -1322,7 +1323,9 @@ class UpdateCoordinatorTest {
                         return WidgetUpdateResult.Success()
                     }
 
-                    override suspend fun recover() {}
+                    override suspend fun recover() {
+                        // No-op for test
+                    }
                 }
 
             val coordinator =
@@ -1390,7 +1393,7 @@ class UpdateCoordinatorTest {
             testScheduler.advanceUntilIdle()
 
             // 3. Emit new snapshot and verify only one update happens (from the new observation job)
-            // If the old monitoring job wasn't cancelled or its join logic failed, we might see duplicate behavior.
+            // If the old monitoring job wasn't canceled or its join logic failed, we might see duplicate behavior.
             snapshotFlow.emit(createSnapshot(timestamp = 2000L, content = "AfterRecover"))
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()

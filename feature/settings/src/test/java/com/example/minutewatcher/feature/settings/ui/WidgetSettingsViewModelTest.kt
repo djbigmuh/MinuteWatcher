@@ -552,14 +552,21 @@ class WidgetSettingsViewModelTest {
     fun `pending updates are validated before setting state`() =
         runTest {
             val deferred = CompletableDeferred<WidgetSettingsState>()
-            val slowLoader = object : WidgetSettingsLoader {
-                override suspend fun load(): WidgetSettingsState = deferred.await()
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) =
-                    WidgetSaveResult.Success
+            val slowLoader =
+                object : WidgetSettingsLoader {
+                    override suspend fun load(): WidgetSettingsState = deferred.await()
 
-                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
-                override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
-            }
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ) = WidgetSaveResult.Success
+
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+                        // Not needed for this test
+                    }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+                }
 
             val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
@@ -708,14 +715,21 @@ class WidgetSettingsViewModelTest {
     fun `updateSettings queues transforms before load and applies them after successful load`() =
         runTest {
             val deferred = CompletableDeferred<WidgetSettingsState>()
-            val slowLoader = object : WidgetSettingsLoader {
-                override suspend fun load(): WidgetSettingsState = deferred.await()
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) =
-                    WidgetSaveResult.Success
+            val slowLoader =
+                object : WidgetSettingsLoader {
+                    override suspend fun load(): WidgetSettingsState = deferred.await()
 
-                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
-                override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
-            }
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ) = WidgetSaveResult.Success
+
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+                        // Not needed for this test
+                    }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+                }
 
             val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
@@ -746,14 +760,21 @@ class WidgetSettingsViewModelTest {
     fun `updateSimSettings queues transforms before load and applies them after successful load`() =
         runTest {
             val deferred = CompletableDeferred<WidgetSettingsState>()
-            val slowLoader = object : WidgetSettingsLoader {
-                override suspend fun load(): WidgetSettingsState = deferred.await()
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) =
-                    WidgetSaveResult.Success
+            val slowLoader =
+                object : WidgetSettingsLoader {
+                    override suspend fun load(): WidgetSettingsState = deferred.await()
 
-                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
-                override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
-            }
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ) = WidgetSaveResult.Success
+
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+                        // Not needed for this test
+                    }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+                }
 
             val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
@@ -767,7 +788,10 @@ class WidgetSettingsViewModelTest {
             advanceUntilIdle()
 
             // 3. Verify applied
-            val simState = vm.state.value.settings?.simStates?.get(0)
+            val simState =
+                vm.state.value.settings
+                    ?.simStates
+                    ?.get(0)
             assertNotNull(simState)
             assertTrue(simState!!.showTraffic)
         }
@@ -776,14 +800,21 @@ class WidgetSettingsViewModelTest {
     fun `pendingUpdates queue respects MAX_PENDING_UPDATES limit`() =
         runTest {
             val deferred = CompletableDeferred<WidgetSettingsState>()
-            val slowLoader = object : WidgetSettingsLoader {
-                override suspend fun load(): WidgetSettingsState = deferred.await()
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean) =
-                    WidgetSaveResult.Success
+            val slowLoader =
+                object : WidgetSettingsLoader {
+                    override suspend fun load(): WidgetSettingsState = deferred.await()
 
-                override suspend fun saveGeneralSettings(state: WidgetSettingsState) {}
-                override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
-            }
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ) = WidgetSaveResult.Success
+
+                    override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+                        // Not needed for this test
+                    }
+
+                    override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
+                }
 
             val vm = WidgetSettingsViewModel(slowLoader, saver, usageStateRepository, backgroundScope)
             runCurrent()
@@ -799,7 +830,11 @@ class WidgetSettingsViewModelTest {
             advanceUntilIdle()
 
             // 3. Last applied should be 4 (109 % 5)
-            assertEquals(4, vm.state.value.settings?.fontSize)
+            assertEquals(
+                4,
+                vm.state.value.settings
+                    ?.fontSize,
+            )
         }
 
     @Test
@@ -856,13 +891,17 @@ class WidgetSettingsViewModelTest {
         runTest {
             initViewModel()
             val hangingSaveStarted = CompletableDeferred<Unit>()
-            val hangingSaver = object : WidgetSettingsSaver(loader, mock()) {
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean): SaveResult {
-                    hangingSaveStarted.complete(Unit)
-                    delay(Constants.Flow.LONG_TIMEOUT_MS.milliseconds * 2)
-                    return SaveResult.Success
+            val hangingSaver =
+                object : WidgetSettingsSaver(loader, mock()) {
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ): SaveResult {
+                        hangingSaveStarted.complete(Unit)
+                        delay(Constants.Flow.LONG_TIMEOUT_MS.milliseconds * 2)
+                        return SaveResult.Success
+                    }
                 }
-            }
 
             // Create a VM with the hanging saver
             val vm = WidgetSettingsViewModel(loader, hangingSaver, usageStateRepository, backgroundScope)
@@ -894,20 +933,25 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify is not interrupted by scope cancellation`() =
         runTest {
             val saveGate = CompletableDeferred<Unit>()
-            val controlledSaver = object : WidgetSettingsSaver(loader, mock()) {
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean): SaveResult {
-                    saveGate.await()
-                    return SaveResult.Success
+            val controlledSaver =
+                object : WidgetSettingsSaver(loader, mock()) {
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ): SaveResult {
+                        saveGate.await()
+                        return SaveResult.Success
+                    }
                 }
-            }
 
             val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
 
             // Use a separate job for saveAndNotify to cancel it independently
-            val job = launch {
-                vm.saveAndNotify()
-            }
+            val job =
+                launch {
+                    vm.saveAndNotify()
+                }
             runCurrent()
             assertTrue(vm.state.value.isSaving)
 
@@ -928,13 +972,17 @@ class WidgetSettingsViewModelTest {
         runTest {
             val capturedStates = mutableListOf<WidgetSettingsState>()
             val saveGate = CompletableDeferred<Unit>()
-            val controlledSaver = object : WidgetSettingsSaver(loader, mock()) {
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean): SaveResult {
-                    capturedStates.add(state)
-                    saveGate.await()
-                    return SaveResult.Success
+            val controlledSaver =
+                object : WidgetSettingsSaver(loader, mock()) {
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ): SaveResult {
+                        capturedStates.add(state)
+                        saveGate.await()
+                        return SaveResult.Success
+                    }
                 }
-            }
 
             whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 1))
             val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository, backgroundScope)
@@ -948,7 +996,11 @@ class WidgetSettingsViewModelTest {
             // 2. Change settings in state while saving is in progress
             vm.updateSettings { it.copy(fontSize = 3) }
             runCurrent()
-            assertEquals(3, vm.state.value.settings?.fontSize)
+            assertEquals(
+                3,
+                vm.state.value.settings
+                    ?.fontSize,
+            )
 
             // 3. Complete save
             saveGate.complete(Unit)
@@ -969,13 +1021,17 @@ class WidgetSettingsViewModelTest {
         runTest {
             val capturedStates = mutableListOf<WidgetSettingsState>()
             var saveGate = CompletableDeferred<Unit>()
-            val controlledSaver = object : WidgetSettingsSaver(loader, mock()) {
-                override suspend fun save(state: WidgetSettingsState, skipSimSettings: Boolean): SaveResult {
-                    capturedStates.add(state)
-                    saveGate.await()
-                    return SaveResult.Success
+            val controlledSaver =
+                object : WidgetSettingsSaver(loader, mock()) {
+                    override suspend fun save(
+                        state: WidgetSettingsState,
+                        skipSimSettings: Boolean,
+                    ): SaveResult {
+                        capturedStates.add(state)
+                        saveGate.await()
+                        return SaveResult.Success
+                    }
                 }
-            }
 
             val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository, backgroundScope)
             advanceUntilIdle()
@@ -995,9 +1051,10 @@ class WidgetSettingsViewModelTest {
             saveGate = CompletableDeferred()
 
             // Manual call instead of auto-save to trigger AlreadyInProgress immediately
-            val secondSaveJob = launch {
-                vm.saveAndNotify()
-            }
+            val secondSaveJob =
+                launch {
+                    vm.saveAndNotify()
+                }
             runCurrent()
 
             // Should have triggered AlreadyInProgress in ViewModel and re-emitted to autoSaveTrigger

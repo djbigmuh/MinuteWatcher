@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimDiscoveryFailureReason
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
@@ -88,7 +89,8 @@ internal class SimIdentityObserver
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val seedFlow: Flow<SeedResult> =
-        manualTrigger.onStart { emit(Unit) }
+        manualTrigger
+            .onStart { emit(Unit) }
             .flatMapLatest {
                 flow<SeedResult> {
                     seedAttempt.set(0)
@@ -97,12 +99,21 @@ internal class SimIdentityObserver
                             flow {
                                 val initial =
                                     withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                                        val current = seedRepository.seedFlow.filter { it.isNotEmpty() }.firstOrNull()
+                                        val current =
+                                            seedRepository.seedFlow
+                                                .filter { it.isNotEmpty() }
+                                                .firstOrNull()
                                         if (current != null) {
                                             SeedResult.Real(current)
                                         } else {
                                             val generated = generateSeedWithRetry()
-                                            if (generated != null) SeedResult.Real(generated) else SeedResult.Fallback
+                                            if (generated !=
+                                                null
+                                            ) {
+                                                SeedResult.Real(generated)
+                                            } else {
+                                                SeedResult.Fallback
+                                            }
                                         }
                                     } ?: SeedResult.Fallback
 
@@ -159,7 +170,8 @@ internal class SimIdentityObserver
             .flatMapLatest { seed ->
                 if (seed is SeedResult.Fallback) {
                     AppLogger.w(
-                        "SimIdentityObserver: seed resolution failed, using Fallback. SIM discovery will be inactive.",
+                        "SimIdentityObserver: seed resolution failed, using Fallback. " +
+                            "SIM discovery will be inactive.",
                     )
                     _status.value =
                         TrackingStatus.Error(
@@ -244,8 +256,9 @@ internal class SimIdentityObserver
                                 if (cause is CancellationException) throw cause
                                 AppLogger.e("SimIdentityObserver: physicalActiveSims flow error", cause)
 
-                                // If it's a terminal IOException after all retries, it's already handled in retryWhen.
-                                // We only set error status for truly unexpected exceptions that reached here directly.
+                                // If it's a terminal IOException after all retries, it's already
+                                // handled in retryWhen. We only set error status for truly
+                                // unexpected exceptions that reached here directly.
                                 if (cause !is IOException) {
                                     _status.value =
                                         TrackingStatus.Error(
@@ -262,36 +275,16 @@ internal class SimIdentityObserver
     private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
         result: SimDiscoveryResult,
     ): Boolean {
+        var shouldRetry = false
         when (result) {
             is SimDiscoveryResult.Available -> {
                 securityAttempt.set(0)
                 _status.value = TrackingStatus.Active
                 emit(result.sims)
-                return false
             }
 
             is SimDiscoveryResult.PermissionMissing -> {
-                val current = securityAttempt.incrementAndGet()
-                if (current > MAX_SECURITY_ATTEMPTS) {
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.PERMISSION_MISSING,
-                            "SecurityException limit reached",
-                        )
-                    emit(emptyList())
-                    return false
-                } else {
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.PERMISSION_MISSING,
-                            "Permission missing (attempt $current)",
-                        )
-                    emit(emptyList())
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        permissionStateNotifier.changes.first()
-                    }
-                    return true
-                }
+                shouldRetry = handlePermissionMissing()
             }
 
             is SimDiscoveryResult.Unsupported -> {
@@ -301,35 +294,65 @@ internal class SimIdentityObserver
                         "SIM discovery unsupported",
                     )
                 emit(emptyList())
-                return false
             }
 
             is SimDiscoveryResult.Failed -> {
-                val currentAttempt = generalAttempt.incrementAndGet()
-                if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
-                    AppLogger.e(
-                        "SimIdentityObserver: physicalActiveSims discovery stopped " +
-                            "after $currentAttempt consecutive logical failures: ${result.reason}",
-                    )
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "SIM discovery stopped after $currentAttempt failures: ${result.reason}",
-                        )
-                    emit(emptyList())
-                    return false
-                }
+                shouldRetry = handleDiscoveryFailure(result.reason)
+            }
+        }
+        return shouldRetry
+    }
 
+    private suspend fun FlowCollector<List<ActiveSimInfo>>.handlePermissionMissing(): Boolean {
+        val current = securityAttempt.incrementAndGet()
+        return if (current > MAX_SECURITY_ATTEMPTS) {
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    "SecurityException limit reached",
+                )
+            emit(emptyList())
+            false
+        } else {
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    "Permission missing (attempt $current)",
+                )
+            emit(emptyList())
+            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                permissionStateNotifier.changes.first()
+            }
+            true
+            }
+    }
+
+    private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryFailure(
+        reason: SimDiscoveryFailureReason,
+    ): Boolean {
+        val currentAttempt = generalAttempt.incrementAndGet()
+        return if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
+            AppLogger.e(
+                "SimIdentityObserver: physicalActiveSims discovery stopped " +
+                    "after $currentAttempt consecutive logical failures: $reason",
+            )
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    "SIM discovery stopped after $currentAttempt failures: $reason",
+                )
+            emit(emptyList())
+            false
+        } else {
                 val backoff =
                     INITIAL_BACKOFF_MS * (1 shl minOf(currentAttempt.toInt(), MAX_BACKOFF_EXPONENT))
                 AppLogger.e(
                     "SimIdentityObserver: physicalActiveSims discovery logical failure " +
-                        "(attempt $currentAttempt): ${result.reason}, retrying in ${backoff}ms",
+                        "(attempt $currentAttempt): $reason, retrying in ${backoff}ms",
                 )
                 emit(emptyList())
                 delay(backoff.milliseconds)
-                return true
-            }
+            true
         }
     }
 

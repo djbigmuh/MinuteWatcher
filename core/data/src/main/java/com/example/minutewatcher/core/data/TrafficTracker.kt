@@ -32,7 +32,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
-internal class TrafficUpdateTimeoutException(message: String = MESSAGE) : Exception(message) {
+internal class TrafficUpdateTimeoutException(
+    message: String = MESSAGE,
+) : Exception(message) {
     companion object {
         const val MESSAGE = "Traffic update timeout"
     }
@@ -179,21 +181,29 @@ class TrafficTracker
             updateTrafficUsageLogic()
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            // Handled in updateTrafficUsageLogic (status set, error logged)
+        } catch (_: TrafficUpdateTimeoutException) {
+            updateStatusOnError(TrafficUpdateTimeoutException.MESSAGE)
+        } catch (e: Exception) {
+            updateStatusOnError(e.message ?: "Unknown error")
         }
     }
 
+    private fun updateStatusOnError(message: String) {
+        // Статус уже установлен в updateTrafficUsageLogic.
+        // Проверяем, что он не был перезаписан гонкой.
+        if (_status.value !is TrackingStatus.Error) {
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    message,
+                )
+        }
+    }
+
+    @Suppress("ThrowsCount")
     private suspend fun updateTrafficUsageLogic() {
         try {
-            val currentStatus = _status.value
-            val isTimeoutError =
-                (currentStatus is TrackingStatus.Error) &&
-                    (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN) &&
-                    (currentStatus.message == TrafficUpdateTimeoutException.MESSAGE)
-            if (isTimeoutError) {
-                _status.value = TrackingStatus.Idle
-            }
+            clearPreviousTimeoutError()
 
             withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
                 if (!permissionChecker.checkPermissions(_status)) return@withTimeoutOrNull
@@ -215,12 +225,23 @@ class TrafficTracker
             AppLogger.e("TrafficTracker: SecurityException during update", e)
             _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             throw e
+        } catch (e: TrafficUpdateTimeoutException) {
+            throw e
         } catch (e: Exception) {
-            if (e !is TrafficUpdateTimeoutException) {
                 AppLogger.e("TrafficTracker: Unexpected error during update", e)
                 errorHandler.handleUpdateError(e, _status)
-            }
             throw e
+        }
+    }
+
+    private fun clearPreviousTimeoutError() {
+        val currentStatus = _status.value
+        val isTimeoutError =
+            (currentStatus is TrackingStatus.Error) &&
+                (currentStatus.type == TrackingStatus.ErrorType.UNKNOWN) &&
+                (currentStatus.message == TrafficUpdateTimeoutException.MESSAGE)
+        if (isTimeoutError) {
+            _status.value = TrackingStatus.Idle
         }
     }
 
@@ -309,56 +330,65 @@ class TrafficTracker
             val actualStartTime = if (currentRetryCount != null) 0L else currentUsage.lastResetDate
             val statsResult = baselineManager.getCurrentMobileBytes(actualStartTime)
 
-            // Check retry limit
-            if ((currentRetryCount != null) &&
-                (currentRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES)
-            ) {
-                baselineManager.baselineNeedsRetry.remove(targetIdentity)
-                errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
-                return@withLock
-            }
-
-            // Handle results
-            val finalStats = statsResult
             if (currentRetryCount != null) {
-                handleRetryAction(target, targetIdentity, currentRetryCount, finalStats)
+                if (currentRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
+                    baselineManager.baselineNeedsRetry.remove(targetIdentity)
+                    errorHandler.handleBaselineRetryFailure(targetIdentity, _status)
+                } else {
+                    handleRetryAction(target, targetIdentity, currentRetryCount, statsResult)
+                }
             } else {
-                if (finalStats !is StatsResult.Success) {
-                    errorHandler.handleStatsFailure(finalStats, _status)
-                    return@withLock
-                }
-
-                val lastTotalBytes = fetchLastTotalBytes(targetIdentity, finalStats)
-                if (lastTotalBytes == null) {
-                    errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                    return@withLock
-                }
-
-                val writeSuccess =
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        deltaCalculator.updateTrafficBaselineAndUsage(
-                            targetIdentity,
-                            finalStats.bytes,
-                            lastTotalBytes,
-                            target,
-                        )
-                        simChangeHandler.updateLastDataSubId(target.dataSubId)
-                        true
-                    } ?: false
-
-                if (!writeSuccess) {
-                    AppLogger.e("TrafficTracker: Traffic update write timed out for $targetIdentity")
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Traffic update write timeout",
-                        )
-                    return@withLock
-                }
-                _status.value = TrackingStatus.Active
+                executeUpdateAndBaseline(target, targetIdentity, statsResult)
             }
         }
     }
+
+    private suspend fun executeUpdateAndBaseline(
+        target: TargetInfo,
+        targetIdentity: String,
+        statsResult: StatsResult,
+    ) {
+        if (statsResult !is StatsResult.Success) {
+            errorHandler.handleStatsFailure(statsResult, _status)
+        } else {
+            val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
+                if (lastTotalBytes == null) {
+                    errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+                } else {
+                    performUpdateWrite(target, targetIdentity, statsResult.bytes, lastTotalBytes)
+                }
+        }
+    }
+
+    private suspend fun performUpdateWrite(
+        target: TargetInfo,
+        targetIdentity: String,
+        currentBytes: Long,
+        lastTotalBytes: Long,
+    ) {
+        val writeSuccess =
+            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                deltaCalculator.updateTrafficBaselineAndUsage(
+                    targetIdentity,
+                    currentBytes,
+                    lastTotalBytes,
+                    target,
+                )
+                simChangeHandler.updateLastDataSubId(target.dataSubId)
+                true
+            } ?: false
+
+        if (!writeSuccess) {
+            AppLogger.e("TrafficTracker: Traffic update write timed out for $targetIdentity")
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    "Traffic update write timeout",
+                )
+        } else {
+                _status.value = TrackingStatus.Active
+            }
+        }
 
     private suspend fun handleRetryAction(
         target: TargetInfo,

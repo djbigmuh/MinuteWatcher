@@ -3,10 +3,13 @@ package com.example.minutewatcher.feature.semantic.search
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.appsearch.app.AppSearchResult
+import androidx.appsearch.app.SearchResult
+import androidx.appsearch.app.SearchSpec
 import androidx.appsearch.exceptions.AppSearchException
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -20,6 +23,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,7 +62,7 @@ open class SemanticSearchManager
         private val indexer: SnapshotIndexer,
         private val errorHandler: AppSearchErrorHandler,
         @ApplicationScope private val scope: CoroutineScope,
-        @com.example.minutewatcher.core.common.di.IoDispatcher
+        @IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
         private val timeProvider: TimeProvider,
     ) : TrackingStatusProvider {
@@ -159,22 +163,9 @@ open class SemanticSearchManager
 
         @OptIn(FlowPreview::class)
         private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
-            val oldJob = job
-            if (oldJob?.isActive == true && (lastSnapshotFlow === snapshotFlow)) return
+            if (isCurrentObservationActive(snapshotFlow)) return
 
-            oldJob?.cancel()
-            try {
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    job?.join()
-                } ?: run {
-                    AppLogger.w("SemanticSearchManager: previous observation job did not terminate in time")
-                    job?.cancel()
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("SemanticSearchManager: failed to join previous observation job during setupObservation", e)
-            }
+            cancelAndJoinPreviousJob()
 
             lastSnapshotFlow = snapshotFlow
             job =
@@ -182,44 +173,84 @@ open class SemanticSearchManager
                     snapshotFlow
                         .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
                         .collect { snapshot ->
-                            ensureActive()
-                            try {
-                                _status.value = TrackingStatus.Indexing
-                                val result =
-                                    try {
-                                        indexSnapshot(snapshot)
-                                    } catch (e: CancellationException) {
-                                        throw e
-                                    } catch (e: Exception) {
-                                        AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
-                                        IndexResult.ActualFailure(e.message)
-                                    }
-
-                                when (result) {
-                                    IndexResult.Success -> {
-                                        errorHandler.resetFailures()
-                                    }
-
-                                    is IndexResult.ActualFailure -> {
-                                    }
-
-                                    IndexResult.MutexTimeout -> {
-                                        val count = consecutiveMutexTimeouts.get()
-                                        if (count < 3) {
-                                            AppLogger.d("SemanticSearchManager: indexing skipped due to mutex timeout (cycle $count)")
-                                        } else {
-                                            AppLogger.w("SemanticSearchManager: indexing consistently skipped due to mutex timeout ($count consecutive)")
-                                        }
-                                    }
-                                }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("SemanticSearchManager: error processing snapshot in collect", e)
-                                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                            }
+                            processSnapshotInternal(snapshot)
                         }
                 }
+        }
+
+    private fun isCurrentObservationActive(snapshotFlow: StateFlow<GlobalSnapshot>): Boolean =
+        job?.isActive == true && (lastSnapshotFlow === snapshotFlow)
+
+    private suspend fun cancelAndJoinPreviousJob() {
+        val currentJob = job ?: return
+        currentJob.cancel()
+            try {
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    currentJob.join()
+                } ?: run {
+                    AppLogger.w("SemanticSearchManager: previous observation job did not terminate in time")
+                    currentJob.cancel()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e(
+                    "SemanticSearchManager: failed to join previous observation job during setupObservation",
+                    e,
+                )
+            }
+    }
+
+    private suspend fun processSnapshotInternal(snapshot: GlobalSnapshot) {
+        currentCoroutineContext().ensureActive()
+        try {
+            _status.value = TrackingStatus.Indexing
+            val result =
+                try {
+                    indexSnapshot(snapshot)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
+                    IndexResult.ActualFailure(e.message)
+                }
+
+            handleIndexResult(result)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("SemanticSearchManager: error processing snapshot in collect", e)
+            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+        }
+    }
+
+    private fun handleIndexResult(result: IndexResult) {
+        when (result) {
+            IndexResult.Success -> {
+                errorHandler.resetFailures()
+            }
+
+            is IndexResult.ActualFailure -> {
+            }
+
+            IndexResult.MutexTimeout -> {
+                handleMutexTimeout()
+            }
+        }
+    }
+
+    private fun handleMutexTimeout() {
+        val count = consecutiveMutexTimeouts.get()
+        if (count < MAX_MUTEX_TIMEOUT_RETRIES) {
+            AppLogger.d(
+                "SemanticSearchManager: indexing skipped due to mutex timeout (cycle $count)",
+            )
+        } else {
+            AppLogger.w(
+                "SemanticSearchManager: indexing consistently skipped due to mutex timeout " +
+                    "($count consecutive)",
+            )
+        }
         }
 
         fun setError(message: String?) {
@@ -228,14 +259,13 @@ open class SemanticSearchManager
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
-        val deadline = timeProvider.elapsedRealtime() + Constants.Flow.SHORT_TIMEOUT_MS
-        var mutexAcquired = false
-        while (!mutexAcquired && timeProvider.elapsedRealtime() < deadline) {
-            mutexAcquired = indexMutex.tryLock()
-            if (!mutexAcquired) delay(50.milliseconds)
-        }
+        val acquired =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                indexMutex.lock()
+                true
+            } ?: false
 
-        if (!mutexAcquired) {
+        if (!acquired) {
             val count = consecutiveMutexTimeouts.incrementAndGet()
             val currentBackoff = mutexBackoffMs.get()
             mutexBackoffMs.set(min(currentBackoff * 2, MAX_BACKOFF_MS))
@@ -387,7 +417,7 @@ open class SemanticSearchManager
     suspend fun query(
         queryExpression: String,
         limit: Int = 10,
-    ): Result<List<androidx.appsearch.app.SearchResult>> =
+    ): Result<List<SearchResult>> =
         withContext(ioDispatcher) {
             if (!sessionManager.ensureSession({ _status.value = it })) {
                 return@withContext Result.failure(
@@ -405,7 +435,7 @@ open class SemanticSearchManager
 
             try {
                 val spec =
-                    androidx.appsearch.app.SearchSpec
+                    SearchSpec
                         .Builder()
                         .setSnippetCount(limit)
                         .addFilterNamespaces(AppSearchConstants.NAMESPACE)
@@ -422,5 +452,6 @@ open class SemanticSearchManager
     private companion object {
         private const val INITIAL_BACKOFF_MS = 1000L
         private const val MAX_BACKOFF_MS = 30_000L
+        private const val MAX_MUTEX_TIMEOUT_RETRIES = 3
     }
 }

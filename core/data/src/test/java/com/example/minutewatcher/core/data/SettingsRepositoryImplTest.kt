@@ -228,7 +228,7 @@ class SettingsRepositoryImplTest {
             try {
                 repository.updateAppSettings {
                     // Try to modify theme but then throw
-                    throw RuntimeException("Simulated failure")
+                    throw IllegalStateException("Simulated failure")
                 }
             } catch (_: Exception) {
             }

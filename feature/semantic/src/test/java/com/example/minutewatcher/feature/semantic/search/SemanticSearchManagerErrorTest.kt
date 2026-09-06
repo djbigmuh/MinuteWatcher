@@ -204,9 +204,10 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val jobs =
                 List(count) {
                     launch {
-                        val flow = MutableStateFlow<TrackingStatus>(
-                            TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "existing"),
-                        )
+                        val flow =
+                            MutableStateFlow<TrackingStatus>(
+                                TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, "existing"),
+                            )
                         flow.value = errorHandler.handleIndexFailure(flow.value)
                     }
                 }
@@ -283,5 +284,37 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
 
             // 3. Verify counter is reset to 0
             assertEquals(0, timeouts.get())
+        }
+
+    @Test
+    fun `indexSnapshot returns MutexTimeout and increments counter when lock cannot be acquired`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+
+            // 1. Manually lock the indexMutex to cause timeout
+            val indexMutexField = SemanticSearchManager::class.java.getDeclaredField("indexMutex")
+            indexMutexField.isAccessible = true
+            val indexMutex = indexMutexField.get(manager) as Mutex
+
+            val timeoutsField = SemanticSearchManager::class.java.getDeclaredField("consecutiveMutexTimeouts")
+            timeoutsField.isAccessible = true
+            val timeouts = timeoutsField.get(manager) as AtomicInteger
+
+            indexMutex.lock()
+            try {
+                // 2. Attempt indexing - should timeout based on SHORT_TIMEOUT_MS
+                val result = manager.indexSnapshot(createSnapshotWithOneSim())
+
+                assertEquals(
+                    "Should return MutexTimeout",
+                    SemanticSearchManager.IndexResult.MutexTimeout,
+                    result,
+                )
+
+                // 3. Verify counter is incremented
+                assertEquals(1, timeouts.get())
+            } finally {
+                indexMutex.unlock()
+            }
         }
 }

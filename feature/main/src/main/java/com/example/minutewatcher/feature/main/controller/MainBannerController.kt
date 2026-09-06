@@ -46,7 +46,9 @@ import javax.inject.Singleton
  * модификатор 'val' удален для предотвращения создания ненужных backing fields и экономии памяти.
  */
 @Singleton
-class MainBannerController @Inject constructor(
+class MainBannerController
+@Inject
+constructor(
     trackingStatusRepository: Lazy<TrackingStatusRepository>,
     permissionRepository: PermissionRepository,
     appSettingsRepository: AppSettingsRepository,

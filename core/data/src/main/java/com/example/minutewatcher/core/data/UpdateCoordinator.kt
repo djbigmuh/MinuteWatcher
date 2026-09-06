@@ -130,36 +130,9 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
 
-            // Ensure flow produces at least one snapshot within timeout before starting monitoring.
-            // This prevents "silent hangs" if the data source is corrupted or inactive.
-            // We use a retry loop with exponential backoff to handle slow initial snapshots.
-            var firstSnapshot: GlobalSnapshot? = null
-            var attempt = 0
-            val maxAttempts = 3
-            var delayMs = Constants.Flow.RETRY_DELAY_MS
-
-            while ((attempt < maxAttempts) && (firstSnapshot == null)) {
-                val rawFlow =
-                    usageStateRepository
-                        .observeSnapshot()
-                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-
-                firstSnapshot =
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        rawFlow.first()
-                    }
-                if (firstSnapshot == null) {
-                    attempt++
-                    if (attempt < maxAttempts) {
-                        AppLogger.w("UpdateCoordinator: snapshot not ready, retry $attempt/$maxAttempts")
-                        delay(delayMs.milliseconds)
-                        delayMs *= 2
-                    }
-                }
-            }
+            val firstSnapshot = waitForInitialSnapshot()
 
             if (firstSnapshot == null) {
-                AppLogger.e("UpdateCoordinator: Widget observation failed to start after $maxAttempts attempts")
                 _status.value =
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -180,26 +153,7 @@ class UpdateCoordinator
             monitoringJob.get()?.cancel()
             val newJob =
                 observationScope.observe(flow, handler) { snapshot ->
-                    try {
-                        processSnapshot(snapshot)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
-                        val newHash =
-                            try {
-                                SnapshotUtils.calculateContentHash(snapshot)
-                            } catch (_: Exception) {
-                                0
-                            }
-                        handleUpdateResult(
-                            WidgetUpdateResult.Failure(
-                                isRetryable = false,
-                                reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                            ),
-                            newHash,
-                        )
-                    }
+                    processSnapshotSafe(snapshot)
                 }
 
             currentObservationJob.set(newJob)
@@ -207,6 +161,69 @@ class UpdateCoordinator
             monitoringJob.set(monitoring)
             _status.value = TrackingStatus.Active
         }
+
+    private suspend fun waitForInitialSnapshot(): GlobalSnapshot? {
+            // Ensure flow produces at least one snapshot within timeout before starting monitoring.
+            // This prevents "silent hangs" if the data source is corrupted or inactive.
+            // We use a retry loop with exponential backoff to handle slow initial snapshots.
+            var firstSnapshot: GlobalSnapshot? = null
+            var attempt = 0
+            var delayMs = Constants.Flow.RETRY_DELAY_MS
+
+        while ((attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) && (firstSnapshot == null)) {
+                val rawFlow =
+                    usageStateRepository
+                        .observeSnapshot()
+                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+
+                firstSnapshot =
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        rawFlow.first()
+                    }
+                if (firstSnapshot == null) {
+                    attempt++
+                    if (attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) {
+                        AppLogger.w(
+                            "UpdateCoordinator: snapshot not ready, retry " +
+                                "$attempt/$MAX_INITIAL_SNAPSHOT_ATTEMPTS",
+                        )
+                        delay(delayMs.milliseconds)
+                        delayMs *= 2
+                    }
+                }
+            }
+
+            if (firstSnapshot == null) {
+                AppLogger.e(
+                    "UpdateCoordinator: Widget observation failed to start " +
+                        "after $MAX_INITIAL_SNAPSHOT_ATTEMPTS attempts",
+                )
+            }
+        return firstSnapshot
+    }
+
+    private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
+        try {
+            processSnapshot(snapshot)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
+            val newHash =
+                try {
+                    SnapshotUtils.calculateContentHash(snapshot)
+                } catch (_: Exception) {
+                    0
+                }
+            handleUpdateResult(
+                WidgetUpdateResult.Failure(
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                ),
+                newHash,
+            )
+        }
+    }
 
     private fun launchMonitoringJob(newJob: Job): Job? {
         if (!newJob.isActive) return null
@@ -243,7 +260,7 @@ class UpdateCoordinator
                             TrackingStatus.Error(
                                 TrackingStatus.ErrorType.DATABASE_ERROR,
                                 "Widget observation failed after $restartCount restarts. " +
-                                    "Retrying in ${MAX_RESTART_COOLDOWN_MS / 1000}s",
+                                    "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
                             )
                         observationRestartCount.set(0)
                         MAX_RESTART_COOLDOWN_MS
@@ -288,9 +305,8 @@ class UpdateCoordinator
         if (!shouldUpdate) return
 
         if (snapshot.suppressWidgetUpdate) {
-            synchronized(stateLock) {
-                lastSnapshotHash = newHash
-            }
+            // Хэш НЕ обновляется: виджет не обновлён,
+            // следующее изменение данных должно триггернуть обновление.
             return
         }
 
@@ -406,7 +422,7 @@ class UpdateCoordinator
          * @param updateWidget If true, a widget update will be initiated.
          * @param force If true, an immediate widget update is forced, bypassing hash checks.
          * Safe to call from any coroutine context.
-         * @throws kotlinx.coroutines.CancellationException if the notification process is cancelled.
+         * @throws CancellationException if the notification process is cancelled.
          */
         override suspend fun notifyDataChanged(
             updateWidget: Boolean,
@@ -477,5 +493,6 @@ class UpdateCoordinator
         private const val INITIAL_RESTART_DELAY_MS = 5000L
         private const val MAX_RESTART_DELAY_MS = 80_000L
         private const val MAX_RESTART_COOLDOWN_MS = 300_000L
+        private const val MAX_INITIAL_SNAPSHOT_ATTEMPTS = 3
     }
     }

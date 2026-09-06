@@ -79,7 +79,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             val errorHandler = getErrorHandler(manager)
             assertTrue(
                 "Counter should be >= 5, but was ${errorHandler.consecutiveIndexFailures}",
-                errorHandler.consecutiveIndexFailures >= 5
+                errorHandler.consecutiveIndexFailures >= 5,
             )
 
             // 2. Call recover

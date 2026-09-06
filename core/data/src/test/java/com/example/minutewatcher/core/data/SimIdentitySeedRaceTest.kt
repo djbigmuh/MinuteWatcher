@@ -148,6 +148,10 @@ class SimIdentitySeedRaceTest {
             // Wait for the initialization to complete deterministically
             testScheduler.advanceUntilIdle()
 
+            // Provide seed
+            seedFlow.emit("test-seed")
+            testScheduler.runCurrent()
+
             val firstSeed = repository.getSimIdentity(0).stableId
 
             // Second resolution attempt. It should still work and return same value.

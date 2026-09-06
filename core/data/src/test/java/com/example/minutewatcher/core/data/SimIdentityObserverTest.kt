@@ -311,6 +311,7 @@ class SimIdentityObserverTest {
         }
 
     @Test
+    @Suppress("LoopWithTooManyJumpStatements")
     fun `physicalActiveSims does NOT emit emptyList until limit is exceeded after having valid data`() =
         runTest {
             // Тестируем логику retryWhen изолированно
@@ -417,6 +418,7 @@ class SimIdentityObserverTest {
         }
 
     @Test
+    @Suppress("LongMethod")
     fun `activeSimsCache coalesces simultaneous changes of settings and physical sims`() =
         runTest {
             val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 0))

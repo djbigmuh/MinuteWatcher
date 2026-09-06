@@ -18,10 +18,13 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -567,6 +570,85 @@ class TrafficTrackerTest {
             assertTrue(status is TrackingStatus.Error)
             assertEquals("Invalid SIM slot index: 99", (status as TrackingStatus.Error).message)
         }
+
+    @Test
+    fun `updateTrafficUsage preserves error status if overwritten by race`() =
+        runTest {
+            val tracker = startTracker()
+            setupRaceProxy(tracker)
+
+            // Имитируем зависание в simChangeMutex
+            val simChangeHandlerField = TrafficTracker::class.java.getDeclaredField("simChangeHandler")
+            simChangeHandlerField.isAccessible = true
+            val simChangeHandler = simChangeHandlerField.get(tracker) as TrafficSimChangeHandler
+            val mutexField = TrafficSimChangeHandler::class.java.getDeclaredField("simChangeMutex")
+            mutexField.isAccessible = true
+            val mutex = mutexField.get(simChangeHandler) as Mutex
+
+            val lockJob =
+                launch {
+                    mutex.lock()
+                    delay(100_000.milliseconds)
+                }
+            runCurrent()
+
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(
+                flowOf(
+                    listOf(
+                        ActiveSimInfo(
+                            identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, isStable = true),
+                            slotIndex = 0,
+                            subscriptionId = 1,
+                            iccId = "sim_0",
+                            displayName = "SIM 1",
+                            carrierName = "Carrier 1",
+                            mccMnc = "25001",
+                            isDefaultData = true,
+                            isDefaultVoice = true,
+                        ),
+                    ),
+                ),
+            )
+
+            tracker.updateTrafficUsage()
+
+            lockJob.cancel()
+
+            // Проверяем, что статус в итоге остался Error, так как catch блок в updateTrafficUsage его восстановил
+            val finalStatus = tracker.status.value
+            val isError = finalStatus is TrackingStatus.Error
+            assertTrue("Expected Error status to be preserved after race", isError)
+            assertEquals(TrafficUpdateTimeoutException.MESSAGE, (finalStatus as TrackingStatus.Error).message)
+        }
+
+    private fun setupRaceProxy(tracker: TrafficTracker) {
+        val statusField = TrafficTracker::class.java.getDeclaredField("_status")
+        statusField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val originalStatus = statusField.get(tracker) as MutableStateFlow<TrackingStatus>
+
+        val raceAlreadySimulated = AtomicBoolean(false)
+        val racingStatus =
+            object : MutableStateFlow<TrackingStatus> by originalStatus {
+                override var value: TrackingStatus
+                    get() = originalStatus.value
+                    set(newValue) {
+                        originalStatus.value = newValue
+                        if (newValue is TrackingStatus.Error &&
+                            newValue.message == TrafficUpdateTimeoutException.MESSAGE &&
+                            raceAlreadySimulated.compareAndSet(false, true)
+                        ) {
+                            originalStatus.value = TrackingStatus.Active
+                        }
+                    }
+
+                override fun compareAndSet(
+                    expect: TrackingStatus,
+                    update: TrackingStatus,
+                ): Boolean = originalStatus.compareAndSet(expect, update)
+            }
+        statusField.set(tracker, racingStatus)
+    }
 
     private fun createTracker(scope: CoroutineScope): TrafficTracker {
         val baselineManager =

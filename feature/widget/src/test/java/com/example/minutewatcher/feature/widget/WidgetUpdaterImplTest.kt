@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -678,6 +679,58 @@ class WidgetUpdaterImplTest {
 
             assertTrue("First update should succeed", result1.isSuccess)
             assertTrue("Second update should succeed (either coalesced or new)", result2.isSuccess)
+        }
+
+    @Test
+    fun `updateAll coalesced calls receive failure instead of cancellation when primary is cancelled`() =
+        runTest {
+            val mockSettings = MutableStateFlow(AppSettings())
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+            val startBarrier = CompletableDeferred<Unit>()
+            val finishBarrier = CompletableDeferred<Unit>()
+
+            val fakeRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        startBarrier.complete(Unit)
+                        finishBarrier.await()
+                    }
+                }
+
+            val updater = createUpdater(backgroundScope, fakeRenderer)
+
+            // 1. Start primary update in a child scope that we can cancel
+            val primaryJob =
+                backgroundScope.launch {
+                    updater.updateAll()
+                }
+
+            // Wait until it enters the renderer
+            startBarrier.await()
+
+            // 2. Start a second update that will coalesce
+            val coalescedDeferred =
+                backgroundScope.async {
+                    updater.updateAll()
+                }
+            runCurrent()
+
+            // 3. Cancel the primary update
+            primaryJob.cancel()
+            runCurrent()
+            advanceUntilIdle()
+
+            // 4. Verify that the coalesced call returned a Failure result instead of throwing CancellationException
+            val result = coalescedDeferred.await()
+            assertTrue("Result should be failure", result is WidgetUpdateResult.Failure)
+            val failure = result as WidgetUpdateResult.Failure
+            assertTrue("Result should be marked as coalesced", failure.wasCoalesced)
+            assertEquals("Reason should be TRANSIENT", WidgetUpdateResult.FailureReason.TRANSIENT, failure.reason)
         }
 
     @Test(expected = CancellationException::class)

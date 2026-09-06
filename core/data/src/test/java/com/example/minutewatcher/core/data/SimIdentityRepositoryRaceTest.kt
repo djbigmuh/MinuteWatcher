@@ -335,7 +335,9 @@ class SimIdentityRepositoryRaceTest {
                     override val seedFlow: Flow<String> = storedSeed
                     override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
-                    override suspend fun setSeed(seed: String) {}
+                    override suspend fun setSeed(seed: String) {
+                        // No-op for test
+                    }
 
                     override suspend fun getOrCreateSeedOrEphemeralFallback(
                         generator: () -> String,

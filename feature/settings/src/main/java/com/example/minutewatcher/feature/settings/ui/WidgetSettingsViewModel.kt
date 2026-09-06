@@ -58,6 +58,7 @@ data class WidgetSettingsUiState(
  * @param usageStateRepository Repository for observed usage state snapshots.
  */
 @HiltViewModel
+@Suppress("TooManyFunctions")
 class WidgetSettingsViewModel
     @Inject
     constructor(
@@ -72,6 +73,7 @@ class WidgetSettingsViewModel
 
     private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
     private val pendingUpdatesMutex = Mutex()
+    private val saveMutex = Mutex()
 
     private var loadJob: Job? = null
 
@@ -272,17 +274,11 @@ class WidgetSettingsViewModel
      * Сохраняет текущие настройки и уведомляет систему об изменениях.
      */
     suspend fun saveAndNotify() {
-        // Проверяем, не идет ли уже сохранение
-        if (state.value.isSaving) {
-            AppLogger.d("saveAndNotify: already in progress (state.isSaving=true)")
+        if (!saveMutex.tryLock()) {
             reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
             return
         }
-
         try {
-            // Атомарно обновляем состояние и захватываем актуальное значение.
-            // Используем currentState.settings, а не state.value.settings, чтобы избежать
-            // гонки состояний, если настройки будут изменены другой корутиной сразу после updateAndGet.
             val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
             val settingsToSave = currentState.settings
             val result = performSaveInternal(currentState)
@@ -306,6 +302,7 @@ class WidgetSettingsViewModel
                     AppLogger.e("WidgetSettingsViewModel: Failed to update isSaving status", e)
                 }
             }
+            saveMutex.unlock()
         }
     }
 

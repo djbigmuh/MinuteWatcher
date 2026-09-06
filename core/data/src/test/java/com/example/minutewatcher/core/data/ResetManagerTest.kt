@@ -316,7 +316,7 @@ class ResetManagerTest {
         }
 
     @Test
-    fun `performAutoReset retries check on next call if previous failed with IOException`() =
+    fun `performAutoReset activates cooling down even after IOException`() =
         runTest {
             val identity = "sim_0"
             val sim = createMockSimInfo(identity, 0)
@@ -331,12 +331,19 @@ class ResetManagerTest {
             assert(!result1)
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), any(), any())
 
-            // Second call should NOT be skipped because lastResetCheck was not updated
+            // Second call immediately after should be SKIPPED because lastResetCheck was updated in finally
             whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any()))
                 .thenReturn(true)
 
             val result2 = resetManager.performAutoReset()
+            // Result is true because skipped call is not considered a failure of coordinator logic
             assert(result2)
+            // Still only 1 call to repository
+            verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), any(), any())
+
+            // Third call after cooling down should trigger check again
+            timeProvider.advance(3600001L)
+            resetManager.performAutoReset()
             verify(simUsageResetRepository, times(2)).resetSimUsageIfDue(eq(identity), any(), any())
         }
 
