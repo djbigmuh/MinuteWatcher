@@ -193,7 +193,6 @@ internal class SimIdentityObserver
                                             TrackingStatus.ErrorType.UNKNOWN,
                                             "SIM recovery stopped after $currentAttempt consecutive IO failures",
                                         )
-                                    emit(emptyList())
                                     return@retryWhen false
                                 }
 
@@ -276,7 +275,6 @@ internal class SimIdentityObserver
                     TrackingStatus.ErrorType.UNKNOWN,
                     "SIM discovery stopped after $currentAttempt failures: $reason",
                 )
-            emit(emptyList())
             false
         } else {
                 val backoff =

@@ -102,6 +102,15 @@ class WidgetUpdaterImpl
                 )
             deferred.complete(failure)
             failure
+        } catch (e: Throwable) {
+            deferred.complete(
+                WidgetUpdateResult.Failure(
+                    wasCoalesced = false,
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                ),
+            )
+            throw e
         } finally {
             coalescingMutex.withLock {
                 if (activeUpdate === deferred) {

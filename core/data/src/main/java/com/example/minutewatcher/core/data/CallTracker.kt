@@ -62,19 +62,21 @@ open class CallTracker
 
     private val isInitialized = AtomicBoolean(false)
     private var permissionObserverJob: Job? = null
+    private var initJob: Job? = null
 
     init {
         if (isInitialized.compareAndSet(false, true)) {
             startPermissionObserver()
-            scope.launch {
-                try {
-                    refreshStatus(force = true)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("CallTracker: Failed to initialize call tracking", e)
+            initJob =
+                scope.launch {
+                    try {
+                        refreshStatus(force = true)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("CallTracker: Failed to initialize call tracking", e)
+                    }
                 }
-            }
         }
     }
 
@@ -276,6 +278,8 @@ open class CallTracker
      * Stops call tracking and cleans up resources.
      */
     fun stop() {
+        initJob?.cancel()
+        initJob = null
         permissionObserverJob?.cancel()
         permissionObserverJob = null
         isInitialized.set(false)

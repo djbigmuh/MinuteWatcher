@@ -95,7 +95,7 @@ internal class CallEndHandler
             return
         }
 
-            val subIdsToEnd = callEndResolver.resolveUnknownSubIdEnd()
+        val subIdsToEnd = callEndResolver.resolveUnknownSubIdEnd()
         if (subIdsToEnd.isEmpty()) return
 
         val notifyEach = subIdsToEnd.size == 1

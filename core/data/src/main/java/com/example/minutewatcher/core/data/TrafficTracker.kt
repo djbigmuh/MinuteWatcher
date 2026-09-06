@@ -186,6 +186,8 @@ class TrafficTracker
             updateTrafficUsageLogic()
         } catch (e: CancellationException) {
             throw e
+        } catch (e: SecurityException) {
+            updateStatusOnError(e.message ?: "Permission missing", TrackingStatus.ErrorType.PERMISSION_MISSING)
         } catch (_: TrafficUpdateTimeoutException) {
             updateStatusOnError(TrafficUpdateTimeoutException.MESSAGE)
         } catch (e: Exception) {
@@ -193,13 +195,14 @@ class TrafficTracker
         }
     }
 
-    private fun updateStatusOnError(message: String) {
-        // Статус уже установлен в updateTrafficUsageLogic.
-        // Проверяем, что он не был перезаписан гонкой.
+    private fun updateStatusOnError(
+        message: String,
+        type: TrackingStatus.ErrorType = TrackingStatus.ErrorType.UNKNOWN
+    ) {
         if (_status.value !is TrackingStatus.Error) {
             _status.value =
                 TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
+                    type,
                     message,
                 )
         }
@@ -217,24 +220,17 @@ class TrafficTracker
                 handleActiveSims(activeSims)
             } ?: run {
                 AppLogger.e("TrafficTracker: Traffic update timed out")
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        TrafficUpdateTimeoutException.MESSAGE,
-                    )
                 throw TrafficUpdateTimeoutException()
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: SecurityException) {
             AppLogger.e("TrafficTracker: SecurityException during update", e)
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             throw e
         } catch (e: TrafficUpdateTimeoutException) {
             throw e
         } catch (e: Exception) {
-                AppLogger.e("TrafficTracker: Unexpected error during update", e)
-                errorHandler.handleUpdateError(e, _status)
+            AppLogger.e("TrafficTracker: Unexpected error during update", e)
             throw e
         }
     }
@@ -357,11 +353,11 @@ class TrafficTracker
             errorHandler.handleStatsFailure(statsResult, _status)
         } else {
             val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
-                if (lastTotalBytes == null) {
-                    errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
-                } else {
-                    performUpdateWrite(target, targetIdentity, statsResult.bytes, lastTotalBytes)
-                }
+            if (lastTotalBytes == null) {
+                errorHandler.handleLastTotalBytesTimeout(targetIdentity, _status)
+            } else {
+                performUpdateWrite(target, targetIdentity, statsResult.bytes, lastTotalBytes)
+            }
         }
     }
 

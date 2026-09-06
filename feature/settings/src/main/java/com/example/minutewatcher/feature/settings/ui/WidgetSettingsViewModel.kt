@@ -357,12 +357,25 @@ class WidgetSettingsViewModel
     }
 
     override fun onCleared() {
+        // Cancel ongoing auto-save to ensure we can check the final state reliably.
         autoSaveJob?.cancel()
-        val currentSettings = state.value.settings
+
+        val currentState = state.value
+        val currentSettings = currentState.settings
         val lastSaved = lastSavedSettings
+
+        // If a manual save is already in progress, don't trigger emergency save to avoid conflicts.
+        // saveAndNotify uses NonCancellable for the actual write, so it will complete even after onCleared.
+        if (currentState.isSaving) {
+            AppLogger.d("WidgetSettingsViewModel: skipping emergency save, save already in progress")
+            super.onCleared()
+            return
+        }
 
         if (currentSettings != null && lastSaved != null && currentSettings != lastSaved) {
             AppLogger.d("WidgetSettingsViewModel: executing emergency save onCleared")
+            // Use externalScope (ApplicationScope) to ensure saving completes even after ViewModel is destroyed.
+            // onCleared() is the last lifecycle event, and viewModelScope is already cancelled.
             externalScope.launch {
                 withContext(NonCancellable) {
                     try {

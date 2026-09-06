@@ -129,36 +129,41 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
 
-            val firstSnapshot = waitForInitialSnapshot()
+            try {
+                val firstSnapshot = waitForInitialSnapshot()
 
-            if (firstSnapshot == null) {
-                _status.value =
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
-                        "Widget observation failed to start",
-                    )
-                isObservationStarted.set(false)
-                return
-            }
-
-            val flow =
-                usageStateRepository
-                    .observeSnapshot()
-                    .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                    .debounce { snapshot ->
-                        if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
-                    }
-
-            monitoringJob.get()?.cancel()
-            val newJob =
-                observationScope.observe(flow, handler) { snapshot ->
-                    processSnapshotSafe(snapshot)
+                if (firstSnapshot == null) {
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Widget observation failed to start",
+                        )
+                    isObservationStarted.set(false)
+                    return
                 }
 
-            currentObservationJob.set(newJob)
-            val monitoring = launchMonitoringJob(newJob)
-            monitoringJob.set(monitoring)
-            _status.value = TrackingStatus.Active
+                val flow =
+                    usageStateRepository
+                        .observeSnapshot()
+                        .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
+                        .debounce { snapshot ->
+                            if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
+                        }
+
+                monitoringJob.get()?.cancel()
+                val newJob =
+                    observationScope.observe(flow, handler) { snapshot ->
+                        processSnapshotSafe(snapshot)
+                    }
+
+                currentObservationJob.set(newJob)
+                val monitoring = launchMonitoringJob(newJob)
+                monitoringJob.set(monitoring)
+                _status.value = TrackingStatus.Active
+            } catch (e: CancellationException) {
+                isObservationStarted.set(false)
+                throw e
+            }
         }
 
     private suspend fun waitForInitialSnapshot(): GlobalSnapshot? {
