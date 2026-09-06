@@ -55,6 +55,11 @@ interface UsageStateRepository {
     fun observeSnapshot(): StateFlow<GlobalSnapshot>
 
     /**
+     * Returns true if the usage data has been loaded at least once.
+     */
+    fun isDataLoaded(): Boolean
+
+    /**
      * Forces a refresh of all usage data.
      *
      * This operation is bounded by a timeout (e.g., SHORT_TIMEOUT_MS).

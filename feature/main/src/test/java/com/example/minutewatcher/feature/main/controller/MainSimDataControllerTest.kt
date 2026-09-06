@@ -7,7 +7,10 @@ import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimCardUiModel
+import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -34,8 +37,6 @@ class MainSimDataControllerTest {
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
-    private val testDispatcher = StandardTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
 
     private lateinit var controller: MainSimDataController
 
@@ -43,22 +44,26 @@ class MainSimDataControllerTest {
     fun setup() {
         initTestLogger()
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(flowOf(emptyList()))
-        controller =
-            MainSimDataController(
-                usageStateRepository,
-                trackingRecoveryController,
-                simIdentityRepository,
-                simLimitsRepository,
-                usageUseCase,
-                dataChangeNotifier,
-                testDispatcher,
-                testScope,
-            )
+        whenever(usageStateRepository.isDataLoaded()).thenReturn(true)
+    }
+
+    private fun TestScope.createController(): MainSimDataController {
+        return MainSimDataController(
+            usageStateRepository,
+            trackingRecoveryController,
+            simIdentityRepository,
+            simLimitsRepository,
+            usageUseCase,
+            dataChangeNotifier,
+            StandardTestDispatcher(testScheduler),
+            backgroundScope,
+        )
     }
 
     @Test
     fun `highlightSlot sets and clears slot after delay`() =
-        testScope.runTest {
+        runTest {
+            controller = createController()
             controller.highlightSlot(1)
             testScheduler.runCurrent()
             assertEquals(1, controller.highlightedSlot.value)
@@ -70,7 +75,8 @@ class MainSimDataControllerTest {
 
     @Test
     fun `highlightSlot concurrent calls do not get stuck`() =
-        testScope.runTest {
+        runTest {
+            controller = createController()
             // Rapidly call highlightSlot for different slots
             repeat(10) { slot ->
                 launch {
@@ -92,7 +98,8 @@ class MainSimDataControllerTest {
 
     @Test
     fun `highlightSlot repeated call for same slot does not restart timer`() =
-        testScope.runTest {
+        runTest {
+            controller = createController()
             controller.highlightSlot(1)
             testScheduler.runCurrent()
             advanceTimeBy((Constants.UI.HIGHLIGHT_DELAY_MS / 2).milliseconds)
@@ -112,8 +119,35 @@ class MainSimDataControllerTest {
         }
 
     @Test
+    fun `uiState stays in Loading when data not loaded and list is empty`() =
+        runTest {
+            val modelsFlow = MutableStateFlow(emptyList<SimCardUiModel>())
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(modelsFlow)
+            whenever(usageStateRepository.isDataLoaded()).thenReturn(false)
+
+            controller = createController()
+
+            testScheduler.runCurrent()
+            assertEquals(SimCardListState.Loading, controller.uiState.value)
+        }
+
+    @Test
+    fun `uiState transitions to Empty when data loaded and list is empty`() =
+        runTest {
+            val modelsFlow = MutableStateFlow(emptyList<SimCardUiModel>())
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(modelsFlow)
+            whenever(usageStateRepository.isDataLoaded()).thenReturn(true)
+
+            controller = createController()
+
+            testScheduler.runCurrent()
+            assertEquals(SimCardListState.Empty, controller.uiState.value)
+        }
+
+    @Test
     fun `executeSimOperation succeeds even when widget update fails`() =
-        testScope.runTest {
+        runTest {
+            controller = createController()
             val slot = 0
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(slot)).thenReturn(identity)

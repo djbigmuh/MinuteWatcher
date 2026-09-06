@@ -337,14 +337,11 @@ internal class SimIdentityObserver
     }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-        val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
-            combine(
-                physicalActiveSims,
-                appSettingsRepository
-                    .observeAppSettings()
-                    .map { it.benchmarkSimCount }
-                    .distinctUntilChanged(),
-            ) { physical, benchmarkSimCount ->
+    val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+        combine(
+            physicalActiveSims,
+            observeBenchmarkSimCount(),
+        ) { physical, benchmarkSimCount ->
                 val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
 
                 when {
@@ -353,15 +350,24 @@ internal class SimIdentityObserver
                 }
             }.debounce(50.milliseconds)
                 .distinctUntilChanged()
-                .onEach { sims ->
-                    val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
-                    cache.cleanupManual(activeSlots)
-                }.onStart { isObservationInitialized.set(true) }
+            .onEach { cleanupCache(it) }
+            .onStart { isObservationInitialized.set(true) }
                 .stateIn(
                     scope,
                     SharingStarted.Eagerly,
                     emptyList(),
                 )
+
+    private fun cleanupCache(sims: List<ActiveSimInfo>) {
+        val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
+        cache.cleanupManual(activeSlots)
+    }
+
+    private fun observeBenchmarkSimCount(): Flow<Int> =
+        appSettingsRepository
+            .observeAppSettings()
+            .map { it.benchmarkSimCount }
+            .distinctUntilChanged()
 
     private suspend fun generateSeedWithRetry(): SeedResolutionResult =
             withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {

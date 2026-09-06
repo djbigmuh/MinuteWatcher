@@ -155,7 +155,6 @@ class SimIdentityRepositoryRegistrationTest {
                     fetcher = fetcher,
                     scope = backgroundScope,
                     cache = cache,
-                    permissionStateNotifier = permissionStateNotifier,
                 )
             val resolver =
                 SimIdentityResolver(

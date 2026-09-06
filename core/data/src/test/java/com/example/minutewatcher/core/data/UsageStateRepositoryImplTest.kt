@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SchemaVersion
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -133,6 +135,44 @@ class UsageStateRepositoryImplTest {
         lastResetDate = 0L,
         rolloverEnabled = false,
     )
+
+    @Test
+    fun `isDataLoaded becomes true after first non-empty data emission`() =
+        runTest {
+            val simsFlow = MutableStateFlow(emptyList<ActiveSimInfo>())
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(simsFlow)
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps =
+                        UsageRepositoryDependencies(
+                            simIdentityRepository = simIdentityRepository,
+                            simUsageRepository = simUsageRepository,
+                            semanticCapabilities = semanticCapabilities,
+                            semanticVersion = semanticVersion,
+                            dataRefreshNotifier = dataRefreshNotifier,
+                            timeProvider = timeProvider,
+                        ),
+                    scope = backgroundScope,
+                )
+
+            assertFalse("Initially should be false", repository.isDataLoaded())
+
+            // Emit some data
+            val id = "id_0"
+            val sims = listOf(createActiveSimInfo(id, subId = 1, slot = 0))
+            val usage = createSimUsage(id, slot = 0, subId = 1)
+            whenever(simUsageRepository.getSimUsage(id)).thenReturn(flowOf(usage))
+
+            simsFlow.value = sims
+
+            // Wait for debounce and internal flow processing
+            testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            assertTrue("Should be true after data emission", repository.isDataLoaded())
+        }
 
     @Test
     fun `refresh finishes within timeout when snapshot does not update`() =

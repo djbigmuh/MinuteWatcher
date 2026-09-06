@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -53,6 +54,10 @@ class UsageStateRepositoryImpl
         private val deps: UsageRepositoryDependencies,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
+    private val _isDataLoaded = AtomicBoolean(false)
+
+    override fun isDataLoaded(): Boolean = _isDataLoaded.get()
+
         private val simUsagesFlow: Flow<List<SimUsage>> =
             deps.simIdentityRepository
                 .observeActiveSims()
@@ -83,8 +88,12 @@ class UsageStateRepositoryImpl
                 }
 
     private val simUsagesSharedFlow: StateFlow<List<SimUsage>> =
-        combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ -> usages }
-            .stateIn(
+        combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ ->
+            if (usages.isNotEmpty()) {
+                _isDataLoaded.set(true)
+            }
+            usages
+        }.stateIn(
                 scope = scope,
                 started = SharingStarted.Eagerly,
                 initialValue = emptyList(),

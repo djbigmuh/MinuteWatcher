@@ -10,13 +10,16 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.layout.wrapContentHeight
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
@@ -55,6 +58,8 @@ internal fun SimItem(
     Column(
         modifier =
             GlanceModifier
+                .fillMaxWidth()
+                .wrapContentHeight()
                 .padding(Constants.Widget.PADDING_SIM_ITEM.dp)
                 .semantics { contentDescription = summary },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -88,8 +93,13 @@ internal fun SimItemLayout(
             SimItemSpacer(component)
         },
     ) { content ->
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            content()
+        Box(
+            modifier = GlanceModifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                content()
+            }
         }
     }
 }

@@ -70,7 +70,15 @@ class MainSimDataController
             usageStateRepository
                 .observeSimCardUiModels()
                 .map { models ->
-                    if (models.isEmpty()) SimCardListState.Empty else SimCardListState.Success(models)
+                    if (models.isEmpty()) {
+                        if (usageStateRepository.isDataLoaded()) {
+                            SimCardListState.Empty
+                        } else {
+                            SimCardListState.Loading
+                        }
+                    } else {
+                        SimCardListState.Success(models)
+                    }
                 }.retryWhen { cause, attempt ->
                     (cause as? CancellationException)?.let { throw it }
                     if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
