@@ -108,7 +108,10 @@ open class SimIdentityDiscovery
     /**
      * Discovers active SIM cards and returns a structured result.
      */
-    open fun discoverSims(seed: String): SimDiscoveryResult {
+    open fun discoverSims(
+        seed: String,
+        isStable: Boolean = true,
+    ): SimDiscoveryResult {
         if (!permissionManager.hasPhoneStatePermission()) {
             return SimDiscoveryResult.PermissionMissing
         }
@@ -120,7 +123,7 @@ open class SimIdentityDiscovery
 
             val discoveredSims =
                 subscriptions.map { info ->
-                    val identity = SimIdentityUtils.createIdentityFromInfo(info, seed)
+                    val identity = SimIdentityUtils.createIdentityFromInfo(info, seed, isStable)
                     ActiveSimInfo(
                         identity = identity,
                         slotIndex = info.simSlotIndex,

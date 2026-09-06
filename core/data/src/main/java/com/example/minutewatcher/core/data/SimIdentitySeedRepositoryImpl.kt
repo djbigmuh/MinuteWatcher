@@ -272,8 +272,8 @@ class SimIdentitySeedRepositoryImpl
     }
 
     private companion object {
-        private const val INITIAL_RETRY_DELAY_MS = 500L
-        private const val MAX_RETRIES = 3
+        private const val INITIAL_RETRY_DELAY_MS = 200L
+        private const val MAX_RETRIES = 2
         private const val EPHEMERAL_READ_TIMEOUT_MS = 100L
     }
     }

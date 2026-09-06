@@ -6,6 +6,7 @@ package com.example.minutewatcher.core.data
 internal sealed interface SeedResult {
     data class Real(
         val value: String,
+        val isStable: Boolean = true,
     ) : SeedResult
 
     data object Fallback : SeedResult

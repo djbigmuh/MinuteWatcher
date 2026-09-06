@@ -179,7 +179,7 @@ class SimIdentityObserverTest {
         }
 
     @Test
-    fun `fallback to SeedResult_Fallback when seed is unavailable`() =
+    fun `use ephemeral seed when seed is unavailable instead of Fallback`() =
         runTest {
             // Arrange
             val seedFlow = MutableStateFlow("") // Initial empty seed
@@ -195,6 +195,21 @@ class SimIdentityObserverTest {
                     }
                 }
 
+            val physicalSims = listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, isStable = false),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    iccId = "icc_1",
+                    displayName = "Real SIM",
+                    carrierName = "Carrier",
+                    mccMnc = "12345",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            )
+            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(physicalSims))
+
             observer =
                 SimIdentityObserver(
                     discovery = discovery,
@@ -208,22 +223,16 @@ class SimIdentityObserverTest {
                 )
             val job = launch { observer.activeSimsCache.collect {} }
 
-            // Act: Wait for SEED_TOTAL_TIMEOUT_MS (10s + 5s + buffer)
+            // Act: Wait for SEED_GENERATION_TIMEOUT_MS (10s) + extra
             testScheduler.advanceTimeBy(20_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // Assert
             val status = observer.status.value
-            assertTrue("Status should be Error, but was $status", status is TrackingStatus.Error)
-            assertEquals("SIM identity seed unavailable", (status as TrackingStatus.Error).message)
-            assertTrue(observer.activeSimsCache.value.isEmpty())
+            assertEquals("Status should be Active despite seed delay", TrackingStatus.Active, status)
+            assertTrue("SIMs should be discovered using ephemeral seed", observer.activeSimsCache.value.isNotEmpty())
+            assertEquals("Real SIM", observer.activeSimsCache.value.first().displayName)
 
-            seedFlow.value = "recovered_seed"
-            testScheduler.advanceTimeBy(1000.milliseconds)
-            testScheduler.runCurrent()
-
-            val finalStatus = observer.status.value
-            assertEquals(TrackingStatus.Active, finalStatus)
             job.cancel()
         }
 
@@ -370,7 +379,7 @@ class SimIdentityObserverTest {
         }
 
     @Test
-    fun `seedFlow timeout is exactly SEED_GENERATION_TIMEOUT_MS`() =
+    fun `seedFlow timeout emits ephemeral seed`() =
         runTest {
             val seedFlow = MutableStateFlow("")
             whenever(seedRepository.seedFlow).thenReturn(seedFlow)
@@ -406,20 +415,15 @@ class SimIdentityObserverTest {
             // 1. Advance just before SEED_GENERATION_TIMEOUT_MS (10s)
             testScheduler.advanceTimeBy(9_000.milliseconds)
             testScheduler.runCurrent()
-            assertEquals("Should not have emitted Fallback yet", 0, emissions.size)
+            assertEquals("Should not have emitted anything yet", 0, emissions.size)
 
-            // 2. Advance past SEED_GENERATION_TIMEOUT_MS but before the secondary timeout
-            testScheduler.advanceTimeBy(2_000.milliseconds) // Total 11s
-            testScheduler.runCurrent()
-            assertEquals("Should still NOT have emitted Fallback (waiting for secondary timeout)", 0, emissions.size)
-
-            // 3. Advance to trigger secondary timeout
-            testScheduler.advanceTimeBy(5_000.milliseconds) // Total 16s
+            // 2. Advance to trigger initial timeout and secondary wait
+            testScheduler.advanceTimeBy(10_000.milliseconds) // Total 19s
             testScheduler.runCurrent()
 
             assertTrue(
-                "Should have emitted Fallback after extended timeout",
-                emissions.any { it is SeedResult.Fallback },
+                "Should have emitted ephemeral seed after timeout",
+                emissions.any { it is SeedResult.Real && !it.isStable },
             )
 
             job.cancel()
@@ -439,7 +443,7 @@ class SimIdentityObserverTest {
                         slotIndex = 0,
                         subscriptionId = 1,
                         iccId = "icc_1",
-                        displayName = "SIM 1",
+                        displayName = "Real SIM",
                         carrierName = "Carrier",
                         mccMnc = "12345",
                         isDefaultData = true,
@@ -493,15 +497,157 @@ class SimIdentityObserverTest {
             testScheduler.advanceTimeBy(1000.milliseconds)
             testScheduler.runCurrent()
 
-            assertEquals("Should have only one new emission after coalescing", 2, emissions.size)
-            assertEquals(2, emissions.last().size)
-            assertTrue(emissions.last().all { it.displayName?.contains("Mock") == true })
+            // In non-benchmark build, physical SIMs should eventually win.
+            // We might see 3 emissions: [], [Mock] (while physical is empty), [Real] (after discovery)
+            // or 2 emissions if coalesced: [], [Real].
+            // The important part is the final state.
+            assertTrue(
+                "Final emission should contain physical SIMs",
+                emissions.last().any { it.displayName == "Real SIM" })
+            assertEquals(1, emissions.last().size)
 
             job.cancel()
         }
 
     @Test
-    fun `seedFlow emits Fallback when internal flow fails terminally`() =
+    fun `activeSimsCache prioritizes physical SIMs over mocks in non-benchmark build`() =
+        runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 2))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val physicalSims = listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity("real_icc", 1, 0, IdentitySource.ICCID, isStable = true),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    iccId = "real_icc",
+                    displayName = "Real SIM",
+                    carrierName = "Real Carrier",
+                    mccMnc = "12345",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            )
+
+            val mockSims = listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity("mock_icc", 2, 1, IdentitySource.MOCK, isStable = false),
+                    slotIndex = 1,
+                    subscriptionId = 2,
+                    iccId = "mock_icc",
+                    displayName = "Mock SIM",
+                    carrierName = "Mock Carrier",
+                    mccMnc = "00000",
+                    isDefaultData = false,
+                    isDefaultVoice = false,
+                )
+            )
+
+            whenever(mockSimProvider.getMockSims(2)).thenReturn(mockSims)
+            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(physicalSims))
+
+            observer = createObserver(backgroundScope)
+            val emissions = mutableListOf<List<ActiveSimInfo>>()
+            val job = launch { observer.activeSimsCache.collect { emissions.add(it) } }
+
+            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.runCurrent()
+
+            // In non-benchmark build (default for tests), physical SIMs should have priority
+            assertTrue("Emissions should contain physical SIMs", emissions.last().any { it.displayName == "Real SIM" })
+            assertTrue("Emissions should NOT contain mock SIMs", emissions.last().none { it.displayName == "Mock SIM" })
+
+            job.cancel()
+        }
+
+    @Test
+    fun `activeSimsCache uses mocks when physical SIMs are empty in non-benchmark build`() =
+        runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 2))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val mockSims = listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity("mock_icc", 2, 1, IdentitySource.MOCK, isStable = false),
+                    slotIndex = 1,
+                    subscriptionId = 2,
+                    iccId = "mock_icc",
+                    displayName = "Mock SIM",
+                    carrierName = "Mock Carrier",
+                    mccMnc = "00000",
+                    isDefaultData = false,
+                    isDefaultVoice = false,
+                )
+            )
+
+            whenever(mockSimProvider.getMockSims(2)).thenReturn(mockSims)
+            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
+
+            observer = createObserver(backgroundScope)
+            val emissions = mutableListOf<List<ActiveSimInfo>>()
+            val job = launch { observer.activeSimsCache.collect { emissions.add(it) } }
+
+            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.runCurrent()
+
+            // When physical SIMs are empty, mocks are used as fallback
+            assertTrue("Emissions should contain mock SIMs", emissions.last().any { it.displayName == "Mock SIM" })
+
+            job.cancel()
+        }
+
+    @Test
+    fun `activeSimsCache explicitly prioritizes physical SIMs even if benchmarkSimCount is positive in non-benchmark build`() =
+        runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 5))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val physicalSims = listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity("real", 1, 0, IdentitySource.ICCID, isStable = true),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    iccId = "real",
+                    displayName = "Real SIM",
+                    carrierName = "Carrier",
+                    mccMnc = "12345",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            )
+
+            val mocks = List(5) { i ->
+                ActiveSimInfo(
+                    identity = SimIdentity("mock_$i", i + 10, i, IdentitySource.MOCK, isStable = false),
+                    slotIndex = i,
+                    subscriptionId = i + 10,
+                    iccId = "mock_$i",
+                    displayName = "Mock $i",
+                    carrierName = "Mock",
+                    mccMnc = "00000",
+                    isDefaultData = i == 0,
+                    isDefaultVoice = i == 0,
+                )
+            }
+
+            whenever(mockSimProvider.getMockSims(5)).thenReturn(mocks)
+            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(physicalSims))
+
+            observer = createObserver(backgroundScope)
+            val job = launch { observer.activeSimsCache.collect {} }
+
+            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.runCurrent()
+
+            val currentSims = observer.activeSimsCache.value
+            assertEquals("Should contain exactly 1 SIM", 1, currentSims.size)
+            assertEquals("Should be Real SIM", "Real SIM", currentSims[0].displayName)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `seedFlow emits ephemeral Real when internal flow fails terminally`() =
         runTest {
             val failingFlow =
                 flow<String> {
@@ -520,11 +666,13 @@ class SimIdentityObserverTest {
                 }
 
             // Act: Wait for all retries to complete (MAX_SEED_RETRIES = 10)
-            testScheduler.advanceTimeBy(100_000.milliseconds)
+            testScheduler.advanceTimeBy(200_000.milliseconds)
             testScheduler.runCurrent()
 
             // Assert
-            assertTrue("Should have emitted Fallback", emissions.any { it is SeedResult.Fallback })
+            assertTrue(
+                "Should have emitted ephemeral Real seed",
+                emissions.any { it is SeedResult.Real && !it.isStable })
             job.cancel()
         }
 }

@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.InvalidSlotException
-import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
@@ -16,6 +15,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -55,8 +55,8 @@ internal class SimIdentityResolver
                 cache.getManual(slot)?.let { return@withLock it }
 
                 // 2. Resolve
-                val seedValue = resolveSeedInternal(seedFlow)
-                val resolvedIdentity = resolveIdentityInternal(slot, seedValue)
+                val (seedValue, isStable) = resolveSeedInternal(seedFlow)
+                val resolvedIdentity = resolveIdentityInternal(slot, seedValue, isStable)
                 val identity = cache.getOrCreateCanonical(resolvedIdentity)
 
                 // 3. Update cache and persist
@@ -67,24 +67,25 @@ internal class SimIdentityResolver
             }
         }
 
-    private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): String {
+    private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): Pair<String, Boolean> {
             val seed =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     seedFlow.firstOrNull()
                 } ?: SeedResult.Fallback
 
         return when (seed) {
-            is SeedResult.Real -> seed.value
-            is SeedResult.Fallback -> throw SeedUnavailableException()
+            is SeedResult.Real -> seed.value to seed.isStable
+            is SeedResult.Fallback -> UUID.randomUUID().toString() to false
         }
     }
 
     private suspend fun resolveIdentityInternal(
         slot: Int,
         seedValue: String,
+        isStable: Boolean,
     ): SimIdentity =
         withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-            val result = discovery.discoverSims(seedValue)
+            val result = discovery.discoverSims(seedValue, isStable)
             val sims =
                 when (result) {
                     is SimDiscoveryResult.Available -> result.sims

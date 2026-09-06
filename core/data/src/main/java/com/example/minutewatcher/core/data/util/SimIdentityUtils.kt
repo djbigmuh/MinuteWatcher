@@ -18,18 +18,21 @@ object SimIdentityUtils {
     fun createIdentityFromInfo(
         info: SubscriptionInfo,
         seed: String,
-    ): SimIdentity = createIdentity(info.subscriptionId, info.simSlotIndex, info.iccId, seed)
+        isStable: Boolean = true,
+    ): SimIdentity = createIdentity(info.subscriptionId, info.simSlotIndex, info.iccId, seed, isStable)
 
     fun createIdentityFromInfo(
         info: ActiveSimInfo,
         seed: String,
-    ): SimIdentity = createIdentity(info.subscriptionId, info.slotIndex, info.iccId, seed)
+        isStable: Boolean = true,
+    ): SimIdentity = createIdentity(info.subscriptionId, info.slotIndex, info.iccId, seed, isStable)
 
     private fun createIdentity(
         subscriptionId: Int,
         slotIndex: Int,
         iccId: String?,
         seed: String,
+        isStable: Boolean,
     ): SimIdentity =
         if (!iccId.isNullOrBlank()) {
             SimIdentity(
@@ -37,7 +40,7 @@ object SimIdentityUtils {
                 subscriptionId = subscriptionId,
                 slotIndex = slotIndex,
                 source = IdentitySource.ICCID,
-                isStable = true,
+                isStable = isStable,
             )
         } else {
             SimIdentity(

@@ -10,7 +10,9 @@ class DebugMockSimProvider
     @Inject
     constructor() : MockSimProvider {
         override fun getMockSims(benchmarkSimCount: Int): List<ActiveSimInfo>? {
-            if (benchmarkSimCount <= 0) return null
+            val isBenchmark = BuildConfig.BUILD_TYPE == "benchmark"
+            // Mocks are only allowed in benchmark builds to prevent accidental replacement in debug.
+            if (!isBenchmark || benchmarkSimCount <= 0) return null
 
             val safeCount = benchmarkSimCount.coerceIn(0, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
             return (0 until safeCount).map { i ->

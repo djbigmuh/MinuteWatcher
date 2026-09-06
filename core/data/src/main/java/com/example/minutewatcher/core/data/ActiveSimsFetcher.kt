@@ -1,13 +1,13 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimDiscoveryFailureReason
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -43,9 +43,6 @@ internal class ActiveSimsFetcher
                     return getActiveSimsInternal(seed)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: SeedUnavailableException) {
-                    handleFetchRetryException(e, attempt, retryDelay)
-                    retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
                 } catch (e: IOException) {
                     handleFetchRetryException(e, attempt, retryDelay)
                     retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
@@ -56,15 +53,16 @@ internal class ActiveSimsFetcher
 
         @Suppress("ReturnCount", "ThrowsCount")
         private suspend fun getActiveSimsInternal(seed: SeedResult): SimDiscoveryResult {
-            val seedValue =
+            val (seedValue, isStable) =
                 when (seed) {
-                    is SeedResult.Real -> seed.value
+                    is SeedResult.Real -> seed.value to seed.isStable
                     is SeedResult.Fallback -> {
-                        throw SeedUnavailableException()
+                        // Use ephemeral fallback instead of throwing exception
+                        UUID.randomUUID().toString() to false
                     }
                 }
 
-            val discoveryResult = discovery.discoverSims(seedValue)
+            val discoveryResult = discovery.discoverSims(seedValue, isStable)
             if (discoveryResult !is SimDiscoveryResult.Available) return discoveryResult
 
             val infoList = discoveryResult.sims
@@ -94,11 +92,6 @@ internal class ActiveSimsFetcher
             delay: Long,
         ) {
             when (e) {
-                is SeedUnavailableException -> {
-                    if (attempt == MAX_FETCH_ATTEMPTS) return
-                    AppLogger.w("ActiveSimsFetcher: Seed unavailable, retrying fetch (attempt ${attempt + 1})")
-                    delay(delay.milliseconds)
-                }
                 is IOException -> {
                     if (attempt == MAX_FETCH_ATTEMPTS) return
                     AppLogger.e("ActiveSimsFetcher: DataStore error, retrying", e)
