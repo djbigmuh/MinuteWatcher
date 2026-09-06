@@ -108,7 +108,7 @@ class SimIdentitySeedRepositoryImplTest {
             // 2. Now make DataStore work and migration be slow
             shouldFail = false
             dataStore.edit { it[DataStoreKeys.SIM_IDENTITY_SEED] = "persistent-seed" }
-            whenever(discovery.discoverSims(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
+            whenever(discovery.discoverSims(any(), any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
 
             val migrationStarted = CompletableDeferred<Unit>()
 
@@ -164,7 +164,7 @@ class SimIdentitySeedRepositoryImplTest {
             // 2. Make migration fail
             shouldFail = false
             dataStore.edit { it[DataStoreKeys.SIM_IDENTITY_SEED] = "persistent-seed" }
-            whenever(discovery.discoverSims(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
+            whenever(discovery.discoverSims(any(), any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
 
             whenever(migrationService.migrateFromEphemeralSeed(any(), any()))
                 .thenThrow(RuntimeException("Migration failed"))
@@ -187,7 +187,7 @@ class SimIdentitySeedRepositoryImplTest {
             // Setup DataStore with an ephemeral seed to catch accidental reads
             dataStore.edit { it[DataStoreKeys.EPHEMERAL_IDENTITY_SEED] = "stored-ephemeral" }
             dataStore.edit { it[DataStoreKeys.SIM_IDENTITY_SEED] = "persistent-seed" }
-            whenever(discovery.discoverSims(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
+            whenever(discovery.discoverSims(any(), any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
 
             // 1. Initially, no ephemeral seed is active
             // When getOrCreateSeedOrEphemeralFallback runs, it should call resolveEphemeralToMigrate.

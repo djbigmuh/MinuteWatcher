@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,8 +58,8 @@ class UpdateCoordinator
 
     private var lastSnapshotHash: Int? = null
     private var consecutiveUpdateFailures = 0
-    private val observationRestartCount = AtomicInteger(0)
-    private val degradedCycleCount = AtomicInteger(0)
+    private var observationRestartCount = 0
+    private var degradedCycleCount = 0
     private val stateLock = Any()
 
     private val isObservationStarted = AtomicBoolean(false)
@@ -81,9 +80,9 @@ class UpdateCoordinator
             AppLogger.d("UpdateCoordinator: recover() called, resetting all counters")
             monitoringJob.get()?.cancel()
             observationScope.getJob()?.cancel()
-            observationRestartCount.set(0)
-            degradedCycleCount.set(0)
             synchronized(stateLock) {
+                observationRestartCount = 0
+                degradedCycleCount = 0
                 lastSnapshotHash = null
                 consecutiveUpdateFailures = 0
                 _status.value = TrackingStatus.Idle
@@ -233,11 +232,20 @@ class UpdateCoordinator
                 if (currentObservationJob.get() !== newJob) return@launch
                 if (!isObservationStarted.get()) return@launch
 
-                val restartCount = observationRestartCount.incrementAndGet()
+            val (restartCount, cycles, isEnteringDegraded) =
+                synchronized(stateLock) {
+                    val count = ++observationRestartCount
+                    var currentCycles = degradedCycleCount
+                    var enteringDegraded = false
+                    if (count >= MAX_OBSERVATION_RESTARTS) {
+                        currentCycles = ++degradedCycleCount
+                        enteringDegraded = true
+                    }
+                    Triple(count, currentCycles, enteringDegraded)
+                }
 
                 val delayMs =
-                    if (restartCount >= MAX_OBSERVATION_RESTARTS) {
-                        val cycles = degradedCycleCount.incrementAndGet()
+                    if (isEnteringDegraded) {
                         if (cycles >= MAX_DEGRADED_CYCLES) {
                             AppLogger.e(
                                 "UpdateCoordinator: observation restart limit reached ($restartCount) " +
@@ -262,7 +270,9 @@ class UpdateCoordinator
                                 "Widget observation failed after $restartCount restarts. " +
                                     "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
                             )
-                        observationRestartCount.set(0)
+                        synchronized(stateLock) {
+                            observationRestartCount = 0
+                        }
                         MAX_RESTART_COOLDOWN_MS
                     } else {
                         calculateRestartDelay(restartCount)
@@ -354,8 +364,8 @@ class UpdateCoordinator
         synchronized(stateLock) {
             if (result.isSuccess) {
                 _status.value = TrackingStatus.Active
-                observationRestartCount.set(0)
-                degradedCycleCount.set(0)
+                observationRestartCount = 0
+                degradedCycleCount = 0
                 consecutiveUpdateFailures = 0
                 lastSnapshotHash = newHash
             } else if ((result is WidgetUpdateResult.Failure) && !result.wasCoalesced) {
@@ -463,8 +473,8 @@ class UpdateCoordinator
             synchronized(stateLock) {
                 if (result.isSuccess) {
                     consecutiveUpdateFailures = 0
-                    observationRestartCount.set(0)
-                    degradedCycleCount.set(0)
+                    observationRestartCount = 0
+                    degradedCycleCount = 0
 
                     // Читаем актуальный снимок ПОСЛЕ завершения обновления,
                     // чтобы lastSnapshotHash соответствовал реальности.

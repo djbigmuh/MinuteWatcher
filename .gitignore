@@ -13,6 +13,7 @@ build/
 *.log
 .kotlin/
 .artifacts/
+.agents/
 
 # Sensitive files
 **/local.properties

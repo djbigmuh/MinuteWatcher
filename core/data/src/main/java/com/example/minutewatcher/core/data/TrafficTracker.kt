@@ -73,6 +73,7 @@ class TrafficTracker
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
     private val trafficMutex = Mutex()
+    private val initMutex = Mutex()
     private val isInitialized = AtomicBoolean(false)
     private val initializationFailed = AtomicBoolean(false)
 
@@ -120,38 +121,42 @@ class TrafficTracker
     }
 
     private suspend fun initializeWithRetry() {
-        for (attempt in 1..MAX_INIT_ATTEMPTS) {
-            try {
-                updateTrafficUsageLogic()
-                return
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                if (isTerminalInitError(e)) {
-                    AppLogger.e("TrafficTracker: terminal init error", e)
-                    initializationFailed.set(true)
+        initMutex.withLock {
+            for (attempt in 1..MAX_INIT_ATTEMPTS) {
+                try {
+                    updateTrafficUsageLogic()
                     return
-                }
-                if (attempt >= MAX_INIT_ATTEMPTS) break
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (isTerminalInitError(e)) {
+                        AppLogger.e("TrafficTracker: terminal init error", e)
+                        initializationFailed.set(true)
+                        return
+                    }
+                    if (attempt >= MAX_INIT_ATTEMPTS) break
 
-                val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
-                AppLogger.w("TrafficTracker: init attempt $attempt failed, retry in ${delayMs}ms", e)
-                delay(delayMs.milliseconds)
+                    val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
+                    AppLogger.w("TrafficTracker: init attempt $attempt failed, retry in ${delayMs}ms", e)
+                    delay(delayMs.milliseconds)
+                }
             }
+            initializationFailed.set(true)
         }
-        initializationFailed.set(true)
     }
 
     private fun isTerminalInitError(e: Exception): Boolean =
         (e is SecurityException) || (e is TrafficUpdateTimeoutException)
 
     override suspend fun recover() {
-        if (initializationFailed.compareAndSet(true, false)) {
-            AppLogger.d("TrafficTracker: attempting manual recovery")
-            initializeWithRetry()
-        } else {
-            // Already initialized or in progress, but we can trigger an update anyway
-            updateTrafficUsage()
+        initMutex.withLock {
+            if (initializationFailed.compareAndSet(true, false)) {
+                AppLogger.d("TrafficTracker: attempting manual recovery")
+                initializeWithRetry()
+            } else {
+                // Already initialized or in progress, but we can trigger an update anyway
+                updateTrafficUsage()
+            }
         }
     }
 

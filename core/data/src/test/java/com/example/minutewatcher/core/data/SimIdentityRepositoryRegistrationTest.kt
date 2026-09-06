@@ -133,10 +133,13 @@ class SimIdentityRepositoryRegistrationTest {
 
             // 1. Setup discovery to throw SecurityException on first call, then succeed
             var activeSubCalls = 0
+            val discoveryChanges = MutableSharedFlow<Unit>(replay = 1)
             val discovery = mock<SimIdentityDiscovery>()
-            whenever(discovery.observeSubscriptionChanges()).thenReturn(flowOf(Unit))
-            whenever(discovery.discoverSims(any())).thenAnswer {
-                if (activeSubCalls++ == 0) {
+            whenever(discovery.observeSubscriptionChanges()).thenReturn(discoveryChanges)
+
+            whenever(discovery.discoverSims(any(), any())).thenAnswer {
+                activeSubCalls++
+                if (activeSubCalls == 1) {
                     SimDiscoveryResult.PermissionMissing
                 } else {
                     SimDiscoveryResult.Available(emptyList())
@@ -171,19 +174,23 @@ class SimIdentityRepositoryRegistrationTest {
                 }
 
             // 2. Wait for initial failure and suspension
+            discoveryChanges.emit(Unit)
+            advanceTimeBy(1000.milliseconds)
             advanceUntilIdle()
+            runCurrent()
             assertEquals(1, emissions.size)
             assertTrue(emissions[0].isEmpty())
+            assertEquals(1, activeSubCalls)
 
             // 3. Trigger permission regrant signal
-            permissionChanges.emit(Unit)
-            // Advance time to pass debounce (300ms) and potential backoffs
-            advanceTimeBy(10000.milliseconds)
+            discoveryChanges.emit(Unit)
+            // Advance time to pass debounce (100ms)
+            advanceTimeBy(1000.milliseconds)
             advanceUntilIdle()
             runCurrent()
 
             // 4. Verify recovery
-            assertTrue("Should have retried and stayed active", activeSubCalls >= 2)
+            assertTrue("Should have retried and stayed active, actual calls: $activeSubCalls", activeSubCalls >= 2)
 
             job.cancel()
         }

@@ -167,7 +167,7 @@ object Constants {
      */
     object Flow {
         const val WHILE_SUBSCRIBED_STOP_TIMEOUT_MS = 5_000L
-        const val DEBOUNCE_MS = 300L
+        const val DEBOUNCE_MS = 100L
         const val SHORT_TIMEOUT_MS = 5_000L
         const val LONG_TIMEOUT_MS = 10_000L
         const val CALL_SESSION_READ_TIMEOUT_MS = 2000L

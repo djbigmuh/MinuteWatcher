@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.UUID
@@ -66,8 +67,6 @@ internal class SimIdentityObserver
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
     private val generalAttempt = AtomicLong(0)
-    private val seedAttempt = AtomicLong(0)
-    private val realEmitted = AtomicBoolean(false)
     private val isObservationInitialized = AtomicBoolean(false)
     private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -77,8 +76,6 @@ internal class SimIdentityObserver
             return
         }
         generalAttempt.set(0)
-        seedAttempt.set(0)
-        realEmitted.set(false)
         _status.value = TrackingStatus.Idle
         manualTrigger.emit(Unit)
     }
@@ -88,90 +85,48 @@ internal class SimIdentityObserver
         manualTrigger
             .onStart { emit(Unit) }
             .flatMapLatest {
-                flow<SeedResult> {
-                    seedAttempt.set(0)
-                    emitAll(
-                        merge<SeedResult>(
-                            flow {
-                                // Попытка первичной генерации или получения сида с основным таймаутом.
-                                val primaryAttempt =
-                                    withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                                        val current =
-                                            seedRepository.seedFlow
-                                                .filter { it.isNotEmpty() }
-                                                .firstOrNull()
-                                        if (current != null) {
-                                            SeedResult.Real(current, isStable = true)
-                                        } else {
-                                            val generated = generateSeedWithRetry()
-                                            SeedResult.Real(
-                                                value = generated.seed,
-                                                isStable = generated is SeedResolutionResult.Persistent,
-                                            )
-                                        }
-                                    }
+                flow {
+                    // Ждем первого значения из репозитория.
+                    // В DataStore оно всегда есть (хотя бы пустая строка).
+                    // Используем таймаут для защиты от "зависшего" DataStore.
+                    val initialSeed =
+                        withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                            seedRepository.seedFlow.first()
+                        }
 
-                                val finalResult =
-                                    when {
-                                        primaryAttempt is SeedResult.Real -> primaryAttempt
-                                        realEmitted.get() -> null // Уже обработано параллельным потоком
-                                        else -> {
-                                            // Основная попытка не удалась или истек таймаут.
-                                            val secondaryAttempt =
-                                                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                                                    seedRepository.seedFlow
-                                                        .filter { it.isNotEmpty() }
-                                                        .firstOrNull()
-                                                }
-                                            if (secondaryAttempt != null) {
-                                                SeedResult.Real(secondaryAttempt, isStable = true)
-                                            } else {
-                                                // Даже если не удалось получить стабильный сид, используем временный,
-                                                // чтобы не блокировать обнаружение SIM.
-                                                SeedResult.Real(UUID.randomUUID().toString(), isStable = false)
-                                            }
-                                        }
-                                    }
-
-                                if (finalResult is SeedResult.Real) {
-                                    if (realEmitted.compareAndSet(false, true)) {
-                                        emit(finalResult)
+                    when {
+                        initialSeed == null || initialSeed.isEmpty() -> {
+                            // Сида нет или DataStore не ответил — используем Fallback
+                            emit(SeedResult.Fallback)
+                            if (initialSeed != null) {
+                                // Если сид просто пуст (первый запуск), запускаем генерацию
+                                scope.launch {
+                                    try {
+                                        generateSeedWithRetry()
+                                    } catch (e: Exception) {
+                                        AppLogger.e("SimIdentityObserver: Background seed generation failed", e)
                                     }
                                 }
-                            },
-                            seedRepository.seedFlow
-                                .filter { it.isNotEmpty() }
-                                .onEach { realEmitted.set(true) }
-                                .map { SeedResult.Real(it, isStable = true) },
-                        ).onEach {
-                            seedAttempt.set(0)
-                        }.retryWhen { cause, _ ->
-                            if (cause is CancellationException) return@retryWhen false
-                            val currentAttempt = seedAttempt.incrementAndGet()
-                            if (currentAttempt > MAX_SEED_RETRIES) {
-                                AppLogger.e("SimIdentityObserver: seedFlow max retries exceeded, using ephemeral seed")
-                                return@retryWhen false
                             }
-                            val backoff = (INITIAL_BACKOFF_MS * currentAttempt).coerceAtMost(MAX_SEED_BACKOFF_MS)
-                            AppLogger.e(
-                                "SimIdentityObserver: seedFlow failure (attempt $currentAttempt), " +
-                                    "retrying in ${backoff}ms",
-                                cause,
-                            )
-                            delay(backoff.milliseconds)
-                            true
-                        }.catch { cause ->
-                            if (cause is CancellationException) throw cause
-                            AppLogger.e("SimIdentityObserver: seedFlow failed, using ephemeral fallback", cause)
-                            if (!realEmitted.get()) emit(
-                                SeedResult.Real(
-                                    UUID.randomUUID().toString(),
-                                    isStable = false
-                                )
-                            )
-                        },
+                        }
+
+                        else -> {
+                            // Сид есть — используем его
+                            emit(SeedResult.Real(initialSeed, isStable = true))
+                        }
+                    }
+
+                    // Подписка на будущие изменения
+                    emitAll(
+                        seedRepository.seedFlow
+                            .filter { it.isNotEmpty() }
+                            .map { SeedResult.Real(it, isStable = true) }
                     )
                 }
+                    .catch { e ->
+                        AppLogger.e("SimIdentityObserver: seedFlow source error", e)
+                        emit(SeedResult.Fallback)
+                    }
             }.distinctUntilChanged()
             .shareIn(
                 scope,
@@ -345,11 +300,11 @@ internal class SimIdentityObserver
                 val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
 
                 when {
+                    physical.isNotEmpty() -> physical
                     mocks != null -> mocks
                     else -> physical
                 }
-            }.debounce(50.milliseconds)
-                .distinctUntilChanged()
+        }.distinctUntilChanged()
             .onEach { cleanupCache(it) }
             .onStart { isObservationInitialized.set(true) }
                 .stateIn(
@@ -377,8 +332,6 @@ internal class SimIdentityObserver
         companion object {
             private const val MAX_BACKOFF_EXPONENT = 4
             private const val INITIAL_BACKOFF_MS = 1000L
-            private const val MAX_SEED_BACKOFF_MS = 10000L
-            private const val MAX_SEED_RETRIES = 10
             private const val MAX_GENERAL_ATTEMPTS = 20
         }
     }

@@ -339,7 +339,7 @@ class SimIdentityObserverTest {
         }
 
     @Test
-    fun `seedFlow timeout emits ephemeral seed`() =
+    fun `seedFlow timeout emits Fallback seed immediately if repo is empty`() =
         runTest {
             val seedFlow = MutableStateFlow("")
             whenever(seedRepository.seedFlow).thenReturn(seedFlow)
@@ -371,18 +371,10 @@ class SimIdentityObserverTest {
                     observer.seedFlow.collect { emissions.add(it) }
                 }
 
-            // 1. Advance just before SEED_GENERATION_TIMEOUT_MS (10s)
-            testScheduler.advanceTimeBy(9_000.milliseconds)
             testScheduler.runCurrent()
-            assertEquals("Should not have emitted anything yet", 0, emissions.size)
-
-            // 2. Advance to trigger initial timeout and secondary wait
-            testScheduler.advanceTimeBy(10_000.milliseconds) // Total 19s
-            testScheduler.runCurrent()
-
             assertTrue(
-                "Should have emitted ephemeral seed after timeout",
-                emissions.any { it is SeedResult.Real && !it.isStable },
+                "Should have emitted Fallback seed immediately",
+                emissions.any { it is SeedResult.Fallback },
             )
 
             job.cancel()
@@ -606,7 +598,7 @@ class SimIdentityObserverTest {
         }
 
     @Test
-    fun `seedFlow emits ephemeral Real when internal flow fails terminally`() =
+    fun `seedFlow emits Fallback when internal flow fails terminally`() =
         runTest {
             val failingFlow =
                 flow<String> {
@@ -624,14 +616,53 @@ class SimIdentityObserverTest {
                     observer.seedFlow.collect { emissions.add(it) }
                 }
 
-            // Act: Wait for all retries to complete (MAX_SEED_RETRIES = 10)
-            testScheduler.advanceTimeBy(200_000.milliseconds)
             testScheduler.runCurrent()
 
-            // Assert
+            // Если seedFlow в репозитории пуст изначально или бросает ошибку при подписке
+            // то наша реализация:
+            // seedRepository.seedFlow
+            //   .map { ... }
+            //   .catch { ... } // Мы не добавили catch во flatMapLatest!
+
+            // В текущей реализации SimIdentityObserver.kt:
+            // seedRepository.seedFlow
+            //    .map { seed -> if (seed.isEmpty()) SeedResult.Fallback else SeedResult.Real(seed, isStable = true) }
+            // Если seedFlow бросает ошибку, flatMapLatest завершится с ошибкой.
+
+            // Нам нужно добавить catch или убедиться, что seedFlow в репозитории не бросает ошибки.
+            // Обычно Flow из DataStore бросают IOException.
+
+            // Подождите, в моей новой реализации SimIdentityObserver.kt:
+            /*
+            val seedFlow: Flow<SeedResult> =
+                manualTrigger
+                    .onStart { emit(Unit) }
+                    .flatMapLatest {
+                        seedRepository.seedFlow
+                            .map { seed ->
+                                if (seed.isEmpty()) {
+                                    SeedResult.Fallback
+                                } else {
+                                    SeedResult.Real(seed, isStable = true)
+                                }
+                            }
+                            .onStart {
+                                scope.launch {
+                                    try {
+                                        generateSeedWithRetry()
+                                    } catch (e: Exception) {
+                                        AppLogger.e("SimIdentityObserver: Background seed generation failed", e)
+                                    }
+                                }
+                            }
+                    }.distinctUntilChanged()
+            */
+            // Если seedRepository.seedFlow бросает ошибку, то seedFlow (observer) упадет.
+            // Я должен добавить .catch { emit(SeedResult.Fallback) }
+
             assertTrue(
-                "Should have emitted ephemeral Real seed",
-                emissions.any { it is SeedResult.Real && !it.isStable })
+                "Should have emitted Fallback seed",
+                emissions.any { it is SeedResult.Fallback })
             job.cancel()
         }
 }

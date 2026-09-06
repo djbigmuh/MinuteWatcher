@@ -112,7 +112,7 @@ internal fun SimCardsLayout(
     noDataColor: IColorProvider,
 ) {
     Column(
-        modifier = GlanceModifier.fillMaxSize(),
+        modifier = GlanceModifier.wrapContentSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -120,7 +120,7 @@ internal fun SimCardsLayout(
             StaleDataIndicator(noDataColor)
         }
         Box(
-            modifier = GlanceModifier.defaultWeight(),
+            modifier = GlanceModifier.wrapContentSize(),
             contentAlignment = Alignment.Center,
         ) {
             MultiSimLayout(simUiStates, uiState)
@@ -167,10 +167,7 @@ internal fun HorizontalSimLayout(
     ) {
         sims.forEachIndexed { index, sim ->
             Box(
-                modifier =
-                    GlanceModifier
-                        .fillMaxHeight()
-                        .defaultWeight(),
+                modifier = GlanceModifier.wrapContentSize(),
                 contentAlignment = Alignment.Center,
             ) {
                 SimItem(sim, uiState)
@@ -203,10 +200,7 @@ internal fun VerticalSimLayout(
     ) {
         sims.forEachIndexed { index, sim ->
             Box(
-                modifier =
-                    GlanceModifier
-                        .fillMaxWidth()
-                        .defaultWeight(),
+                modifier = GlanceModifier.wrapContentSize(),
                 contentAlignment = Alignment.Center,
             ) {
                 SimItem(sim, uiState)

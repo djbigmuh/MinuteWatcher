@@ -124,12 +124,13 @@ object AppLogger {
         level: String,
         message: String,
     ) {
-        val dir = logDir ?: return
         val entry = LogEntry(level, message)
         var fallbackRequired = false
+        var dir: File? = null
 
         lock.withLock {
             if (!isFileLoggingEnabled) return
+            dir = logDir ?: return
 
             val totalSize = criticalQueue.size + normalQueue.size
             if (entry.isCritical) {
@@ -139,8 +140,10 @@ object AppLogger {
             }
         }
 
+        val targetDir = dir ?: return
+
         if (fallbackRequired) {
-            handleSynchronousFallback(entry, level, dir)
+            handleSynchronousFallback(entry, level, targetDir)
         } else {
             ensureWorkerStarted()
         }

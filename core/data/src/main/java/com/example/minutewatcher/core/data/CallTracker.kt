@@ -131,9 +131,6 @@ open class CallTracker
      * Safe to call from any coroutine context.
      */
     suspend fun onCallStarted(subId: Int) {
-        permissionObserverJob?.cancel()
-        startPermissionObserver()
-
         startHandler.executeCallStart(
             subId = subId,
             callMutex = callMutex,

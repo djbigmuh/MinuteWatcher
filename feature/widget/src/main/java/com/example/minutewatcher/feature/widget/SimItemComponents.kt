@@ -14,12 +14,11 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.layout.wrapContentHeight
+import androidx.glance.layout.wrapContentSize
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
@@ -58,8 +57,7 @@ internal fun SimItem(
     Column(
         modifier =
             GlanceModifier
-                .fillMaxWidth()
-                .wrapContentHeight()
+                .wrapContentSize()
                 .padding(Constants.Widget.PADDING_SIM_ITEM.dp)
                 .semantics { contentDescription = summary },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -94,7 +92,7 @@ internal fun SimItemLayout(
         },
     ) { content ->
         Box(
-            modifier = GlanceModifier.fillMaxWidth(),
+            modifier = GlanceModifier.wrapContentSize(),
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -145,6 +143,7 @@ internal fun SimItemText(
                 fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
                 color = textColor,
             ),
+        maxLines = 1,
     )
 }
 

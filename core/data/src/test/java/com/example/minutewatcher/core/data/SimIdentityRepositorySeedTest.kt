@@ -133,16 +133,12 @@ class SimIdentityRepositorySeedTest {
                     scope = backgroundScope,
                 )
 
-            // Ждём, пока seedFlow перейдет в Fallback естественным путем (таймаут 13с)
+            // Ждём, пока seedFlow перейдет в Fallback естественным путем
             testScheduler.advanceUntilIdle()
 
-            // Проверяем состояние ошибки через прямой вызов
-            try {
-                identityRepo.getSimIdentity(0)
-                org.junit.Assert.fail("Expected IllegalStateException when seed is unavailable")
-            } catch (e: IllegalStateException) {
-                assertTrue(e.message?.contains("seed unavailable") == true)
-            }
+            // Проверяем состояние - должно вернуть идентичность (даже на fallback-сиде)
+            val initialIdentity = identityRepo.getSimIdentity(0)
+            assertTrue("Should return fallback identity", initialIdentity.stableId.isNotEmpty())
 
             // Теперь предоставляем реальный сид
             storedSeed.emit("real_seed")
@@ -202,13 +198,16 @@ class SimIdentityRepositorySeedTest {
             // 1. Advance to Fallback state
             testScheduler.advanceUntilIdle()
 
-            // 2. First call - must throw because no seed
-            try {
-                identityRepo.getSimIdentity(0)
-                org.junit.Assert.fail("Expected IllegalStateException when seed is unavailable")
-            } catch (e: IllegalStateException) {
-                assertTrue(e.message?.contains("seed unavailable") == true)
-            }
+            // 2. First call - should return identity using fallback seed
+            // Mock a subscription so it doesn't throw SimNotFoundException
+            val mockSubInfoFallback = mock<SubscriptionInfo>()
+            whenever(mockSubInfoFallback.subscriptionId).thenReturn(99)
+            whenever(mockSubInfoFallback.simSlotIndex).thenReturn(0)
+            whenever(mockSubInfoFallback.iccId).thenReturn("icc_fallback")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfoFallback))
+
+            val initialId = identityRepo.getSimIdentity(0)
+            assertTrue("Should return identity using fallback", initialId.stableId.isNotEmpty())
 
             // 3. (Deleted stale cache verification as cache is no longer populated with fallbacks)
 
