@@ -33,6 +33,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -110,6 +111,11 @@ class UsageAccessNavigationTest {
     @After
     fun tearDown() {
         // MainDispatcherRule handles resetMain()
+    }
+
+    private suspend fun TestScope.actAndAdvance(block: suspend () -> Unit) {
+        block()
+        advanceUntilIdle()
     }
 
     @Suppress("LongMethod")
@@ -263,18 +269,15 @@ class UsageAccessNavigationTest {
         runTest {
             // Test ViewModel state consistency
             val viewModel = createViewModel(backgroundScope)
-            advanceUntilIdle()
+            actAndAdvance {} // initial advance
 
-            viewModel.setUsageAccessDialog(true)
-            advanceUntilIdle()
+            actAndAdvance { viewModel.setUsageAccessDialog(true) }
             assertTrue(viewModel.showUsageAccessDialog.value)
 
-            viewModel.setUsageAccessDialog(true) // Call again
-            advanceUntilIdle()
+            actAndAdvance { viewModel.setUsageAccessDialog(true) } // Call again
             assertTrue(viewModel.showUsageAccessDialog.value)
 
-            viewModel.setUsageAccessDialog(false)
-            advanceUntilIdle()
+            actAndAdvance { viewModel.setUsageAccessDialog(false) }
             assertFalse(viewModel.showUsageAccessDialog.value)
         }
 }

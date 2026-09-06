@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.di.DataStoreKeys
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -235,5 +236,34 @@ class SettingsRepositoryImplTest {
             // 3. Verify DataStore is unchanged
             val prefs = dataStore.data.first()
             assertEquals(AppTheme.DARK.value, prefs[DataStoreKeys.APP_THEME])
+        }
+
+    @Test
+    fun testUpdateAppSettings_RedundantUpdate_DoesNotEmit() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+            val settingsList = mutableListOf<AppSettings>()
+
+            // Start collecting
+            val job =
+                launch {
+                    repository.getAppSettings().toList(settingsList)
+                }
+            testScheduler.advanceUntilIdle() // Initial emission
+
+            // Perform update with same values
+            repository.updateAppSettings { it } // No change
+            testScheduler.advanceUntilIdle()
+
+            // Perform update with different values
+            repository.updateAppSettings { it.copy(onboardingCompleted = true) }
+            testScheduler.advanceUntilIdle()
+
+            job.cancel()
+            // Expected: 1 (initial) + 1 (different) = 2.
+            // The redundant one should not add to the list.
+            assertEquals(2, settingsList.size)
+            assertEquals(false, settingsList[0].onboardingCompleted)
+            assertEquals(true, settingsList[1].onboardingCompleted)
         }
 }

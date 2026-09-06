@@ -189,12 +189,25 @@ internal class SimIdentityObserver
                                         val result = fetcher.fetchActiveSimsWithRetry(seed)
                                         val shouldRetry = handleDiscoveryResult(result)
                                         shouldContinue = shouldRetry
+                                    } catch (e: SecurityException) {
+                                        AppLogger.w("Permission denied for SIM discovery: ${e.message}")
+                                        _status.value =
+                                            TrackingStatus.Error(
+                                                TrackingStatus.ErrorType.PERMISSION_MISSING,
+                                                "SIM permission denied",
+                                            )
+                                        shouldContinue = false
                                     } catch (e: CancellationException) {
                                         throw e
                                     } catch (e: IOException) {
                                         throw e
                                     } catch (e: Exception) {
                                         AppLogger.e("SimIdentityObserver: fetchActiveSimsWithRetry failed", e)
+                                        _status.value =
+                                            TrackingStatus.Error(
+                                                TrackingStatus.ErrorType.UNKNOWN,
+                                                e.message ?: "Unknown error",
+                                            )
                                         shouldContinue = false
                                     }
                                 }

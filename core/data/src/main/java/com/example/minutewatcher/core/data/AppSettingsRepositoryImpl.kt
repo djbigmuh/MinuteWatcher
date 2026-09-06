@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -47,7 +48,11 @@ class AppSettingsRepositoryImpl
         flow {
             while (true) {
                 try {
-                    emitAll(dataStore.data.map { prefs -> prefs.toAppSettings() })
+                    emitAll(
+                        dataStore.data
+                            .map { prefs -> prefs.toAppSettings() }
+                            .distinctUntilChanged(),
+                    )
                     break // DataStore flow completed normally (should not happen in practice)
                 } catch (e: CancellationException) {
                     throw e
@@ -117,6 +122,9 @@ class AppSettingsRepositoryImpl
                             AppLogger.e("updateAppSettings: transform failed", e)
                             throw e
                         }
+
+                    if (current == updated) return@edit
+
                     applyUpdatedSettings(prefs, updated)
                 }
             }

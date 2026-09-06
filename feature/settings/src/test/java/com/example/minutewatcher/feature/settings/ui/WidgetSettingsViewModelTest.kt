@@ -133,12 +133,8 @@ class WidgetSettingsViewModelTest {
             runCurrent()
             assertTrue(vm.state.value.isSaving)
 
-            // Второй вызов ждёт освобождения мьютекса с таймаутом
+            // Второй вызов возвращает AlreadyInProgress немедленно
             val secondSave = launch { vm.saveAndNotify() }
-            runCurrent()
-
-            // Продвигаем время на SHORT_TIMEOUT_MS, чтобы сработал таймаут ожидания мьютекса
-            advanceTimeBy(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
             runCurrent()
 
             // Теперь AlreadyInProgress IS set in the state
@@ -1015,13 +1011,13 @@ class WidgetSettingsViewModelTest {
             // isSaving should be false now
             assertFalse(vm.state.value.isSaving)
 
-            // 4. Advance time for the second (auto-save) debounce triggered by the retry
-            advanceTimeBy(500.milliseconds)
+            // 4. Advance time. Second save should NOT happen because manual save during another save
+            // no longer triggers auto-retry (to avoid race conditions).
+            advanceTimeBy(1000.milliseconds)
             runCurrent()
 
-            // Should have saved again with current state
-            // (Note: we didn't change the state in step 2, but the retry should still happen)
-            assertEquals(2, capturedStates.size)
+            // Should still be 1
+            assertEquals(1, capturedStates.size)
 
             saveGate.complete(Unit)
             advanceUntilIdle()

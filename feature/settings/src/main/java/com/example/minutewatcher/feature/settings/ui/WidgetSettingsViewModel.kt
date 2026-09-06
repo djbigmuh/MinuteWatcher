@@ -21,6 +21,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -78,6 +80,20 @@ class WidgetSettingsViewModel
     init {
         loadSettings()
         setupAutoSave()
+        setupSaveResultCleanup()
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun setupSaveResultCleanup() {
+        viewModelScope.launch {
+            state
+                .map { it.saveResult }
+                .debounce(2000.milliseconds)
+                .filter { it is SaveResult.AlreadyInProgress }
+                .collect {
+                    reduce { copy(saveResult = null) }
+                }
+        }
     }
 
     private fun setupAutoSave() {
@@ -260,7 +276,6 @@ class WidgetSettingsViewModel
         if (state.value.isSaving) {
             AppLogger.d("saveAndNotify: already in progress (state.isSaving=true)")
             reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
-            autoSaveTrigger.tryEmit(Unit)
             return
         }
 
@@ -272,10 +287,6 @@ class WidgetSettingsViewModel
             val settingsToSave = currentState.settings
             val result = performSaveInternal(currentState)
             currentCoroutineContext().ensureActive()
-
-            if (result == SaveResult.AlreadyInProgress) {
-                autoSaveTrigger.tryEmit(Unit)
-            }
 
             if (result is SaveResult.Success && settingsToSave != null) {
                 lastSavedSettings = settingsToSave
