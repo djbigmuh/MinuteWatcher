@@ -48,9 +48,7 @@ internal fun WidgetContent(
 ) {
     val context = LocalContext.current
     val alpha = Constants.Widget.ALPHA_FULL - (uiState.transparency / Constants.Widget.PERCENT_MAX_FLOAT)
-    val bgColor =
-        Color(uiState.backgroundColor)
-            .copy(alpha = alpha)
+    val bgColor = Color(uiState.backgroundColor).copy(alpha = alpha)
 
     val noDataColor = getNoDataColor(uiState)
 
@@ -176,7 +174,9 @@ internal fun HorizontalSimLayout(
             ) {
                 SimItem(sim, uiState)
             }
-            if (uiState.showSeparator && index < sims.size - 1) {
+            if (
+                uiState.showSeparator && index < sims.size - 1
+            ) {
                 SimSeparator(uiState, isHorizontal = true)
             }
         }
@@ -210,7 +210,9 @@ internal fun VerticalSimLayout(
             ) {
                 SimItem(sim, uiState)
             }
-            if (uiState.showSeparator && index < sims.size - 1) {
+            if (
+                uiState.showSeparator && index < sims.size - 1
+            ) {
                 SimSeparator(uiState, isHorizontal = false)
             }
         }

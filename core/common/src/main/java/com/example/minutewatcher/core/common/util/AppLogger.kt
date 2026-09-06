@@ -433,31 +433,53 @@ object AppLogger {
         lock.withLock {
             condition.signalAll()
         }
-        val thread = workerThread
-        if (thread != null) {
-            thread.interrupt()
-            try {
-                thread.join(SHUTDOWN_JOIN_TIMEOUT_MS)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
-            }
-        }
 
-        if (thread?.isAlive == true) {
-            if (fileLock.tryLock(SHUTDOWN_FLUSH_LOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                try {
-                    closeWriterUnlocked()
-                } finally {
-                    fileLock.unlock()
-                }
-            }
+        stopWorkerThread()
+
+        if (workerThread?.isAlive == true) {
+            shutdownAliveWorker(dir)
         } else {
-            fileLock.withLock {
-                dir?.let { flushRemainingLogsUnlocked(it) }
-                closeWriterUnlocked()
-            }
+            shutdownDeadWorker(dir)
         }
         workerThread = null
+    }
+
+    private fun stopWorkerThread() {
+        val thread = workerThread ?: return
+        thread.interrupt()
+        try {
+            thread.join(SHUTDOWN_JOIN_TIMEOUT_MS)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+    }
+
+    private fun shutdownAliveWorker(dir: File?) {
+        val acquired =
+            try {
+                fileLock.tryLock(SHUTDOWN_FLUSH_LOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                false
+            }
+
+        if (acquired) {
+            try {
+                dir?.let { flushRemainingLogsUnlocked(it) }
+            } catch (_: Exception) {
+                // Промывка не удалась — закрываем писатель в любом случае
+            } finally {
+                closeWriterUnlocked()
+                fileLock.unlock()
+            }
+        }
+    }
+
+    private fun shutdownDeadWorker(dir: File?) {
+        fileLock.withLock {
+            dir?.let { flushRemainingLogsUnlocked(it) }
+            closeWriterUnlocked()
+        }
     }
 
     private fun flushRemainingLogsUnlocked(dir: File) {

@@ -124,7 +124,8 @@ internal fun SimItemText(
     sim: SimUiState,
     uiState: WidgetUiState,
 ) {
-    val textColor = resolveTextColor(uiState, sim, component)
+    val textColor =
+        resolveTextColor(uiState, sim, component)
 
     Text(
         text = component.text,
@@ -148,8 +149,7 @@ private fun resolveTextColor(
     } else if (uiState.useSystemColors && (component.color == sim.secondaryTextColor)) {
         GlanceTheme.colors.onSurfaceVariant
     } else {
-        val composeColor =
-            Color(component.color)
+        val composeColor = Color(component.color)
         androidx.glance.color.ColorProvider(day = composeColor, night = composeColor)
     }
 

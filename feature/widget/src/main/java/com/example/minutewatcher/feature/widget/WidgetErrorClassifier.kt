@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.widget
 
+import android.os.TransactionTooLargeException
 import com.example.minutewatcher.core.common.util.AppLogger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -60,7 +61,7 @@ class WidgetErrorClassifier
             }
 
         fun isRemoteViewsLimitException(e: Throwable): Boolean =
-            hasCauseOfType(e, android.os.TransactionTooLargeException::class.java)
+            hasCauseOfType(e, TransactionTooLargeException::class.java)
 
         private fun hasCauseOfType(
             e: Throwable,

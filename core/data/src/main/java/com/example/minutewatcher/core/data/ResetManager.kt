@@ -174,9 +174,7 @@ class ResetManager
         return true
         }
 
-        private suspend fun cleanupStaleCheckTimestamps(
-            activeSims: List<com.example.minutewatcher.core.model.ActiveSimInfo>,
-        ) {
+    private suspend fun cleanupStaleCheckTimestamps(activeSims: List<ActiveSimInfo>) {
             resetMutex.withLock {
                 val activeIdentitySet = activeSims.asSequence().map { it.identity.stableId }.toSet()
                 lastResetCheck.keys.removeAll { it !in activeIdentitySet }
@@ -198,7 +196,7 @@ class ResetManager
         }
 
         private suspend fun checkAndPerformResetForSimInternal(
-            simInfo: com.example.minutewatcher.core.model.ActiveSimInfo,
+            simInfo: ActiveSimInfo,
             now: Long,
             usage: SimUsage,
         ): Boolean {

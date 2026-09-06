@@ -1,3 +1,8 @@
+@file:OptIn(
+    InternalCoroutinesApi::class,
+    ExperimentalForInheritanceCoroutinesApi::class,
+)
+
 package com.example.minutewatcher.core.data
 
 import android.telephony.SubscriptionInfo
@@ -18,9 +23,13 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
+import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -46,7 +55,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(
+    InternalCoroutinesApi::class,
+    ExperimentalCoroutinesApi::class,
+    ExperimentalForInheritanceCoroutinesApi::class,
+)
 @Suppress("LargeClass")
 class TrafficTrackerTest {
     private val networkStatsProvider: NetworkStatsProvider = mock()
@@ -191,7 +204,7 @@ class TrafficTrackerTest {
             val message = (status as TrackingStatus.Error).message
             assertTrue(
                 "Unexpected message: $message",
-                message == "Timeout reading lastTotalBytes" || message == TrafficUpdateTimeoutException.MESSAGE,
+                (message == "Timeout reading lastTotalBytes") || (message == TrafficUpdateTimeoutException.MESSAGE),
             )
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
         }
@@ -212,7 +225,7 @@ class TrafficTrackerTest {
             val message = (status as TrackingStatus.Error).message
             assertTrue(
                 "Unexpected message: $message",
-                message == "Timeout reading simUsage" || message == TrafficUpdateTimeoutException.MESSAGE,
+                (message == "Timeout reading simUsage") || (message == TrafficUpdateTimeoutException.MESSAGE),
             )
             verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
         }
@@ -626,28 +639,51 @@ class TrafficTrackerTest {
         statusField.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         val originalStatus = statusField.get(tracker) as MutableStateFlow<TrackingStatus>
-
-        val raceAlreadySimulated = AtomicBoolean(false)
-        val racingStatus =
-            object : MutableStateFlow<TrackingStatus> by originalStatus {
-                override var value: TrackingStatus
-                    get() = originalStatus.value
-                    set(newValue) {
-                        originalStatus.value = newValue
-                        if (newValue is TrackingStatus.Error &&
-                            newValue.message == TrafficUpdateTimeoutException.MESSAGE &&
-                            raceAlreadySimulated.compareAndSet(false, true)
-                        ) {
-                            originalStatus.value = TrackingStatus.Active
-                        }
-                    }
-
-                override fun compareAndSet(
-                    expect: TrackingStatus,
-                    update: TrackingStatus,
-                ): Boolean = originalStatus.compareAndSet(expect, update)
-            }
+        val racingStatus = RacingStatus(originalStatus)
         statusField.set(tracker, racingStatus)
+    }
+
+    @OptIn(
+        InternalCoroutinesApi::class,
+        ExperimentalCoroutinesApi::class,
+        ExperimentalForInheritanceCoroutinesApi::class,
+    )
+    private class RacingStatus(
+        private val originalStatus: MutableStateFlow<TrackingStatus>,
+    ) : MutableStateFlow<TrackingStatus> {
+        private val raceAlreadySimulated = AtomicBoolean(false)
+
+        override var value: TrackingStatus
+            get() = originalStatus.value
+            set(newValue) {
+                originalStatus.value = newValue
+                if (newValue is TrackingStatus.Error &&
+                    newValue.message == TrafficUpdateTimeoutException.MESSAGE &&
+                    raceAlreadySimulated.compareAndSet(false, true)
+                ) {
+                    originalStatus.value = TrackingStatus.Active
+                }
+            }
+
+        override val replayCache: List<TrackingStatus> get() = originalStatus.replayCache
+        override val subscriptionCount: StateFlow<Int> get() = originalStatus.subscriptionCount
+
+        override suspend fun emit(value: TrackingStatus) = originalStatus.emit(value)
+
+        @ExperimentalCoroutinesApi
+        override fun resetReplayCache() = originalStatus.resetReplayCache()
+
+        override fun tryEmit(value: TrackingStatus): Boolean = originalStatus.tryEmit(value)
+
+        override fun compareAndSet(
+            expect: TrackingStatus,
+            update: TrackingStatus,
+        ): Boolean = originalStatus.compareAndSet(expect, update)
+
+        @InternalCoroutinesApi
+        override suspend fun collect(collector: FlowCollector<TrackingStatus>): Nothing {
+            originalStatus.collect(collector)
+        }
     }
 
     private fun createTracker(scope: CoroutineScope): TrafficTracker {

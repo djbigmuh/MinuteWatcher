@@ -208,8 +208,8 @@ class SimIdentityObserverTest {
                 )
             val job = launch { observer.activeSimsCache.collect {} }
 
-            // Act: Wait for SEED_TOTAL_TIMEOUT_MS (13s)
-            testScheduler.advanceTimeBy(15_000.milliseconds)
+            // Act: Wait for SEED_TOTAL_TIMEOUT_MS (10s + 5s + buffer)
+            testScheduler.advanceTimeBy(20_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // Assert
@@ -408,11 +408,19 @@ class SimIdentityObserverTest {
             testScheduler.runCurrent()
             assertEquals("Should not have emitted Fallback yet", 0, emissions.size)
 
-            // 2. Advance to trigger timeout
-            testScheduler.advanceTimeBy(2_000.milliseconds)
+            // 2. Advance past SEED_GENERATION_TIMEOUT_MS but before the secondary timeout
+            testScheduler.advanceTimeBy(2_000.milliseconds) // Total 11s
+            testScheduler.runCurrent()
+            assertEquals("Should still NOT have emitted Fallback (waiting for secondary timeout)", 0, emissions.size)
+
+            // 3. Advance to trigger secondary timeout
+            testScheduler.advanceTimeBy(5_000.milliseconds) // Total 16s
             testScheduler.runCurrent()
 
-            assertTrue("Should have emitted Fallback after timeout", emissions.any { it is SeedResult.Fallback })
+            assertTrue(
+                "Should have emitted Fallback after extended timeout",
+                emissions.any { it is SeedResult.Fallback },
+            )
 
             job.cancel()
         }

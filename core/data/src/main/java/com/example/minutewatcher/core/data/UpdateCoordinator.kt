@@ -457,9 +457,6 @@ class UpdateCoordinator
             }
         }
 
-        val currentSnapshot = usageStateRepository.observeSnapshot().value
-        val currentHash = SnapshotUtils.calculateContentHash(currentSnapshot)
-
         return try {
             val result = widgetUpdater.updateAll()
 
@@ -468,7 +465,11 @@ class UpdateCoordinator
                     consecutiveUpdateFailures = 0
                     observationRestartCount.set(0)
                     degradedCycleCount.set(0)
-                    lastSnapshotHash = currentHash
+
+                    // Читаем актуальный снимок ПОСЛЕ завершения обновления,
+                    // чтобы lastSnapshotHash соответствовал реальности.
+                    val latestSnapshot = usageStateRepository.observeSnapshot().value
+                    lastSnapshotHash = SnapshotUtils.calculateContentHash(latestSnapshot)
                     true
                 } else {
                     handleUpdateFailure()

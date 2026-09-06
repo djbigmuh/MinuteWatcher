@@ -147,14 +147,14 @@ class WidgetSettingsViewModel
      * Обновляет текущее состояние настроек виджета.
      */
     fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-        val currentSettings = state.value.settings
-        if (currentSettings == null) {
+        if (state.value.settings == null) {
             queueUpdate(transform)
             return
         }
 
         var changed = false
         reduce {
+            val currentSettings = this.settings ?: return@reduce this
             val transformed = transform(currentSettings)
             val validated = WidgetSettingsState.validate(transformed)
             if (validated != currentSettings) {
@@ -179,8 +179,7 @@ class WidgetSettingsViewModel
         slot: Int,
         transform: (SimSettingsState) -> SimSettingsState,
     ) {
-        val currentSettings = state.value.settings
-        if (currentSettings == null) {
+        if (state.value.settings == null) {
             queueUpdate { settings ->
                 val updatedSimStates = settings.simStates.toMutableMap()
                 val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
@@ -192,6 +191,7 @@ class WidgetSettingsViewModel
 
         var changed = false
         reduce {
+            val currentSettings = this.settings ?: return@reduce this
             val updatedSimStates = currentSettings.simStates.toMutableMap()
             val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
             updatedSimStates[slot] = transform(currentSimState)

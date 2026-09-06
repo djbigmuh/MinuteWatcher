@@ -1303,7 +1303,7 @@ class UpdateCoordinatorTest {
     }
 
     @Test
-    fun `performForcedUpdate updates hash based on snapshot before updateAll`() =
+    fun `performForcedUpdate updates hash based on actual snapshot after updateAll`() =
         runTest {
             val initialState = createSnapshot(timestamp = 1000L, content = "Initial")
             val intermediateState = createSnapshot(timestamp = 2000L, content = "Intermediate")
@@ -1344,19 +1344,22 @@ class UpdateCoordinatorTest {
 
             updateStarted.await()
 
-            // 2. Change snapshot while update is running
+            // 2. Change snapshot while update is running.
+            // In the new implementation, performForcedUpdate will read THIS snapshot
+            // after it finishes updateAll().
             snapshotFlow.value = intermediateState
 
             // 3. Finish update
             canFinishUpdate.complete(Unit)
             forcedUpdateJob.join()
 
-            // 4. Verification: если хэш был Initial, Intermediate триггерит реактивное обновление
+            // 4. Verification: хэш должен стать Intermediate.
+            // Реактивное обновление для Intermediate должно увидеть совпадение хэшей и быть пропущено.
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            // Total calls should be 2: one forced (for Initial), one reactive (for Intermediate)
-            assertEquals("Should have updated twice", 2, callCount)
+            // Total calls should be 1: only the forced one. Reactive one is skipped.
+            assertEquals("Should have updated only once, reactive update skipped due to fresh hash", 1, callCount)
         }
 
     @Test

@@ -19,6 +19,7 @@ import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
@@ -151,8 +152,8 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val snapshot = refreshResult.snapshot
         val refreshFailed =
             when (refreshResult) {
-                is com.example.minutewatcher.core.domain.RefreshResult.Success -> false
-                is com.example.minutewatcher.core.domain.RefreshResult.Timeout -> {
+                is RefreshResult.Success -> false
+                is RefreshResult.Timeout -> {
                     AppLogger.w("Widget: using stale snapshot, timestamp=${refreshResult.snapshot.timestamp}")
                     true
                 }
@@ -184,13 +185,13 @@ class MinutesGlanceWidget : GlanceAppWidget() {
     private suspend fun getSnapshot(
         usageRepository: UsageStateRepository,
         timeProvider: TimeProvider,
-    ): com.example.minutewatcher.core.domain.RefreshResult {
+    ): RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
         val now = timeProvider.now()
         val isStale = (now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS
 
         if ((initialSnapshot.timestamp != 0L) && !isStale) {
-            return com.example.minutewatcher.core.domain.RefreshResult
+            return RefreshResult
                 .Success(initialSnapshot)
         }
 
@@ -200,7 +201,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
             throw e
         } catch (e: Exception) {
             AppLogger.e("Widget refresh failed", e)
-            com.example.minutewatcher.core.domain.RefreshResult
+            RefreshResult
                 .Timeout(initialSnapshot)
         }
     }

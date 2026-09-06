@@ -295,15 +295,14 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
-    fun `concurrent updateSettings does not lose updates`() =
+    fun `concurrent updateSettings with increment does not lose updates`() =
         runTest {
             initViewModel()
-            val totalUpdates = 10
+            val totalUpdates = 20
             val deferreds =
-                List(totalUpdates) { i ->
+                List(totalUpdates) {
                     async {
-                        // Use values distinct from default (2)
-                        viewModel.updateSettings { it.copy(fontSize = (i % 5)) }
+                        viewModel.updateSettings { it.copy(transparency = it.transparency + 1) }
                     }
                 }
             deferreds.awaitAll()
@@ -311,7 +310,33 @@ class WidgetSettingsViewModelTest {
 
             val state = viewModel.state.value.settings
             assertNotNull(state)
-            assertTrue("FontSize should be valid", state!!.fontSize in 0..4)
+            // Initial is 50, +20 = 70
+            assertEquals(70, state!!.transparency)
+        }
+
+    @Test
+    fun `concurrent updateSimSettings different slots does not lose updates`() =
+        runTest {
+            initViewModel()
+            val slots = 0 until 5
+            val deferreds =
+                slots.flatMap { slot ->
+                    listOf(
+                        async { viewModel.updateSimSettings(slot) { it.copy(showSim = false) } },
+                        async { viewModel.updateSimSettings(slot) { it.copy(showIcon = false) } },
+                    )
+                }
+            deferreds.awaitAll()
+            advanceUntilIdle()
+
+            val state = viewModel.state.value.settings
+            assertNotNull(state)
+            slots.forEach { slot ->
+                val simState = state!!.simStates[slot]
+                assertNotNull("State for slot $slot should exist", simState)
+                assertFalse("showSim for slot $slot should be false", simState!!.showSim)
+                assertFalse("showIcon for slot $slot should be false", simState.showIcon)
+            }
         }
 
     @Test(expected = CancellationException::class)

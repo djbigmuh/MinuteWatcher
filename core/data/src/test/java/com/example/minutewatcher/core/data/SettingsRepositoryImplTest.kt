@@ -182,7 +182,7 @@ class SettingsRepositoryImplTest {
     fun testFlowEmitsUpdatedValue() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
-            val settingsList = mutableListOf<com.example.minutewatcher.core.model.AppSettings>()
+            val settingsList = mutableListOf<AppSettings>()
 
             val job =
                 launch {

@@ -97,7 +97,12 @@ internal class SimIdentityObserver
                     emitAll(
                         merge<SeedResult>(
                             flow {
-                                val initial =
+                                // Попытка первичной генерации или получения сида с основным таймаутом.
+                                // Если таймаут истек, мы не эмитим Fallback сразу, чтобы избежать
+                                // состояния гонки с параллельным потоком seedRepository.seedFlow в merge.
+                                // Это предотвращает кратковременную эмиссию emptyList в physicalActiveSims,
+                                // если реальный сид вот-вот появится.
+                                val primaryAttempt =
                                     withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
                                         val current =
                                             seedRepository.seedFlow
@@ -107,26 +112,42 @@ internal class SimIdentityObserver
                                             SeedResult.Real(current)
                                         } else {
                                             val generated = generateSeedWithRetry()
-                                            if (generated !=
-                                                null
-                                            ) {
-                                                SeedResult.Real(generated)
+                                            if (generated != null) SeedResult.Real(generated) else null
+                                        }
+                                    }
+
+                                val finalResult =
+                                    when {
+                                        primaryAttempt is SeedResult.Real -> primaryAttempt
+                                        realEmitted.get() -> null // Уже обработано параллельным потоком
+                                        else -> {
+                                            // Основная попытка не удалась или истек таймаут.
+                                            // Ждем seedRepository.seedFlow с коротким дополнительным таймаутом
+                                            // как финальную проверку перед переходом на Fallback.
+                                            val secondaryAttempt =
+                                                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                                                    seedRepository.seedFlow
+                                                        .filter { it.isNotEmpty() }
+                                                        .firstOrNull()
+                                                }
+                                            if (secondaryAttempt != null) {
+                                                SeedResult.Real(secondaryAttempt)
                                             } else {
                                                 SeedResult.Fallback
                                             }
                                         }
-                                    } ?: SeedResult.Fallback
-
-                                if (initial is SeedResult.Real) {
-                                    if (realEmitted.compareAndSet(false, true)) {
-                                        emit(initial)
                                     }
-                                } else if (!realEmitted.get()) {
+
+                                if (finalResult is SeedResult.Real) {
+                                    if (realEmitted.compareAndSet(false, true)) {
+                                        emit(finalResult)
+                                    }
+                                } else if (finalResult == SeedResult.Fallback && !realEmitted.get()) {
                                     AppLogger.e(
-                                        "SimIdentityObserver: seed unavailable after timeout, emitting Fallback. " +
-                                            "SIM identity resolution will fail until seed is available.",
+                                        "SimIdentityObserver: seed unavailable after timeout, " +
+                                            "emitting Fallback.",
                                     )
-                                    emit(initial)
+                                    emit(SeedResult.Fallback)
                                 }
                             },
                             seedRepository.seedFlow

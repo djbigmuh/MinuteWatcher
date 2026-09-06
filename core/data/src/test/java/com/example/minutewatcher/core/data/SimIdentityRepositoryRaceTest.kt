@@ -98,8 +98,8 @@ class SimIdentityRepositoryRaceTest {
             val emissions = mutableListOf<Any>()
             val job = launch { seedFlow.collect { emissions.add(it) } }
 
-            // 1. Initial state: wait 13 seconds for timeout.
-            testScheduler.advanceTimeBy(13.seconds)
+            // 1. Initial state: wait 16 seconds for extended timeout.
+            testScheduler.advanceTimeBy(16.seconds)
             testScheduler.runCurrent()
 
             assertTrue(
@@ -140,8 +140,8 @@ class SimIdentityRepositoryRaceTest {
             assertEquals(1, emissions.size)
             assertTrue(emissions[0].toString().contains("real_seed"))
 
-            // 2. Wait past 13s timeout
-            testScheduler.advanceTimeBy(10.seconds)
+            // 2. Wait past 16s timeout
+            testScheduler.advanceTimeBy(15.seconds)
             testScheduler.runCurrent()
 
             assertEquals("Should not emit Fallback after Real", 1, emissions.size)
@@ -407,16 +407,17 @@ class SimIdentityRepositoryRaceTest {
                     identityRepo.observeActiveSims().drop(1).collect { activeSimsList.add(it) }
                 }
 
-            // 1. Initial wait: T=13s. seedFlow emits Fallback.
-            // SimIdentityObserver should wait extra SHORT_TIMEOUT_MS before emitting emptyList.
-            testScheduler.advanceTimeBy(13.seconds)
+            // 1. Initial wait: T=16s. seedFlow emits Fallback if not arrived.
+            // SimIdentityObserver waits for SEED_GENERATION_TIMEOUT_MS + SHORT_TIMEOUT_MS.
+            testScheduler.advanceTimeBy(14.seconds)
             testScheduler.runCurrent()
 
-            // At this point Fallback was emitted, and observation is waiting for Real seed.
+            // At this point Fallback is NOT YET emitted (T=14s < 15s),
+            // and observation is waiting.
             assertTrue("Should not emit sims until Fallback timeout finishes", activeSimsList.isEmpty())
 
-            // 2. T=14s. Real seed arrives before Fallback-to-emptyList timeout (5s)
-            testScheduler.advanceTimeBy(1.seconds)
+            // 2. T=14.5s. Real seed arrives before Fallback timeout (15s)
+            testScheduler.advanceTimeBy(0.5.seconds)
             storedSeed.emit("slow_real_seed")
             testScheduler.runCurrent()
 
