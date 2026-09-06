@@ -68,11 +68,8 @@ open class SemanticSearchManager
     ) : TrackingStatusProvider {
         override val key: String = "appsearch"
 
-    @Volatile
-        private var lastSnapshotHash: Int? = null
-
-    @Volatile
-        private var lastSnapshotVersion: SchemaVersion? = null
+    private var lastSnapshotHash: Int? = null
+    private var lastSnapshotVersion: SchemaVersion? = null
 
     /** Result of an indexing attempt. */
     sealed interface IndexResult {

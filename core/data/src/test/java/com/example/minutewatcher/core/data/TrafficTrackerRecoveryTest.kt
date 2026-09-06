@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -44,7 +45,6 @@ class TrafficTrackerRecoveryTest {
         initTestLogger()
         whenever(permissionChecker.checkPermissions(any())).thenReturn(true)
         whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
-        whenever(simIdentityRepository.observeActiveSims()).thenReturn(simFlow)
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
@@ -87,7 +87,7 @@ class TrafficTrackerRecoveryTest {
             runCurrent()
 
             // Verify initial 4 calls (1 observer, 3 attempts)
-            verify(simIdentityRepository, times(4)).observeActiveSims()
+            verify(simIdentityRepository, times(4)).observeActiveSims().let {}
 
             // 2. Trigger recovery concurrently from both observers
             // We need to re-mock because the previous thenAnswer is exhausted or would keep throwing
@@ -99,6 +99,7 @@ class TrafficTrackerRecoveryTest {
 
             // 3. Assert: only ONE more call to observeActiveSims (from ONE recovery attempt)
             // Total = 4 (init) + 1 (recovery) = 5
-            verify(simIdentityRepository, times(5)).observeActiveSims()
+            verify(simIdentityRepository, times(5)).observeActiveSims().let {}
+            verify(permissionStateNotifier, atLeast(1)).changes.let {}
         }
 }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -67,7 +68,11 @@ class WidgetSettingsViewModel
         usageStateRepository: UsageStateRepository,
         @ApplicationScope private val externalScope: CoroutineScope,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
-    private val autoSaveTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val autoSaveTrigger =
+        MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
     private var autoSaveJob: Job? = null
     private var lastSavedSettings: WidgetSettingsState? = null
 

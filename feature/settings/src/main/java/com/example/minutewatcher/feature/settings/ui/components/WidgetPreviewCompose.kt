@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -104,8 +105,7 @@ private fun HorizontalSimPreviewLayout(
     Row(
         modifier =
             Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
+                .wrapContentSize()
                 .padding(Constants.Widget.PADDING_DEFAULT.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -128,8 +128,7 @@ private fun VerticalSimPreviewLayout(
     Column(
         modifier =
             Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
+                .wrapContentSize()
                 .padding(Constants.Widget.PADDING_DEFAULT.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

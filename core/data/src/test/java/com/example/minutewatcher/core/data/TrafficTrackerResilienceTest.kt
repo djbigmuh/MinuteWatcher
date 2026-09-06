@@ -47,8 +47,6 @@ class TrafficTrackerResilienceTest {
         // Default permission success
         whenever(permissionChecker.checkPermissions(any())).thenReturn(true)
         whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow())
-        // Default empty sims
-        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
     }
 
     private fun createTracker(scope: TestScope): TrafficTracker =
@@ -78,22 +76,23 @@ class TrafficTrackerResilienceTest {
             runCurrent()
 
             // 1 from observer, 1 from init (Attempt 1)
-            verify(simIdentityRepository, atLeast(2)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(2)).observeActiveSims().let {}
 
             advanceTimeBy(1001.milliseconds)
             runCurrent()
             // Attempt 2
-            verify(simIdentityRepository, atLeast(3)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(3)).observeActiveSims().let {}
 
             advanceTimeBy(2001.milliseconds)
             runCurrent()
             // Attempt 3
-            verify(simIdentityRepository, atLeast(4)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(4)).observeActiveSims().let {}
 
             advanceTimeBy(4001.milliseconds)
             runCurrent()
             // No more attempts (from init coroutine)
-            verify(simIdentityRepository, times(4)).observeActiveSims()
+            verify(simIdentityRepository, times(4)).observeActiveSims().let {}
+            verify(permissionStateNotifier, atLeast(1)).changes.let {}
         }
 
     @Test
@@ -105,11 +104,12 @@ class TrafficTrackerResilienceTest {
             runCurrent()
 
             // 1 from observer, 1 from init
-            verify(simIdentityRepository, atLeast(2)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(2)).observeActiveSims().let {}
 
             advanceTimeBy(10.seconds)
             runCurrent()
-            verify(simIdentityRepository, times(2)).observeActiveSims()
+            verify(simIdentityRepository, times(2)).observeActiveSims().let {}
+            verify(permissionStateNotifier, atLeast(1)).changes.let {}
         }
 
     @Test
@@ -121,11 +121,12 @@ class TrafficTrackerResilienceTest {
             runCurrent()
 
             // 1 from observer, 1 from init
-            verify(simIdentityRepository, atLeast(2)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(2)).observeActiveSims().let {}
 
             advanceTimeBy(10.seconds)
             runCurrent()
-            verify(simIdentityRepository, times(2)).observeActiveSims()
+            verify(simIdentityRepository, times(2)).observeActiveSims().let {}
+            verify(permissionStateNotifier, atLeast(1)).changes.let {}
         }
 
     @Test
@@ -147,14 +148,15 @@ class TrafficTrackerResilienceTest {
             // Let init retries finish (calls 2, 3, 4)
             advanceTimeBy(4000.milliseconds)
             runCurrent()
-            verify(simIdentityRepository, times(4)).observeActiveSims()
+            verify(simIdentityRepository, times(4)).observeActiveSims().let {}
 
             // Act: Recover should try again and succeed (5th call)
             tracker.recover()
             runCurrent()
 
             // Total calls: 1 (observer) + 3 (init) + 1 (recover) = 5
-            verify(simIdentityRepository, times(5)).observeActiveSims()
+            verify(simIdentityRepository, times(5)).observeActiveSims().let {}
+            verify(permissionStateNotifier, atLeast(1)).changes.let {}
             assertEquals(TrackingStatus.Idle, tracker.status.value)
         }
 }

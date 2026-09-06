@@ -24,6 +24,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.width
+import androidx.glance.layout.wrapContentSize
 import com.example.minutewatcher.core.android.util.WidgetColorResolver
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.NavigationProvider
@@ -161,7 +162,7 @@ internal fun HorizontalSimLayout(
     uiState: WidgetUiState,
 ) {
     Row(
-        modifier = GlanceModifier.fillMaxSize(),
+        modifier = GlanceModifier.wrapContentSize(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         sims.forEachIndexed { index, sim ->
@@ -197,7 +198,7 @@ internal fun VerticalSimLayout(
     uiState: WidgetUiState,
 ) {
     Column(
-        modifier = GlanceModifier.fillMaxSize(),
+        modifier = GlanceModifier.wrapContentSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         sims.forEachIndexed { index, sim ->

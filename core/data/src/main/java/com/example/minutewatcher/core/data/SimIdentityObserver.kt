@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -30,7 +29,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -61,7 +59,6 @@ internal class SimIdentityObserver
         private val fetcher: ActiveSimsFetcher,
         @ApplicationScope private val scope: CoroutineScope,
         private val cache: SimIdentityCache,
-        private val permissionStateNotifier: PermissionStateNotifier,
     ) : TrackingStatusProvider {
     override val key: String = "sim_discovery"
 
@@ -69,7 +66,6 @@ internal class SimIdentityObserver
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
     private val generalAttempt = AtomicLong(0)
-    private val securityAttempt = AtomicLong(0)
     private val seedAttempt = AtomicLong(0)
     private val realEmitted = AtomicBoolean(false)
     private val isObservationInitialized = AtomicBoolean(false)
@@ -81,7 +77,6 @@ internal class SimIdentityObserver
             return
         }
         generalAttempt.set(0)
-        securityAttempt.set(0)
         seedAttempt.set(0)
         realEmitted.set(false)
         _status.value = TrackingStatus.Idle
@@ -196,9 +191,7 @@ internal class SimIdentityObserver
                 merge(
                     discovery.observeSubscriptionChanges(),
                     manualTrigger,
-                ).onEach {
-                    securityAttempt.set(0)
-                }.debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
+                ).debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                         .flatMapLatest {
                             flow {
                                 var shouldContinue = true
@@ -280,7 +273,6 @@ internal class SimIdentityObserver
         var shouldRetry = false
         when (result) {
             is SimDiscoveryResult.Available -> {
-                securityAttempt.set(0)
                 _status.value = TrackingStatus.Active
                 emit(result.sims)
             }
@@ -306,27 +298,13 @@ internal class SimIdentityObserver
     }
 
     private suspend fun FlowCollector<List<ActiveSimInfo>>.handlePermissionMissing(): Boolean {
-        val current = securityAttempt.incrementAndGet()
-        return if (current > MAX_SECURITY_ATTEMPTS) {
-            _status.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.PERMISSION_MISSING,
-                    "SecurityException limit reached",
-                )
-            emit(emptyList())
-            false
-        } else {
-            _status.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.PERMISSION_MISSING,
-                    "Permission missing (attempt $current)",
-                )
-            emit(emptyList())
-            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                permissionStateNotifier.changes.first()
-            }
-            true
-            }
+        _status.value =
+            TrackingStatus.Error(
+                TrackingStatus.ErrorType.PERMISSION_MISSING,
+                "Permission missing",
+            )
+        emit(emptyList())
+        return false
     }
 
     private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryFailure(
@@ -368,11 +346,9 @@ internal class SimIdentityObserver
                     .distinctUntilChanged(),
             ) { physical, benchmarkSimCount ->
                 val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
-                val isBenchmarkBuild = BuildConfig.BUILD_TYPE == "benchmark"
 
                 when {
-                    isBenchmarkBuild && mocks != null -> mocks
-                    mocks != null && physical.isEmpty() -> mocks
+                    mocks != null -> mocks
                     else -> physical
                 }
             }.debounce(50.milliseconds)
@@ -398,6 +374,5 @@ internal class SimIdentityObserver
             private const val MAX_SEED_BACKOFF_MS = 10000L
             private const val MAX_SEED_RETRIES = 10
             private const val MAX_GENERAL_ATTEMPTS = 20
-            private const val MAX_SECURITY_ATTEMPTS = 5
         }
     }

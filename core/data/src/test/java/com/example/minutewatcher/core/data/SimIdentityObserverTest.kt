@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -47,7 +46,6 @@ class SimIdentityObserverTest {
     private val mockSimProvider: MockSimProvider = mock()
     private val fetcher: ActiveSimsFetcher = mock()
     private val cache: SimIdentityCache = mock()
-    private val permissionStateNotifier: PermissionStateNotifier = mock()
 
     private lateinit var observer: SimIdentityObserver
 
@@ -60,7 +58,6 @@ class SimIdentityObserverTest {
             fetcher = fetcher,
             scope = scope,
             cache = cache,
-            permissionStateNotifier = permissionStateNotifier,
         )
 
     @Before
@@ -70,7 +67,6 @@ class SimIdentityObserverTest {
         seedRepository.stub {
             on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
         }
-        whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow(replay = 1))
         fetcher.stub {
             on { fetchActiveSimsWithRetry(any()) } doReturn SimDiscoveryResult.Available(emptyList())
         }
@@ -142,41 +138,6 @@ class SimIdentityObserverTest {
             job.cancel()
         }
 
-    @Test
-    fun `security exception limit is respected`() =
-        runTest {
-            observer = createObserver(backgroundScope)
-            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
-                SimDiscoveryResult.PermissionMissing,
-            )
-
-            // Mock permission changes to emit Unit when first() is called in retryWhen
-            // Use replay = 0 to ensure it waits for the next emission
-            val permissionChanges = MutableSharedFlow<Unit>(replay = 0)
-            whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
-
-            val job =
-                launch {
-                    observer.activeSimsCache.collect {}
-                }
-
-            // Advance time to pass initial debounce from setup emission
-            testScheduler.advanceTimeBy(1000.milliseconds)
-            testScheduler.runCurrent()
-
-            repeat(6) {
-                permissionChanges.emit(Unit)
-                testScheduler.advanceTimeBy(3000.milliseconds)
-                testScheduler.runCurrent()
-            }
-
-            // MAX_SECURITY_ATTEMPTS = 5.
-            // Attempt 1..5 return true. Attempt 6 returns false.
-            // Total calls = 6.
-            verify(fetcher, times(6)).fetchActiveSimsWithRetry(any())
-
-            job.cancel()
-        }
 
     @Test
     fun `use ephemeral seed when seed is unavailable instead of Fallback`() =
@@ -219,7 +180,6 @@ class SimIdentityObserverTest {
                     fetcher = fetcher,
                     scope = backgroundScope,
                     cache = cache,
-                    permissionStateNotifier = permissionStateNotifier,
                 )
             val job = launch { observer.activeSimsCache.collect {} }
 
@@ -403,7 +363,6 @@ class SimIdentityObserverTest {
                     fetcher = fetcher,
                     scope = backgroundScope,
                     cache = cache,
-                    permissionStateNotifier = permissionStateNotifier,
                 )
 
             val emissions = mutableListOf<SeedResult>()

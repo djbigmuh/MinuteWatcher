@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
@@ -11,7 +10,6 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
@@ -40,7 +38,6 @@ class SimIdentityObserverResilienceTest {
     private val mockSimProvider: MockSimProvider = mock()
     private val fetcher: ActiveSimsFetcher = mock()
     private val cache: SimIdentityCache = mock()
-    private val permissionStateNotifier: PermissionStateNotifier = mock()
 
     private lateinit var observer: SimIdentityObserver
 
@@ -53,7 +50,6 @@ class SimIdentityObserverResilienceTest {
             fetcher = fetcher,
             scope = scope,
             cache = cache,
-            permissionStateNotifier = permissionStateNotifier,
         )
 
     @Before
@@ -63,7 +59,6 @@ class SimIdentityObserverResilienceTest {
         seedRepository.stub {
             on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
         }
-        whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow(replay = 1))
 
         // Default trigger
         whenever(discovery.observeSubscriptionChanges()).thenReturn(
