@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.settings.ui
 
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
-import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -12,7 +11,6 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -25,6 +23,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -66,7 +65,6 @@ class WidgetSettingsViewModel
         private val loader: WidgetSettingsLoader,
         private val saver: WidgetSettingsSaver,
         usageStateRepository: UsageStateRepository,
-        @ApplicationScope private val externalScope: CoroutineScope,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
     private val autoSaveTrigger =
         MutableSharedFlow<Unit>(
@@ -96,7 +94,7 @@ class WidgetSettingsViewModel
             state
                 .map { it.saveResult }
                 .debounce(2000.milliseconds)
-                .filter { it != null && it !is SaveResult.Success }
+                .filter { it != null && it !is SaveResult.Success && it !is SaveResult.PartialSuccess }
                 .collect {
                     reduce { copy(saveResult = null) }
                 }
@@ -166,7 +164,7 @@ class WidgetSettingsViewModel
                 changed = true
                 copy(
                     isLoadError = false,
-                    settings = validated.copy(widgetLimitExceeded = false),
+                    settings = validated,
                 )
             } else {
                 this
@@ -212,7 +210,7 @@ class WidgetSettingsViewModel
                 changed = true
                 copy(
                     isLoadError = false,
-                    settings = validated.copy(widgetLimitExceeded = false),
+                    settings = validated,
                 )
             } else {
                 this
@@ -227,8 +225,8 @@ class WidgetSettingsViewModel
         viewModelScope.launch {
             pendingUpdatesMutex.withLock {
                 if (pendingUpdates.size >= MAX_PENDING_UPDATES) {
-                    AppLogger.w("WidgetSettingsViewModel: pendingUpdates limit reached, dropping oldest update")
-                    pendingUpdates.removeAt(0)
+                    AppLogger.e("WidgetSettingsViewModel: pendingUpdates limit reached, clearing queue")
+                    pendingUpdates.clear()
                 }
                 pendingUpdates.add(transform)
                 AppLogger.d("WidgetSettingsViewModel: update queued (total: ${pendingUpdates.size})")
@@ -242,7 +240,7 @@ class WidgetSettingsViewModel
                 if (pendingUpdates.isEmpty()) {
                     WidgetSettingsState.validate(loaded)
                 } else {
-                    AppLogger.d("WidgetSettingsViewModel: applying ${pendingUpdates.size} pending updates")
+                    AppLogger.d("WidgetSettingsViewModel: Applying ${pendingUpdates.size} pending updates")
                     var current = loaded
                     pendingUpdates.forEach { transform ->
                         current = transform(current)
@@ -254,7 +252,7 @@ class WidgetSettingsViewModel
 
         reduce {
             copy(
-                settings = finalSettings.copy(widgetLimitExceeded = false),
+                settings = finalSettings,
                 isLoadError = false,
             )
         }
@@ -289,7 +287,16 @@ class WidgetSettingsViewModel
                 if (result is SaveResult.Success && settingsToSave != null) {
                     lastSavedSettings = settingsToSave
                 }
-                reduce { copy(saveResult = result) }
+
+                // If SIM list failed to load, show information that settings were saved partially.
+                // We treat this as success for internal state, but notify the user via PartialSuccess.
+                val finalResult = if (result is SaveResult.Success && settingsToSave?.simListLoadFailed == true) {
+                    SaveResult.PartialSuccess(skippedSimSettings = true)
+                } else {
+                    result
+                }
+
+                reduce { copy(saveResult = finalResult) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -371,23 +378,18 @@ class WidgetSettingsViewModel
 
         if (currentSettings != null && lastSaved != null && currentSettings != lastSaved) {
             AppLogger.d("WidgetSettingsViewModel: executing emergency save onCleared")
-            // Use externalScope (ApplicationScope) to ensure saving completes even after ViewModel is destroyed.
-            // onCleared() is the last lifecycle event, and viewModelScope is already cancelled.
-            externalScope.launch {
-                withContext(NonCancellable) {
-                    try {
-                        val result =
-                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                saver.save(currentSettings, skipSimSettings = currentSettings.simListLoadFailed)
-                            }
-                        if (result == null) {
-                            AppLogger.w("WidgetSettingsViewModel: emergency save timed out")
+            // Use runBlocking to ensure saving completes before ViewModel is destroyed.
+            // onCleared() is called on the main thread, but blocking for a short time
+            // during process shutdown/activity death is acceptable for data integrity.
+            runBlocking(NonCancellable) {
+                try {
+                    val result =
+                        withTimeoutOrNull(3.seconds) {
+                            saver.save(currentSettings, skipSimSettings = currentSettings.simListLoadFailed)
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("WidgetSettingsViewModel: emergency save failed", e)
-                    }
+                    AppLogger.d("WidgetSettingsViewModel: emergency save completed with result: $result")
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetSettingsViewModel: emergency save failed", e)
                 }
             }
         }
@@ -396,6 +398,6 @@ class WidgetSettingsViewModel
 
     companion object {
         private val LOAD_TIMEOUT: Duration = 15.seconds
-        private const val MAX_PENDING_UPDATES = 100
+        private const val MAX_PENDING_UPDATES = 10
     }
 }

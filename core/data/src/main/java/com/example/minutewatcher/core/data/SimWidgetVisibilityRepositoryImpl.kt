@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -105,16 +106,16 @@ class SimWidgetVisibilityRepositoryImpl
         }
 
         /**
-         * Очищает настройки для SIM-карт, которые больше не активны.
+         * Очищает настройки для SIM-карт, которые больше не активны и не присутствуют в настройках.
          *
          * Для предотвращения потери данных fallback-ключи формата `sim_<slot>` никогда не
          * удаляются автоматически, так как они служат последним уровнем защиты при отсутствии
          * стабильных идентификаторов (например, после сброса настроек сети или на старых API).
          *
-         * @param activeIdentities Список identity SIM-карт, которые считаются активными в данный момент.
+         * @param knownIdentities Список identity SIM-карт, которые считаются известными (активные + из настроек).
          */
-        override suspend fun clearOrphanedSettings(activeIdentities: List<String>) {
-            val activeSet = activeIdentities.toSet()
+        override suspend fun clearOrphanedSettings(knownIdentities: List<String>) {
+            val knownSet = knownIdentities.toSet()
             // Защита fallback-ключей: ключи вида "sim_<число>" никогда не удаляются
             // автоматически. Это последний уровень защиты при отсутствии стабильных
             // идентификаторов (например, после сброса настроек сети или на старых API).
@@ -136,7 +137,7 @@ class SimWidgetVisibilityRepositoryImpl
                         // Protect sim_$slot fallback keys
                         val isFallbackKey = fallbackRegex.matches(identity)
 
-                        (identity !in activeSet) && !isFallbackKey
+                        (identity !in knownSet) && !isFallbackKey
                     }
                 if (orphanedKeys.isNotEmpty()) {
                     AppLogger.d("Clearing ${orphanedKeys.size} orphaned widget settings keys")
@@ -144,6 +145,14 @@ class SimWidgetVisibilityRepositoryImpl
                 }
             }
         }
+
+    override suspend fun getAllIdentitiesWithSettings(): List<String> {
+        return dataStore.data.map { prefs ->
+            prefs.asMap().keys.mapNotNull { key ->
+                extractIdentity(key.name)
+            }.distinct()
+        }.first()
+    }
 
         /**
          * Extracts identity from a DataStore key name by matching known widget prefixes.

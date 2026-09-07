@@ -490,15 +490,21 @@ class TrafficTrackerTest {
             val job2 = launch { tracker.updateTrafficUsage() }
             runCurrent()
 
-            // 1 from SIM observer, 1 from init, 2 from current calls
-            // Note: with lazy init and our current locking, they might be sequential if they hit the same mutex
-            // but fetchActiveSims() is outside trafficMutex.
-            assertEquals(4, callCount.get())
+            // 1 from init, 1 from SIM observer.
+            // job1 and job2 are waiting for updateMutex before calling fetchActiveSims().
+            assertEquals(2, callCount.get())
 
             flow.emit(emptyList())
             runCurrent()
+
+            // After flow emits, the first one (init or job1) finishes its fetch.
+            // Then the next one acquires the lock and calls fetch.
+            testScheduler.advanceUntilIdle()
             job1.join()
             job2.join()
+
+            // Total should be 4 eventually: init + observer + job1 + job2
+            assertEquals(4, callCount.get())
         }
 
     @Test

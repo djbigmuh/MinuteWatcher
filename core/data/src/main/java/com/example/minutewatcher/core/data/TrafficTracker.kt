@@ -78,6 +78,7 @@ class TrafficTracker
     private val initMutex = Mutex()
     private val updateMutex = Mutex()
     private val initializationFailed = AtomicBoolean(false)
+    private val isInitializing = AtomicBoolean(false)
     private var initJob: Job? = null
 
     init {
@@ -102,11 +103,20 @@ class TrafficTracker
             try {
                 permissionStateNotifier.changes.collect {
                     if (permissionManager.hasPhoneStatePermission() &&
-                        permissionManager.hasUsageStatsPermission() &&
-                        initializationFailed.compareAndSet(true, false)
+                        permissionManager.hasUsageStatsPermission()
                     ) {
-                        AppLogger.d("TrafficTracker: attempting auto-recovery after permission change")
-                        startInitialization()
+                        val shouldStart =
+                            initMutex.withLock {
+                                if (!isInitializing.get() && initializationFailed.compareAndSet(true, false)) {
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                        if (shouldStart) {
+                            AppLogger.d("TrafficTracker: attempting auto-recovery after permission change")
+                            startInitialization()
+                        }
                     }
                 }
             } catch (e: CancellationException) {
@@ -118,7 +128,15 @@ class TrafficTracker
         scope.launch {
             try {
                 simIdentityRepository.observeActiveSims().collect {
-                    if (initializationFailed.compareAndSet(true, false)) {
+                    val shouldStart =
+                        initMutex.withLock {
+                            if (!isInitializing.get() && initializationFailed.compareAndSet(true, false)) {
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                    if (shouldStart) {
                         AppLogger.d("TrafficTracker: attempting auto-recovery after SIM change")
                         startInitialization()
                     }
@@ -132,8 +150,13 @@ class TrafficTracker
     }
 
     private suspend fun initializeWithRetry() {
-        initMutex.withLock {
-            performInitializeWithRetry()
+        isInitializing.set(true)
+        try {
+            initMutex.withLock {
+                performInitializeWithRetry()
+            }
+        } finally {
+            isInitializing.set(false)
         }
     }
 
@@ -141,6 +164,7 @@ class TrafficTracker
         for (attempt in 1..MAX_INIT_ATTEMPTS) {
             try {
                 updateTrafficUsageLogic()
+                initializationFailed.set(false)
                 return
             } catch (e: CancellationException) {
                 throw e
@@ -230,9 +254,9 @@ class TrafficTracker
     private suspend fun updateTrafficUsageLogic() {
         val result =
             withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
-                val activeSims = fetchActiveSims()
                 updateMutex.withLock {
                     try {
+                        val activeSims = fetchActiveSims()
                         clearPreviousTimeoutError()
 
                         if (!permissionChecker.checkPermissions(_status)) return@withLock

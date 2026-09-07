@@ -15,6 +15,7 @@ import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -1474,5 +1475,123 @@ class UpdateCoordinatorTest {
 
             // Total calls to observeSimCardUiModels: 1 (init) + 10 (recovers) = 11
             verify(usageStateRepository, times(11)).observeSimCardUiModels()
+        }
+
+    @Test
+    fun `forced update cancels reactive update but observation loop continues`() =
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val reactiveUpdateStarted = CompletableDeferred<Unit>()
+            val reactiveUpdateCanFinish = CompletableDeferred<Unit>()
+            var reactiveUpdateCancelled = false
+            var updateAllCallCount = 0
+
+            val customUpdater =
+                object : WidgetUpdater {
+                    override suspend fun updateAll(): WidgetUpdateResult {
+                        updateAllCallCount++
+                        if (updateAllCallCount == 1) {
+                            // First call is reactive
+                            try {
+                                reactiveUpdateStarted.complete(Unit)
+                                reactiveUpdateCanFinish.await()
+                            } catch (e: CancellationException) {
+                                reactiveUpdateCancelled = true
+                                throw e
+                            }
+                        }
+                        return WidgetUpdateResult.Success()
+                    }
+
+                    override suspend fun recover() {}
+                }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    customUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // 1. Trigger reactive update
+            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "Reactive"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            reactiveUpdateStarted.await()
+
+            // 2. Trigger forced update while reactive update is suspended
+            val forcedUpdateJob =
+                launch {
+                    coordinator.notifyDataChanged(updateWidget = true, force = true)
+                }
+            testScheduler.runCurrent()
+
+            // Forced update should have cancelled the currentUpdateJob
+            assertTrue("Reactive update should have been cancelled by forced update", reactiveUpdateCancelled)
+
+            // 3. Complete forced update
+            forcedUpdateJob.join()
+            assertEquals("Second call to updateAll should be the forced one", 2, updateAllCallCount)
+
+            // 4. Emit another snapshot and verify observation is still ALIVE
+            snapshotFlow.emit(createSnapshot(timestamp = 2000L, content = "Next"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Total calls: 1 (cancelled reactive) + 1 (forced) + 1 (new reactive) = 3
+            assertEquals("Observation loop should still be active and process new snapshots", 3, updateAllCallCount)
+        }
+
+    @Test
+    fun `recover resets lastSnapshotHash and allows update for same content`() =
+        runTest {
+            val stateFlow =
+                snapshotFlow.stateIn(
+                    backgroundScope,
+                    SharingStarted.Eagerly,
+                    createEmptySnapshot(),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            coordinator.status
+            testScheduler.advanceUntilIdle()
+
+            // 1. Emit snapshot s1 and let reactive update finish
+            val s1 = createSnapshot(timestamp = 1000L, content = "SameContent")
+            snapshotFlow.emit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // 2. Call recover()
+            coordinator.recover()
+            testScheduler.advanceUntilIdle()
+
+            // 3. Emit SAME snapshot content again (different timestamp to trigger flow)
+            val s2 = createSnapshot(timestamp = 2000L, content = "SameContent")
+            snapshotFlow.emit(s2)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // 4. Verification: Should call updateAll again because recover() reset lastSnapshotHash
+            verify(widgetUpdater, times(2)).updateAll()
         }
 }

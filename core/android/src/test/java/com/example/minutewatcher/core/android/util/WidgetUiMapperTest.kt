@@ -106,7 +106,8 @@ class WidgetUiMapperTest {
         val sim0 = uiState.simUiStates[0]
         assertEquals(0, sim0.slot)
         assertEquals("100", sim0.minutesText)
-        assertEquals("/200 min.", sim0.minutesLimitText)
+        assertEquals("min.", sim0.minutesSuffix)
+        assertEquals("/200", sim0.minutesLimitText)
         assertTrue(sim0.showMinutesLimit)
         assertEquals(Color.WHITE, sim0.textColor)
 
@@ -114,7 +115,7 @@ class WidgetUiMapperTest {
         val limitComponent =
             sim0.layoutSpec.rows
                 .flatMap { it.components }
-                .find { it is SimLayoutComponent.Text && it.text == "/200 min." }
+                .find { it is SimLayoutComponent.Text && it.text == "/200" }
         assertTrue("Limit should be present in layout spec", limitComponent != null)
 
         // Verify full text fields
@@ -193,7 +194,8 @@ class WidgetUiMapperTest {
                 state = settings,
                 operatorNames = mapOf(0 to "MTS"),
             )
-        assertEquals("150 min.", uiState.simUiStates[0].minutesText)
+        assertEquals("150", uiState.simUiStates[0].minutesText)
+        assertEquals("min.", uiState.simUiStates[0].minutesSuffix)
     }
 
     @Test
@@ -381,5 +383,44 @@ class WidgetUiMapperTest {
                 operatorNames = mapOf(0 to "MTS"),
             )
         assertEquals(WidgetLayoutMode.SIMPLE, WidgetLayoutMode.fromValue(uiState.layoutMode))
+    }
+
+    @Test
+    fun testShowSimLogic_WhenConfigMissing() {
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(0, "sim_0", "Operator", true, emptyMap(), 1),
+                    ),
+                capabilities = emptyList(),
+            )
+
+        // Scenario 1: Config missing, load succeeded -> showSim should be false
+        val settingsNormal = WidgetSettingsState(simStates = emptyMap(), simListLoadFailed = false)
+        val uiStateNormal =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settingsNormal,
+                operatorNames = emptyMap(),
+            )
+        assertFalse(
+            "showSim should be false when config missing and load succeeded",
+            uiStateNormal.simUiStates[0].showSim
+        )
+
+        // Scenario 2: Config missing, load failed -> showSim should be true (fallback)
+        val settingsFailed = WidgetSettingsState(simStates = emptyMap(), simListLoadFailed = true)
+        val uiStateFailed =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settingsFailed,
+                operatorNames = emptyMap(),
+            )
+        assertTrue("showSim should be true when config missing and load failed", uiStateFailed.simUiStates[0].showSim)
     }
 }

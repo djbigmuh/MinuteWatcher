@@ -86,7 +86,6 @@ class UsageCheckWorkerTest {
             whenever(trafficTracker.updateTrafficUsage()).thenReturn(Unit)
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
-            whenever(simWidgetVisibilityRepository.clearOrphanedSettings(any())).thenReturn(Unit)
         }
 
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))

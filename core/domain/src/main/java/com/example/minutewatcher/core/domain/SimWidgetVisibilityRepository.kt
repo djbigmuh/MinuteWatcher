@@ -32,10 +32,16 @@ interface SimWidgetVisibilityRepository {
     suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>)
 
     /**
-     * Clears settings for identities that are no longer active.
+     * Clears settings for identities that are no longer known.
      *
+     * @param knownIdentities List of identities that should be preserved.
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
-    suspend fun clearOrphanedSettings(activeIdentities: List<String>)
+    suspend fun clearOrphanedSettings(knownIdentities: List<String>)
+
+    /**
+     * Returns all identities that currently have widget settings stored.
+     */
+    suspend fun getAllIdentitiesWithSettings(): List<String>
 }

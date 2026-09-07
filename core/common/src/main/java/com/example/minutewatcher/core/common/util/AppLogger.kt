@@ -143,6 +143,7 @@ object AppLogger {
         }
 
         val targetDir = dir ?: return
+        if (!isFileLoggingEnabled) return
 
         if (fallbackRequired) {
             handleSynchronousFallback(entry, level, targetDir)
@@ -188,6 +189,7 @@ object AppLogger {
         level: String,
         dir: File,
     ) {
+        if (!isFileLoggingEnabled) return
         Log.w(TAG, "Critical log queue full! Performing synchronous fallback for $level/$TAG")
         val acquired =
             try {
@@ -199,6 +201,7 @@ object AppLogger {
 
         if (acquired) {
             try {
+                if (!isFileLoggingEnabled) return
                 writeEntryToFileUnlocked(entry, dir)
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {

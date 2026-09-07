@@ -60,6 +60,7 @@ object WidgetUiMapper {
                             textColor,
                             secondaryTextColor,
                             fontMultiplier,
+                            state.simListLoadFailed,
                         )
                     simUiState.copy(
                         layoutSpec = WidgetLayoutSpecBuilder.generateLayoutSpec(simUiState, currentLayoutMode),

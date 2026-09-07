@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -146,5 +147,21 @@ class SimWidgetVisibilityRepositoryImplTest {
 
             val prefs = dataStore.data.first()
             assertNull(prefs[DataStoreKeys.showSimIconKey(identity)])
+        }
+
+    @Test
+    fun `getAllIdentitiesWithSettings should return all identities from DataStore`() =
+        runTest {
+            val id1 = "icc_1"
+            val id2 = "sub_2"
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.showSimKey(id1)] = true
+                prefs[DataStoreKeys.showSimKey(id2)] = true
+            }
+
+            val identities = repository.getAllIdentitiesWithSettings()
+            assertTrue(identities.contains(id1))
+            assertTrue(identities.contains(id2))
+            assertEquals(2, identities.size)
         }
 }

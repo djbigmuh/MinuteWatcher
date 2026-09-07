@@ -45,7 +45,7 @@ class WidgetSettingsViewModelRaceTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
             whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 4))
 
-            viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository, backgroundScope)
+            viewModel = WidgetSettingsViewModel(loader, saver, usageStateRepository)
             advanceUntilIdle()
         }
 
@@ -74,7 +74,7 @@ class WidgetSettingsViewModelRaceTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository, backgroundScope)
+            val vm = WidgetSettingsViewModel(loader, controlledSaver, usageStateRepository)
             advanceUntilIdle()
 
             // 1. Start save operation

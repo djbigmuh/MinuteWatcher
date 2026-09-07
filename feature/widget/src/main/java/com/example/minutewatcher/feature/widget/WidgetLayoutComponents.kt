@@ -167,7 +167,7 @@ internal fun HorizontalSimLayout(
     ) {
         sims.forEachIndexed { index, sim ->
             Box(
-                modifier = GlanceModifier.wrapContentSize(),
+                modifier = GlanceModifier.defaultWeight(),
                 contentAlignment = Alignment.Center,
             ) {
                 SimItem(sim, uiState)
@@ -200,7 +200,7 @@ internal fun VerticalSimLayout(
     ) {
         sims.forEachIndexed { index, sim ->
             Box(
-                modifier = GlanceModifier.wrapContentSize(),
+                modifier = GlanceModifier.defaultWeight(),
                 contentAlignment = Alignment.Center,
             ) {
                 SimItem(sim, uiState)

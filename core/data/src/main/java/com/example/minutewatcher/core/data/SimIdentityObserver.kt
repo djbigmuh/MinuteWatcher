@@ -15,7 +15,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -71,6 +70,20 @@ internal class SimIdentityObserver
     private val isObservationInitialized = AtomicBoolean(false)
     private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
+    init {
+        scope.launch {
+            try {
+                val initialSeed = seedRepository.seedFlow.first()
+                if (initialSeed.isEmpty()) {
+                    AppLogger.d("SimIdentityObserver: Initial seed empty, triggering generation")
+                    generateSeedWithRetry()
+                }
+            } catch (e: Exception) {
+                AppLogger.e("SimIdentityObserver: Failed to check/generate initial seed", e)
+            }
+        }
+    }
+
     override suspend fun recover() {
         if (!isObservationInitialized.get()) {
             AppLogger.w("SimIdentityObserver: recover() called before observation was initialized, ignoring")
@@ -78,7 +91,12 @@ internal class SimIdentityObserver
         }
         generalAttempt.set(0)
         _status.value = TrackingStatus.Idle
-        manualTrigger.emit(Unit)
+
+        // Trigger seed re-generation/check on recovery
+        scope.launch {
+            generateSeedWithRetry()
+            manualTrigger.emit(Unit)
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -99,20 +117,6 @@ internal class SimIdentityObserver
                         initialSeed == null || initialSeed.isEmpty() -> {
                             // Сида нет или DataStore не ответил — используем Fallback
                             emit(SeedResult.Fallback)
-                            if (initialSeed != null) {
-                                // Если сид просто пуст (первый запуск), запускаем генерацию
-                                // Используем текущий контекст, чтобы генерация отменилась
-                                // при отмене потока (flatMapLatest)
-                                CoroutineScope(currentCoroutineContext()).launch {
-                                    try {
-                                        generateSeedWithRetry()
-                                    } catch (e: CancellationException) {
-                                        throw e
-                                    } catch (e: Exception) {
-                                        AppLogger.e("SimIdentityObserver: Background seed generation failed", e)
-                                    }
-                                }
-                            }
                         }
 
                         else -> {
@@ -212,6 +216,16 @@ internal class SimIdentityObserver
                                 true
                             }.catch { cause ->
                                 if (cause is CancellationException) throw cause
+                                if (cause is SecurityException) {
+                                    AppLogger.w("SimIdentityObserver: Permission denied in flow: ${cause.message}")
+                                    _status.value =
+                                        TrackingStatus.Error(
+                                            TrackingStatus.ErrorType.PERMISSION_MISSING,
+                                            "SIM permission denied",
+                                        )
+                                    emit(emptyList())
+                                    return@catch
+                                }
                                 AppLogger.e("SimIdentityObserver: physicalActiveSims flow error", cause)
 
                                 if (cause !is IOException) {

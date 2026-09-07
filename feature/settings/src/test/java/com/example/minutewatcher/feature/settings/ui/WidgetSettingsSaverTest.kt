@@ -109,4 +109,18 @@ class WidgetSettingsSaverTest {
                 .verify(dataChangeNotifier)
                 .notifyDataChanged(any(), any())
         }
+
+    @Test
+    fun `save returns Success when skipSimSettings is true`() =
+        runTest {
+            // Given: General settings save succeeds
+            whenever(loader.saveGeneralSettings(any())).thenReturn(Unit)
+            val state = WidgetSettingsState()
+
+            // Act: Save with skipSimSettings = true
+            val result = saver.save(state, skipSimSettings = true)
+
+            // Then: Result should be Success, not PartialSuccess (per Instruction 18)
+            assertEquals(SaveResult.Success, result)
+        }
 }

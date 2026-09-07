@@ -36,6 +36,7 @@ object WidgetSimUiFactory {
         textColor: Int,
         secondaryTextColor: Int,
         fontMultiplier: Float,
+        simListLoadFailed: Boolean = false,
     ): SimUiState {
         val minutesEntity = sim.entities[PackageType.MINUTES]
         val trafficEntity = sim.entities[PackageType.DATA]
@@ -47,16 +48,18 @@ object WidgetSimUiFactory {
             slot = sim.slot,
             operatorName = operatorName,
             operatorIconRes = SimUtils.getOperatorIconResource(sim.operatorName),
-            showSim = simConfig?.showSim ?: true,
+            showSim = simConfig?.showSim ?: simListLoadFailed,
             showIcon = simConfig?.showIcon ?: true,
             showName = simConfig?.showName ?: true,
             showMinutes = minData.show,
             minutesText = minData.text,
+            minutesSuffix = minData.suffix,
             minutesColor = minData.color,
             showMinutesLimit = minData.showLimit,
             minutesLimitText = minData.limitText,
             showTraffic = trafData.show,
             trafficText = trafData.text,
+            trafficSuffix = trafData.suffix,
             trafficColor = trafData.color,
             showTrafficLimit = trafData.showLimit,
             trafficLimitText = trafData.limitText,
@@ -73,6 +76,7 @@ object WidgetSimUiFactory {
     private data class PackageUiData(
         val show: Boolean,
         val text: String,
+        val suffix: String,
         val color: Int,
         val showLimit: Boolean,
         val limitText: String,
@@ -97,15 +101,11 @@ object WidgetSimUiFactory {
 
         return PackageUiData(
             show = showMinutes,
-            text = if (showLimit) rem.toString() else formatWithSuffix(rem.toString(), strings.minutesAbbr),
+            text = rem.toString(),
+            suffix = strings.minutesAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText =
-                if (showLimit) {
-                    "${strings.fractionFormat.format(limit)} ${strings.minutesAbbr}".trim()
-                } else {
-                    ""
-                },
+            limitText = if (showLimit) strings.fractionFormat.format(limit) else "",
             usedFull = "${strings.usedText}: ${formatWithSuffix(used.toString(), strings.minutesAbbr)}",
             limitFull = "${strings.limitText}: ${formatWithSuffix(limit.toString(), strings.minutesAbbr)}",
         )
@@ -128,15 +128,11 @@ object WidgetSimUiFactory {
 
         return PackageUiData(
             show = showTraffic,
-            text = formatTrafficText(entity, limitGb, remGb, showLimit, strings.gbAbbr),
+            text = formatTrafficValue(entity, limitGb, remGb),
+            suffix = strings.gbAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText =
-                if (showLimit) {
-                    "${strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb))} ${strings.gbAbbr}".trim()
-                } else {
-                    ""
-                },
+            limitText = if (showLimit) strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb)) else "",
             usedFull = "${strings.usedText}: ${
                 formatWithSuffix(
                     FormatUtils.formatTrafficGb(usedGb),
@@ -158,16 +154,13 @@ object WidgetSimUiFactory {
         return maxOf(0f, (remBytes.toDouble() / Constants.BYTES_PER_GB).toFloat())
     }
 
-    private fun formatTrafficText(
+    private fun formatTrafficValue(
         entity: SemanticEntity?,
         limitGb: Float,
         remGb: Float,
-        showLimit: Boolean,
-        unit: String,
     ): String {
         if (entity == null || limitGb <= 0f) return "-"
-        val formattedRem = FormatUtils.formatTrafficGb(remGb)
-        return if (showLimit) formattedRem else formatWithSuffix(formattedRem, unit)
+        return FormatUtils.formatTrafficGb(remGb)
     }
 
     private fun formatWithSuffix(

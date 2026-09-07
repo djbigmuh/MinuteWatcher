@@ -52,8 +52,10 @@ object SimCardMapper {
      * @param activeSlots The set of currently active SIM slot indices.
      */
     fun cleanupSlots(activeSlots: Set<Int>) {
-        negativeLogged.keys.removeAll { it !in activeSlots }
-        slotCallCounters.keys.removeAll { it !in activeSlots }
+        synchronized(this) {
+            negativeLogged.keys.removeIf { it !in activeSlots }
+            slotCallCounters.keys.removeIf { it !in activeSlots }
+        }
     }
 
     fun map(
@@ -66,7 +68,9 @@ object SimCardMapper {
             return createDefaultModel(slot, usage.identity)
         }
 
-        val version = slotCallCounters.computeIfAbsent(slot) { AtomicLong(0) }.incrementAndGet()
+        val version = synchronized(this) {
+            slotCallCounters.computeIfAbsent(slot) { AtomicLong(0) }.incrementAndGet()
+        }
 
         val hasNegativeValues =
             usage.minutesUsed < 0 ||
@@ -135,17 +139,19 @@ object SimCardMapper {
         version: Long,
     ) {
         var shouldLog = false
-        negativeLogged.compute(slot) { _, currentEntry ->
-            // Если в кэше уже есть более новая версия (race condition), ничего не меняем.
-            if (currentEntry != null && currentEntry.version > version) return@compute currentEntry
+        synchronized(this) {
+            negativeLogged.compute(slot) { _, currentEntry ->
+                // Если в кэше уже есть более новая версия (race condition), ничего не меняем.
+                if (currentEntry != null && currentEntry.version > version) return@compute currentEntry
 
-            if (currentEntry?.identity == usage.identity) return@compute currentEntry
+                if (currentEntry?.identity == usage.identity) return@compute currentEntry
 
-            if (hasNegativeValues && (currentEntry != null || negativeLogged.size < MAX_LOGGED_SIZE)) {
-                shouldLog = true
-                LogEntry(usage.identity, version)
-            } else {
-                null
+                if (hasNegativeValues && (currentEntry != null || negativeLogged.size < MAX_LOGGED_SIZE)) {
+                    shouldLog = true
+                    LogEntry(usage.identity, version)
+                } else {
+                    null
+                }
             }
         }
 

@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.model.MeasurementUnit
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.WidgetLayoutMode
@@ -131,6 +132,39 @@ class WidgetLayoutTest {
         // 1: Name
         // 2: Icon
         assertEquals(2, sim.layoutSpec.rows.size)
+    }
+
+    @Test
+    fun `Usage components count should be correct with and without limit`() {
+        // Without limit: Value + Suffix = 2 text components
+        val uiStateNoLimit =
+            createWidgetUiState(
+                mode = WidgetLayoutMode.SIMPLE,
+                hasMinutes = true,
+                hasTraffic = false,
+                showMinutesLimit = false,
+            )
+        val simNoLimit = uiStateNoLimit.simUiStates.first()
+        val textComponentsNoLimit = simNoLimit.layoutSpec.rows[0].components.filterIsInstance<SimLayoutComponent.Text>()
+        assertEquals(2, textComponentsNoLimit.size)
+        assertEquals("90", textComponentsNoLimit[0].text)
+        assertEquals("min.", textComponentsNoLimit[1].text)
+
+        // With limit: Value + Limit + Suffix = 3 text components
+        val uiStateWithLimit =
+            createWidgetUiState(
+                mode = WidgetLayoutMode.SIMPLE,
+                hasMinutes = true,
+                hasTraffic = false,
+                showMinutesLimit = true,
+            )
+        val simWithLimit = uiStateWithLimit.simUiStates.first()
+        val textComponentsWithLimit =
+            simWithLimit.layoutSpec.rows[0].components.filterIsInstance<SimLayoutComponent.Text>()
+        assertEquals(3, textComponentsWithLimit.size)
+        assertEquals("90", textComponentsWithLimit[0].text)
+        assertEquals("/100", textComponentsWithLimit[1].text)
+        assertEquals("min.", textComponentsWithLimit[2].text)
     }
 
     private fun createWidgetUiState(

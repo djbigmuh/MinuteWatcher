@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -334,10 +335,6 @@ class UpdateCoordinator
     @Suppress("ReturnCount")
     private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
         currentCoroutineContext().ensureActive()
-        // Привязываем текущее обновление к currentUpdateJob, чтобы его могли отменить
-        // внешние вызовы (например, принудительное обновление).
-        // При использовании collectLatest предыдущее выполнение processSnapshot отменяется автоматически.
-        currentUpdateJob = currentCoroutineContext().job
 
         val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
@@ -350,15 +347,24 @@ class UpdateCoordinator
             return
         }
 
-        // Обновление виджета при отсутствии активных SIM выполняется
-        // намеренно — виджет должен корректно отобразить состояние
-        // "No SIM" или "No Data".
-        val result = performWidgetUpdate()
+        // Оборачиваем обновление в coroutineScope, чтобы выделить отдельный Job для этого процесса.
+        // Это позволяет внешним вызовам (performForcedUpdate) отменить текущее обновление,
+        // не прерывая весь цикл наблюдения (collectLatest).
+        coroutineScope {
+            currentUpdateJob = coroutineContext.job
+            try {
+                val result = performWidgetUpdate()
 
-        // Проверяем, что снапшот все еще актуален.
-        currentCoroutineContext().ensureActive()
+                // Проверяем, что снапшот все еще актуален.
+                ensureActive()
 
-        handleUpdateResult(result, newHash)
+                handleUpdateResult(result, newHash)
+            } finally {
+                if (currentUpdateJob === coroutineContext.job) {
+                    currentUpdateJob = null
+                }
+            }
+        }
     }
 
     private suspend fun checkShouldUpdate(newHash: Int): Boolean =
@@ -507,6 +513,9 @@ class UpdateCoordinator
 
         // Отменяем текущее реактивное обновление, если оно идет.
         currentUpdateJob?.cancel()
+
+        // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)
+        widgetUpdater.recover()
 
         return try {
             val result = widgetUpdater.updateAll()

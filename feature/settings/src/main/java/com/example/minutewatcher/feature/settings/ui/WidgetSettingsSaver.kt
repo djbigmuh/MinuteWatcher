@@ -97,7 +97,8 @@ open class WidgetSettingsSaver
 
             if (failedSlots.isEmpty()) {
                 if (skipSimSettings) {
-                    SaveResult.PartialSuccess(skippedSimSettings = true)
+                    // Settings were saved fully (general settings), and SIM settings were not saved intentionally.
+                    SaveResult.Success
                 } else {
                     SaveResult.Success
                 }

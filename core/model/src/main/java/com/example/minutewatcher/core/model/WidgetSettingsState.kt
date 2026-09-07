@@ -100,4 +100,5 @@ data class SimSettingsState(
     val showMinutesLimit: Boolean = false,
     val showTraffic: Boolean = true,
     val showTrafficLimit: Boolean = false,
+    val lastKnownIdentity: String? = null,
 )

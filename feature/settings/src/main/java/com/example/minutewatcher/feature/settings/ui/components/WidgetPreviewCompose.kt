@@ -7,13 +7,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,7 +50,7 @@ fun WidgetPreview(
     Box(
         modifier =
             modifier
-                .wrapContentWidth()
+                .fillMaxWidth()
                 .wrapContentHeight()
                 .clip(RoundedCornerShape(Constants.Widget.CORNER_RADIUS.dp))
                 .background(bgColor),
@@ -103,19 +103,24 @@ private fun HorizontalSimPreviewLayout(
     sims: List<SimUiState>,
     uiState: WidgetUiState,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .wrapContentSize()
-                .padding(Constants.Widget.PADDING_DEFAULT.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
     ) {
-        sims.forEachIndexed { index, sim ->
-            Box(modifier = Modifier.wrapContentSize(), contentAlignment = Alignment.Center) {
-                SimItemPreview(sim, uiState)
-            }
-            if (uiState.showSeparator && index < sims.size - 1) {
-                Separator(isHorizontal = true, uiState = uiState, firstSim = sims[0])
+        Row(
+            modifier =
+                Modifier
+                    .wrapContentSize()
+                    .padding(Constants.Widget.PADDING_DEFAULT.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            sims.forEachIndexed { index, sim ->
+                Box(modifier = Modifier.wrapContentSize(), contentAlignment = Alignment.Center) {
+                    SimItemPreview(sim, uiState)
+                }
+                if (uiState.showSeparator && index < sims.size - 1) {
+                    Separator(isHorizontal = true, uiState = uiState, firstSim = sims[0])
+                }
             }
         }
     }
@@ -126,19 +131,24 @@ private fun VerticalSimPreviewLayout(
     sims: List<SimUiState>,
     uiState: WidgetUiState,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .wrapContentSize()
-                .padding(Constants.Widget.PADDING_DEFAULT.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
     ) {
-        sims.forEachIndexed { index, sim ->
-            Box(modifier = Modifier.wrapContentSize(), contentAlignment = Alignment.Center) {
-                SimItemPreview(sim, uiState)
-            }
-            if (uiState.showSeparator && index < sims.size - 1) {
-                Separator(isHorizontal = false, uiState = uiState, firstSim = sims[0])
+        Column(
+            modifier =
+                Modifier
+                    .wrapContentSize()
+                    .padding(Constants.Widget.PADDING_DEFAULT.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            sims.forEachIndexed { index, sim ->
+                Box(modifier = Modifier.wrapContentSize(), contentAlignment = Alignment.Center) {
+                    SimItemPreview(sim, uiState)
+                }
+                if (uiState.showSeparator && index < sims.size - 1) {
+                    Separator(isHorizontal = false, uiState = uiState, firstSim = sims[0])
+                }
             }
         }
     }

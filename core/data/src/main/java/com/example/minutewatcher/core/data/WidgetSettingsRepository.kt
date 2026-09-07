@@ -118,8 +118,23 @@ class WidgetSettingsRepository
                 activeSims.associate { info ->
                     val identity = info.identity.stableId
                     val fallbackKey = "sim_${info.slotIndex}"
-                    val settings = batch[identity] ?: batch[fallbackKey] ?: SimSettingsState()
-                    info.slotIndex to settings
+                    val settingsByIdentity = batch[identity]
+                    val settingsByFallback = batch[fallbackKey]
+
+                    val settings = when {
+                        settingsByIdentity != null -> settingsByIdentity
+                        settingsByFallback != null -> {
+                            AppLogger.w("WidgetSettingsRepository: settings found ONLY via fallback key for slot ${info.slotIndex}")
+                            settingsByFallback
+                        }
+
+                        else -> {
+                            AppLogger.w("WidgetSettingsRepository: settings not found for slot ${info.slotIndex} (identity: $identity, fallback: $fallbackKey)")
+                            null
+                        }
+                    }
+
+                    info.slotIndex to (settings ?: SimSettingsState()).copy(lastKnownIdentity = identity)
                 }
             }
         }
@@ -225,8 +240,16 @@ class WidgetSettingsRepository
                         simSettingsMap[fallbackKey] = simSettings
                     }
                 } catch (e: SeedUnavailableException) {
-                    AppLogger.w("saveSimSettings: seed unavailable for slot $slot. Saving with fallback key.", e)
+                    AppLogger.w(
+                        "saveSimSettings: seed unavailable for slot $slot. Saving with fallback key and last known identity.",
+                        e
+                    )
                     simSettingsMap["sim_$slot"] = simSettings
+                    simSettings.lastKnownIdentity?.let { lastId ->
+                        if (lastId != "sim_$slot") {
+                            simSettingsMap[lastId] = simSettings
+                        }
+                    }
                 } catch (e: SimNotFoundException) {
                     AppLogger.w("saveSimSettings: SIM not found in slot $slot. Saving with fallback key.", e)
                     simSettingsMap["sim_$slot"] = simSettings

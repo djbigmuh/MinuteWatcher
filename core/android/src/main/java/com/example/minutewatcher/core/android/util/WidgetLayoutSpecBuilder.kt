@@ -33,6 +33,7 @@ object WidgetLayoutSpecBuilder {
                 sim.showMinutesLimit,
                 sim.minutesLimitText,
                 sim.secondaryTextColor,
+                sim.minutesSuffix,
                 WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
                 sim.fontMultiplier,
             )
@@ -48,6 +49,7 @@ object WidgetLayoutSpecBuilder {
                 sim.showTrafficLimit,
                 sim.trafficLimitText,
                 sim.secondaryTextColor,
+                sim.trafficSuffix,
                 WidgetDimens.FONT_SINGLE_VALUE * sim.fontMultiplier,
                 sim.fontMultiplier,
             )
@@ -126,6 +128,7 @@ object WidgetLayoutSpecBuilder {
                 sim.showMinutesLimit,
                 sim.minutesLimitText,
                 sim.secondaryTextColor,
+                sim.minutesSuffix,
                 fontSizeBase * sim.fontMultiplier,
                 sim.fontMultiplier,
             )
@@ -141,6 +144,7 @@ object WidgetLayoutSpecBuilder {
                 sim.showTrafficLimit,
                 sim.trafficLimitText,
                 sim.secondaryTextColor,
+                sim.trafficSuffix,
                 fontSizeBase * sim.fontMultiplier,
                 sim.fontMultiplier,
             )
@@ -154,6 +158,7 @@ object WidgetLayoutSpecBuilder {
         showLimit: Boolean,
         limitText: String,
         limitColor: Int,
+        suffix: String,
         valueSize: Float,
         fontMultiplier: Float,
     ) {
@@ -165,11 +170,20 @@ object WidgetLayoutSpecBuilder {
                 isBold = true,
             ),
         )
-        if (showLimit) {
-            components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+        if (showLimit && limitText.isNotEmpty()) {
             components.add(
                 SimLayoutComponent.Text(
                     text = limitText,
+                    color = limitColor,
+                    fontSizeSp = WidgetDimens.FONT_LIMIT * fontMultiplier,
+                ),
+            )
+        }
+        if (suffix.isNotEmpty()) {
+            components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_SMALL))
+            components.add(
+                SimLayoutComponent.Text(
+                    text = suffix,
                     color = limitColor,
                     fontSizeSp = WidgetDimens.FONT_LIMIT * fontMultiplier,
                 ),
@@ -192,6 +206,7 @@ object WidgetLayoutSpecBuilder {
                 sim.showMinutesLimit,
                 sim.minutesLimitText,
                 sim.secondaryTextColor,
+                sim.minutesSuffix,
                 WidgetDimens.FONT_MULTI_VALUE * sim.fontMultiplier,
                 sim.fontMultiplier,
             )
@@ -206,6 +221,7 @@ object WidgetLayoutSpecBuilder {
                 sim.showTrafficLimit,
                 sim.trafficLimitText,
                 sim.secondaryTextColor,
+                sim.trafficSuffix,
                 WidgetDimens.FONT_MULTI_VALUE * sim.fontMultiplier,
                 sim.fontMultiplier,
             )
