@@ -86,11 +86,13 @@ open class CallTracker
                             AppLogger.e("CallTracker: Failed to initialize call tracking", e)
                         }
                     }
+            } catch (e: CancellationException) {
+                isInitialized.set(false)
+                throw e
             } catch (e: Exception) {
-                if (e is CancellationException) throw e
                 isInitialized.set(false)
                 AppLogger.e("CallTracker: Failed to start initialization", e)
-                throw e
+                _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             }
         }
     }

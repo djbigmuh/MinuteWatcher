@@ -159,7 +159,9 @@ internal class SimIdentityObserver
                         .flatMapLatest {
                             flow {
                                 var shouldContinue = true
-                                while (shouldContinue) {
+                                var loopAttempts = 0
+                                while (shouldContinue && loopAttempts < MAX_DISCOVERY_LOOP_ATTEMPTS) {
+                                    loopAttempts++
                                     try {
                                         val result = fetcher.fetchActiveSimsWithRetry(seed)
                                         val shouldRetry = handleDiscoveryResult(result)
@@ -185,6 +187,15 @@ internal class SimIdentityObserver
                                             )
                                         shouldContinue = false
                                     }
+                                }
+
+                                if (loopAttempts >= MAX_DISCOVERY_LOOP_ATTEMPTS) {
+                                    AppLogger.e("SimIdentityObserver: discovery loop safety limit reached ($MAX_DISCOVERY_LOOP_ATTEMPTS)")
+                                    _status.value =
+                                        TrackingStatus.Error(
+                                            TrackingStatus.ErrorType.UNKNOWN,
+                                            "SIM discovery loop safety limit reached",
+                                        )
                                 }
                             }.retryWhen { cause, _ ->
                                 if (cause is CancellationException) return@retryWhen false
@@ -359,5 +370,6 @@ internal class SimIdentityObserver
             private const val MAX_BACKOFF_EXPONENT = 4
             private const val INITIAL_BACKOFF_MS = 1000L
             private const val MAX_GENERAL_ATTEMPTS = 5
+            private const val MAX_DISCOVERY_LOOP_ATTEMPTS = 10
         }
     }

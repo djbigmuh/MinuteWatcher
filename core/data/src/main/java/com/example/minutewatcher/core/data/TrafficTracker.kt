@@ -18,11 +18,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -82,20 +84,26 @@ class TrafficTracker
     private var initJob: Job? = null
 
     init {
+        scope.launch {
             startInitialization()
-            startAutomaticRecoveryObservers()
         }
+        startAutomaticRecoveryObservers()
+    }
 
     internal fun ensureStarted() {
         // Automatically started in init
     }
 
-    private fun startInitialization() {
-        initJob?.cancel()
-        initJob =
-            scope.launch {
-                initializeWithRetry()
-            }
+    private suspend fun startInitialization() {
+        val oldJob = initJob
+        initJob = currentCoroutineContext().job
+        oldJob?.cancel()
+        try {
+            oldJob?.join()
+        } catch (_: Exception) {
+            /* job уже завершён или отменён */
+        }
+        initializeWithRetry()
     }
 
     private fun startAutomaticRecoveryObservers() {

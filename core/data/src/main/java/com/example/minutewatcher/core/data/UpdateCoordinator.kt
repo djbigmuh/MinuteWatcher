@@ -71,7 +71,7 @@ class UpdateCoordinator
     private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
     private val monitoringJob = AtomicReference<Job?>(null)
     private val currentObservationJob = AtomicReference<Job?>(null)
-    private var currentUpdateJob: Job? = null
+    private val currentUpdateJob = AtomicReference<Job?>(null)
 
     init {
         ensureObservationStarted()
@@ -353,7 +353,7 @@ class UpdateCoordinator
         // Это позволяет внешним вызовам (performForcedUpdate) отменить текущее обновление,
         // не прерывая весь цикл наблюдения (collectLatest).
         coroutineScope {
-            currentUpdateJob = coroutineContext.job
+            currentUpdateJob.set(coroutineContext.job)
             try {
                 val result = performWidgetUpdate()
 
@@ -362,9 +362,7 @@ class UpdateCoordinator
 
                 handleUpdateResult(result, newHash)
             } finally {
-                if (currentUpdateJob === coroutineContext.job) {
-                    currentUpdateJob = null
-                }
+                currentUpdateJob.compareAndSet(coroutineContext.job, null)
             }
         }
     }
@@ -514,7 +512,7 @@ class UpdateCoordinator
             }
 
         // Отменяем текущее реактивное обновление, если оно идет.
-        currentUpdateJob?.cancel()
+        currentUpdateJob.getAndSet(null)?.cancel()
 
         // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)
         widgetUpdater.recover()

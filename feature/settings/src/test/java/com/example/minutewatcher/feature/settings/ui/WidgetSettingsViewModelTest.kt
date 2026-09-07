@@ -1135,6 +1135,48 @@ class WidgetSettingsViewModelTest {
             val saveJob =
                 childScope.launch {
                     vm.saveAndNotify()
+                    @Test
+                    fun `saveResult is NOT cleared automatically`() =
+                        runTest {
+                            initViewModel()
+
+                            // 1. Success case
+                            whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
+                            viewModel.saveAndNotify()
+                            runCurrent()
+                            assertEquals(SaveResult.Success, viewModel.state.value.saveResult)
+
+                            // Advance past some time
+                            advanceTimeBy(5000.milliseconds)
+                            runCurrent()
+                            assertEquals(
+                                "Success should NOT be cleared automatically by VM",
+                                SaveResult.Success,
+                                viewModel.state.value.saveResult
+                            )
+
+                            viewModel.consumeSaveResult()
+                            assertEquals(null, viewModel.state.value.saveResult)
+
+                            // 2. Failure case
+                            whenever(saver.save(any(), any())).thenReturn(SaveResult.Failed("Error"))
+                            viewModel.saveAndNotify()
+                            runCurrent()
+                            assertEquals(SaveResult.Failed("Error"), viewModel.state.value.saveResult)
+
+                            // Advance past some time
+                            advanceTimeBy(5000.milliseconds)
+                            runCurrent()
+                            assertEquals(
+                                "Failure should NOT be cleared automatically",
+                                SaveResult.Failed("Error"),
+                                viewModel.state.value.saveResult
+                            )
+
+                            // Manual cleanup
+                            viewModel.consumeSaveResult()
+                            assertEquals(null, viewModel.state.value.saveResult)
+                        }
                 }
             runCurrent()
             saveStarted.await()

@@ -130,22 +130,47 @@ class WidgetUpdaterImpl
     private suspend fun executeUpdateProcess(): WidgetUpdateResult =
         try {
             var lastOutcome: UpdateOutcome? = null
+            var limitHandledInThisCall = false
             val success =
                 retryManager.updateWithRetry { attempt ->
-                    try {
-                        performSingleUpdate(attempt).also { lastOutcome = it }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("WidgetUpdater: attempt $attempt threw exception", e)
-                        UpdateOutcome.Retry.also { lastOutcome = it }
+                    val outcome =
+                        try {
+                            performSingleUpdate(attempt)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("WidgetUpdater: attempt $attempt threw exception", e)
+                            UpdateOutcome.Retry
+                        }
+
+                    when (outcome) {
+                        is UpdateOutcome.LimitExceeded -> {
+                            if (limitExceededHandled.compareAndSet(false, true)) {
+                                limitHandledInThisCall = true
+                                limitManager.setWidgetLimitExceeded(value = true)
+                                // Retry to switch to SIMPLIFIED mode in the next iteration
+                                UpdateOutcome.Retry
+                            } else {
+                                lastOutcome = outcome
+                                UpdateOutcome.Stop
+                            }
+                        }
+
+                        else -> {
+                            lastOutcome = outcome
+                            outcome
+                        }
                     }
                 }
 
             if (success) {
+                if (limitHandledInThisCall) {
+                    limitManager.setWidgetLimitExceeded(value = false)
+                    limitExceededHandled.set(false)
+                }
                 WidgetUpdateResult.Success(wasCoalesced = false)
             } else {
-                handleUnsuccessfulUpdate(lastOutcome)
+                createFailureResult(lastOutcome)
             }
         } catch (e: CancellationException) {
             throw e
@@ -158,21 +183,22 @@ class WidgetUpdaterImpl
             )
         }
 
-    private suspend fun handleUnsuccessfulUpdate(lastOutcome: UpdateOutcome?): WidgetUpdateResult {
-        if (lastOutcome is UpdateOutcome.LimitExceeded) {
-            return handleLimitExceeded()
-        }
-
+    private fun createFailureResult(lastOutcome: UpdateOutcome?): WidgetUpdateResult {
         val isRetryable = lastOutcome == UpdateOutcome.Retry || lastOutcome == null
+        val reason =
+            when (lastOutcome) {
+                is UpdateOutcome.LimitExceeded -> WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED
+                else ->
+                    if (isRetryable) {
+                        WidgetUpdateResult.FailureReason.TRANSIENT
+                    } else {
+                        WidgetUpdateResult.FailureReason.TERMINAL
+                    }
+            }
         return WidgetUpdateResult.Failure(
             wasCoalesced = false,
             isRetryable = isRetryable,
-            reason =
-                if (isRetryable) {
-                    WidgetUpdateResult.FailureReason.TRANSIENT
-                } else {
-                    WidgetUpdateResult.FailureReason.TERMINAL
-                },
+            reason = reason,
         )
     }
 
@@ -187,70 +213,7 @@ class WidgetUpdaterImpl
             }
     }
 
-        private suspend fun handleLimitExceeded(): WidgetUpdateResult {
-            if (!limitExceededHandled.compareAndSet(false, true)) {
-                return WidgetUpdateResult.Failure(
-                    wasCoalesced = false,
-                    isRetryable = false,
-                    reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
-                )
-            }
-            limitManager.setWidgetLimitExceeded(value = true)
-
-            var lastOutcome: UpdateOutcome = UpdateOutcome.Retry
-            val success =
-                retryManager.updateWithRetry { _ ->
-                    val result = safeUpdateInternal(context, isFullAttempt = false, isProbe = false)
-                    when (result) {
-                        is UpdateResult.Success -> UpdateOutcome.Success().also { lastOutcome = it }
-                        is UpdateResult.LimitExceeded -> UpdateOutcome.LimitExceeded.also { lastOutcome = it }
-                        is UpdateResult.GenericFailure -> {
-                            if (result.isRetryable) {
-                                UpdateOutcome.Retry.also { lastOutcome = it }
-                            } else {
-                                UpdateOutcome.Stop.also { lastOutcome = it }
-                            }
-                        }
-                    }
-                }
-
-            return createLimitExceededResult(success, lastOutcome)
-        }
-
-    private suspend fun createLimitExceededResult(
-        success: Boolean,
-        lastOutcome: UpdateOutcome,
-    ): WidgetUpdateResult =
-        when {
-                success -> {
-                    limitManager.setWidgetLimitExceeded(value = false)
-                    limitExceededHandled.set(false)
-                    WidgetUpdateResult.Success(wasCoalesced = false)
-                }
-
-                lastOutcome is UpdateOutcome.LimitExceeded ->
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = false,
-                        reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED,
-                    )
-
-                else -> {
-                    val isRetryable = lastOutcome == UpdateOutcome.Retry
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = isRetryable,
-                        reason =
-                            if (isRetryable) {
-                                WidgetUpdateResult.FailureReason.TRANSIENT
-                            } else {
-                                WidgetUpdateResult.FailureReason.TERMINAL
-                            },
-                    )
-                }
-            }
-
-        private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
+    private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
             val mode = resolveRenderMode()
 
             AppLogger.d("WidgetUpdater: performing update in mode $mode (attempt $attempt)")
@@ -307,28 +270,28 @@ class WidgetUpdaterImpl
         }
 
     private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
-            when (result) {
-                is UpdateResult.Success -> {
-                    if (result.wasFull) {
-                        limitManager.setWidgetLimitExceeded(value = false)
-                    }
+        when (result) {
+            is UpdateResult.Success -> {
+                if (result.wasFull) {
+                    limitManager.setWidgetLimitExceeded(value = false)
                     limitExceededHandled.set(false)
-                    UpdateOutcome.Success()
                 }
+                UpdateOutcome.Success(shouldStop = result.wasFull)
+            }
 
-                is UpdateResult.LimitExceeded -> {
-                    UpdateOutcome.LimitExceeded
-                }
+            is UpdateResult.LimitExceeded -> {
+                UpdateOutcome.LimitExceeded
+            }
 
-                is UpdateResult.GenericFailure -> {
-                    if (result.isRetryable) {
-                        UpdateOutcome.Retry
-                    } else {
-                        AppLogger.e("Widget update: terminal failure encountered, stopping retries.")
-                        UpdateOutcome.Stop
-                    }
+            is UpdateResult.GenericFailure -> {
+                if (result.isRetryable) {
+                    UpdateOutcome.Retry
+                } else {
+                    AppLogger.e("Widget update: terminal failure encountered, stopping retries.")
+                    UpdateOutcome.Stop
                 }
             }
+        }
 
         private suspend fun safeUpdateInternal(
             context: Context,

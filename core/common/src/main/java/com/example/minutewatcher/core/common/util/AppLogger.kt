@@ -271,6 +271,7 @@ object AppLogger {
             }
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
+            return
         } catch (e: Exception) {
             lock.withLock {
                 isWorkerStarted = false

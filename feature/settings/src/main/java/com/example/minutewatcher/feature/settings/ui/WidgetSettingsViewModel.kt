@@ -20,8 +20,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -85,20 +83,6 @@ class WidgetSettingsViewModel
     init {
         loadSettings()
         setupAutoSave()
-        setupSaveResultCleanup()
-    }
-
-    @OptIn(FlowPreview::class)
-    private fun setupSaveResultCleanup() {
-        viewModelScope.launch {
-            state
-                .map { it.saveResult }
-                .debounce(2000.milliseconds)
-                .filter { it != null && it !is SaveResult.Success && it !is SaveResult.PartialSuccess }
-                .collect {
-                    reduce { copy(saveResult = null) }
-                }
-        }
     }
 
     private fun setupAutoSave() {

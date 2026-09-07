@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -27,22 +28,24 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
             assertFalse("Initial state should be not started", callTracker.isStarted())
 
             // 1. Arrange: make permissionStateNotifier.changes throw
+            // Suppress because Mockito's property stubbing is flagged as an unused Flow construction
+            @Suppress("UNUSED_EXPRESSION")
             doThrow(RuntimeException("Simulated failure")).whenever(permissionStateNotifier).changes
 
             // 2. Act: call ensureStarted()
-            var exceptionThrown = false
-            try {
-                callTracker.ensureStarted()
-            } catch (e: Exception) {
-                exceptionThrown = true
-            }
+            callTracker.ensureStarted()
             advanceUntilIdle()
 
-            // 3. Assert: isStarted should be false because of the exception
-            assertTrue("Exception should have been thrown", exceptionThrown)
+            // 3. Assert: isStarted should be false because of the exception, and status should be Error
             assertFalse("Tracker should not be started after failure", callTracker.isStarted())
+            assertTrue(
+                "Status should be Error",
+                callTracker.status.value is TrackingStatus.Error
+            )
 
             // 4. Arrange: fix the notifier
+            // Suppress because Mockito's property stubbing is flagged as an unused Flow construction
+            @Suppress("UNUSED_EXPRESSION")
             doReturn(permissionChangesFlow).whenever(permissionStateNotifier).changes
 
             // 5. Act: call ensureStarted() again
