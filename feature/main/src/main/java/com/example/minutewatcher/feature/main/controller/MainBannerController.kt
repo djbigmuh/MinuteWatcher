@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
@@ -15,6 +16,7 @@ import dagger.Lazy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,9 +28,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainBannerController manages the state of tracking banners (errors and notifications).
@@ -226,7 +230,10 @@ constructor(
      * **Thread Safety:** Safe to call from any coroutine context.
      */
     override suspend fun recover() {
-        observationScope.getJob()?.cancel()
+        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+            observationScope.getJob()?.cancelAndJoin()
+        }
+        observationScope.shutdown()
         isObservationStarted.set(false)
         appSearchRetryCount.value = 0
         appSearchBannerDismissed.value = false

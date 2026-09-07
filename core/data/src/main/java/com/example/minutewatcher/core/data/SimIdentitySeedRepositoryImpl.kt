@@ -56,17 +56,17 @@ internal class SimIdentitySeedRepositoryImpl
         val result = tryGetPersistentSeed(generator)
         if (result != null) return result
 
-            // Fallback to ephemeral seed under mutex (cache management only)
-            return seedMutex.withLock {
-                AppLogger.e(
-                    "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
-                        "All SIM identities will change. Previous statistics will be orphaned.",
-                )
-                _isEphemeralSeedActive.value = true
-                val seed = cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
-                SeedResolutionResult.Ephemeral(seed)
-            }
+        // Fallback to ephemeral seed under mutex (cache management only)
+        return seedMutex.withLock {
+            AppLogger.e(
+                "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
+                    "All SIM identities will change. Previous statistics will be orphaned.",
+            )
+            _isEphemeralSeedActive.value = true
+            val seed = cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
+            SeedResolutionResult.Ephemeral(seed)
         }
+    }
 
     private suspend fun tryGetPersistentSeed(generator: () -> String): SeedResolutionResult? {
         var result: SeedResolutionResult? = null

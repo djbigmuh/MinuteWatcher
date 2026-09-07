@@ -84,6 +84,11 @@ class WidgetUpdaterImpl
             deferred.complete(result)
             result
         } catch (e: CancellationException) {
+            coalescingMutex.withLock {
+                if (activeUpdate === deferred) {
+                    activeUpdate = null
+                }
+            }
             deferred.complete(
                 WidgetUpdateResult.Failure(
                     wasCoalesced = false,

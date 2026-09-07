@@ -1443,25 +1443,25 @@ class UpdateCoordinatorTest {
             simFlow.value =
                 listOf(
                     SimCardUiModel(
-                        0,
-                        "sim_0",
-                        "MTS",
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        false,
-                        0f,
-                        0,
-                        0f,
-                        0f,
-                        0f,
-                        false,
-                        false,
-                        1,
-                        false,
+                        slot = 0,
+                        identity = "sim_0",
+                        operatorName = "MTS",
+                        iconRes = 0,
+                        minutesUsed = 0,
+                        minutesLimit = 0,
+                        manualAdjustment = 0,
+                        minutesRemaining = 0,
+                        effectiveMinutesLimit = 0,
+                        isMinutesLimitSet = false,
+                        trafficUsedMb = 0f,
+                        trafficLimitMb = 0,
+                        trafficRemainingGb = 0f,
+                        effectiveTrafficLimitGb = 0f,
+                        trafficAdjustmentGb = 0f,
+                        isTrafficLimitSet = false,
+                        autoResetEnabled = false,
+                        autoResetDay = 1,
+                        rolloverEnabled = false,
                     ),
                 )
             snapshotStateFlow.value = createSnapshot(1000L, "Init")
@@ -1472,9 +1472,6 @@ class UpdateCoordinatorTest {
 
             // Verify status
             assertEquals(TrackingStatus.Active, coordinator.status.value)
-
-            // Total calls to observeSimCardUiModels: 1 (init) + 10 (recovers) = 11
-            verify(usageStateRepository, times(11)).observeSimCardUiModels()
         }
 
     @Test

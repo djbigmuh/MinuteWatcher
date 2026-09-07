@@ -205,14 +205,12 @@ object Constants {
      * Константы SIM.
      *
      * MAX_SUPPORTED_SIM_SLOTS — максимальное количество поддерживаемых SIM-слотов.
-     * MOCK_SUB_ID_BASE — базовый ID для мок-SIM (для бенчмарков).
      * SUPPORTED_SLOT_INDICES — диапазон поддерживаемых индексов слотов.
      * INVALID_SLOT_IDENTITY_PREFIX — префикс невалидной identity слота.
      *   Используется когда SIM не может быть идентифицирована.
      */
     object SimConstants {
         const val MAX_SUPPORTED_SIM_SLOTS = 10
-        const val MOCK_SUB_ID_BASE = 1000
         val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
         const val INVALID_SLOT_IDENTITY_PREFIX = "invalid_slot_"
 

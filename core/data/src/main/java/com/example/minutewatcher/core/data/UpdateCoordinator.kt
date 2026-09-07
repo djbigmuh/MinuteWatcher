@@ -87,6 +87,7 @@ class UpdateCoordinator
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                 observationScope.getJob()?.cancelAndJoin()
             }
+            observationScope.shutdown()
             monitoringJob.get()?.cancelAndJoin()
 
             stateMutex.withLock {
@@ -103,13 +104,14 @@ class UpdateCoordinator
         }
 
         private fun ensureObservationStarted() {
-            if (!isObservationStarted.compareAndSet(false, true)) {
-                // Already started or starting — check if job is still alive
+            if (isObservationStarted.get()) {
                 val job = observationScope.getJob()
                 if (job != null && job.isActive) return
-                // Job died — try to restart
-                if (!isObservationStarted.compareAndSet(false, true)) return
+                isObservationStarted.set(false)
             }
+
+            if (!isObservationStarted.compareAndSet(false, true)) return
+
             scope.launch {
                 try {
                     usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
@@ -119,13 +121,13 @@ class UpdateCoordinator
                     isObservationStarted.set(false)
                     throw e
                 } catch (e: Exception) {
+                    isObservationStarted.set(false)
                     AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
                     _status.value =
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.UNKNOWN,
                             "Failed to start widget observation: ${e.message}",
                         )
-                    isObservationStarted.set(false)
                 }
             }
         }

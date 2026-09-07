@@ -72,27 +72,38 @@ open class CallTracker
 
     internal fun ensureStarted() {
         if (isInitialized.compareAndSet(false, true)) {
-            startPermissionObserver()
-            initJob =
-                scope.launch {
-                    try {
-                        initMutex.withLock {
-                            refreshStatus(force = true)
+            try {
+                startPermissionObserver()
+                initJob =
+                    scope.launch {
+                        try {
+                            initMutex.withLock {
+                                refreshStatus(force = true)
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("CallTracker: Failed to initialize call tracking", e)
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("CallTracker: Failed to initialize call tracking", e)
                     }
-                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                isInitialized.set(false)
+                AppLogger.e("CallTracker: Failed to start initialization", e)
+                throw e
+            }
         }
     }
 
+    @VisibleForTesting
+    fun isStarted(): Boolean = isInitialized.get()
+
     private fun startPermissionObserver() {
+        val changesFlow = permissionStateNotifier.changes
         permissionObserverJob?.cancel()
         permissionObserverJob =
             scope.launch {
-                permissionStateNotifier.changes
+                changesFlow
                     .retryWhen { cause, attempt ->
                         if (attempt < MAX_RETRY_ATTEMPTS && cause !is CancellationException) {
                             val delayTime =
