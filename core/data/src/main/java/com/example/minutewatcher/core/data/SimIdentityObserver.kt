@@ -101,7 +101,8 @@ internal class SimIdentityObserver
                             emit(SeedResult.Fallback)
                             if (initialSeed != null) {
                                 // Если сид просто пуст (первый запуск), запускаем генерацию
-                                // Используем текущий контекст, чтобы генерация отменилась при отмене потока (flatMapLatest)
+                                // Используем текущий контекст, чтобы генерация отменилась
+                                // при отмене потока (flatMapLatest)
                                 CoroutineScope(currentCoroutineContext()).launch {
                                     try {
                                         generateSeedWithRetry()
@@ -124,10 +125,9 @@ internal class SimIdentityObserver
                     emitAll(
                         seedRepository.seedFlow
                             .filter { it.isNotEmpty() }
-                            .map { SeedResult.Real(it, isStable = true) }
+                            .map { SeedResult.Real(it, isStable = true) },
                     )
-                }
-                    .catch { e ->
+                }.catch { e ->
                         AppLogger.e("SimIdentityObserver: seedFlow source error", e)
                         emit(SeedResult.Fallback)
                     }
@@ -142,8 +142,9 @@ internal class SimIdentityObserver
     private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
         seedFlow
             .flatMapLatest { seed ->
-                if (_status.value is TrackingStatus.Error &&
-                    (_status.value as TrackingStatus.Error).message == "SIM identity seed unavailable"
+                val currentStatus = _status.value
+                if (currentStatus is TrackingStatus.Error &&
+                    currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING
                 ) {
                     _status.value = TrackingStatus.Idle
                 }

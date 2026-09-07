@@ -278,13 +278,18 @@ class TrafficTrackerTest {
             val tracker = startTracker()
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(35000L))
+
+            // Clear invocations again to ensure no background init calls interfere
+            clearInvocations(simUsageResetRepository)
+
             whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(any(), any(), any()))
                 .thenThrow(RuntimeException("Write failed"))
 
             tracker.updateTrafficUsage()
 
             val deltaMb = (34000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
-            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
+            verify(simUsageResetRepository, times(1))
+                .incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
 
             whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(any(), any(), any()))
                 .thenReturn(Unit)
@@ -633,8 +638,13 @@ class TrafficTrackerTest {
             val updateJob = launch { tracker.updateTrafficUsage() }
             runCurrent()
 
-            // At this point updateJob is suspended on mutex.withLock
+            // At this point updateJob is suspended on mutex.withLock inside withTimeoutOrNull.
+            // We advance time to trigger the timeout.
+            testScheduler.advanceTimeBy(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds + 100.milliseconds)
+            runCurrent()
 
+            // Now the timeout has occurred, but updateJob might be waiting for the mutex to release
+            // to finish the updateTrafficUsageLogic block and enter catch block.
             lockJob.cancel()
             runCurrent()
             testScheduler.advanceUntilIdle()
@@ -643,7 +653,7 @@ class TrafficTrackerTest {
             // Проверяем, что статус в итоге остался Error, так как catch блок в updateTrafficUsage его восстановил
             val finalStatus = tracker.status.value
             val isError = finalStatus is TrackingStatus.Error
-            assertTrue("Expected Error status to be preserved after race", isError)
+            assertTrue("Expected Error status to be preserved after race, but was $finalStatus", isError)
             assertEquals(TrafficUpdateTimeoutException.MESSAGE, (finalStatus as TrackingStatus.Error).message)
         }
 

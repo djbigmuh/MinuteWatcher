@@ -52,8 +52,7 @@ class AppSettingsRepositoryImpl
                         .map { prefs ->
                             consecutiveErrors = 0
                             prefs.toAppSettings()
-                        }
-                        .distinctUntilChanged()
+                        }.distinctUntilChanged()
                         .collect { emit(it) }
 
                     break // DataStore flow completed normally

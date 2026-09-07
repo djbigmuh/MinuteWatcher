@@ -376,7 +376,7 @@ class WidgetUpdaterImplTest {
             assertEquals(2, callCount)
             assertFalse(
                 "Limit flag should be reset after successful simplified update",
-                mockSettings.value.widgetLimitExceeded
+                mockSettings.value.widgetLimitExceeded,
             )
         }
 

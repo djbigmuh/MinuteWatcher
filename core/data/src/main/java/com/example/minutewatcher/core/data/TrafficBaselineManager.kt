@@ -10,7 +10,8 @@ import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,7 +31,35 @@ class TrafficBaselineManager
         private val timeProvider: TimeProvider,
         private val networkStatsProvider: NetworkStatsProvider,
     ) {
-        val baselineNeedsRetry = ConcurrentHashMap<String, Int>()
+    private val retryMutex = Mutex()
+    private val retryCounts = mutableMapOf<String, Int>()
+
+    suspend fun getRetryCount(identity: String): Int? =
+        retryMutex.withLock {
+            retryCounts[identity]
+        }
+
+    suspend fun setRetryCount(
+        identity: String,
+        count: Int,
+    ) = retryMutex.withLock {
+        retryCounts[identity] = count
+    }
+
+    suspend fun removeRetry(identity: String) =
+        retryMutex.withLock {
+            retryCounts.remove(identity)
+        }
+
+    suspend fun cleanupRetries(activeIdentities: Set<String>) =
+        retryMutex.withLock {
+            retryCounts.keys.retainAll(activeIdentities)
+        }
+
+    suspend fun removeRetriesExcept(identity: String) =
+        retryMutex.withLock {
+            retryCounts.entries.removeIf { it.key != identity }
+        }
 
         fun getCurrentMobileBytes(startTime: Long): StatsResult {
             val now = timeProvider.now()
@@ -60,7 +89,7 @@ class TrafficBaselineManager
                     simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
                     AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
 
-                    baselineNeedsRetry.remove(identity)
+                    removeRetry(identity)
                     status.value = TrackingStatus.Active
                 } else {
                     val message =
@@ -102,10 +131,6 @@ class TrafficBaselineManager
                     }
                 }
             }
-        }
-
-        fun cleanupRetries(activeIdentities: Set<String>) {
-            baselineNeedsRetry.entries.removeIf { it.key !in activeIdentities }
         }
 
         companion object {

@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -63,9 +64,9 @@ class UpdateCoordinator
     private var consecutiveUpdateFailures = 0
     private var observationRestartCount = 0
     private var degradedCycleCount = 0
-    private val stateLock = Any()
+    private val isObservationStarted = AtomicBoolean(false)
+    private val stateMutex = Mutex()
 
-    private val startObservationMutex = Mutex()
     private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
     private val monitoringJob = AtomicReference<Job?>(null)
     private val currentObservationJob = AtomicReference<Job?>(null)
@@ -87,7 +88,7 @@ class UpdateCoordinator
             }
             monitoringJob.get()?.cancelAndJoin()
 
-            synchronized(stateLock) {
+            stateMutex.withLock {
                 observationRestartCount = 0
                 degradedCycleCount = 0
                 lastSnapshotHash = null
@@ -96,16 +97,34 @@ class UpdateCoordinator
             }
             widgetUpdater.recover()
 
-            startObservationMutex.withLock {
-                setupObservation()
-            }
+            isObservationStarted.set(false)
+            ensureObservationStarted()
         }
 
         private fun ensureObservationStarted() {
+            if (!isObservationStarted.compareAndSet(false, true)) {
+                // Already started or starting — check if job is still alive
+                val job = observationScope.getJob()
+                if (job != null && job.isActive) return
+                // Job died — try to restart
+                if (!isObservationStarted.compareAndSet(false, true)) return
+            }
             scope.launch {
-                startObservationMutex.withLock {
-                    if (observationScope.getJob()?.isActive == true) return@withLock
+                try {
+                    usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
+                    AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
                     setupObservation()
+                } catch (e: CancellationException) {
+                    isObservationStarted.set(false)
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
+                    _status.value =
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Failed to start widget observation: ${e.message}",
+                        )
+                    isObservationStarted.set(false)
                 }
             }
         }
@@ -118,10 +137,6 @@ class UpdateCoordinator
                 }
 
             try {
-                _status.value = TrackingStatus.Active
-                usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
-                AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
-
                 val firstSnapshot = waitForInitialSnapshot()
 
                 if (firstSnapshot == null) {
@@ -237,7 +252,7 @@ class UpdateCoordinator
                 if (currentObservationJob.get() !== newJob) return@launch
 
             val (restartCount, cycles, isEnteringDegraded) =
-                synchronized(stateLock) {
+                stateMutex.withLock {
                     val count = ++observationRestartCount
                     var currentCycles = degradedCycleCount
                     var enteringDegraded = false
@@ -250,55 +265,65 @@ class UpdateCoordinator
 
                 val delayMs =
                     if (isEnteringDegraded) {
-                        if (cycles >= MAX_DEGRADED_CYCLES) {
-                            AppLogger.e(
-                                "UpdateCoordinator: observation restart limit reached ($restartCount) " +
-                                    "and max degraded cycles reached ($cycles). Permanent stop.",
-                            )
-                            _status.value =
-                                TrackingStatus.Error(
-                                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                                    "Widget observation permanently stopped after $cycles degraded cycles",
-                                )
-                            return@launch
-                        }
-
-                        AppLogger.e(
-                            "UpdateCoordinator: observation restart limit reached ($restartCount), " +
-                                "entering degraded mode (cycle $cycles)",
-                        )
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.DATABASE_ERROR,
-                                "Widget observation failed after $restartCount restarts. " +
-                                    "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
-                            )
-                        synchronized(stateLock) {
-                            observationRestartCount = 0
-                        }
-                        MAX_RESTART_COOLDOWN_MS
+                        handleDegradedMode(restartCount, cycles)
                     } else {
                         calculateRestartDelay(restartCount)
                     }
 
-                AppLogger.w(
-                    "UpdateCoordinator: observation terminated unexpectedly, " +
-                        "scheduling restart #$restartCount in ${delayMs}ms",
-                )
-                delay(delayMs.milliseconds)
+            if (delayMs < 0) return@launch // Permanent stop
 
-                if (observationScope.getJob() === newJob) {
-                    synchronized(stateLock) {
-                        lastSnapshotHash = null
-                        consecutiveUpdateFailures = 0
-                        // В деградированном режиме оставляем Error для информирования UI
-                        if (restartCount < MAX_OBSERVATION_RESTARTS) {
-                            _status.value = TrackingStatus.Idle
-                        }
+            AppLogger.w(
+                "UpdateCoordinator: observation terminated unexpectedly, " +
+                    "scheduling restart #$restartCount in ${delayMs}ms",
+            )
+            delay(delayMs.milliseconds)
+
+            if (observationScope.getJob() === newJob) {
+                stateMutex.withLock {
+                    lastSnapshotHash = null
+                    consecutiveUpdateFailures = 0
+                    // В деградированном режиме оставляем Error для информирования UI
+                    if (restartCount < MAX_OBSERVATION_RESTARTS) {
+                        _status.value = TrackingStatus.Idle
                     }
-                    ensureObservationStarted()
                 }
+                isObservationStarted.set(false)
+                ensureObservationStarted()
             }
+        }
+    }
+
+    private suspend fun handleDegradedMode(
+        restartCount: Int,
+        cycles: Int,
+    ): Long {
+        if (cycles >= MAX_DEGRADED_CYCLES) {
+            AppLogger.e(
+                "UpdateCoordinator: observation restart limit reached ($restartCount) " +
+                    "and max degraded cycles reached ($cycles). Permanent stop.",
+            )
+            _status.value =
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    "Widget observation permanently stopped after $cycles degraded cycles",
+                )
+            return -1 // Signal to stop
+        }
+
+        AppLogger.e(
+            "UpdateCoordinator: observation restart limit reached ($restartCount), " +
+                "entering degraded mode (cycle $cycles)",
+        )
+        _status.value =
+            TrackingStatus.Error(
+                TrackingStatus.ErrorType.DATABASE_ERROR,
+                "Widget observation failed after $restartCount restarts. " +
+                    "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
+            )
+        stateMutex.withLock {
+            observationRestartCount = 0
+        }
+        return MAX_RESTART_COOLDOWN_MS
     }
 
     private fun calculateRestartDelay(restartCount: Int): Long {
@@ -336,19 +361,19 @@ class UpdateCoordinator
         handleUpdateResult(result, newHash)
     }
 
-    private fun checkShouldUpdate(newHash: Int): Boolean =
-        synchronized(stateLock) {
+    private suspend fun checkShouldUpdate(newHash: Int): Boolean =
+        stateMutex.withLock {
             if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
                 AppLogger.d(
                     "UpdateCoordinator: widget update suppressed due to too many failures " +
                         "($consecutiveUpdateFailures)",
                 )
-                return@synchronized false
+                return@withLock false
             }
 
             if (newHash == lastSnapshotHash) {
                 AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
-                return@synchronized false
+                return@withLock false
             }
             true
         }
@@ -366,11 +391,11 @@ class UpdateCoordinator
             )
         }
 
-    private fun handleUpdateResult(
+    private suspend fun handleUpdateResult(
         result: WidgetUpdateResult,
         newHash: Int,
     ) {
-        synchronized(stateLock) {
+        stateMutex.withLock {
             if (result.isSuccess) {
                 _status.value = TrackingStatus.Active
                 observationRestartCount = 0
@@ -468,15 +493,17 @@ class UpdateCoordinator
         }
 
     private suspend fun performForcedUpdate(): Boolean {
-        synchronized(stateLock) {
-            if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+        val suppressed =
+            stateMutex.withLock {
+                consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES
+            }
+        if (suppressed) {
                 AppLogger.w(
                     "UpdateCoordinator: forced widget update suppressed due to too many failures " +
                         "($consecutiveUpdateFailures)",
                 )
                 return false
             }
-        }
 
         // Отменяем текущее реактивное обновление, если оно идет.
         currentUpdateJob?.cancel()
@@ -484,7 +511,7 @@ class UpdateCoordinator
         return try {
             val result = widgetUpdater.updateAll()
 
-            synchronized(stateLock) {
+            stateMutex.withLock {
                 if (result.isSuccess) {
                     consecutiveUpdateFailures = 0
                     observationRestartCount = 0
@@ -504,7 +531,7 @@ class UpdateCoordinator
             throw e
         } catch (e: Exception) {
             AppLogger.w("Force widget update failed, hash not updated", e)
-            synchronized(stateLock) {
+            stateMutex.withLock {
                 handleUpdateFailure()
             }
             false

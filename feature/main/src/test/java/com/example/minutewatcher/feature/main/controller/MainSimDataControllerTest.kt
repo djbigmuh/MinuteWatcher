@@ -47,8 +47,8 @@ class MainSimDataControllerTest {
         whenever(usageStateRepository.isDataLoaded()).thenReturn(true)
     }
 
-    private fun TestScope.createController(): MainSimDataController {
-        return MainSimDataController(
+    private fun TestScope.createController(): MainSimDataController =
+        MainSimDataController(
             usageStateRepository,
             trackingRecoveryController,
             simIdentityRepository,
@@ -58,7 +58,6 @@ class MainSimDataControllerTest {
             StandardTestDispatcher(testScheduler),
             backgroundScope,
         )
-    }
 
     @Test
     fun `highlightSlot sets and clears slot after delay`() =

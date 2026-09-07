@@ -1439,9 +1439,30 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
 
             // Unblock everything
-            simFlow.value = listOf(
-                SimCardUiModel(0, "sim_0", "MTS", 0, 0, 0, 0, 0, 0, false, 0f, 0, 0f, 0f, 0f, false, false, 1, false)
-            )
+            simFlow.value =
+                listOf(
+                    SimCardUiModel(
+                        0,
+                        "sim_0",
+                        "MTS",
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        false,
+                        0f,
+                        0,
+                        0f,
+                        0f,
+                        0f,
+                        false,
+                        false,
+                        1,
+                        false,
+                    ),
+                )
             snapshotStateFlow.value = createSnapshot(1000L, "Init")
 
             // Advance virtual time

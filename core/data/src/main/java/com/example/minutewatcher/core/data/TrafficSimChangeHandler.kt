@@ -84,7 +84,7 @@ class TrafficSimChangeHandler
 
             return if (isSimChanged) {
                 // Read the updated retry count from the map to accurately log the state after the attempt.
-                val retryCount = baselineManager.baselineNeedsRetry.getOrDefault(targetIdentity, 0)
+                val retryCount = baselineManager.getRetryCount(targetIdentity) ?: 0
                 handleSkipDelta(target, retryCount, status)
                 null
             } else {
@@ -111,7 +111,7 @@ class TrafficSimChangeHandler
             isSimChanged: Boolean,
         ) {
             // Centralized cleanup: remove all retries for other identities
-            baselineManager.baselineNeedsRetry.entries.removeIf { it.key != identity }
+            baselineManager.removeRetriesExcept(identity)
 
             if (!isSimChanged) return
 
@@ -122,12 +122,12 @@ class TrafficSimChangeHandler
                 // reset operation fails and enters a retry cycle.
                 updateLastDataSubId(currentDataSubId)
 
-                val retryCount = baselineManager.baselineNeedsRetry.getOrDefault(identity, 0)
+                val retryCount = baselineManager.getRetryCount(identity) ?: 0
                 if (retryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
                     AppLogger.e(
                         "TrafficSimChangeHandler: Baseline reset failed after $retryCount retries for $identity",
                     )
-                    baselineManager.baselineNeedsRetry.remove(identity)
+                    baselineManager.removeRetry(identity)
                     status.value =
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -139,7 +139,7 @@ class TrafficSimChangeHandler
                 val statsResult = baselineManager.getCurrentMobileBytes(0L)
                 if (statsResult is StatsResult.Success) {
                     simUsageResetRepository.setLastTotalBytes(identity, statsResult.bytes)
-                    baselineManager.baselineNeedsRetry.remove(identity)
+                    baselineManager.removeRetry(identity)
                     AppLogger.d("Baseline reset successfully for $identity")
                     status.value = TrackingStatus.Active
                 } else {
@@ -151,7 +151,7 @@ class TrafficSimChangeHandler
                             "Stats unavailable"
                         }
                     AppLogger.w("Stats unavailable on SIM change for $identity: $reason. Retrying.")
-                    baselineManager.baselineNeedsRetry[identity] = retryCount + 1
+                    baselineManager.setRetryCount(identity, retryCount + 1)
                     status.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, reason)
                 }
             } catch (e: CancellationException) {

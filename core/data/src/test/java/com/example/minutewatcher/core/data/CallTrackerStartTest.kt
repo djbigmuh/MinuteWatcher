@@ -205,22 +205,21 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             setupCommonMocks()
             var refreshStatusCalled = false
             val attributionResolver = createAttributionResolver()
-            val startHandler = createStartHandler(attributionResolver)
-            val endHandler = createEndHandler(attributionResolver)
+            val mutexHolder = createMutexHolder()
             val tracker =
                 object : CallTracker(
-                    context = context,
                     callSessionRepository = callSessionRepository,
                     dataChangeNotifier = dataChangeNotifier,
                     permissionManager = permissionManager,
-                    telephonyManager = telephonyManager,
                     scope = testScope,
                     attributionResolver = attributionResolver,
-                    startHandler = startHandler,
-                    endHandler = endHandler,
+                    startHandler = createStartHandler(attributionResolver, mutexHolder),
+                    endHandler = createEndHandler(attributionResolver, mutexHolder),
                     sessionCleaner = sessionCleaner,
                     settingsHandler = settingsHandler,
                     permissionStateNotifier = permissionStateNotifier,
+                    callEndResolver = createEndResolver(),
+                    callMutexHolder = mutexHolder,
                 ) {
                     override suspend fun refreshStatus(force: Boolean) {
                         refreshStatusCalled = true

@@ -129,14 +129,16 @@ object AppLogger {
         var dir: File? = null
 
         lock.withLock {
-            if (!isFileLoggingEnabled) return
-            dir = logDir ?: return
-
-            val totalSize = criticalQueue.size + normalQueue.size
-            if (entry.isCritical) {
-                fallbackRequired = !enqueueCritical(entry, totalSize)
-            } else {
-                enqueueNormal(entry, totalSize)
+            if (isFileLoggingEnabled) {
+                dir = logDir
+                if (dir != null) {
+                    val totalSize = criticalQueue.size + normalQueue.size
+                    if (entry.isCritical) {
+                        fallbackRequired = !enqueueCritical(entry, totalSize)
+                    } else {
+                        enqueueNormal(entry, totalSize)
+                    }
+                }
             }
         }
 

@@ -138,7 +138,6 @@ class SimIdentityObserverTest {
             job.cancel()
         }
 
-
     @Test
     fun `use ephemeral seed when seed is unavailable instead of Fallback`() =
         runTest {
@@ -156,19 +155,20 @@ class SimIdentityObserverTest {
                     }
                 }
 
-            val physicalSims = listOf(
-                ActiveSimInfo(
-                    identity = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, isStable = false),
-                    slotIndex = 0,
-                    subscriptionId = 1,
-                    iccId = "icc_1",
-                    displayName = "Real SIM",
-                    carrierName = "Carrier",
-                    mccMnc = "12345",
-                    isDefaultData = true,
-                    isDefaultVoice = true,
+            val physicalSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, isStable = false),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        iccId = "icc_1",
+                        displayName = "Real SIM",
+                        carrierName = "Carrier",
+                        mccMnc = "12345",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
                 )
-            )
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(physicalSims))
 
             observer =
@@ -191,7 +191,12 @@ class SimIdentityObserverTest {
             val status = observer.status.value
             assertEquals("Status should be Active despite seed delay", TrackingStatus.Active, status)
             assertTrue("SIMs should be discovered using ephemeral seed", observer.activeSimsCache.value.isNotEmpty())
-            assertEquals("Real SIM", observer.activeSimsCache.value.first().displayName)
+            assertEquals(
+                "Real SIM",
+                observer.activeSimsCache.value
+                    .first()
+                    .displayName,
+            )
 
             job.cancel()
         }
@@ -454,7 +459,8 @@ class SimIdentityObserverTest {
             // The important part is the final state.
             assertTrue(
                 "Final emission should contain physical SIMs",
-                emissions.last().any { it.displayName == "Real SIM" })
+                emissions.last().any { it.displayName == "Real SIM" },
+            )
             assertEquals(1, emissions.last().size)
 
             job.cancel()
@@ -466,33 +472,35 @@ class SimIdentityObserverTest {
             val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 2))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
 
-            val physicalSims = listOf(
-                ActiveSimInfo(
-                    identity = SimIdentity("real_icc", 1, 0, IdentitySource.ICCID, isStable = true),
-                    slotIndex = 0,
-                    subscriptionId = 1,
-                    iccId = "real_icc",
-                    displayName = "Real SIM",
-                    carrierName = "Real Carrier",
-                    mccMnc = "12345",
-                    isDefaultData = true,
-                    isDefaultVoice = true,
+            val physicalSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("real_icc", 1, 0, IdentitySource.ICCID, isStable = true),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        iccId = "real_icc",
+                        displayName = "Real SIM",
+                        carrierName = "Real Carrier",
+                        mccMnc = "12345",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
                 )
-            )
 
-            val mockSims = listOf(
-                ActiveSimInfo(
-                    identity = SimIdentity("mock_icc", 2, 1, IdentitySource.MOCK, isStable = false),
-                    slotIndex = 1,
-                    subscriptionId = 2,
-                    iccId = "mock_icc",
-                    displayName = "Mock SIM",
-                    carrierName = "Mock Carrier",
-                    mccMnc = "00000",
-                    isDefaultData = false,
-                    isDefaultVoice = false,
+            val mockSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("mock_icc", 2, 1, IdentitySource.MOCK, isStable = false),
+                        slotIndex = 1,
+                        subscriptionId = 2,
+                        iccId = "mock_icc",
+                        displayName = "Mock SIM",
+                        carrierName = "Mock Carrier",
+                        mccMnc = "00000",
+                        isDefaultData = false,
+                        isDefaultVoice = false,
+                    ),
                 )
-            )
 
             whenever(mockSimProvider.getMockSims(2)).thenReturn(mockSims)
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(physicalSims))
@@ -517,19 +525,20 @@ class SimIdentityObserverTest {
             val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 2))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
 
-            val mockSims = listOf(
-                ActiveSimInfo(
-                    identity = SimIdentity("mock_icc", 2, 1, IdentitySource.MOCK, isStable = false),
-                    slotIndex = 1,
-                    subscriptionId = 2,
-                    iccId = "mock_icc",
-                    displayName = "Mock SIM",
-                    carrierName = "Mock Carrier",
-                    mccMnc = "00000",
-                    isDefaultData = false,
-                    isDefaultVoice = false,
+            val mockSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("mock_icc", 2, 1, IdentitySource.MOCK, isStable = false),
+                        slotIndex = 1,
+                        subscriptionId = 2,
+                        iccId = "mock_icc",
+                        displayName = "Mock SIM",
+                        carrierName = "Mock Carrier",
+                        mccMnc = "00000",
+                        isDefaultData = false,
+                        isDefaultVoice = false,
+                    ),
                 )
-            )
 
             whenever(mockSimProvider.getMockSims(2)).thenReturn(mockSims)
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(emptyList()))
@@ -548,38 +557,40 @@ class SimIdentityObserverTest {
         }
 
     @Test
-    fun `activeSimsCache explicitly prioritizes physical SIMs even if benchmarkSimCount is positive in non-benchmark build`() =
+    fun `activeSimsCache prioritizes physical SIMs over benchmarkSimCount in non-benchmark build`() =
         runTest {
             val settingsFlow = MutableStateFlow(AppSettings(benchmarkSimCount = 5))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
 
-            val physicalSims = listOf(
-                ActiveSimInfo(
-                    identity = SimIdentity("real", 1, 0, IdentitySource.ICCID, isStable = true),
-                    slotIndex = 0,
-                    subscriptionId = 1,
-                    iccId = "real",
-                    displayName = "Real SIM",
-                    carrierName = "Carrier",
-                    mccMnc = "12345",
-                    isDefaultData = true,
-                    isDefaultVoice = true,
+            val physicalSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("real", 1, 0, IdentitySource.ICCID, isStable = true),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        iccId = "real",
+                        displayName = "Real SIM",
+                        carrierName = "Carrier",
+                        mccMnc = "12345",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
                 )
-            )
 
-            val mocks = List(5) { i ->
-                ActiveSimInfo(
-                    identity = SimIdentity("mock_$i", i + 10, i, IdentitySource.MOCK, isStable = false),
-                    slotIndex = i,
-                    subscriptionId = i + 10,
-                    iccId = "mock_$i",
-                    displayName = "Mock $i",
-                    carrierName = "Mock",
-                    mccMnc = "00000",
-                    isDefaultData = i == 0,
-                    isDefaultVoice = i == 0,
-                )
-            }
+            val mocks =
+                List(5) { i ->
+                    ActiveSimInfo(
+                        identity = SimIdentity("mock_$i", i + 10, i, IdentitySource.MOCK, isStable = false),
+                        slotIndex = i,
+                        subscriptionId = i + 10,
+                        iccId = "mock_$i",
+                        displayName = "Mock $i",
+                        carrierName = "Mock",
+                        mccMnc = "00000",
+                        isDefaultData = i == 0,
+                        isDefaultVoice = i == 0,
+                    )
+                }
 
             whenever(mockSimProvider.getMockSims(5)).thenReturn(mocks)
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(physicalSims))
@@ -633,6 +644,7 @@ class SimIdentityObserverTest {
             // Обычно Flow из DataStore бросают IOException.
 
             // Подождите, в моей новой реализации SimIdentityObserver.kt:
+
             /*
             val seedFlow: Flow<SeedResult> =
                 manualTrigger
@@ -656,13 +668,15 @@ class SimIdentityObserverTest {
                                 }
                             }
                     }.distinctUntilChanged()
-            */
+             */
+
             // Если seedRepository.seedFlow бросает ошибку, то seedFlow (observer) упадет.
             // Я должен добавить .catch { emit(SeedResult.Fallback) }
 
             assertTrue(
                 "Should have emitted Fallback seed",
-                emissions.any { it is SeedResult.Fallback })
+                emissions.any { it is SeedResult.Fallback },
+            )
             job.cancel()
         }
 }

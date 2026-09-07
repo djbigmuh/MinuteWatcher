@@ -1,8 +1,6 @@
 package com.example.minutewatcher.core.data
 
 import android.Manifest
-import android.content.Context
-import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -12,7 +10,6 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -42,11 +39,9 @@ import kotlin.time.Duration.Companion.milliseconds
 open class CallTracker
     @Inject
     internal constructor(
-        @ApplicationContext context: Context,
         private val callSessionRepository: CallSessionRepository,
         private val dataChangeNotifier: DataChangeNotifier,
         private val permissionManager: PermissionManager,
-        telephonyManager: TelephonyManager,
         @ApplicationScope private val scope: CoroutineScope,
         private val attributionResolver: CallAttributionResolver,
         private val startHandler: CallStartHandler,
@@ -54,6 +49,8 @@ open class CallTracker
         private val sessionCleaner: CallSessionCleaner,
         private val settingsHandler: CallTrackingSettingsHandler,
         private val permissionStateNotifier: PermissionStateNotifier,
+        private val callEndResolver: CallEndResolver,
+        private val callMutexHolder: CallMutexHolder,
     ) : TrackingStatusProvider {
     override val key: String = "calls"
 
@@ -130,15 +127,6 @@ open class CallTracker
             }
     }
 
-    private val callMutex = Mutex()
-    private val callEndResolver =
-        CallEndResolver(
-            context,
-            callSessionRepository,
-            permissionManager,
-            telephonyManager,
-        ) { _status.value = it }
-
     /**
      * Records call start time for a specific subscription ID.
      *
@@ -150,7 +138,6 @@ open class CallTracker
         initMutex.withLock {
             startHandler.executeCallStart(
                 subId = subId,
-                callMutex = callMutex,
                 statusFlow = _status,
                 checkPermissions = ::checkPermissions,
                 cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
@@ -177,7 +164,6 @@ open class CallTracker
                 refreshStatus = ::refreshStatus,
                 endCallAction = ::endCall,
                 isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
-                callMutex = callMutex,
                 clearAllCallSessions = { sessionCleaner.clearAllSessions() },
                 notifyDataChanged = { dataChangeNotifier.notifyDataChanged() },
             )
@@ -248,7 +234,7 @@ open class CallTracker
     private suspend fun clearSessionsAndRefresh(tag: String) {
         var operationCompleted = false
         try {
-            callMutex.withLock {
+            callMutexHolder.mutex.withLock {
                 sessionCleaner.clearAllSessions()
                 AppLogger.d("CallTracker: cleared all sessions during $tag")
             }

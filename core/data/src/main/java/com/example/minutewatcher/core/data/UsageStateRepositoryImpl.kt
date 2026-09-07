@@ -54,9 +54,9 @@ class UsageStateRepositoryImpl
         private val deps: UsageRepositoryDependencies,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
-    private val _isDataLoaded = AtomicBoolean(false)
+    private val isDataLoadedSet = AtomicBoolean(false)
 
-    override fun isDataLoaded(): Boolean = _isDataLoaded.get()
+    override fun isDataLoaded(): Boolean = isDataLoadedSet.get()
 
         private val simUsagesFlow: Flow<List<SimUsage>> =
             deps.simIdentityRepository
@@ -90,7 +90,7 @@ class UsageStateRepositoryImpl
     private val simUsagesSharedFlow: StateFlow<List<SimUsage>> =
         combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ ->
             if (usages.isNotEmpty()) {
-                _isDataLoaded.set(true)
+                isDataLoadedSet.set(true)
             }
             usages
         }.stateIn(

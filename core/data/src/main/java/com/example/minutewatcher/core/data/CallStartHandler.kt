@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -24,10 +23,10 @@ internal class CallStartHandler
         private val timeProvider: TimeProvider,
         private val retryHelper: DataStoreRetryHelper,
         private val attributionResolver: CallAttributionResolver,
+        private val callMutexHolder: CallMutexHolder,
     ) {
     suspend fun executeCallStart(
         subId: Int,
-        callMutex: Mutex,
         statusFlow: MutableStateFlow<TrackingStatus>,
         checkPermissions: () -> Boolean,
         cleanupCounters: suspend (Int) -> Unit,
@@ -48,7 +47,7 @@ internal class CallStartHandler
                 return
             }
 
-            callMutex.withLock {
+            callMutexHolder.mutex.withLock {
                 if (!isCallTrackingEnabled()) {
                     AppLogger.d("CallTracker: tracking disabled, ignoring OFFHOOK for subId $targetSubId")
                     cleanupCounters(targetSubId)

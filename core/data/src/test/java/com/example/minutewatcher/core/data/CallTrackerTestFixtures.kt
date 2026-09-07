@@ -68,17 +68,17 @@ abstract class CallTrackerTestFixtures {
 
     internal fun createTracker(): CallTracker {
         val attributionResolver = createAttributionResolver()
-        val startHandler = createStartHandler(attributionResolver)
-        val endHandler = createEndHandler(attributionResolver)
+        val mutexHolder = createMutexHolder()
+        val startHandler = createStartHandler(attributionResolver, mutexHolder)
+        val endHandler = createEndHandler(attributionResolver, mutexHolder)
         val sessionCleaner = createSessionCleaner(attributionResolver)
         val settingsHandler = createSettingsHandler()
+        val endResolver = createEndResolver()
 
         return CallTracker(
-            context = context,
             callSessionRepository = callSessionRepository,
             dataChangeNotifier = dataChangeNotifier,
             permissionManager = permissionManager,
-            telephonyManager = telephonyManager,
             scope = testScope,
             attributionResolver = attributionResolver,
             startHandler = startHandler,
@@ -86,6 +86,8 @@ abstract class CallTrackerTestFixtures {
             sessionCleaner = sessionCleaner,
             settingsHandler = settingsHandler,
             permissionStateNotifier = permissionStateNotifier,
+            callEndResolver = endResolver,
+            callMutexHolder = mutexHolder,
         )
     }
 
@@ -98,21 +100,29 @@ abstract class CallTrackerTestFixtures {
             dataChangeNotifier,
         )
 
-    internal fun createStartHandler(attributionResolver: CallAttributionResolver) =
-        CallStartHandler(
-            callSessionRepository,
-            timeProvider,
-            retryHelper,
-            attributionResolver,
-        )
+    internal fun createStartHandler(
+        attributionResolver: CallAttributionResolver,
+        mutexHolder: CallMutexHolder = createMutexHolder(),
+    ) = CallStartHandler(
+        callSessionRepository,
+        timeProvider,
+        retryHelper,
+        attributionResolver,
+        mutexHolder,
+    )
 
-    internal fun createEndHandler(attributionResolver: CallAttributionResolver) =
-        CallEndHandler(
-            callSessionRepository,
-            timeProvider,
-            retryHelper,
-            attributionResolver,
-        )
+    internal fun createEndHandler(
+        attributionResolver: CallAttributionResolver,
+        mutexHolder: CallMutexHolder = createMutexHolder(),
+    ) = CallEndHandler(
+        callSessionRepository,
+        timeProvider,
+        retryHelper,
+        attributionResolver,
+        mutexHolder,
+    )
+
+    internal fun createMutexHolder() = CallMutexHolder()
 
     internal fun createSessionCleaner(attributionResolver: CallAttributionResolver) =
         CallSessionCleaner(
@@ -126,6 +136,14 @@ abstract class CallTrackerTestFixtures {
             simUsageRepository,
             dataChangeNotifier,
             retryHelper,
+        )
+
+    internal fun createEndResolver() =
+        CallEndResolver(
+            context = context,
+            callSessionRepository = callSessionRepository,
+            permissionManager = permissionManager,
+            telephonyManager = telephonyManager,
         )
 
     protected suspend fun setupCommonMocks() {

@@ -10,50 +10,63 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.TrackingStatus
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Вспомогательный класс для разрешения завершения звонков в неопределенных ситуациях.
  * Вынесен из [CallTracker] для уменьшения сложности.
  */
-internal class CallEndResolver(
-    private val context: Context,
+@Singleton
+internal class CallEndResolver
+@Inject
+constructor(
+    @ApplicationContext private val context: Context,
     private val callSessionRepository: CallSessionRepository,
     private val permissionManager: PermissionManager,
     private val telephonyManager: TelephonyManager,
-    private val setError: (TrackingStatus.Error) -> Unit,
 ) {
-    suspend fun resolveUnknownSubIdEnd(): List<Int> {
+    sealed interface ResolveResult {
+        data class SubIds(
+            val ids: List<Int>,
+        ) : ResolveResult
+
+        data class Error(
+            val error: TrackingStatus.Error,
+        ) : ResolveResult
+    }
+
+    suspend fun resolveUnknownSubIdEnd(): ResolveResult {
         if (!permissionManager.hasPhoneStatePermission()) {
             AppLogger.w("CallEndResolver: permission revoked during resolveUnknownSubIdEnd")
-            setError(
+            return ResolveResult.Error(
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.PERMISSION_MISSING,
                     "Permission revoked during call end resolution",
                 ),
             )
-            return emptyList()
         }
 
         val activeSubIds = fetchActiveSubIds()
         return when {
             activeSubIds.isEmpty() -> {
                 AppLogger.d("Call ended with unknown subId and no active sessions found")
-                emptyList()
+                ResolveResult.SubIds(emptyList())
             }
 
             isDeviceIdle(activeSubIds) -> {
                 AppLogger.d("Call ended with unknown subId and global state is IDLE. Closing all sessions.")
-                activeSubIds
+                ResolveResult.SubIds(activeSubIds)
             }
 
             else -> {
                 val target = findTargetSubId(activeSubIds)
                 if (target != null) {
-                    listOf(target)
+                    ResolveResult.SubIds(listOf(target))
                 } else {
-                    handleAmbiguousIdle(activeSubIds)
-                    emptyList()
+                    ResolveResult.Error(handleAmbiguousIdle(activeSubIds))
                 }
             }
         }
@@ -93,10 +106,10 @@ internal class CallEndResolver(
         }
     }
 
-    private fun handleAmbiguousIdle(activeSubIds: List<Int>) {
+    private fun handleAmbiguousIdle(activeSubIds: List<Int>): TrackingStatus.Error {
         val message = "Cannot attribute unknown IDLE event for multiple active calls (${activeSubIds.size})"
         AppLogger.e(message, null)
-        setError(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
+        return TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
     }
 
     @Suppress("MissingPermission")

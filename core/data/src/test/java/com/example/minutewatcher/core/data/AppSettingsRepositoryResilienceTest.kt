@@ -87,9 +87,9 @@ class AppSettingsRepositoryResilienceTest {
             val failingDataStore =
                 object : DataStore<Preferences> {
                     override val data = flow<Preferences> { throw IOException("Permanent failure") }
-                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
                         throw IOException("Permanent failure")
-                    }
                 }
 
             val repository = AppSettingsRepositoryImpl(failingDataStore, backgroundScope)

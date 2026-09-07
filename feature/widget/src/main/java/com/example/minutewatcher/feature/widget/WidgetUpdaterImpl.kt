@@ -102,7 +102,10 @@ class WidgetUpdaterImpl
                 )
             deferred.complete(failure)
             failure
-        } catch (e: Throwable) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Throwable,
+        ) {
+            AppLogger.e("WidgetUpdater: unexpected throwable during update", e)
             deferred.complete(
                 WidgetUpdateResult.Failure(
                     wasCoalesced = false,

@@ -22,11 +22,11 @@ import javax.inject.Singleton
 abstract class IdentityDataModule {
     @Binds
     @Singleton
-    abstract fun bindSimIdentitySeedRepository(impl: SimIdentitySeedRepositoryImpl): SimIdentitySeedRepository
+    internal abstract fun bindSimIdentitySeedRepository(impl: SimIdentitySeedRepositoryImpl): SimIdentitySeedRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimIdentityRepository(impl: SimIdentityRepositoryImpl): SimIdentityRepository
+    internal abstract fun bindSimIdentityRepository(impl: SimIdentityRepositoryImpl): SimIdentityRepository
 
     companion object {
         @Provides

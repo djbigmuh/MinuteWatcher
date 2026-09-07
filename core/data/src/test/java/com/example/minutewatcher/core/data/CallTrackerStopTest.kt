@@ -51,6 +51,10 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
             val jobBefore = jobField.get(callTracker) as? Job
             Assert.assertNotNull(jobBefore)
 
+            // Stop the tracker to reset isInitialized
+            callTracker.stop()
+            advanceUntilIdle()
+
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 

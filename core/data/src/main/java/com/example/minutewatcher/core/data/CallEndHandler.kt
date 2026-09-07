@@ -9,7 +9,6 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -25,6 +24,7 @@ internal class CallEndHandler
         private val timeProvider: TimeProvider,
         private val retryHelper: DataStoreRetryHelper,
         private val attributionResolver: CallAttributionResolver,
+        private val callMutexHolder: CallMutexHolder,
     ) {
     @Suppress("LongMethod", "ThrowsCount")
     suspend fun performCallEnd(
@@ -36,7 +36,6 @@ internal class CallEndHandler
         refreshStatus: suspend (Boolean) -> Unit,
         endCallAction: suspend (Int, Boolean) -> Unit,
         isCallTrackingEnabled: suspend () -> Boolean,
-        callMutex: Mutex,
         clearAllCallSessions: suspend () -> Unit,
         notifyDataChanged: suspend () -> Unit,
     ) {
@@ -48,7 +47,7 @@ internal class CallEndHandler
                 return
             }
 
-            callMutex.withLock {
+            callMutexHolder.mutex.withLock {
                 if ((subId == -1) && !isCallTrackingEnabled()) {
                     // If tracking is disabled and subId is unknown (-1), we clear all pending sessions
                     // to ensure no orphaned sessions remain when tracking is turned back on.
@@ -60,6 +59,7 @@ internal class CallEndHandler
                         endCallAction,
                         callEndResolver,
                         notifyDataChanged,
+                        statusFlow,
                     )
                 }
                 shouldRefreshStatus = true
@@ -68,20 +68,22 @@ internal class CallEndHandler
             throw e
         } catch (e: IOException) {
             shouldRefreshStatus = false
-            val error = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
-            statusFlow.value = error
-            if (statusFlow.value != error) {
-                statusFlow.value = error
+            // Force refresh before rethrowing so status is consistent
+            try {
+                refreshStatus(true)
+            } catch (_: Exception) {
             }
+            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
             throw e
         } catch (e: SecurityException) {
             shouldRefreshStatus = false
             AppLogger.e("SecurityException in onCallEnded", e)
-            val error = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
-            statusFlow.value = error
-            if (statusFlow.value != error) {
-                statusFlow.value = error
+            // Force refresh before rethrowing so status is consistent
+            try {
+                refreshStatus(true)
+            } catch (_: Exception) {
             }
+            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
             throw e
         } catch (e: Exception) {
             shouldRefreshStatus = false // Не обновляем статус при неизвестной ошибке
@@ -96,6 +98,7 @@ internal class CallEndHandler
         endCallAction: suspend (Int, Boolean) -> Unit,
         callEndResolver: CallEndResolver,
         notifyDataChanged: suspend () -> Unit,
+        statusFlow: MutableStateFlow<TrackingStatus>,
     ) {
         val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
         if (effectiveSubId != -1) {
@@ -103,7 +106,32 @@ internal class CallEndHandler
             return
         }
 
-        val subIdsToEnd = callEndResolver.resolveUnknownSubIdEnd()
+        val result = callEndResolver.resolveUnknownSubIdEnd()
+        handleResolveResult(result, endCallAction, notifyDataChanged, statusFlow)
+    }
+
+    private suspend fun handleResolveResult(
+        result: CallEndResolver.ResolveResult,
+        endCallAction: suspend (Int, Boolean) -> Unit,
+        notifyDataChanged: suspend () -> Unit,
+        statusFlow: MutableStateFlow<TrackingStatus>,
+    ) {
+        when (result) {
+            is CallEndResolver.ResolveResult.Error -> {
+                statusFlow.value = result.error
+            }
+
+            is CallEndResolver.ResolveResult.SubIds -> {
+                processResolvedSubIds(result.ids, endCallAction, notifyDataChanged)
+            }
+        }
+    }
+
+    private suspend fun processResolvedSubIds(
+        subIdsToEnd: List<Int>,
+        endCallAction: suspend (Int, Boolean) -> Unit,
+        notifyDataChanged: suspend () -> Unit,
+    ) {
         if (subIdsToEnd.isEmpty()) return
 
         val notifyEach = subIdsToEnd.size == 1
