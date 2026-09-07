@@ -47,9 +47,4 @@ sealed interface SaveResult {
     data class Failed(
         val message: String? = null,
     ) : SaveResult
-
-    /**
-     * Сохранение уже выполняется.
-     */
-    data object AlreadyInProgress : SaveResult
 }

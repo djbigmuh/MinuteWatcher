@@ -87,67 +87,72 @@ class SimIdentitySeedRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
-            seedMutex.withLock {
-                repeat(MAX_RETRIES) { attempt ->
-                    val attemptNum = attempt + 1
-                    try {
-                        val persistentSeed = tryGetPersistentSeed(generator)
-                        if (persistentSeed != null) {
-                            val ephemeralToMigrate = resolveEphemeralToMigrateInternal()
-                            ephemeralToMigrate?.let { seed ->
-                                if (migrationInProgress.compareAndSet(false, true)) {
-                                    try {
-                                        executeMigrationSafely(seed, persistentSeed)
-                                    } finally {
-                                        migrationInProgress.set(false)
-                                    }
+            repeat(MAX_RETRIES) { attempt ->
+                val attemptNum = attempt + 1
+                try {
+                    val persistentSeed = seedMutex.withLock { tryGetPersistentSeed(generator) }
+                    if (persistentSeed != null) {
+                        val ephemeralToMigrate = resolveEphemeralToMigrateInternal()
+                        ephemeralToMigrate?.let { seed ->
+                            if (migrationInProgress.compareAndSet(false, true)) {
+                                try {
+                                    executeMigrationSafely(seed, persistentSeed)
+                                } finally {
+                                    migrationInProgress.set(false)
                                 }
                             }
-                            return SeedResolutionResult.Persistent(persistentSeed)
                         }
-                        AppLogger.w(
-                            "SimIdentitySeedRepositoryImpl: Persistent seed access returned null (attempt $attemptNum)",
-                        )
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.w(
-                            "SimIdentitySeedRepositoryImpl: Persistent seed access failed (attempt $attemptNum)",
-                            e
-                        )
+                        return SeedResolutionResult.Persistent(persistentSeed)
                     }
-
-                    if (attemptNum < MAX_RETRIES) {
-                        val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
-                        AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying persistent seed access in ${delayMs}ms...")
-                        delay(delayMs.milliseconds)
-                    }
+                    AppLogger.w(
+                        "SimIdentitySeedRepositoryImpl: Persistent seed access returned null (attempt $attemptNum)",
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w(
+                        "SimIdentitySeedRepositoryImpl: Persistent seed access failed (attempt $attemptNum)",
+                        e
+                    )
                 }
 
-                // 3. Fallback to ephemeral seed under mutex (cache management only)
+                if (attemptNum < MAX_RETRIES) {
+                    val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
+                    AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying persistent seed access in ${delayMs}ms...")
+                    delay(delayMs.milliseconds)
+                }
+            }
+
+            // Fallback to ephemeral seed under mutex (cache management only)
+            return seedMutex.withLock {
                 AppLogger.e(
                     "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
                         "All SIM identities will change. Previous statistics will be orphaned.",
                 )
                 _isEphemeralSeedActive.value = true
                 val seed = cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
-                return SeedResolutionResult.Ephemeral(seed)
+                SeedResolutionResult.Ephemeral(seed)
             }
         }
 
     private suspend fun resolveEphemeralToMigrateInternal(): String? {
-        if (_isEphemeralSeedActive.value || cachedEphemeralSeed != null) {
-            val found = cachedEphemeralSeed
-            _isEphemeralSeedActive.value = false
-            cachedEphemeralSeed = null
-            if (found != null) {
-                return found
+        var needsStorageCheck = false
+        seedMutex.withLock {
+            if (_isEphemeralSeedActive.value || cachedEphemeralSeed != null) {
+                val found = cachedEphemeralSeed
+                _isEphemeralSeedActive.value = false
+                cachedEphemeralSeed = null
+                if (found != null) {
+                    return found
+                }
+                needsStorageCheck = true
             }
-        } else {
-            return null
         }
 
-        return tryGetStoredEphemeralSeed()
+        if (needsStorageCheck) {
+            return tryGetStoredEphemeralSeed()
+        }
+        return null
     }
 
     private suspend fun tryGetStoredEphemeralSeed(): String? =

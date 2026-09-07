@@ -70,6 +70,8 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // Arrange: Force attribution failure by having TWO active calls and no way to distinguish
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()

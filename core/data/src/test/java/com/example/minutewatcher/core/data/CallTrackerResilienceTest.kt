@@ -35,7 +35,8 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
 
             whenever(permissionStateNotifier.changes).thenReturn(crashingFlow)
 
-            createTracker()
+            val tracker = createTracker()
+            tracker.ensureStarted()
             advanceUntilIdle()
 
             // sequence: 1000, 2000, 4000, 8000 ...
@@ -59,7 +60,8 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
 
             whenever(permissionStateNotifier.changes).thenReturn(crashingFlow)
 
-            createTracker()
+            val tracker = createTracker()
+            tracker.ensureStarted()
 
             // Advance by enough time to reach 10 retries.
             testScheduler.advanceTimeBy(1000_000)

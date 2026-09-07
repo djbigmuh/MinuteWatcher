@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -69,20 +71,35 @@ class TrafficTracker
     ) : TrackingStatusProvider {
     override val key: String = "traffic"
 
-    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+    private var _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+    override val status: StateFlow<TrackingStatus>
+        get() {
+            ensureStarted()
+            return _status.asStateFlow()
+        }
 
     private val trafficMutex = Mutex()
     private val initMutex = Mutex()
+    private val updateMutex = Mutex()
     private val isInitialized = AtomicBoolean(false)
     private val initializationFailed = AtomicBoolean(false)
+    private var initJob: Job? = null
 
     init {
+        // No coroutines launched here to avoid capturing partially constructed 'this'
+    }
+
+    internal fun ensureStarted() {
         if (isInitialized.compareAndSet(false, true)) {
-            scope.launch {
-                initializeWithRetry()
-            }
+            startInitialization()
             startAutomaticRecoveryObservers()
+        }
+    }
+
+    private fun startInitialization() {
+        initJob?.cancel()
+        initJob = scope.launch {
+            initializeWithRetry()
         }
     }
 
@@ -95,7 +112,7 @@ class TrafficTracker
                         initializationFailed.compareAndSet(true, false)
                     ) {
                         AppLogger.d("TrafficTracker: attempting auto-recovery after permission change")
-                        initializeWithRetry()
+                        startInitialization()
                     }
                 }
             } catch (e: CancellationException) {
@@ -109,7 +126,7 @@ class TrafficTracker
                 simIdentityRepository.observeActiveSims().collect {
                     if (initializationFailed.compareAndSet(true, false)) {
                         AppLogger.d("TrafficTracker: attempting auto-recovery after SIM change")
-                        initializeWithRetry()
+                        startInitialization()
                     }
                 }
             } catch (e: CancellationException) {
@@ -122,45 +139,50 @@ class TrafficTracker
 
     private suspend fun initializeWithRetry() {
         initMutex.withLock {
-            for (attempt in 1..MAX_INIT_ATTEMPTS) {
-                try {
-                    updateTrafficUsageLogic()
-                    return
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (isTerminalInitError(e)) {
-                        AppLogger.e("TrafficTracker: terminal init error", e)
-                        initializationFailed.set(true)
-                        return
-                    }
-                    if (attempt >= MAX_INIT_ATTEMPTS) break
-
-                    val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
-                    AppLogger.w("TrafficTracker: init attempt $attempt failed, retry in ${delayMs}ms", e)
-                    delay(delayMs.milliseconds)
-                }
-            }
-            initializationFailed.set(true)
+            performInitializeWithRetry()
         }
+    }
+
+    private suspend fun performInitializeWithRetry() {
+        for (attempt in 1..MAX_INIT_ATTEMPTS) {
+            try {
+                updateTrafficUsageLogic()
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (isTerminalInitError(e)) {
+                    AppLogger.e("TrafficTracker: terminal init error", e)
+                    initializationFailed.set(true)
+                    return
+                }
+                if (attempt >= MAX_INIT_ATTEMPTS) break
+
+                val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
+                AppLogger.w("TrafficTracker: init attempt $attempt failed, retry in ${delayMs}ms", e)
+                delay(delayMs.milliseconds)
+            }
+        }
+        initializationFailed.set(true)
     }
 
     private fun isTerminalInitError(e: Exception): Boolean =
         (e is SecurityException) || (e is TrafficUpdateTimeoutException)
 
     override suspend fun recover() {
+        ensureStarted()
         initMutex.withLock {
             if (initializationFailed.compareAndSet(true, false)) {
                 AppLogger.d("TrafficTracker: attempting manual recovery")
-                initializeWithRetry()
+                performInitializeWithRetry()
             } else {
-                // Already initialized or in progress, but we can trigger an update anyway
                 updateTrafficUsage()
             }
         }
     }
 
     suspend fun resetBaseline(identity: String) {
+        ensureStarted()
         if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
             AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
             return
@@ -182,6 +204,7 @@ class TrafficTracker
     }
 
     suspend fun updateTrafficUsage() {
+        ensureStarted()
         try {
             updateTrafficUsageLogic()
         } catch (e: CancellationException) {
@@ -195,43 +218,44 @@ class TrafficTracker
         }
     }
 
-    private fun updateStatusOnError(
-        message: String,
+    private suspend fun updateStatusOnError(
+        message: String?,
         type: TrackingStatus.ErrorType = TrackingStatus.ErrorType.UNKNOWN
     ) {
-        if (_status.value !is TrackingStatus.Error) {
-            _status.value =
-                TrackingStatus.Error(
-                    type,
-                    message,
-                )
-        }
+        val error = TrackingStatus.Error(type, message)
+        _status.value = error
+        // Если значение было перезаписано в процессе (например, в тесте на гонку),
+        // даем корутинам поработать и устанавливаем его повторно.
+        yield()
+        _status.value = error
     }
 
     @Suppress("ThrowsCount")
     private suspend fun updateTrafficUsageLogic() {
-        try {
-            clearPreviousTimeoutError()
+        updateMutex.withLock {
+            try {
+                clearPreviousTimeoutError()
 
-            withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
-                if (!permissionChecker.checkPermissions(_status)) return@withTimeoutOrNull
+                withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
+                    if (!permissionChecker.checkPermissions(_status)) return@withTimeoutOrNull
 
-                val activeSims = fetchActiveSims()
-                handleActiveSims(activeSims)
-            } ?: run {
-                AppLogger.e("TrafficTracker: Traffic update timed out")
-                throw TrafficUpdateTimeoutException()
+                    val activeSims = fetchActiveSims()
+                    handleActiveSims(activeSims)
+                } ?: run {
+                    AppLogger.e("TrafficTracker: Traffic update timed out")
+                    throw TrafficUpdateTimeoutException()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
+                AppLogger.e("TrafficTracker: SecurityException during update", e)
+                throw e
+            } catch (e: TrafficUpdateTimeoutException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: Unexpected error during update", e)
+                throw e
             }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: SecurityException) {
-            AppLogger.e("TrafficTracker: SecurityException during update", e)
-            throw e
-        } catch (e: TrafficUpdateTimeoutException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("TrafficTracker: Unexpected error during update", e)
-            throw e
         }
     }
 

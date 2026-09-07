@@ -85,12 +85,12 @@ class SimIdentityObserverResilienceTest {
             testScheduler.advanceTimeBy(1000.milliseconds)
             testScheduler.runCurrent()
 
-            // After MAX_GENERAL_ATTEMPTS (20), it should set Error status but stay alive
-            // Attempts are: initial + 20 retries = 21 total calls
-            testScheduler.advanceTimeBy(600_000.milliseconds) // Enough for all backoffs
+            // After MAX_GENERAL_ATTEMPTS (5), it should set Error status but stay alive
+            // Attempts are: initial + 5 retries = 6 total calls
+            testScheduler.advanceTimeBy(100_000.milliseconds) // Enough for all backoffs
             testScheduler.runCurrent()
 
-            verify(fetcher, times(21)).fetchActiveSimsWithRetry(any())
+            verify(fetcher, times(6)).fetchActiveSimsWithRetry(any())
             assertTrue(observer.status.value is TrackingStatus.Error)
 
             // Now make it succeed and trigger manually
@@ -102,8 +102,8 @@ class SimIdentityObserverResilienceTest {
             testScheduler.advanceTimeBy(1000.milliseconds)
             testScheduler.runCurrent()
 
-            // Total calls should be 21 + 1 = 22
-            verify(fetcher, times(22)).fetchActiveSimsWithRetry(any())
+            // Total calls should be 6 + 1 = 7
+            verify(fetcher, times(7)).fetchActiveSimsWithRetry(any())
             assertEquals(TrackingStatus.Active, observer.status.value)
 
             job.cancel()

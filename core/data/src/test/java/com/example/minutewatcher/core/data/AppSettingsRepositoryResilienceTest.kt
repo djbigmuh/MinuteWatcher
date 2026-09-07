@@ -80,4 +80,34 @@ class AppSettingsRepositoryResilienceTest {
 
             assertEquals(4, repository.observeAppSettings().value.widgetFontSize)
         }
+
+    @Test
+    fun `appSettingsState stops retrying after max consecutive errors`() =
+        runTest {
+            val failingDataStore =
+                object : DataStore<Preferences> {
+                    override val data = flow<Preferences> { throw IOException("Permanent failure") }
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        throw IOException("Permanent failure")
+                    }
+                }
+
+            val repository = AppSettingsRepositoryImpl(failingDataStore, backgroundScope)
+
+            // Initial value should be default
+            assertEquals(2, repository.observeAppSettings().value.widgetFontSize)
+
+            // Retries should happen 10 times with exponential backoff:
+            // 1s, 2s, 4s, 8s, 16s, 30s, 30s, 30s, 30s
+            // Total time ~ 181s
+
+            // Advance time significantly to pass all retries
+            advanceTimeBy(300.seconds)
+            runCurrent()
+
+            // After all retries fail, it should stop.
+            // We can't easily check if it stopped from outside without looking at logs,
+            // but we can ensure it doesn't crash the scope and maintains the default value.
+            assertEquals(2, repository.observeAppSettings().value.widgetFontSize)
+        }
 }

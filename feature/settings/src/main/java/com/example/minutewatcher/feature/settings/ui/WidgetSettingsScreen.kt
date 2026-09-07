@@ -179,7 +179,6 @@ private fun WidgetSettingsContent(
                         is SaveResult.PartialSuccess -> partialSuccessMessage
                         is SaveResult.PartialFailure -> saveResult.message
                         is SaveResult.Failed -> saveResult.message ?: failedMessage
-                        SaveResult.AlreadyInProgress -> null
                     }
 
                 message?.let { snackbarHostState.showSnackbar(it) }

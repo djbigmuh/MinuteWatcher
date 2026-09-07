@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -139,6 +140,7 @@ class TrafficTrackerTest {
 
     private fun TestScope.startTracker(): TrafficTracker {
         val t = createTracker(backgroundScope)
+        t.status.value // Trigger lazy initialization
         testScheduler.advanceUntilIdle()
         clearInvocations(
             simIdentityRepository,
@@ -484,6 +486,8 @@ class TrafficTrackerTest {
             runCurrent()
 
             // 1 from SIM observer, 1 from init, 2 from current calls
+            // Note: with lazy init and our current locking, they might be sequential if they hit the same mutex
+            // but fetchActiveSims() is outside trafficMutex.
             assertEquals(4, callCount.get())
 
             flow.emit(emptyList())
@@ -516,6 +520,7 @@ class TrafficTrackerTest {
             }
 
             val localTracker = createTracker(backgroundScope)
+            localTracker.ensureStarted()
             testScheduler.advanceUntilIdle()
 
             shouldThrow.set(false)
@@ -543,6 +548,7 @@ class TrafficTrackerTest {
             }
 
             val localTracker = createTracker(backgroundScope)
+            localTracker.ensureStarted()
             testScheduler.advanceUntilIdle()
 
             shouldThrow.set(false)
@@ -600,8 +606,9 @@ class TrafficTrackerTest {
 
             val lockJob =
                 launch {
-                    mutex.lock()
-                    delay(100_000.milliseconds)
+                    mutex.withLock {
+                        delay(100_000.milliseconds)
+                    }
                 }
             runCurrent()
 
@@ -623,9 +630,15 @@ class TrafficTrackerTest {
                 ),
             )
 
-            tracker.updateTrafficUsage()
+            val updateJob = launch { tracker.updateTrafficUsage() }
+            runCurrent()
+
+            // At this point updateJob is suspended on mutex.withLock
 
             lockJob.cancel()
+            runCurrent()
+            testScheduler.advanceUntilIdle()
+            updateJob.join()
 
             // Проверяем, что статус в итоге остался Error, так как catch блок в updateTrafficUsage его восстановил
             val finalStatus = tracker.status.value

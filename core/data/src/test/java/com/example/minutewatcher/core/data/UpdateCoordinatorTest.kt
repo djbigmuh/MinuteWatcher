@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.model.MeasurementUnit
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CompletableDeferred
@@ -845,7 +846,9 @@ class UpdateCoordinatorTest {
 
             // Rapid succession of recover calls
             repeat(10) {
-                coordinator.recover()
+                backgroundScope.launch {
+                    coordinator.recover()
+                }
             }
 
             testScheduler.advanceUntilIdle()
@@ -1275,7 +1278,7 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
 
             // 1. Emit snapshot to trigger observation loop
-            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "TerminalCrashLoop"))
+            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "CrashLoop"))
 
             // Advance by enough time to finish all cycles.
             // 3 cycles * (5s + 10s + 20s + 40s + 300s) = 3 * 375s = 1125s.
@@ -1406,5 +1409,49 @@ class UpdateCoordinatorTest {
             verify(widgetUpdater, times(2)).updateAll()
 
             supervisorJob.cancel()
+        }
+
+    @Test
+    fun `ensureObservationStarted handles multiple concurrent calls correctly`() =
+        runTest {
+            val simFlow = MutableStateFlow<List<SimCardUiModel>>(emptyList())
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(simFlow)
+            val snapshotStateFlow = MutableStateFlow(createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotStateFlow)
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+
+            // Let init start and block on SIM list
+            testScheduler.runCurrent()
+
+            // Simulation of rapid calls to start observation
+            repeat(10) {
+                backgroundScope.launch {
+                    coordinator.recover()
+                }
+            }
+            testScheduler.runCurrent()
+
+            // Unblock everything
+            simFlow.value = listOf(
+                SimCardUiModel(0, "sim_0", "MTS", 0, 0, 0, 0, 0, 0, false, 0f, 0, 0f, 0f, 0f, false, false, 1, false)
+            )
+            snapshotStateFlow.value = createSnapshot(1000L, "Init")
+
+            // Advance virtual time
+            testScheduler.advanceTimeBy(100_000)
+            testScheduler.runCurrent()
+
+            // Verify status
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+
+            // Total calls to observeSimCardUiModels: 1 (init) + 10 (recovers) = 11
+            verify(usageStateRepository, times(11)).observeSimCardUiModels()
         }
 }

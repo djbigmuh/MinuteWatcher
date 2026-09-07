@@ -32,6 +32,8 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // Arrange: flow that never emits triggers readWithRetry to return failure (on real timeout)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
 
@@ -55,6 +57,8 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
 
             var attempts = 0
             whenever(appSettingsRepository.getAppSettings()).thenAnswer {
@@ -83,6 +87,8 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
 
             var attempts = 0
             whenever(appSettingsRepository.getAppSettings()).thenAnswer {

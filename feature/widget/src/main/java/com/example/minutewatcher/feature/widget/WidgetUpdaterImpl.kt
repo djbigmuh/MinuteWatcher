@@ -209,12 +209,13 @@ class WidgetUpdaterImpl
             return createLimitExceededResult(success, lastOutcome)
         }
 
-    private fun createLimitExceededResult(
+    private suspend fun createLimitExceededResult(
         success: Boolean,
         lastOutcome: UpdateOutcome,
     ): WidgetUpdateResult =
         when {
                 success -> {
+                    limitManager.setWidgetLimitExceeded(value = false)
                     limitExceededHandled.set(false)
                     WidgetUpdateResult.Success(wasCoalesced = false)
                 }

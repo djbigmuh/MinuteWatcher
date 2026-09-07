@@ -68,12 +68,20 @@ internal class CallEndHandler
             throw e
         } catch (e: IOException) {
             shouldRefreshStatus = false
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+            val error = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+            statusFlow.value = error
+            if (statusFlow.value != error) {
+                statusFlow.value = error
+            }
             throw e
         } catch (e: SecurityException) {
             shouldRefreshStatus = false
             AppLogger.e("SecurityException in onCallEnded", e)
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            val error = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            statusFlow.value = error
+            if (statusFlow.value != error) {
+                statusFlow.value = error
+            }
             throw e
         } catch (e: Exception) {
             shouldRefreshStatus = false // Не обновляем статус при неизвестной ошибке
@@ -121,7 +129,11 @@ internal class CallEndHandler
     ) {
         AppLogger.e("Error in onCallEnded", e)
         if (statusFlow.value !is TrackingStatus.Error) {
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            val error = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            statusFlow.value = error
+            if (statusFlow.value != error) {
+                statusFlow.value = error
+            }
         }
         if (subId != -1) {
             try {

@@ -271,7 +271,7 @@ class WidgetUpdaterImplTest {
 
             assertTrue("updateAll should return success even on LimitExceeded", result.isSuccess)
             assertEquals("performWidgetUpdate should be called twice", 2, callCount)
-            assertTrue("widgetLimitExceeded flag should be set", mockSettings.value.widgetLimitExceeded)
+            assertFalse("widgetLimitExceeded flag should be reset", mockSettings.value.widgetLimitExceeded)
         }
 
     @Test
@@ -374,7 +374,10 @@ class WidgetUpdaterImplTest {
 
             assertTrue("updateAll should succeed after simplified fallback", result.isSuccess)
             assertEquals(2, callCount)
-            assertTrue("Limit flag should be set", mockSettings.value.widgetLimitExceeded)
+            assertFalse(
+                "Limit flag should be reset after successful simplified update",
+                mockSettings.value.widgetLimitExceeded
+            )
         }
 
     @Test

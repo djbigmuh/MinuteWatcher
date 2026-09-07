@@ -13,6 +13,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -210,5 +211,53 @@ class SimIdentitySeedRepositoryImplTest {
             // To simulate this, we would need to mock seedMutex or use reflection,
             // but we can trust the previous test's negative result (it didn't call)
             // as proof that the logic distinguishes cases.
+        }
+
+    @Test
+    fun `setSeed does not wait for retry delays`() =
+        runTest {
+            var shouldFail = true
+            val failingDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> =
+                        flow {
+                            if (shouldFail) {
+                                throw IOException("Storage unavailable")
+                            }
+                            dataStore.data.collect { emit(it) }
+                        }
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        if (shouldFail) {
+                            throw IOException("Storage unavailable")
+                        }
+                        return dataStore.updateData(transform)
+                    }
+                }
+
+            val repo = SimIdentitySeedRepositoryImpl(failingDataStore, { migrationService }, { discovery })
+
+            // 1. Start getOrCreateSeed... which will fail and delay
+            // Use backgroundScope to run it concurrently
+            val firstCall = backgroundScope.launch {
+                repo.getOrCreateSeedOrEphemeralFallback { "ephemeral" }
+            }
+
+            // Let it start and hit the first failure/delay
+            testScheduler.runCurrent()
+
+            // 2. Now call setSeed. It should succeed immediately because the mutex is released during delay.
+            // We need to make storage work for setSeed to succeed
+            shouldFail = false
+
+            val setSeedJob = backgroundScope.launch {
+                repo.setSeed("new-persistent-seed")
+            }
+
+            // setSeed should complete quickly (doesn't wait for the 200ms delay of the first call)
+            testScheduler.runCurrent()
+            assertTrue("setSeed should have completed", setSeedJob.isCompleted)
+
+            firstCall.join()
         }
 }

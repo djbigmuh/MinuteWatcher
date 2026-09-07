@@ -15,6 +15,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -100,9 +101,12 @@ internal class SimIdentityObserver
                             emit(SeedResult.Fallback)
                             if (initialSeed != null) {
                                 // Если сид просто пуст (первый запуск), запускаем генерацию
-                                scope.launch {
+                                // Используем текущий контекст, чтобы генерация отменилась при отмене потока (flatMapLatest)
+                                CoroutineScope(currentCoroutineContext()).launch {
                                     try {
                                         generateSeedWithRetry()
+                                    } catch (e: CancellationException) {
+                                        throw e
                                     } catch (e: Exception) {
                                         AppLogger.e("SimIdentityObserver: Background seed generation failed", e)
                                     }
@@ -252,6 +256,7 @@ internal class SimIdentityObserver
     }
 
     private suspend fun FlowCollector<List<ActiveSimInfo>>.handlePermissionMissing(): Boolean {
+        generalAttempt.set(0)
         _status.value =
             TrackingStatus.Error(
                 TrackingStatus.ErrorType.PERMISSION_MISSING,
@@ -266,6 +271,7 @@ internal class SimIdentityObserver
     ): Boolean {
         val currentAttempt = generalAttempt.incrementAndGet()
         return if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
+            generalAttempt.set(0)
             AppLogger.e(
                 "SimIdentityObserver: physicalActiveSims discovery stopped " +
                     "after $currentAttempt consecutive logical failures: $reason",
@@ -323,13 +329,20 @@ internal class SimIdentityObserver
             .distinctUntilChanged()
 
     private suspend fun generateSeedWithRetry(): SeedResolutionResult =
+        try {
             withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
                 seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
             } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("SimIdentityObserver: Seed generation process failed", e)
+            SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+        }
 
         companion object {
             private const val MAX_BACKOFF_EXPONENT = 4
             private const val INITIAL_BACKOFF_MS = 1000L
-            private const val MAX_GENERAL_ATTEMPTS = 20
+            private const val MAX_GENERAL_ATTEMPTS = 5
         }
     }

@@ -58,19 +58,30 @@ open class CallTracker
     override val key: String = "calls"
 
     private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+    override val status: StateFlow<TrackingStatus>
+        get() {
+            ensureStarted()
+            return _status.asStateFlow()
+        }
 
     private val isInitialized = AtomicBoolean(false)
     private var permissionObserverJob: Job? = null
     private var initJob: Job? = null
+    private val initMutex = Mutex()
 
     init {
+        // No coroutines launched here to avoid capturing partially constructed 'this'
+    }
+
+    internal fun ensureStarted() {
         if (isInitialized.compareAndSet(false, true)) {
             startPermissionObserver()
             initJob =
                 scope.launch {
                     try {
-                        refreshStatus(force = true)
+                        initMutex.withLock {
+                            refreshStatus(force = true)
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -107,7 +118,9 @@ open class CallTracker
                         _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                     }.collect {
                         try {
-                            refreshStatus(force = true)
+                            initMutex.withLock {
+                                refreshStatus(force = true)
+                            }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -133,14 +146,17 @@ open class CallTracker
      * Safe to call from any coroutine context.
      */
     suspend fun onCallStarted(subId: Int) {
-        startHandler.executeCallStart(
-            subId = subId,
-            callMutex = callMutex,
-            statusFlow = _status,
-            checkPermissions = ::checkPermissions,
-            cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
-            refreshStatus = ::refreshStatus,
-        ) { settingsHandler.isCallTrackingEnabled() }
+        ensureStarted()
+        initMutex.withLock {
+            startHandler.executeCallStart(
+                subId = subId,
+                callMutex = callMutex,
+                statusFlow = _status,
+                checkPermissions = ::checkPermissions,
+                cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
+                refreshStatus = ::refreshStatus,
+            ) { settingsHandler.isCallTrackingEnabled() }
+        }
     }
 
     /**
@@ -150,19 +166,22 @@ open class CallTracker
      * Safe to call from any coroutine context.
      */
     suspend fun onCallEnded(subId: Int) {
-        endHandler.performCallEnd(
-            subId = subId,
-            callEndResolver = callEndResolver,
-            statusFlow = _status,
-            checkPermissions = ::checkPermissions,
-            cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
-            refreshStatus = ::refreshStatus,
-            endCallAction = ::endCall,
-            isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
-            callMutex = callMutex,
-            clearAllCallSessions = { sessionCleaner.clearAllSessions() },
-            notifyDataChanged = { dataChangeNotifier.notifyDataChanged() },
-        )
+        ensureStarted()
+        initMutex.withLock {
+            endHandler.performCallEnd(
+                subId = subId,
+                callEndResolver = callEndResolver,
+                statusFlow = _status,
+                checkPermissions = ::checkPermissions,
+                cleanupCounters = { sessionCleaner.cleanupCounters(it, _status) },
+                refreshStatus = ::refreshStatus,
+                endCallAction = ::endCall,
+                isCallTrackingEnabled = { settingsHandler.isCallTrackingEnabled() },
+                callMutex = callMutex,
+                clearAllCallSessions = { sessionCleaner.clearAllSessions() },
+                notifyDataChanged = { dataChangeNotifier.notifyDataChanged() },
+            )
+        }
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
@@ -252,9 +271,12 @@ open class CallTracker
     }
 
     fun onBoot() {
+        ensureStarted()
         scope.launch {
             try {
-                clearSessionsAndRefresh("boot cleanup")
+                initMutex.withLock {
+                    clearSessionsAndRefresh("boot cleanup")
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -264,9 +286,12 @@ open class CallTracker
     }
 
     override suspend fun recover() {
+        ensureStarted()
         startPermissionObserver()
         try {
-            clearSessionsAndRefresh("recovery")
+            initMutex.withLock {
+                clearSessionsAndRefresh("recovery")
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

@@ -80,7 +80,7 @@ class SimIdentityObserverTest {
     }
 
     @Test
-    fun `circuit breaker triggers after 20 general failures`() =
+    fun `circuit breaker triggers after 5 general failures`() =
         runTest {
             observer = createObserver(backgroundScope)
             // Mock fetcher to throw IOException persistently
@@ -88,18 +88,18 @@ class SimIdentityObserverTest {
 
             val job = launch { observer.activeSimsCache.collect {} }
 
-            // Retries: 1s, 2s, 4s, 8s, 16s... up to 20 times.
-            // Total time is about 300 seconds.
-            testScheduler.advanceTimeBy(400_000.milliseconds)
+            // Retries: 1s, 2s, 4s, 8s, 16s... up to 5 times.
+            // Total time is about 100 seconds.
+            testScheduler.advanceTimeBy(100_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
-            // Verify fetcher was called exactly 21 times
-            verify(fetcher, times(21)).fetchActiveSimsWithRetry(any())
+            // Verify fetcher was called exactly 6 times (1 initial + 5 retries)
+            verify(fetcher, times(6)).fetchActiveSimsWithRetry(any())
 
             val status = observer.status.value
             assertTrue("Status should be Error, but was $status", status is TrackingStatus.Error)
             assertEquals(
-                "SIM recovery stopped after 21 consecutive IO failures",
+                "SIM recovery stopped after 6 consecutive IO failures",
                 (status as TrackingStatus.Error).message,
             )
 
@@ -115,9 +115,9 @@ class SimIdentityObserverTest {
             val job = launch { observer.activeSimsCache.collect {} }
 
             // Advance through failure cycle
-            testScheduler.advanceTimeBy(400_000.milliseconds)
+            testScheduler.advanceTimeBy(100_000.milliseconds)
             testScheduler.advanceUntilIdle()
-            verify(fetcher, times(21)).fetchActiveSimsWithRetry(any())
+            verify(fetcher, times(6)).fetchActiveSimsWithRetry(any())
 
             // Now make fetcher succeed
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
@@ -131,8 +131,8 @@ class SimIdentityObserverTest {
             testScheduler.advanceTimeBy(10_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
-            // Total calls should now be 22
-            verify(fetcher, times(22)).fetchActiveSimsWithRetry(any())
+            // Total calls should now be 7
+            verify(fetcher, times(7)).fetchActiveSimsWithRetry(any())
             assertEquals(TrackingStatus.Active, observer.status.value)
 
             job.cancel()

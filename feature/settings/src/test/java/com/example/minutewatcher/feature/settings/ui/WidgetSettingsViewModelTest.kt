@@ -133,17 +133,17 @@ class WidgetSettingsViewModelTest {
             runCurrent()
             assertTrue(vm.state.value.isSaving)
 
-            // Второй вызов возвращает AlreadyInProgress немедленно
+            // Второй вызов ждет завершения первого
             val secondSave = launch { vm.saveAndNotify() }
             runCurrent()
 
-            // Теперь AlreadyInProgress IS set in the state
-            assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
+            // Настроили блокирующий Saver, так что второй вызов еще не завершился
+            assertFalse(secondSave.isCompleted)
 
             gate.complete(Unit)
             advanceUntilIdle()
 
-            // After first save completes, it should be Success
+            // Оба завершились успешно
             assertEquals(SaveResult.Success, vm.state.value.saveResult)
             assertFalse(vm.state.value.isSaving)
             secondSave.join()
@@ -163,7 +163,7 @@ class WidgetSettingsViewModelTest {
             advanceUntilIdle()
 
             vm.saveAndNotify()
-            advanceUntilIdle()
+            runCurrent()
 
             assertEquals(SaveResult.Failed("Generic failure"), vm.state.value.saveResult)
         }
@@ -383,9 +383,9 @@ class WidgetSettingsViewModelTest {
                     vm.saveAndNotify()
                 }
 
-            // Advance time past BOTH the VM timeout and the hanging loader delay
-            advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS * 2 + 1000).milliseconds)
-            advanceUntilIdle()
+            // Advance time past the VM timeout (15s) but less than cleanup timeout (2s more)
+            advanceTimeBy((Constants.Flow.LONG_TIMEOUT_MS + 500).milliseconds)
+            runCurrent()
 
             assertEquals(
                 SaveResult.Failed("Saving timed out. Storage might be slow or unavailable."),
@@ -411,7 +411,7 @@ class WidgetSettingsViewModelTest {
             advanceUntilIdle()
 
             vm.updateSettings { it.copy(simListLoadFailed = true) }
-            advanceUntilIdle()
+            runCurrent()
 
             // Advance for auto-save
             advanceTimeBy(500.milliseconds)
@@ -463,7 +463,7 @@ class WidgetSettingsViewModelTest {
             assertTrue(vm.state.value.isLoadError)
 
             vm.saveAndNotify()
-            advanceUntilIdle()
+            runCurrent()
 
             assertEquals(SaveResult.Failed("Settings were not loaded"), vm.state.value.saveResult)
         }
@@ -1075,34 +1075,31 @@ class WidgetSettingsViewModelTest {
             val firstSaveGate = saveGate
             saveGate = CompletableDeferred()
 
-            // Manual call instead of auto-save to trigger AlreadyInProgress immediately
-            val secondSaveJob =
-                launch {
-                    vm.saveAndNotify()
-                }
+            // Manual call instead of auto-save to trigger waiting immediately
+            launch {
+                vm.saveAndNotify()
+            }
             runCurrent()
 
-            // Should have triggered AlreadyInProgress in ViewModel and re-emitted to autoSaveTrigger
-            assertEquals(SaveResult.AlreadyInProgress, vm.state.value.saveResult)
+            // Should be waiting for lock, isSaving still true from first save
+            assertTrue(vm.state.value.isSaving)
 
             // 3. Complete first save
             firstSaveGate.complete(Unit)
             runCurrent()
-            advanceUntilIdle()
+            advanceTimeBy(1.milliseconds)
 
-            // isSaving should be false now
-            assertFalse(vm.state.value.isSaving)
+            // Second save should start now
+            assertTrue(vm.state.value.isSaving)
+            assertEquals(2, capturedStates.size)
 
-            // 4. Advance time. Second save should NOT happen because manual save during another save
-            // no longer triggers auto-retry (to avoid race conditions).
-            advanceTimeBy(1000.milliseconds)
-            runCurrent()
-
-            // Should still be 1
-            assertEquals(1, capturedStates.size)
-
+            // 4. Complete second save
             saveGate.complete(Unit)
-            advanceUntilIdle()
-            secondSaveJob.join()
+            runCurrent()
+            advanceTimeBy(1.milliseconds)
+
+            // After both saves complete
+            assertFalse(vm.state.value.isSaving)
+            assertEquals(SaveResult.Success, vm.state.value.saveResult)
         }
 }

@@ -50,6 +50,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 
@@ -61,6 +63,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // Arrange: saved boot time is in the future relative to current
             timeProvider.setRealtime(5000L)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
@@ -80,6 +84,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // Arrange: stale session
             timeProvider.setRealtime(5000L)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
@@ -102,6 +108,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // Arrange: Flow that never emits triggers timeout in readWithRetry
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
 
@@ -128,6 +136,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // Arrange
             whenever(callSessionRepository.getCallStartTime(any()))
                 .thenReturn(
@@ -151,6 +161,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // Mock both direct call AND permission check to throw
             whenever(permissionManager.hasPhoneStatePermission()).thenThrow(SecurityException())
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenThrow(SecurityException())
@@ -167,6 +179,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // 1. Устанавливаем статус ошибки из-за отсутствия разрешения
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             callTracker.onCallStarted(1)
@@ -232,6 +246,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(settingsFlow)
 
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
 
             // Disable tracking before the check inside the mutex occurs
             settingsFlow.value = AppSettings(callTrackingEnabled = false)
@@ -249,6 +265,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
             // Arrange: flow that never emits causes timeout in readWithRetry
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
             // Simulate that there are active calls in the repository
@@ -270,6 +288,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
 
             // 1. Start first call
             timeProvider.setTime(1000L)
@@ -300,6 +320,8 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
 
             // Arrange: active session with identity "id_1"
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))

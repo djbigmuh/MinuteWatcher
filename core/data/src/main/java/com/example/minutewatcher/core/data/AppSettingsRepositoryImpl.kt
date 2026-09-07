@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -46,19 +45,39 @@ class AppSettingsRepositoryImpl
     ) : AppSettingsRepository {
     private val appSettingsState: StateFlow<AppSettings> =
         flow {
-            while (true) {
+            var consecutiveErrors = 0
+            while (consecutiveErrors < MAX_CONSECUTIVE_ERRORS) {
                 try {
-                    emitAll(
-                        dataStore.data
-                            .map { prefs -> prefs.toAppSettings() }
-                            .distinctUntilChanged(),
-                    )
-                    break // DataStore flow completed normally (should not happen in practice)
+                    dataStore.data
+                        .map { prefs ->
+                            consecutiveErrors = 0
+                            prefs.toAppSettings()
+                        }
+                        .distinctUntilChanged()
+                        .collect { emit(it) }
+
+                    break // DataStore flow completed normally
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("DataStore error in appSettingsState, restarting in 1s", e)
-                    delay(1000.milliseconds)
+                    consecutiveErrors++
+                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                        AppLogger.e(
+                            "Terminal DataStore error in appSettingsState after " +
+                                "$consecutiveErrors attempts. Settings observation stopped.",
+                            e,
+                        )
+                    } else {
+                        val delayMs =
+                            (INITIAL_RETRY_DELAY_MS * (1 shl (consecutiveErrors - 1)))
+                                .coerceAtMost(MAX_RETRY_DELAY_MS)
+                        AppLogger.e(
+                            "DataStore error in appSettingsState (attempt $consecutiveErrors), " +
+                                "restarting in ${delayMs}ms",
+                            e,
+                        )
+                        delay(delayMs.milliseconds)
+                    }
                 }
             }
         }.stateIn(
@@ -87,7 +106,11 @@ class AppSettingsRepositoryImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("getAppSettingsOnce: failed to read from DataStore, returning defaults", e)
+                AppLogger.e(
+                    "getAppSettingsOnce: CRITICAL failure to read from DataStore, " +
+                        "returning defaults",
+                    e,
+                )
                 AppSettings()
             }
 
@@ -217,6 +240,8 @@ class AppSettingsRepositoryImpl
         }
 
         companion object {
-            // No-op
+            private const val MAX_CONSECUTIVE_ERRORS = 10
+            private const val INITIAL_RETRY_DELAY_MS = 1000L
+            private const val MAX_RETRY_DELAY_MS = 30000L
         }
     }

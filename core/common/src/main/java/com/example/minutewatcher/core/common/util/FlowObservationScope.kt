@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.common.util
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -40,7 +41,7 @@ class FlowObservationScope<T>(
             currentJob?.cancel()
             val newJob =
                 scope.launch(context) {
-                    flow.collect { collector(it) }
+                    flow.collectLatest { collector(it) }
                 }
             currentJob = newJob
             newJob

@@ -79,7 +79,8 @@ class TrafficTrackerRecoveryTest {
                 simFlow
             }
 
-            createTracker(this)
+            val tracker = createTracker(this)
+            tracker.ensureStarted()
             runCurrent()
 
             // Let all 3 init attempts fail

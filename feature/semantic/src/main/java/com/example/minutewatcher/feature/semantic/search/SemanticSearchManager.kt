@@ -255,7 +255,7 @@ open class SemanticSearchManager
         }
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
-    suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
+    internal suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
         val acquired =
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                 indexMutex.lock()
@@ -445,6 +445,14 @@ open class SemanticSearchManager
                 Result.failure(e)
             }
         }
+
+    /**
+     * Performs an initial indexing of the given snapshot.
+     *
+     * This is a public wrapper for [indexSnapshot] intended for use during
+     * initialization (e.g. from WorkManager) where synchronous feedback is needed.
+     */
+    suspend fun indexInitialSnapshot(snapshot: GlobalSnapshot): IndexResult = indexSnapshot(snapshot)
 
     private companion object {
         private const val INITIAL_BACKOFF_MS = 1000L

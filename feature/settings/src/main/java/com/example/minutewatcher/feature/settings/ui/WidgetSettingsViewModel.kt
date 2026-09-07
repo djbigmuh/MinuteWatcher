@@ -96,7 +96,7 @@ class WidgetSettingsViewModel
             state
                 .map { it.saveResult }
                 .debounce(2000.milliseconds)
-                .filter { it is SaveResult.AlreadyInProgress }
+                .filter { it != null && it !is SaveResult.Success }
                 .collect {
                     reduce { copy(saveResult = null) }
                 }
@@ -279,35 +279,32 @@ class WidgetSettingsViewModel
      * Сохраняет текущие настройки и уведомляет систему об изменениях.
      */
     suspend fun saveAndNotify() {
-        if (!saveMutex.tryLock()) {
-            reduce { copy(saveResult = SaveResult.AlreadyInProgress) }
-            return
-        }
-        try {
-            val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
-            val settingsToSave = currentState.settings
-            val result = performSaveInternal(currentState)
-            currentCoroutineContext().ensureActive()
+        saveMutex.withLock {
+            try {
+                val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
+                val settingsToSave = currentState.settings
+                val result = performSaveInternal(currentState)
+                currentCoroutineContext().ensureActive()
 
-            if (result is SaveResult.Success && settingsToSave != null) {
-                lastSavedSettings = settingsToSave
-            }
-            reduce { copy(saveResult = result) }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("Failed to save widget settings", e)
-            currentCoroutineContext().ensureActive()
-            reduce { copy(saveResult = SaveResult.Failed("Failed to save settings")) }
-        } finally {
-            withContext(NonCancellable) {
-                try {
-                    reduce { copy(isSaving = false) }
-                } catch (e: Exception) {
-                    AppLogger.e("WidgetSettingsViewModel: Failed to update isSaving status", e)
+                if (result is SaveResult.Success && settingsToSave != null) {
+                    lastSavedSettings = settingsToSave
+                }
+                reduce { copy(saveResult = result) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save widget settings", e)
+                currentCoroutineContext().ensureActive()
+                reduce { copy(saveResult = SaveResult.Failed("Failed to save settings")) }
+            } finally {
+                withContext(NonCancellable) {
+                    try {
+                        reduce { copy(isSaving = false) }
+                    } catch (e: Exception) {
+                        AppLogger.e("WidgetSettingsViewModel: Failed to update isSaving status", e)
+                    }
                 }
             }
-            saveMutex.unlock()
         }
     }
 

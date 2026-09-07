@@ -72,7 +72,8 @@ class TrafficTrackerResilienceTest {
                 error("General error")
             }
 
-            createTracker(this)
+            val tracker = createTracker(this)
+            tracker.ensureStarted()
             runCurrent()
 
             // 1 from observer, 1 from init (Attempt 1)
@@ -100,7 +101,8 @@ class TrafficTrackerResilienceTest {
         runTest {
             whenever(simIdentityRepository.observeActiveSims()).thenAnswer { throw SecurityException("No permission") }
 
-            createTracker(this)
+            val tracker = createTracker(this)
+            tracker.ensureStarted()
             runCurrent()
 
             // 1 from observer, 1 from init
@@ -117,7 +119,8 @@ class TrafficTrackerResilienceTest {
         runTest {
             whenever(simIdentityRepository.observeActiveSims()).thenAnswer { throw TrafficUpdateTimeoutException() }
 
-            createTracker(this)
+            val tracker = createTracker(this)
+            tracker.ensureStarted()
             runCurrent()
 
             // 1 from observer, 1 from init
@@ -143,6 +146,7 @@ class TrafficTrackerResilienceTest {
             }
 
             val tracker = createTracker(this)
+            tracker.ensureStarted()
             runCurrent()
 
             // Let init retries finish (calls 2, 3, 4)

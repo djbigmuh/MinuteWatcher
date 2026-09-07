@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -26,9 +27,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -62,10 +65,11 @@ class UpdateCoordinator
     private var degradedCycleCount = 0
     private val stateLock = Any()
 
-    private val isObservationStarted = AtomicBoolean(false)
+    private val startObservationMutex = Mutex()
     private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
     private val monitoringJob = AtomicReference<Job?>(null)
     private val currentObservationJob = AtomicReference<Job?>(null)
+    private var currentUpdateJob: Job? = null
 
     init {
         ensureObservationStarted()
@@ -78,8 +82,11 @@ class UpdateCoordinator
          */
         override suspend fun recover() {
             AppLogger.d("UpdateCoordinator: recover() called, resetting all counters")
-            monitoringJob.get()?.cancel()
-            observationScope.getJob()?.cancel()
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                observationScope.getJob()?.cancelAndJoin()
+            }
+            monitoringJob.get()?.cancelAndJoin()
+
             synchronized(stateLock) {
                 observationRestartCount = 0
                 degradedCycleCount = 0
@@ -88,36 +95,17 @@ class UpdateCoordinator
                 _status.value = TrackingStatus.Idle
             }
             widgetUpdater.recover()
-            isObservationStarted.set(false)
-            ensureObservationStarted()
+
+            startObservationMutex.withLock {
+                setupObservation()
+            }
         }
 
         private fun ensureObservationStarted() {
-            if (isObservationStarted.get()) {
-                // Проверяем, что джоб наблюдения ещё активен
-                val job = observationScope.getJob()
-                if (job?.isActive == true) return
-                // Джоб завершён — сбрасываем флаг для перезапуска
-                isObservationStarted.set(false)
-            }
             scope.launch {
-                if (isObservationStarted.compareAndSet(false, true)) {
-                    try {
-                        usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
-                        AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
-                        setupObservation()
-                    } catch (e: CancellationException) {
-                        isObservationStarted.set(false)
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
-                        _status.value =
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.UNKNOWN,
-                                "Failed to start widget observation: ${e.message}",
-                            )
-                        isObservationStarted.set(false)
-                    }
+                startObservationMutex.withLock {
+                    if (observationScope.getJob()?.isActive == true) return@withLock
+                    setupObservation()
                 }
             }
         }
@@ -130,6 +118,10 @@ class UpdateCoordinator
                 }
 
             try {
+                _status.value = TrackingStatus.Active
+                usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
+                AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
+
                 val firstSnapshot = waitForInitialSnapshot()
 
                 if (firstSnapshot == null) {
@@ -138,7 +130,6 @@ class UpdateCoordinator
                             TrackingStatus.ErrorType.DATABASE_ERROR,
                             "Widget observation failed to start",
                         )
-                    isObservationStarted.set(false)
                     return
                 }
 
@@ -161,8 +152,14 @@ class UpdateCoordinator
                 monitoringJob.set(monitoring)
                 _status.value = TrackingStatus.Active
             } catch (e: CancellationException) {
-                isObservationStarted.set(false)
                 throw e
+            } catch (e: Exception) {
+                AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
+                _status.value =
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Failed to start widget observation: ${e.message}",
+                    )
             }
         }
 
@@ -226,6 +223,9 @@ class UpdateCoordinator
                 ),
                 newHash,
             )
+            // Rethrow to fail the observation loop and trigger monitoring-based restart.
+            // FlowObservationScope using collectLatest ensures that CancellationException is expected here.
+            throw e
         }
     }
 
@@ -235,7 +235,6 @@ class UpdateCoordinator
         return scope.launch {
                 newJob.join()
                 if (currentObservationJob.get() !== newJob) return@launch
-                if (!isObservationStarted.get()) return@launch
 
             val (restartCount, cycles, isEnteringDegraded) =
                 synchronized(stateLock) {
@@ -261,7 +260,6 @@ class UpdateCoordinator
                                     TrackingStatus.ErrorType.DATABASE_ERROR,
                                     "Widget observation permanently stopped after $cycles degraded cycles",
                                 )
-                            isObservationStarted.set(false)
                             return@launch
                         }
 
@@ -298,9 +296,7 @@ class UpdateCoordinator
                             _status.value = TrackingStatus.Idle
                         }
                     }
-                    if (isObservationStarted.compareAndSet(true, false)) {
-                        ensureObservationStarted()
-                    }
+                    ensureObservationStarted()
                 }
             }
     }
@@ -313,6 +309,10 @@ class UpdateCoordinator
     @Suppress("ReturnCount")
     private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
         currentCoroutineContext().ensureActive()
+        // Привязываем текущее обновление к currentUpdateJob, чтобы его могли отменить
+        // внешние вызовы (например, принудительное обновление).
+        // При использовании collectLatest предыдущее выполнение processSnapshot отменяется автоматически.
+        currentUpdateJob = currentCoroutineContext().job
 
         val newHash = SnapshotUtils.calculateContentHash(snapshot)
 
@@ -329,6 +329,10 @@ class UpdateCoordinator
         // намеренно — виджет должен корректно отобразить состояние
         // "No SIM" или "No Data".
         val result = performWidgetUpdate()
+
+        // Проверяем, что снапшот все еще актуален.
+        currentCoroutineContext().ensureActive()
+
         handleUpdateResult(result, newHash)
     }
 
@@ -372,7 +376,11 @@ class UpdateCoordinator
                 observationRestartCount = 0
                 degradedCycleCount = 0
                 consecutiveUpdateFailures = 0
-                lastSnapshotHash = newHash
+                // Записываем хэш только если он изменился или не был установлен.
+                // Это предотвращает перезапись более новым хэшем при гонках.
+                if (lastSnapshotHash == null || lastSnapshotHash != newHash) {
+                    lastSnapshotHash = newHash
+                }
             } else if ((result is WidgetUpdateResult.Failure) && !result.wasCoalesced) {
                 processFailureResult(result)
             }
@@ -445,8 +453,6 @@ class UpdateCoordinator
         ): Boolean {
             if (!updateWidget) return true
 
-            ensureObservationStarted()
-
             return if (force) {
                 val success = performForcedUpdate()
                 if (success) {
@@ -471,6 +477,9 @@ class UpdateCoordinator
                 return false
             }
         }
+
+        // Отменяем текущее реактивное обновление, если оно идет.
+        currentUpdateJob?.cancel()
 
         return try {
             val result = widgetUpdater.updateAll()

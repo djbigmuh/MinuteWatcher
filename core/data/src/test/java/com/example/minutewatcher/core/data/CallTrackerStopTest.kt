@@ -20,6 +20,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
             advanceUntilIdle()
 
             val jobField: Field = CallTracker::class.java.getDeclaredField("permissionObserverJob")
@@ -41,6 +42,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
+            callTracker.ensureStarted()
             advanceUntilIdle()
 
             val jobField: Field = CallTracker::class.java.getDeclaredField("permissionObserverJob")
