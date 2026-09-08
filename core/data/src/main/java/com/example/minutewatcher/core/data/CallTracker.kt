@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -64,6 +65,9 @@ open class CallTracker
     private val isInitialized = AtomicBoolean(false)
     private var permissionObserverJob: Job? = null
     private var initJob: Job? = null
+
+    @Volatile
+    private var initDeferred = CompletableDeferred<Unit>()
     private val initMutex = Mutex()
 
     init {
@@ -80,9 +84,13 @@ open class CallTracker
                             initMutex.withLock {
                                 refreshStatus(force = true)
                             }
+                            initDeferred.complete(Unit)
                         } catch (e: CancellationException) {
+                            isInitialized.set(false)
                             throw e
                         } catch (e: Exception) {
+                            isInitialized.set(false)
+                            initDeferred.completeExceptionally(e)
                             AppLogger.e("CallTracker: Failed to initialize call tracking", e)
                         }
                     }
@@ -148,6 +156,11 @@ open class CallTracker
      */
     suspend fun onCallStarted(subId: Int) {
         ensureStarted()
+        try {
+            initDeferred.await()
+        } catch (_: Exception) {
+            // Initialization failed, but we still try to proceed or the status will reflect the error
+        }
         initMutex.withLock {
             startHandler.executeCallStart(
                 subId = subId,
@@ -167,6 +180,11 @@ open class CallTracker
      */
     suspend fun onCallEnded(subId: Int) {
         ensureStarted()
+        try {
+            initDeferred.await()
+        } catch (_: Exception) {
+            // Proceed anyway
+        }
         initMutex.withLock {
             endHandler.performCallEnd(
                 subId = subId,
@@ -307,6 +325,7 @@ open class CallTracker
         permissionObserverJob?.cancel()
         permissionObserverJob = null
         isInitialized.set(false)
+        initDeferred = CompletableDeferred()
     }
 
     companion object {

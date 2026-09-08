@@ -1534,7 +1534,7 @@ class UpdateCoordinatorTest {
                 }
             testScheduler.runCurrent()
 
-            // Forced update should have cancelled the currentUpdateJob
+            // Forced update should have canceled the currentUpdateJob
             assertTrue("Reactive update should have been cancelled by forced update", reactiveUpdateCancelled)
 
             // 3. Complete forced update
@@ -1546,7 +1546,7 @@ class UpdateCoordinatorTest {
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            // Total calls: 1 (cancelled reactive) + 1 (forced) + 1 (new reactive) = 3
+            // Total calls: 1 (canceled reactive) + 1 (forced) + 1 (new reactive) = 3
             assertEquals("Observation loop should still be active and process new snapshots", 3, updateAllCallCount)
         }
 

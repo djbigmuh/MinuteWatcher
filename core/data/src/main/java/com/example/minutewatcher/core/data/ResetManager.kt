@@ -146,8 +146,8 @@ class ResetManager
             } finally {
                 resetMutex.withLock {
                     lastResetCheck[identity] = nowElapsed
+                    pendingResets.remove(identity)
                 }
-                pendingResets.remove(identity)
             }
         }
 

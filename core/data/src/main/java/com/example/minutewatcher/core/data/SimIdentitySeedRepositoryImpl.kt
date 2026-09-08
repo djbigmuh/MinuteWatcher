@@ -3,9 +3,9 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import kotlinx.coroutines.CancellationException
@@ -36,13 +36,13 @@ internal class SimIdentitySeedRepositoryImpl
 
         override val seedFlow: Flow<String> =
             dataStore.data.map { preferences ->
-                preferences[SEED_KEY] ?: ""
+                preferences[DataStoreKeys.SIM_IDENTITY_SEED] ?: ""
             }
 
         override suspend fun setSeed(seed: String) {
             try {
                 dataStore.edit { preferences ->
-                    preferences[SEED_KEY] = seed
+                    preferences[DataStoreKeys.SIM_IDENTITY_SEED] = seed
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -74,10 +74,10 @@ internal class SimIdentitySeedRepositoryImpl
         while (result == null && attempt < MAX_RETRIES) {
             try {
                 dataStore.edit { preferences ->
-                    val currentSeed = preferences[SEED_KEY]
+                    val currentSeed = preferences[DataStoreKeys.SIM_IDENTITY_SEED]
                     if (currentSeed.isNullOrEmpty()) {
                         val newSeed = generator()
-                        preferences[SEED_KEY] = newSeed
+                        preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
                         AppLogger.d("SimIdentitySeedRepositoryImpl: New seed generated and stored.")
                         result = SeedResolutionResult.Persistent(newSeed)
                     } else {
@@ -101,7 +101,6 @@ internal class SimIdentitySeedRepositoryImpl
     }
 
     companion object {
-        private val SEED_KEY = stringPreferencesKey("sim_identity_seed")
         private const val MAX_RETRIES = 3
         private const val INITIAL_RETRY_DELAY_MS = 500L
     }

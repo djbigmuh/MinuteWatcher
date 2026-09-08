@@ -32,6 +32,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -81,11 +82,20 @@ class TrafficTracker
     private val updateMutex = Mutex()
     private val initializationFailed = AtomicBoolean(false)
     private val isInitializing = AtomicBoolean(false)
-    private var initJob: Job? = null
+    private val initJob = AtomicReference<Job?>(null)
+    private var permissionObserverJob: Job? = null
+    private var simObserverJob: Job? = null
 
     init {
+        isInitializing.set(true)
         scope.launch {
-            startInitialization()
+            try {
+                startInitialization()
+            } finally {
+                initMutex.withLock {
+                    isInitializing.set(false)
+                }
+            }
         }
         startAutomaticRecoveryObservers()
     }
@@ -95,8 +105,7 @@ class TrafficTracker
     }
 
     private suspend fun startInitialization() {
-        val oldJob = initJob
-        initJob = currentCoroutineContext().job
+        val oldJob = initJob.getAndSet(currentCoroutineContext().job)
         oldJob?.cancel()
         try {
             oldJob?.join()
@@ -107,64 +116,79 @@ class TrafficTracker
     }
 
     private fun startAutomaticRecoveryObservers() {
-        scope.launch {
-            try {
-                permissionStateNotifier.changes.collect {
-                    if (permissionManager.hasPhoneStatePermission() &&
-                        permissionManager.hasUsageStatsPermission()
-                    ) {
+        permissionObserverJob =
+            scope.launch {
+                try {
+                    permissionStateNotifier.changes.collect {
+                        if (permissionManager.hasPhoneStatePermission() &&
+                            permissionManager.hasUsageStatsPermission()
+                        ) {
+                            val shouldStart =
+                                initMutex.withLock {
+                                    if (!isInitializing.get() && initializationFailed.compareAndSet(true, false)) {
+                                        isInitializing.set(true)
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                            if (shouldStart) {
+                                AppLogger.d("TrafficTracker: attempting auto-recovery after permission change")
+                                scope.launch {
+                                    try {
+                                        startInitialization()
+                                    } finally {
+                                        initMutex.withLock {
+                                            isInitializing.set(false)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("TrafficTracker: Permission observer failed", e)
+                }
+            }
+        simObserverJob =
+            scope.launch {
+                try {
+                    simIdentityRepository.observeActiveSims().collect {
                         val shouldStart =
                             initMutex.withLock {
                                 if (!isInitializing.get() && initializationFailed.compareAndSet(true, false)) {
+                                    isInitializing.set(true)
                                     true
                                 } else {
                                     false
                                 }
                             }
                         if (shouldStart) {
-                            AppLogger.d("TrafficTracker: attempting auto-recovery after permission change")
-                            startInitialization()
-                        }
-                    }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("TrafficTracker: Permission observer failed", e)
-            }
-        }
-        scope.launch {
-            try {
-                simIdentityRepository.observeActiveSims().collect {
-                    val shouldStart =
-                        initMutex.withLock {
-                            if (!isInitializing.get() && initializationFailed.compareAndSet(true, false)) {
-                                true
-                            } else {
-                                false
+                            AppLogger.d("TrafficTracker: attempting auto-recovery after SIM change")
+                            scope.launch {
+                                try {
+                                    startInitialization()
+                                } finally {
+                                    initMutex.withLock {
+                                        isInitializing.set(false)
+                                    }
+                                }
                             }
                         }
-                    if (shouldStart) {
-                        AppLogger.d("TrafficTracker: attempting auto-recovery after SIM change")
-                        startInitialization()
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("TrafficTracker: SIM observer failed", e)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("TrafficTracker: SIM observer failed", e)
             }
-        }
     }
 
     private suspend fun initializeWithRetry() {
-        isInitializing.set(true)
-        try {
-            initMutex.withLock {
-                performInitializeWithRetry()
-            }
-        } finally {
-            isInitializing.set(false)
+        initMutex.withLock {
+            performInitializeWithRetry()
         }
     }
 
@@ -196,13 +220,38 @@ class TrafficTracker
         (e is SecurityException) || (e is TrafficUpdateTimeoutException)
 
     override suspend fun recover() {
-            if (initializationFailed.compareAndSet(true, false)) {
-                AppLogger.d("TrafficTracker: attempting manual recovery")
-                initializeWithRetry()
-            } else {
-                updateTrafficUsage()
+        val shouldStart =
+            initMutex.withLock {
+                if (!isInitializing.get() && initializationFailed.compareAndSet(true, false)) {
+                    isInitializing.set(true)
+                    true
+                } else {
+                    false
+                }
             }
+        if (shouldStart) {
+            AppLogger.d("TrafficTracker: attempting manual recovery")
+            try {
+                startInitialization()
+            } finally {
+                initMutex.withLock {
+                    isInitializing.set(false)
+                }
+            }
+        } else {
+            updateTrafficUsage()
         }
+    }
+
+    fun stop() {
+        permissionObserverJob?.cancel()
+        permissionObserverJob = null
+        simObserverJob?.cancel()
+        simObserverJob = null
+        initJob.getAndSet(null)?.cancel()
+        isInitializing.set(false)
+        initializationFailed.set(false)
+    }
 
     suspend fun resetBaseline(identity: String) {
         if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {

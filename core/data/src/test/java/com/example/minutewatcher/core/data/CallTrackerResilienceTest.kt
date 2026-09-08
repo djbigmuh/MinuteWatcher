@@ -8,8 +8,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -27,10 +25,10 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
 
             assertFalse("Initial state should be not started", callTracker.isStarted())
 
-            // 1. Arrange: make permissionStateNotifier.changes throw
-            // Suppress because Mockito's property stubbing is flagged as an unused Flow construction
-            @Suppress("UNUSED_EXPRESSION")
-            doThrow(RuntimeException("Simulated failure")).whenever(permissionStateNotifier).changes
+            // 1. Arrange: make permissionStateNotifier.changes throw on first call and succeed on second
+            whenever(permissionStateNotifier.changes)
+                .thenThrow(RuntimeException("Simulated failure"))
+                .thenReturn(permissionChangesFlow)
 
             // 2. Act: call ensureStarted()
             callTracker.ensureStarted()
@@ -40,15 +38,10 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
             assertFalse("Tracker should not be started after failure", callTracker.isStarted())
             assertTrue(
                 "Status should be Error",
-                callTracker.status.value is TrackingStatus.Error
+                callTracker.status.value is TrackingStatus.Error,
             )
 
-            // 4. Arrange: fix the notifier
-            // Suppress because Mockito's property stubbing is flagged as an unused Flow construction
-            @Suppress("UNUSED_EXPRESSION")
-            doReturn(permissionChangesFlow).whenever(permissionStateNotifier).changes
-
-            // 5. Act: call ensureStarted() again
+            // 4. Act: call ensureStarted() again
             callTracker.ensureStarted()
             advanceUntilIdle()
 

@@ -872,7 +872,7 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
-    fun `onCleared triggers emergency save if settings are unsaved`() =
+    fun `onCleared does NOT trigger emergency save`() =
         runTest {
             initViewModel()
 
@@ -889,8 +889,8 @@ class WidgetSettingsViewModelTest {
             method.invoke(viewModel)
             runCurrent()
 
-            // 3. Assert: Verify emergency save was triggered
-            verify(saver).save(any(), any())
+            // 3. Assert: Verify emergency save was NOT triggered (it was disabled to avoid ANR)
+            verify(saver, never()).save(any(), any())
         }
 
     @Test
@@ -921,7 +921,7 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
-    fun `onCleared emergency save respects timeout`() =
+    fun `onCleared does NOT trigger emergency save even if saver hangs`() =
         runTest {
             initViewModel()
             val hangingSaveStarted = CompletableDeferred<Unit>()
@@ -932,12 +932,11 @@ class WidgetSettingsViewModelTest {
                         skipSimSettings: Boolean,
                     ): SaveResult {
                         hangingSaveStarted.complete(Unit)
-                        delay(Constants.Flow.LONG_TIMEOUT_MS.milliseconds * 2)
+                        delay(10000L) // 10 seconds
                         return SaveResult.Success
                     }
                 }
 
-            // Create a VM with the hanging saver
             val vm = WidgetSettingsViewModel(loader, hangingSaver, usageStateRepository)
             advanceUntilIdle()
 
@@ -950,15 +949,8 @@ class WidgetSettingsViewModelTest {
             method.isAccessible = true
             method.invoke(vm)
 
-            // 3. Wait for save to start
-            hangingSaveStarted.await()
-
-            // 4. Advance time past timeout
-            advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS.milliseconds + 100.milliseconds)
-            runCurrent()
-
-            // Since it's in runBlocking now, it will have finished by the time reflect call returns.
-            // If it hadn't timed out, it would still be delaying.
+            // 3. Verify no save started
+            assertFalse(hangingSaveStarted.isCompleted)
         }
 
     @Test
@@ -1135,48 +1127,6 @@ class WidgetSettingsViewModelTest {
             val saveJob =
                 childScope.launch {
                     vm.saveAndNotify()
-                    @Test
-                    fun `saveResult is NOT cleared automatically`() =
-                        runTest {
-                            initViewModel()
-
-                            // 1. Success case
-                            whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
-                            viewModel.saveAndNotify()
-                            runCurrent()
-                            assertEquals(SaveResult.Success, viewModel.state.value.saveResult)
-
-                            // Advance past some time
-                            advanceTimeBy(5000.milliseconds)
-                            runCurrent()
-                            assertEquals(
-                                "Success should NOT be cleared automatically by VM",
-                                SaveResult.Success,
-                                viewModel.state.value.saveResult
-                            )
-
-                            viewModel.consumeSaveResult()
-                            assertEquals(null, viewModel.state.value.saveResult)
-
-                            // 2. Failure case
-                            whenever(saver.save(any(), any())).thenReturn(SaveResult.Failed("Error"))
-                            viewModel.saveAndNotify()
-                            runCurrent()
-                            assertEquals(SaveResult.Failed("Error"), viewModel.state.value.saveResult)
-
-                            // Advance past some time
-                            advanceTimeBy(5000.milliseconds)
-                            runCurrent()
-                            assertEquals(
-                                "Failure should NOT be cleared automatically",
-                                SaveResult.Failed("Error"),
-                                viewModel.state.value.saveResult
-                            )
-
-                            // Manual cleanup
-                            viewModel.consumeSaveResult()
-                            assertEquals(null, viewModel.state.value.saveResult)
-                        }
                 }
             runCurrent()
             saveStarted.await()
@@ -1192,5 +1142,48 @@ class WidgetSettingsViewModelTest {
 
             // 4. Verify isSaving is false even though the parent coroutine was cancelled
             assertFalse("isSaving should be false after cancellation", vm.state.value.isSaving)
+        }
+
+    @Test
+    fun `saveResult is NOT cleared automatically`() =
+        runTest {
+            initViewModel()
+
+            // 1. Success case
+            whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
+            viewModel.saveAndNotify()
+            runCurrent()
+            assertEquals(SaveResult.Success, viewModel.state.value.saveResult)
+
+            // Advance past some time
+            advanceTimeBy(5000.milliseconds)
+            runCurrent()
+            assertEquals(
+                "Success should NOT be cleared automatically by VM",
+                SaveResult.Success,
+                viewModel.state.value.saveResult
+            )
+
+            viewModel.consumeSaveResult()
+            assertEquals(null, viewModel.state.value.saveResult)
+
+            // 2. Failure case
+            whenever(saver.save(any(), any())).thenReturn(SaveResult.Failed("Error"))
+            viewModel.saveAndNotify()
+            runCurrent()
+            assertEquals(SaveResult.Failed("Error"), viewModel.state.value.saveResult)
+
+            // Advance past some time
+            advanceTimeBy(5000.milliseconds)
+            runCurrent()
+            assertEquals(
+                "Failure should NOT be cleared automatically",
+                SaveResult.Failed("Error"),
+                viewModel.state.value.saveResult
+            )
+
+            // Manual cleanup
+            viewModel.consumeSaveResult()
+            assertEquals(null, viewModel.state.value.saveResult)
         }
 }

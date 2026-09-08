@@ -104,13 +104,17 @@ class UpdateCoordinator
         }
 
         private fun ensureObservationStarted() {
+            // Быстрая проверка: если уже запущено и активно — выходим
             if (isObservationStarted.get()) {
                 val job = observationScope.getJob()
                 if (job != null && job.isActive) return
-                isObservationStarted.set(false)
             }
 
-            if (!isObservationStarted.compareAndSet(false, true)) return
+            // Пытаемся захватить право на запуск
+            if (!isObservationStarted.compareAndSet(false, true)) {
+                // Другой поток уже запускает — выходим
+                return
+            }
 
             scope.launch {
                 try {

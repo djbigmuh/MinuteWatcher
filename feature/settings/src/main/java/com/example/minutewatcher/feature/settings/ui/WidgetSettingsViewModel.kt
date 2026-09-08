@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -70,10 +69,12 @@ class WidgetSettingsViewModel
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
     private var autoSaveJob: Job? = null
+
+    @Volatile
     private var lastSavedSettings: WidgetSettingsState? = null
 
     private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
-    private val pendingUpdatesMutex = Mutex()
+    private val pendingUpdatesLock = Any()
     private val saveMutex = Mutex()
 
     private var loadJob: Job? = null
@@ -134,27 +135,32 @@ class WidgetSettingsViewModel
      * Обновляет текущее состояние настроек виджета.
      */
     fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-        if (state.value.settings == null) {
-            queueUpdate(transform)
-            return
-        }
-
-        var changed = false
-        reduce {
-            val currentSettings = this.settings ?: return@reduce this
-            val transformed = transform(currentSettings)
-            val validated = WidgetSettingsState.validate(transformed)
-            if (validated != currentSettings) {
-                changed = true
-                copy(
-                    isLoadError = false,
-                    settings = validated,
-                )
+        var appliedImmediately = false
+        synchronized(pendingUpdatesLock) {
+            val currentSettings = state.value.settings
+            if (currentSettings != null) {
+                val transformed = transform(currentSettings)
+                val validated = WidgetSettingsState.validate(transformed)
+                if (validated != currentSettings) {
+                    reduce {
+                        copy(
+                            isLoadError = false,
+                            settings = validated,
+                        )
+                    }
+                    appliedImmediately = true
+                }
             } else {
-                this
+                if (pendingUpdates.size >= MAX_PENDING_UPDATES) {
+                    AppLogger.e("WidgetSettingsViewModel: pendingUpdates limit reached, clearing queue")
+                    pendingUpdates.clear()
+                }
+                pendingUpdates.add(transform)
+                AppLogger.d("WidgetSettingsViewModel: update queued (total: ${pendingUpdates.size})")
             }
         }
-        if (changed) {
+
+        if (appliedImmediately) {
             autoSaveTrigger.tryEmit(Unit)
         }
     }
@@ -166,87 +172,72 @@ class WidgetSettingsViewModel
         slot: Int,
         transform: (SimSettingsState) -> SimSettingsState,
     ) {
-        if (state.value.settings == null) {
-            queueUpdate { settings ->
-                val updatedSimStates = settings.simStates.toMutableMap()
-                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
-                updatedSimStates[slot] = transform(currentSimState)
-                WidgetSettingsState.validate(settings.copy(simStates = updatedSimStates))
-            }
-            return
-        }
-
-        var changed = false
-        reduce {
-            val currentSettings = this.settings ?: return@reduce this
-            val updatedSimStates = currentSettings.simStates.toMutableMap()
+        val simTransform: (WidgetSettingsState) -> WidgetSettingsState = { settings ->
+            val updatedSimStates = settings.simStates.toMutableMap()
             val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
             updatedSimStates[slot] = transform(currentSimState)
+            settings.copy(simStates = updatedSimStates)
+        }
 
-            val validated =
-                WidgetSettingsState.validate(
-                    currentSettings.copy(
-                        simStates = updatedSimStates,
-                    ),
-                )
-
-            if (validated != currentSettings) {
-                changed = true
-                copy(
-                    isLoadError = false,
-                    settings = validated,
-                )
+        var appliedImmediately = false
+        synchronized(pendingUpdatesLock) {
+            val currentSettings = state.value.settings
+            if (currentSettings != null) {
+                val transformed = simTransform(currentSettings)
+                val validated = WidgetSettingsState.validate(transformed)
+                if (validated != currentSettings) {
+                    reduce {
+                        copy(
+                            isLoadError = false,
+                            settings = validated,
+                        )
+                    }
+                    appliedImmediately = true
+                }
             } else {
-                this
-            }
-        }
-        if (changed) {
-            autoSaveTrigger.tryEmit(Unit)
-        }
-    }
-
-    private fun queueUpdate(transform: (WidgetSettingsState) -> WidgetSettingsState) {
-        viewModelScope.launch {
-            pendingUpdatesMutex.withLock {
                 if (pendingUpdates.size >= MAX_PENDING_UPDATES) {
                     AppLogger.e("WidgetSettingsViewModel: pendingUpdates limit reached, clearing queue")
                     pendingUpdates.clear()
                 }
-                pendingUpdates.add(transform)
-                AppLogger.d("WidgetSettingsViewModel: update queued (total: ${pendingUpdates.size})")
+                pendingUpdates.add(simTransform)
+                AppLogger.d("WidgetSettingsViewModel: SIM update queued (total: ${pendingUpdates.size})")
             }
+        }
+
+        if (appliedImmediately) {
+            autoSaveTrigger.tryEmit(Unit)
         }
     }
 
-    private suspend fun applyPendingUpdatesAndSet(loaded: WidgetSettingsState) {
-        val finalSettings =
-            pendingUpdatesMutex.withLock {
-                if (pendingUpdates.isEmpty()) {
-                    WidgetSettingsState.validate(loaded)
-                } else {
-                    AppLogger.d("WidgetSettingsViewModel: Applying ${pendingUpdates.size} pending updates")
-                    var current = loaded
-                    pendingUpdates.forEach { transform ->
-                        current = transform(current)
-                    }
-                    pendingUpdates.clear()
-                    WidgetSettingsState.validate(current)
-                }
+    private fun applyPendingUpdatesAndSet(loaded: WidgetSettingsState) {
+        synchronized(pendingUpdatesLock) {
+            val currentSettings = state.value.settings
+            if (currentSettings != null && lastSavedSettings != null && currentSettings != lastSavedSettings) {
+                AppLogger.w("WidgetSettingsViewModel: overwriting modified settings with loaded data and pending updates!")
             }
 
-        reduce {
-            copy(
-                settings = finalSettings,
-                isLoadError = false,
-            )
-        }
+            var merged = loaded
+            if (pendingUpdates.isNotEmpty()) {
+                AppLogger.d("WidgetSettingsViewModel: Applying ${pendingUpdates.size} pending updates")
+                pendingUpdates.forEach { merged = it(merged) }
+                pendingUpdates.clear()
+            }
+            val finalSettings = WidgetSettingsState.validate(merged)
 
-        if (lastSavedSettings == null) {
-            lastSavedSettings = finalSettings
-        }
+            reduce {
+                copy(
+                    settings = finalSettings,
+                    isLoadError = false,
+                )
+            }
 
-        if (finalSettings != loaded) {
-            autoSaveTrigger.tryEmit(Unit)
+            if (lastSavedSettings == null) {
+                lastSavedSettings = finalSettings
+            }
+
+            if (finalSettings != loaded) {
+                autoSaveTrigger.tryEmit(Unit)
+            }
         }
     }
 
@@ -345,36 +336,18 @@ class WidgetSettingsViewModel
     }
 
     override fun onCleared() {
-        // Cancel ongoing auto-save to ensure we can check the final state reliably.
+        // Cancel ongoing auto-save.
         autoSaveJob?.cancel()
 
         val currentState = state.value
         val currentSettings = currentState.settings
         val lastSaved = lastSavedSettings
 
-        // If a manual save is already in progress, don't trigger emergency save to avoid conflicts.
-        // saveAndNotify uses NonCancellable for the actual write, so it will complete even after onCleared.
-        if (currentState.isSaving) {
-            AppLogger.d("WidgetSettingsViewModel: skipping emergency save, save already in progress")
-            super.onCleared()
-            return
-        }
-
         if (currentSettings != null && lastSaved != null && currentSettings != lastSaved) {
-            AppLogger.d("WidgetSettingsViewModel: executing emergency save onCleared")
-            // Use runBlocking to ensure saving completes before ViewModel is destroyed.
-            // onCleared() is called on the main thread, but blocking for a short time
-            // during process shutdown/activity death is acceptable for data integrity.
-            runBlocking(NonCancellable) {
-                try {
-                    val result =
-                        withTimeoutOrNull(3.seconds) {
-                            saver.save(currentSettings, skipSimSettings = currentSettings.simListLoadFailed)
-                        }
-                    AppLogger.d("WidgetSettingsViewModel: emergency save completed with result: $result")
-                } catch (e: Exception) {
-                    AppLogger.e("WidgetSettingsViewModel: emergency save failed", e)
-                }
+            if (currentState.isSaving) {
+                AppLogger.d("WidgetSettingsViewModel: unsaved changes onCleared, but save is already in progress")
+            } else {
+                AppLogger.w("WidgetSettingsViewModel: onCleared with UNSAVED changes! Emergency save in onCleared is disabled to avoid ANR.")
             }
         }
         super.onCleared()
