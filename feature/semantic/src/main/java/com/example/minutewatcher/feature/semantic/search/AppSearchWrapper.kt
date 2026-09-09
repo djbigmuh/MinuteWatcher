@@ -87,11 +87,11 @@ internal class AppSearchWrapperImpl
                 .addIds(ids)
                 .build()
 
-    override fun createSearchSpec(query: String): SearchSpec =
-        SearchSpec
-            .Builder()
-            .addFilterNamespaces(NAMESPACE)
-            .setSnippetCount(SNIPPET_COUNT)
+        override fun createSearchSpec(query: String): SearchSpec =
+            SearchSpec
+                .Builder()
+                .addFilterNamespaces(NAMESPACE)
+                .setSnippetCount(SNIPPET_COUNT)
                 .build()
     }
 

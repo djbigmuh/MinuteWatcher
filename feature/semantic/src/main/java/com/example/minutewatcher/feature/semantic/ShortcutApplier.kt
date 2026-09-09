@@ -30,26 +30,26 @@ interface ShortcutApplier {
  */
 @Singleton
 class SystemShortcutApplier
-@Inject
-constructor() : ShortcutApplier {
-    override fun apply(
-        context: Context,
-        shortcuts: List<ShortcutInfoCompat>,
-    ) {
-        try {
-            if (shortcuts.isNotEmpty()) {
-                ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
-            } else {
-                ShortcutManagerCompat.removeAllDynamicShortcuts(context)
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (
-            @Suppress("TooGenericExceptionCaught")
-            e: Exception,
+    @Inject
+    constructor() : ShortcutApplier {
+        override fun apply(
+            context: Context,
+            shortcuts: List<ShortcutInfoCompat>,
         ) {
-            AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
-            throw e
+            try {
+                if (shortcuts.isNotEmpty()) {
+                    ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
+                } else {
+                    ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
+                AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
+                throw e
+            }
         }
     }
-}

@@ -1,6 +1,10 @@
 package com.example.minutewatcher.feature.semantic.search
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -9,6 +13,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -16,6 +24,29 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SnapshotIndexerResilienceTest : SemanticSearchManagerTestFixtures() {
+    @Test
+    fun `performIndexUpdate skips processing for empty snapshot`() =
+        runTest(testDispatcher) {
+            val appSearchWrapper: AppSearchWrapper = mock()
+            val errorHandler: AppSearchErrorHandler = mock()
+            val dataStore: DataStore<Preferences> = mock()
+            val indexer = SnapshotIndexer(appSearchWrapper, errorHandler, dataStore)
+            val session: AppSearchSessionWrapper = mock()
+
+            val emptySnapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
+
+            indexer.performIndexUpdate(session, emptySnapshot)
+
+            verify(session, never()).putDocuments(any())
+            verify(session, never()).removeByDocumentId(any())
+        }
+
     @Test
     fun `performIndexUpdate reorders operations and handles partial remove failure`() =
         runTest(testDispatcher) {

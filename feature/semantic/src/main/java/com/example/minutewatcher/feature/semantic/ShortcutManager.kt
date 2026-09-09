@@ -64,7 +64,7 @@ class ShortcutManager
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val shortcutApplier: ShortcutApplier,
     ) : TrackingStatusProvider {
-    override val key: TrackingKey = TrackingKey.SHORTCUTS
+        override val key: TrackingKey = TrackingKey.SHORTCUTS
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
@@ -73,43 +73,43 @@ class ShortcutManager
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
         private var job: Job? = null
 
-    /**
-     * Updates the tracker status using a prioritized transition rule to prevent race conditions.
-     * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
-     */
-    private fun transitionStatus(
-        newStatus: TrackingStatus,
-        force: Boolean = false,
-    ) {
-        _status.update { current ->
-            val currentPrio = getStatusPriority(current)
-            val newPrio = getStatusPriority(newStatus)
+        /**
+         * Updates the tracker status using a prioritized transition rule to prevent race conditions.
+         * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+         */
+        private fun transitionStatus(
+            newStatus: TrackingStatus,
+            force: Boolean = false,
+        ) {
+            _status.update { current ->
+                val currentPrio = getStatusPriority(current)
+                val newPrio = getStatusPriority(newStatus)
 
-            when {
-                force -> newStatus
-                current == newStatus -> current
-                newPrio >= currentPrio -> newStatus
-                // Recovery: Success can clear transient UNKNOWN error
-                newPrio == TrackingStatus.PRIORITY_HEALTHY &&
-                    currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
+                when {
+                    force -> newStatus
+                    current == newStatus -> current
+                    newPrio >= currentPrio -> newStatus
+                    // Recovery: Success can clear transient UNKNOWN error
+                    newPrio == TrackingStatus.PRIORITY_HEALTHY &&
+                        currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
 
-                else -> current
+                    else -> current
+                }
             }
         }
-    }
 
-    private fun getStatusPriority(status: TrackingStatus): Int =
-        when (status) {
-            is TrackingStatus.Error ->
-                when (status.type) {
-                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                }
+        private fun getStatusPriority(status: TrackingStatus): Int =
+            when (status) {
+                is TrackingStatus.Error ->
+                    when (status.type) {
+                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                    }
 
-            TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-            else -> 0
-        }
+                TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+                else -> 0
+            }
 
         /**
          * Инициализирует наблюдение за snapshot-потоком.
@@ -204,10 +204,17 @@ class ShortcutManager
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException].
+         * **Contract:** Snapshots with [Constants.Data.EMPTY_TIMESTAMP] are ignored to avoid
+         * removing all dynamic shortcuts during cold start.
          */
         @Suppress("InstanceOfCheckForException")
         suspend fun updateShortcutsSync(snapshot: GlobalSnapshot): Boolean =
             try {
+                if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
+                    AppLogger.d("ShortcutManager: snapshot not loaded, skipping shortcut update (no removal)")
+                    return true
+                }
+
                 withContext(ioDispatcher) {
                     val shortcuts = createShortcuts(snapshot)
                     applyShortcuts(shortcuts)
@@ -253,6 +260,10 @@ class ShortcutManager
             }
 
         private fun updateShortcuts(snapshot: GlobalSnapshot) {
+            if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
+                AppLogger.d("ShortcutManager: snapshot not loaded, skipping shortcut update (no removal)")
+                return
+            }
             val shortcuts = createShortcuts(snapshot)
             applyShortcuts(shortcuts)
         }
@@ -323,8 +334,8 @@ class ShortcutManager
                     putExtra(IntentExtras.SIM_SLOT, slot)
                 }
 
-    private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
-        shortcutApplier.apply(context, shortcuts)
+        private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
+            shortcutApplier.apply(context, shortcuts)
         }
 
         companion object {

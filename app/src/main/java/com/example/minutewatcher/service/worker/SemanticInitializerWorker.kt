@@ -6,11 +6,14 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Worker responsible for initializing semantic services (AppSearch and Shortcuts).
@@ -30,15 +33,27 @@ class SemanticInitializerWorker
         override suspend fun doWork(): Result {
             AppLogger.d("SemanticInitializerWorker: Starting initialization")
             val snapshotFlow = usageStateRepository.observeSnapshot()
-            val initialSnapshot = snapshotFlow.first()
 
-            // Start background observers for continuous updates
+            // Start background observers for continuous updates.
+            // These will eventually handle indexing when data arrives.
             searchManager.initialize(snapshotFlow)
             shortcutManager.initialize(snapshotFlow)
 
+            // Wait for the first meaningful snapshot to perform synchronous initialization.
+            val initialSnapshot =
+                withTimeoutOrNull(Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds) {
+                    snapshotFlow.first { it.timestamp != Constants.Data.EMPTY_TIMESTAMP }
+                }
+
+            if (initialSnapshot == null) {
+                AppLogger.w(
+                    "SemanticInitializerWorker: no loaded snapshot within timeout, " +
+                        "skipping synchronous indexing (observers remain active)",
+                )
+                return Result.success()
+            }
+
             // Perform initial indexing and shortcut update synchronously to catch immediate failures.
-            // We log the outcome but return success to avoid infinite WorkManager retries,
-            // as error state is visible in the UI and can be retried manually.
             val searchResult = searchManager.indexInitialSnapshot(initialSnapshot)
             val shortcutSuccess = shortcutManager.updateShortcutsSync(initialSnapshot)
 

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
@@ -30,10 +31,21 @@ open class SnapshotIndexer
         @AppDataStore
         private val dataStore: DataStore<Preferences>,
     ) {
+        /**
+         * Updates the AppSearch index based on the given snapshot.
+         *
+         * **Contract:** A snapshot with [Constants.Data.EMPTY_TIMESTAMP] is ignored to prevent
+         * accidental index wipes during initialization.
+         */
         suspend fun performIndexUpdate(
             session: AppSearchSessionWrapper,
             snapshot: GlobalSnapshot,
         ) {
+            if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
+                AppLogger.d("SnapshotIndexer: snapshot not loaded yet, skipping index update (no wipe)")
+                return
+            }
+
             val documents = UsageDocument.fromGlobalSnapshot(snapshot)
             val currentIds = documents.asSequence().map { it.id }.toSet()
 

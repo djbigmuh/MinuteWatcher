@@ -80,11 +80,11 @@ class AppSearchSessionManager
             }
         }
 
-    suspend fun closeSession() {
-        sessionMutex.withLock {
-            session?.close()
-            session = null
-        }
+        suspend fun closeSession() {
+            sessionMutex.withLock {
+                session?.close()
+                session = null
+            }
         }
 
         companion object {

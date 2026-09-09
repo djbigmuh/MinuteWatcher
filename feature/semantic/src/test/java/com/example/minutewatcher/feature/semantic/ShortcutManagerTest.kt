@@ -230,6 +230,66 @@ class ShortcutManagerTest {
             assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
         }
 
+    @Test
+    fun `updateShortcutsSync ignores empty snapshot and does not remove shortcuts`() =
+        runTest {
+            // 1. Initial shortcuts setup
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(
+                                PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
+                            ),
+                            1,
+                        ),
+                    ),
+                )
+            shortcutManager.updateShortcutsSync(snapshot)
+            assertTrue(androidShortcutManager.dynamicShortcuts.isNotEmpty())
+
+            // 2. Pass empty snapshot (timestamp = 0)
+            val emptySnapshot = snapshot.copy(timestamp = 0L)
+            val result = shortcutManager.updateShortcutsSync(emptySnapshot)
+
+            // 3. Verify shortcuts NOT removed
+            assertTrue(result)
+            assertTrue("Shortcuts should still exist", androidShortcutManager.dynamicShortcuts.isNotEmpty())
+        }
+
+    @Test
+    fun `updateShortcutsSync removes shortcuts for loaded snapshot without SIMs`() =
+        runTest {
+            // 1. Initial shortcuts setup
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(
+                                PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
+                            ),
+                            1,
+                        ),
+                    ),
+                )
+            shortcutManager.updateShortcutsSync(snapshot)
+            assertTrue(androidShortcutManager.dynamicShortcuts.isNotEmpty())
+
+            // 2. Pass loaded snapshot with no SIMs (timestamp != 0)
+            val noSimSnapshot = snapshot.copy(timestamp = 1000L, simSnapshots = emptyList())
+            val result = shortcutManager.updateShortcutsSync(noSimSnapshot)
+
+            // 3. Verify shortcuts ARE removed
+            assertTrue(result)
+            assertTrue("Shortcuts should be removed", androidShortcutManager.dynamicShortcuts.isEmpty())
+        }
+
     @Suppress("SameParameterValue")
     private fun createEntity(
         slot: Int,

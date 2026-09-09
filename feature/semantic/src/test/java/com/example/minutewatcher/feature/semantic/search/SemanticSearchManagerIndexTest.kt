@@ -65,6 +65,28 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
+    fun `indexSnapshot with empty snapshot ignores update and does not clear index`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+
+            // 1. Initial indexing
+            manager.indexSnapshot(createSnapshotWithOneSim())
+            val session = fakeWrapper.lastSession!!
+            val initialRemoves = session.removeRequests.size
+
+            // 2. Pass empty snapshot (timestamp = 0)
+            val emptySnapshot = createSnapshot(emptyList()).copy(timestamp = 0L)
+            manager.indexSnapshot(emptySnapshot)
+
+            // 3. Verify NO additional remove requests
+            assertEquals(
+                "Should NOT have new remove requests",
+                initialRemoves,
+                session.removeRequests.size,
+            )
+        }
+
+    @Test
     fun `empty snapshot triggers stale document removal`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
