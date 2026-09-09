@@ -14,7 +14,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStickyStatusTest : CallTrackerTestFixtures() {
-
     @Test
     fun `transient error UNKNOWN is cleared by successful non-forced refresh`() =
         runTest(testDispatcher) {
@@ -41,7 +40,10 @@ class CallTrackerStickyStatusTest : CallTrackerTestFixtures() {
 
             // 1. Set transient error
             tracker.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION), force = true)
-            assertEquals(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, (tracker.status.value as TrackingStatus.Error).type)
+            assertEquals(
+                TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                (tracker.status.value as TrackingStatus.Error).type,
+            )
 
             // 2. Perform non-forced refresh with success
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
@@ -81,11 +83,17 @@ class CallTrackerStickyStatusTest : CallTrackerTestFixtures() {
             // 1. Missing permission
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             tracker.refreshStatus(force = true)
-            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (tracker.status.value as TrackingStatus.Error).type)
+            assertEquals(
+                TrackingStatus.ErrorType.PERMISSION_MISSING,
+                (tracker.status.value as TrackingStatus.Error).type,
+            )
 
             // 2. Refresh without gaining permission
             tracker.refreshStatus(force = true)
-            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (tracker.status.value as TrackingStatus.Error).type)
+            assertEquals(
+                TrackingStatus.ErrorType.PERMISSION_MISSING,
+                (tracker.status.value as TrackingStatus.Error).type,
+            )
 
             // 3. Regain permission and refresh
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)

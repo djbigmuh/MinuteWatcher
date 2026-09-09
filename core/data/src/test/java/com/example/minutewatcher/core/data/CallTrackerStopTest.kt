@@ -120,13 +120,14 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
             setupCommonMocks()
             val tracker = createTracker(backgroundScope)
 
-            val callerJob = launch {
-                try {
-                    tracker.onCallStarted(1)
-                } catch (e: Exception) {
-                    throw e
+            val callerJob =
+                launch {
+                    try {
+                        tracker.onCallStarted(1)
+                    } catch (e: Exception) {
+                        throw e
+                    }
                 }
-            }
             runCurrent()
 
             callerJob.cancel()
@@ -141,17 +142,18 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
             setupCommonMocks()
 
             val startHandler: CallStartHandler = mock()
-            val tracker = CallTracker(
-                callSessionRepository,
-                permissionManager,
-                backgroundScope,
-                createAttributionResolver(),
-                startHandler,
-                mock(),
-                mock(),
-                permissionStateNotifier,
-                createMutexHolder()
-            )
+            val tracker =
+                CallTracker(
+                    callSessionRepository,
+                    permissionManager,
+                    backgroundScope,
+                    createAttributionResolver(),
+                    startHandler,
+                    mock(),
+                    mock(),
+                    permissionStateNotifier,
+                    createMutexHolder(),
+                )
 
             // 1. Mock stop during onCallStarted
             tracker.stop()

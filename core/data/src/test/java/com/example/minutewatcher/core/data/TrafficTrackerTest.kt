@@ -396,7 +396,10 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
             verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
             runCurrent()
-            assertTrue("Expected Error status, but was ${tracker.status.value}", tracker.status.value is TrackingStatus.Error)
+            assertTrue(
+                "Expected Error status, but was ${tracker.status.value}",
+                tracker.status.value is TrackingStatus.Error,
+            )
 
             // Manual retry that succeeds
             repeat(5) { tracker.updateTrafficUsage() } // Exhaust Unavailable

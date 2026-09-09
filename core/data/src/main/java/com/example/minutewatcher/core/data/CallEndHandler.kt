@@ -53,10 +53,11 @@ internal class CallEndHandler
                         sessionCleaner.clearAllSessions()
                         shouldRefreshStatus = true
                     } else {
-                        shouldRefreshStatus = executeCallEndLogic(
-                            subId,
-                            context,
-                        )
+                        shouldRefreshStatus =
+                            executeCallEndLogic(
+                                subId,
+                                context,
+                            )
                     }
                 }
             } catch (e: CancellationException) {

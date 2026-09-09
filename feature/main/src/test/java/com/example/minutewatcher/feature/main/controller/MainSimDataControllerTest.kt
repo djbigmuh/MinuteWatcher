@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -40,9 +39,10 @@ import kotlin.time.Duration.Companion.milliseconds
 @RunWith(RobolectricTestRunner::class)
 class MainSimDataControllerTest {
     @get:Rule
-    val mainDispatcherRule = MainDispatcherRule(
-        UnconfinedTestDispatcher()
-    )
+    val mainDispatcherRule =
+        MainDispatcherRule(
+            UnconfinedTestDispatcher(),
+        )
 
     private val usageStateRepository: UsageStateRepository = mock()
     private val trackingRecoveryController: TrackingRecoveryController = mock()
@@ -192,9 +192,10 @@ class MainSimDataControllerTest {
 
             assertEquals("Flow should not be collected yet", 0, modelsFlow.subscriptionCount.value)
 
-            val job = launch {
-                controller.observeUiState(this).collect {}
-            }
+            val job =
+                launch {
+                    controller.observeUiState(this).collect {}
+                }
             testScheduler.runCurrent()
             assertEquals("Flow should be collected after subscription", 1, modelsFlow.subscriptionCount.value)
 
