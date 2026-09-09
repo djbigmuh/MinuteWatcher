@@ -1,8 +1,10 @@
 package com.example.minutewatcher.feature.settings.ui
 
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -34,6 +36,7 @@ class WidgetSettingsViewModelRaceTest {
     private val loader: WidgetSettingsLoader = mock()
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
+    private val appSettingsRepository: AppSettingsRepository = mock()
 
     private lateinit var viewModel: WidgetSettingsViewModel
 
@@ -43,9 +46,11 @@ class WidgetSettingsViewModelRaceTest {
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
             val snapshotFlow = MutableStateFlow(snapshot)
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
             whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 4))
 
-            viewModel = WidgetSettingsViewModel(loader, saver, backgroundScope, usageStateRepository)
+            viewModel =
+                WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
         }
 
@@ -74,7 +79,14 @@ class WidgetSettingsViewModelRaceTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    controlledSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // 1. Start save operation

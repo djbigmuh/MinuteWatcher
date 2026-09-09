@@ -24,7 +24,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -38,6 +40,7 @@ import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen
 import com.example.minutewatcher.feature.main.SimCardScreenActions
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
+import com.example.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
@@ -94,29 +97,33 @@ class MainActivity : AppCompatActivity() {
 
     private fun observeAppTheme() {
         lifecycleScope.launch {
-            viewModel.appTheme.collect { theme ->
-                val mode =
-                    when (theme) {
-                        AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-                        AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
-                        AppTheme.FOLLOW_SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                    }
-                AppCompatDelegate.setDefaultNightMode(mode)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.appTheme.collect { theme ->
+                    val mode =
+                        when (theme) {
+                            AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+                            AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
+                            AppTheme.FOLLOW_SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                        }
+                    AppCompatDelegate.setDefaultNightMode(mode)
+                }
             }
         }
     }
 
     private fun observeAppLanguage() {
         lifecycleScope.launch {
-            viewModel.appLanguage.collect { lang ->
-                val appLocale: LocaleListCompat =
-                    if (lang == null) {
-                        LocaleListCompat.getEmptyLocaleList()
-                    } else {
-                        LocaleListCompat.forLanguageTags(lang)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.appLanguage.collect { lang ->
+                    val appLocale: LocaleListCompat =
+                        if (lang == null) {
+                            LocaleListCompat.getEmptyLocaleList()
+                        } else {
+                            LocaleListCompat.forLanguageTags(lang)
+                        }
+                    if (AppCompatDelegate.getApplicationLocales() != appLocale) {
+                        AppCompatDelegate.setApplicationLocales(appLocale)
                     }
-                if (AppCompatDelegate.getApplicationLocales() != appLocale) {
-                    AppCompatDelegate.setApplicationLocales(appLocale)
                 }
             }
         }
@@ -125,12 +132,7 @@ class MainActivity : AppCompatActivity() {
     @androidx.compose.runtime.Composable
     private fun AppContent() {
         val themeState by viewModel.appTheme.collectAsState()
-        val darkTheme =
-            when (themeState) {
-                AppTheme.DARK -> true
-                AppTheme.LIGHT -> false
-                AppTheme.FOLLOW_SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-            }
+        val darkTheme = rememberIsDarkTheme(themeState)
 
         MinuteWatcherTheme(darkTheme = darkTheme) {
             Surface(

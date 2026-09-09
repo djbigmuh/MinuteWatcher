@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
@@ -63,6 +64,18 @@ fun MinuteWatcherTheme(
         content = content,
     )
 }
+
+/**
+ * Maps [AppTheme] to a boolean indicating if dark theme should be used.
+ * Respects system settings when [AppTheme.FOLLOW_SYSTEM] is selected.
+ */
+@Composable
+fun rememberIsDarkTheme(appTheme: AppTheme): Boolean =
+    when (appTheme) {
+        AppTheme.DARK -> true
+        AppTheme.LIGHT -> false
+        AppTheme.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+    }
 
 val ColorScheme.usageNormal: Color
     get() = Color(UsageColors.normal(surface.luminance() < Constants.UI.LUMINANCE_THRESHOLD))

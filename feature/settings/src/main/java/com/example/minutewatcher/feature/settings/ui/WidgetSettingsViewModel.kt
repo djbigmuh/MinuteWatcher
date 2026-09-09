@@ -4,8 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimSettingsState
@@ -20,8 +22,11 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -63,6 +68,7 @@ class WidgetSettingsViewModel
     constructor(
         private val loader: WidgetSettingsLoader,
         private val saver: WidgetSettingsSaver,
+        private val appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val appScope: CoroutineScope,
         usageStateRepository: UsageStateRepository,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
@@ -83,6 +89,20 @@ class WidgetSettingsViewModel
         private var loadJob: Job? = null
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
+
+        /**
+         * State flow for the current application theme.
+         * Used to sync the settings screen theme with the main app theme.
+         */
+        val appTheme: StateFlow<AppTheme> =
+            appSettingsRepository
+                .observeAppSettings()
+                .map { it.theme }
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    initialValue = AppTheme.FOLLOW_SYSTEM,
+                )
 
         init {
             loadSettings()

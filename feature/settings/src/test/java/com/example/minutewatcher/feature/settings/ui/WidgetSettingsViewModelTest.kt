@@ -1,9 +1,12 @@
 package com.example.minutewatcher.feature.settings.ui
 
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSaveResult
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
@@ -54,6 +57,7 @@ class WidgetSettingsViewModelTest {
     private val loader: WidgetSettingsLoader = mock()
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
+    private val appSettingsRepository: AppSettingsRepository = mock()
 
     private val testDispatcher get() = mainDispatcherRule.testDispatcher
 
@@ -64,6 +68,7 @@ class WidgetSettingsViewModelTest {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
         val snapshotFlow = MutableStateFlow(snapshot)
         whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
 
         runBlocking {
             whenever(loader.load()).thenReturn(WidgetSettingsState())
@@ -72,7 +77,7 @@ class WidgetSettingsViewModelTest {
     }
 
     private fun TestScope.initViewModel() {
-        viewModel = WidgetSettingsViewModel(loader, saver, backgroundScope, usageStateRepository)
+        viewModel = WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
         advanceUntilIdle()
     }
 
@@ -91,7 +96,8 @@ class WidgetSettingsViewModelTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
 
             // Initial load in init
-            val initialViewModel = WidgetSettingsViewModel(loader, saver, backgroundScope, usageStateRepository)
+            val initialViewModel =
+                WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
             assertTrue(initialViewModel.state.value.isLoadError)
 
@@ -133,7 +139,8 @@ class WidgetSettingsViewModelTest {
                 }
             val realSaver = WidgetSettingsSaver(blockingLoader, mock())
             whenever(loader.load()).thenReturn(WidgetSettingsState())
-            val vm = WidgetSettingsViewModel(loader, realSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(loader, realSaver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
 
             launch { vm.saveAndNotify() }
@@ -166,7 +173,14 @@ class WidgetSettingsViewModelTest {
                         skipSimSettings: Boolean,
                     ): SaveResult = SaveResult.Failed("Generic failure")
                 }
-            val vm = WidgetSettingsViewModel(loader, failingSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    failingSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             vm.saveAndNotify()
@@ -224,7 +238,14 @@ class WidgetSettingsViewModelTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, localSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    localSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             vm.updateSettings { it.copy(fontSize = 1) }
@@ -283,7 +304,8 @@ class WidgetSettingsViewModelTest {
                 }
 
             // 1. Create VM (triggers first load in init)
-            val vm = WidgetSettingsViewModel(fakeLoader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(fakeLoader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             runCurrent()
 
             // 2. Trigger second load while first is still pending
@@ -356,7 +378,14 @@ class WidgetSettingsViewModelTest {
                         skipSimSettings: Boolean,
                     ): SaveResult = throw CancellationException("Test cancellation")
                 }
-            val vm = WidgetSettingsViewModel(loader, cancelingSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    cancelingSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             vm.saveAndNotify()
@@ -382,7 +411,8 @@ class WidgetSettingsViewModelTest {
                 }
             val realSaver = WidgetSettingsSaver(hangingLoader, mock())
             whenever(loader.load()).thenReturn(WidgetSettingsState())
-            val vm = WidgetSettingsViewModel(loader, realSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(loader, realSaver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
 
             val saveJob =
@@ -414,7 +444,14 @@ class WidgetSettingsViewModelTest {
                         return SaveResult.Success
                     }
                 }
-            val vm = WidgetSettingsViewModel(loader, partialSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    partialSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             vm.updateSettings { it.copy(simListLoadFailed = true) }
@@ -432,7 +469,8 @@ class WidgetSettingsViewModelTest {
         runTest {
             // Имитировать ошибку загрузки
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            val vm = WidgetSettingsViewModel(loader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
@@ -449,7 +487,8 @@ class WidgetSettingsViewModelTest {
         runTest {
             // Имитировать ошибку загрузки
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            val vm = WidgetSettingsViewModel(loader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
@@ -465,7 +504,8 @@ class WidgetSettingsViewModelTest {
     fun `saveAndNotify returns Failed when loading failed previously`() =
         runTest {
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
-            val vm = WidgetSettingsViewModel(loader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
@@ -495,7 +535,8 @@ class WidgetSettingsViewModelTest {
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(slowLoader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             // Do NOT advance time, so it's still loading inside init -> loadSettings
 
             vm.saveAndNotify()
@@ -520,7 +561,14 @@ class WidgetSettingsViewModelTest {
                         return SaveResult.Success
                     }
                 }
-            val vm = WidgetSettingsViewModel(loader, capturingSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    capturingSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // Test MAX values
@@ -600,7 +648,8 @@ class WidgetSettingsViewModelTest {
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(slowLoader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             runCurrent()
 
             // Queue invalid update
@@ -657,7 +706,14 @@ class WidgetSettingsViewModelTest {
                 }
 
             // Create a NEW vm for this test to avoid shared state
-            val vm = WidgetSettingsViewModel(controlledLoader, controlledSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    controlledLoader,
+                    controlledSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             runCurrent()
 
             // 1. Complete initial load
@@ -711,7 +767,14 @@ class WidgetSettingsViewModelTest {
                 }
 
             whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 1))
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    controlledSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // 1. Initial state
@@ -763,7 +826,8 @@ class WidgetSettingsViewModelTest {
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(slowLoader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             runCurrent()
 
             // 1. Queue updates
@@ -808,7 +872,8 @@ class WidgetSettingsViewModelTest {
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(slowLoader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             runCurrent()
 
             // 1. Queue SIM update
@@ -848,7 +913,8 @@ class WidgetSettingsViewModelTest {
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
-            val vm = WidgetSettingsViewModel(slowLoader, saver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(slowLoader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             runCurrent()
 
             // 1. Flood with updates
@@ -887,7 +953,14 @@ class WidgetSettingsViewModelTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    controlledSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // 1. Change setting, but don't wait for auto-save debounce (400ms)
@@ -953,7 +1026,14 @@ class WidgetSettingsViewModelTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, hangingSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    hangingSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // 1. Change setting
@@ -984,7 +1064,14 @@ class WidgetSettingsViewModelTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    controlledSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // Use a separate job for saveAndNotify to cancel it independently
@@ -1025,7 +1112,14 @@ class WidgetSettingsViewModelTest {
                 }
 
             whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 1))
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    controlledSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // 1. Start save
@@ -1073,7 +1167,14 @@ class WidgetSettingsViewModelTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    controlledSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // 1. First update
@@ -1135,7 +1236,14 @@ class WidgetSettingsViewModelTest {
                     }
                 }
 
-            val vm = WidgetSettingsViewModel(loader, controlledSaver, backgroundScope, usageStateRepository)
+            val vm =
+                WidgetSettingsViewModel(
+                    loader,
+                    controlledSaver,
+                    appSettingsRepository,
+                    backgroundScope,
+                    usageStateRepository,
+                )
             advanceUntilIdle()
 
             // 1. Start save in a child scope that we can cancel
@@ -1201,5 +1309,23 @@ class WidgetSettingsViewModelTest {
             // Manual cleanup
             viewModel.consumeSaveResult()
             assertEquals(null, viewModel.state.value.saveResult)
+        }
+
+    @Test
+    fun `appTheme emits value from appSettingsRepository`() =
+        runTest(testDispatcher) {
+            val themeFlow = MutableStateFlow(AppSettings(theme = AppTheme.DARK))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(themeFlow)
+
+            initViewModel()
+            val job = launch { viewModel.appTheme.collect {} }
+            advanceUntilIdle()
+
+            assertEquals(AppTheme.DARK, viewModel.appTheme.value)
+
+            themeFlow.value = AppSettings(theme = AppTheme.LIGHT)
+            advanceUntilIdle()
+            assertEquals(AppTheme.LIGHT, viewModel.appTheme.value)
+            job.cancel()
         }
 }
