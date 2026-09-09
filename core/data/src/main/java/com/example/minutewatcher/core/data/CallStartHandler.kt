@@ -53,20 +53,19 @@ internal class CallStartHandler
                     }
 
                     val startData = fetchCallStartData(targetSubId)
-                    processCallStartLocked(targetSubId, startData, context)
-                    shouldRefreshStatus = true
+                    shouldRefreshStatus = processCallStartLocked(targetSubId, startData, context)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                shouldRefreshStatus = true
+                shouldRefreshStatus = false
                 context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message))
             } catch (e: SecurityException) {
-                shouldRefreshStatus = true
+                shouldRefreshStatus = false
                 AppLogger.e("SecurityException in onCallStarted", e)
                 context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
             } catch (e: Exception) {
-                shouldRefreshStatus = true
+                shouldRefreshStatus = false
                 AppLogger.e("Error in onCallStarted", e)
                 val error = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
                 context.updateStatus(error)
@@ -105,9 +104,10 @@ internal class CallStartHandler
             targetSubId: Int,
             data: CallStartData,
             context: CallTrackingContext,
-        ) {
+        ): Boolean {
             if (data.startTimeResult.isFailure) {
                 handleStartTimeFailure(targetSubId, data.startTimeResult.exceptionOrNull(), context)
+                return false
             } else {
                 val startTime = data.startTimeResult.getOrThrow()
                 if (startTime != 0L) {
@@ -115,11 +115,12 @@ internal class CallStartHandler
                     val isStale = validateSessionStaleness(targetSubId, savedBootTime, data.bootTime, context)
                     if (!isStale) {
                         handleActiveSession(targetSubId, data)
-                        return
+                        return true
                     }
                 }
 
                 recordCallStart(targetSubId, data)
+                return true
             }
         }
 

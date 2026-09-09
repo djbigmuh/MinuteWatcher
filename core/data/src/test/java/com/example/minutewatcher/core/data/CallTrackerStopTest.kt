@@ -12,6 +12,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -108,6 +112,56 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
                     true
                 }
             Assert.assertEquals("onCallStarted should not hang after stop()", true, result)
+        }
+
+    @Test
+    fun `onCallStarted rethrows CancellationException when caller is cancelled`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val tracker = createTracker(backgroundScope)
+
+            val callerJob = launch {
+                try {
+                    tracker.onCallStarted(1)
+                } catch (e: Exception) {
+                    throw e
+                }
+            }
+            runCurrent()
+
+            callerJob.cancel()
+            advanceUntilIdle()
+
+            Assert.assertTrue("Caller job should be cancelled", callerJob.isCancelled)
+        }
+
+    @Test
+    fun `onCallStarted proceeds when tracker is stopped`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+
+            val startHandler: CallStartHandler = mock()
+            val tracker = CallTracker(
+                callSessionRepository,
+                permissionManager,
+                backgroundScope,
+                createAttributionResolver(),
+                startHandler,
+                mock(),
+                mock(),
+                permissionStateNotifier,
+                createMutexHolder()
+            )
+
+            // 1. Mock stop during onCallStarted
+            tracker.stop()
+
+            // 2. Act: call onCallStarted
+            tracker.onCallStarted(1)
+            advanceUntilIdle()
+
+            // 3. Assert: executeCallStart should be called (not thrown)
+            verify(startHandler).executeCallStart(eq(1), any())
         }
 
     @Test

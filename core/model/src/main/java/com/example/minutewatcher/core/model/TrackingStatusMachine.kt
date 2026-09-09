@@ -57,3 +57,20 @@ class TrackingStatusMachine(initial: TrackingStatus = TrackingStatus.Idle) {
             }
     }
 }
+
+/**
+ * Returns true if the error is "sticky" and should not be cleared by regular
+ * non-forced status refreshes. Sticky errors usually require manual recovery
+ * or a specific fix (like granting permissions).
+ */
+fun TrackingStatus.ErrorType.isSticky(): Boolean =
+    when (this) {
+        TrackingStatus.ErrorType.PERMISSION_MISSING,
+        TrackingStatus.ErrorType.DATABASE_ERROR,
+        -> true
+
+        TrackingStatus.ErrorType.UNKNOWN,
+        TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+        TrackingStatus.ErrorType.NOT_SUPPORTED,
+        -> false
+    }

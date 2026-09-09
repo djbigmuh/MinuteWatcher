@@ -51,13 +51,13 @@ internal class CallEndHandler
                         // to ensure no orphaned sessions remain when tracking is turned back on.
                         AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
                         sessionCleaner.clearAllSessions()
+                        shouldRefreshStatus = true
                     } else {
-                        executeCallEndLogic(
+                        shouldRefreshStatus = executeCallEndLogic(
                             subId,
                             context,
                         )
                     }
-                    shouldRefreshStatus = true
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -91,31 +91,31 @@ internal class CallEndHandler
         private suspend fun executeCallEndLogic(
             subId: Int,
             context: CallTrackingContext,
-        ) {
+        ): Boolean {
             val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
             if (effectiveSubId != -1) {
-                endCall(effectiveSubId, true, context)
-                return
+                return endCall(effectiveSubId, true, context)
             }
 
             val result = callEndResolver.resolveUnknownSubIdEnd()
-            handleResolveResult(result, context)
+            return handleResolveResult(result, context)
         }
 
         private suspend fun handleResolveResult(
             result: CallEndResolver.ResolveResult,
             context: CallTrackingContext,
-        ) {
+        ): Boolean =
             when (result) {
                 is CallEndResolver.ResolveResult.Error -> {
                     context.updateStatus(result.error)
+                    false
                 }
 
                 is CallEndResolver.ResolveResult.SubIds -> {
                     processResolvedSubIds(result.ids, context)
+                    true
                 }
             }
-        }
 
         private suspend fun processResolvedSubIds(
             subIdsToEnd: List<Int>,
@@ -180,15 +180,15 @@ internal class CallEndHandler
             subId: Int,
             notify: Boolean,
             context: CallTrackingContext,
-        ) {
+        ): Boolean {
             val endData = fetchCallEndData(subId)
 
             if (!settingsHandler.isCallTrackingEnabled()) {
                 AppLogger.d("CallTracker: tracking disabled, clearing session for subId $subId")
                 sessionCleaner.cleanupCounters(subId, context)
-                return
+                return true
             }
-            processCallEndLocked(subId, endData, notify, context)
+            return processCallEndLocked(subId, endData, notify, context)
         }
 
         private suspend fun fetchCallEndData(subId: Int): CallEndData =
@@ -218,19 +218,21 @@ internal class CallEndHandler
             data: CallEndData,
             notify: Boolean,
             context: CallTrackingContext,
-        ) {
+        ): Boolean {
             if (data.startTimeResult.isFailure) {
                 handleReadStartTimeFailure(subId, data.startTimeResult.exceptionOrNull(), context)
+                return false
             } else {
                 val startTime = data.startTimeResult.getOrThrow()
                 if (startTime == 0L) {
                     AppLogger.d("CallTracker: received IDLE for subId $subId but no session was active")
+                    return true
                 } else if (validateCallDuration(subId, data, context)) {
                     val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
                     val durationSeconds =
                         ((data.currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
 
-                    if (processCallDurationLocked(
+                    return if (processCallDurationLocked(
                             subId = subId,
                             durationSeconds = durationSeconds,
                             data = data,
@@ -239,7 +241,12 @@ internal class CallEndHandler
                         )
                     ) {
                         sessionCleaner.cleanupCounters(subId, context)
+                        true
+                    } else {
+                        false
                     }
+                } else {
+                    return false
                 }
             }
         }

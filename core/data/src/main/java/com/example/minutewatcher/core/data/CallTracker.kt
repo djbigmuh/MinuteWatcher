@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.TrackingStatusMachine
+import com.example.minutewatcher.core.model.isSticky
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +55,9 @@ open class CallTracker
     ) : TrackingStatusProvider,
         CallTrackingContext {
         override val key: TrackingKey = TrackingKey.CALLS
+
+        /** Internal marker to distinguish tracker shutdown from general cancellation. */
+        private class CallTrackerStoppedException : CancellationException("CallTracker stopped")
 
         private val statusMachine = TrackingStatusMachine()
         override val status: StateFlow<TrackingStatus> = statusMachine.status
@@ -190,13 +194,20 @@ open class CallTracker
          *
          * Requires [Manifest.permission.READ_PHONE_STATE].
          * Safe to call from any coroutine context.
+         *
+         * @throws CancellationException if the calling coroutine is cancelled.
+         * Does NOT throw if the tracker is stopped while waiting for initialization.
          */
         suspend fun onCallStarted(subId: Int) {
             ensureStarted()
             try {
                 initDeferred.await()
-            } catch (_: Exception) {
-                // Initialization failed, but we still try to proceed or the status will reflect the error
+            } catch (e: CallTrackerStoppedException) {
+                AppLogger.w("CallTracker: stopped while waiting for init, proceeding anyway")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
             startHandler.executeCallStart(
                 subId = subId,
@@ -209,13 +220,20 @@ open class CallTracker
          *
          * Requires [Manifest.permission.READ_PHONE_STATE].
          * Safe to call from any coroutine context.
+         *
+         * @throws CancellationException if the calling coroutine is cancelled.
+         * Does NOT throw if the tracker is stopped while waiting for initialization.
          */
         suspend fun onCallEnded(subId: Int) {
             ensureStarted()
             try {
                 initDeferred.await()
-            } catch (_: Exception) {
-                // Proceed anyway
+            } catch (e: CallTrackerStoppedException) {
+                AppLogger.w("CallTracker: stopped while waiting for init, proceeding anyway")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
             endHandler.performCallEnd(
                 subId = subId,
@@ -227,14 +245,15 @@ open class CallTracker
          * Refreshes the tracker status based on current system state.
          *
          * State machine transitions:
-         * - [TrackingStatus.ErrorType.PERMISSION_MISSING]: "Sticky" error, only cleared by a
-         *   successful refresh (Active/Idle).
-         * - [TrackingStatus.ErrorType.DATABASE_ERROR]: "Sticky" error, usually requires manual
-         *   recovery or successful write to clear.
-         * - [TrackingStatus.ErrorType.UNKNOWN]: Transient error, can be cleared by any successful
+         * - Sticky errors ([TrackingStatus.ErrorType.DATABASE_ERROR]): Not cleared by
+         *   non-forced refreshes. Requires [force] or [recover] to clear.
+         * - Permission errors ([TrackingStatus.ErrorType.PERMISSION_MISSING]): Re-evaluated
+         *   on every refresh. Cleared automatically if permissions are regained.
+         * - Transient errors ([TrackingStatus.ErrorType.UNKNOWN],
+         *   [TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION]): Cleared by any successful
          *   refresh attempt even if not forced.
          *
-         * @param force If true, skips priority checks and forces a full re-evaluation.
+         * @param force If true, skips sticky error gating and forces a full re-evaluation.
          * Use force=true during manual recovery or initialization.
          *
          * **Thread Safety:** Safe to call from any coroutine context. Holds internal mutex
@@ -245,10 +264,11 @@ open class CallTracker
             try {
                 val currentStatus = statusMachine.current
                 if (!force) {
-                    if ((currentStatus is TrackingStatus.Error) &&
-                        (currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING)
+                    if (currentStatus is TrackingStatus.Error &&
+                        currentStatus.type.isSticky() &&
+                        currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING
                     ) {
-                        AppLogger.d("CallTracker: refreshStatus skipped (not forced and has non-permission error)")
+                        AppLogger.d("CallTracker: refreshStatus skipped (sticky ${currentStatus.type} error, not forced)")
                         return
                     }
                 }
@@ -368,7 +388,8 @@ open class CallTracker
 
         /**
          * Stops call tracking and cleans up resources.
-         * Guaranteed to complete or cancel any pending initialization waiters.
+         * Guaranteed to complete or cancel any pending initialization waiters without
+         * throwing [CancellationException] to the callers of [onCallStarted]/[onCallEnded].
          */
         fun stop() {
             initJob?.cancel()
@@ -379,7 +400,7 @@ open class CallTracker
             synchronized(this) {
                 // Cancel current deferred to unblock any awaiters (e.g. in workers or handlers)
                 if (!initDeferred.isCompleted) {
-                    initDeferred.completeExceptionally(CancellationException("CallTracker stopped"))
+                    initDeferred.completeExceptionally(CallTrackerStoppedException())
                 }
                 // Prepare fresh deferred for potential future re-start
                 initDeferred = CompletableDeferred()
