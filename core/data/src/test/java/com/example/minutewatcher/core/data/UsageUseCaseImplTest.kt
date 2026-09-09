@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.content.Context
 import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
@@ -19,6 +20,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UsageUseCaseImplTest {
@@ -95,6 +97,43 @@ class UsageUseCaseImplTest {
             usageUseCase.adjustTraffic(0, 5f)
 
             verify(simUsageAdjustmentRepository).setTrafficAdjustment(identity, -3f)
+        }
+
+    @Test(expected = InvalidSlotException::class)
+    fun `adjustMinutes rethrows InvalidSlotException from repository`() =
+        runTest {
+            whenever(simIdentityRepository.getIdentity(99)).thenThrow(InvalidSlotException(99))
+
+            usageUseCase.adjustMinutes(99, 100)
+        }
+
+    @Test(expected = IOException::class)
+    fun `resetCounters rethrows IOException from repository`() =
+        runTest {
+            val identity = "sim_0"
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            whenever(simUsageResetRepository.resetSimUsageManual(identity)).thenAnswer {
+                throw IOException("Storage error")
+            }
+
+            usageUseCase.resetCounters(0)
+        }
+
+    @Test(expected = IOException::class)
+    fun `refreshOperatorInfo rethrows IOException from repository`() =
+        runTest {
+            val subInfo = mock<SubscriptionInfo>()
+            whenever(subInfo.simSlotIndex).thenReturn(0)
+            whenever(subInfo.displayName).thenReturn("Operator A")
+            whenever(subInfo.mccString).thenReturn("250")
+            whenever(subInfo.mncString).thenReturn("01")
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
+            whenever(simIdentityRepository.setSimOperator(any(), any())).thenAnswer {
+                throw IOException("Write error")
+            }
+
+            usageUseCase.refreshOperatorInfo()
         }
 
     private fun createSimUsage(

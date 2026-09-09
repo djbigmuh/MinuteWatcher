@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimCardUiModel
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,9 +24,11 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,6 +49,25 @@ class MainSimDataControllerTest {
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(flowOf(emptyList()))
         whenever(usageStateRepository.isDataLoaded()).thenReturn(true)
     }
+
+    @Test
+    fun `adjustRemainingMinutes failure sets lastOperationError`() =
+        runTest {
+            controller = createController()
+            val slot = 0
+            whenever(usageUseCase.adjustMinutes(eq(slot), any())).thenAnswer {
+                throw IOException("Storage error")
+            }
+
+            controller.adjustRemainingMinutes(slot, 100)
+            testScheduler.advanceTimeBy(1000.milliseconds)
+            testScheduler.runCurrent()
+            testScheduler.advanceUntilIdle()
+
+            val error = controller.lastOperationError.value
+            assertEquals(R.string.error_operation_failed_retry, error?.messageRes)
+            assertEquals(slot, error?.slot)
+        }
 
     private fun TestScope.createController(): MainSimDataController =
         MainSimDataController(

@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.data
 
 import android.content.Context
 import com.example.minutewatcher.core.android.util.OperatorResolver
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
@@ -47,36 +46,31 @@ class UsageUseCaseImpl
          *
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore write fails.
-         * @throws kotlinx.coroutines.CancellationException if the process is cancelled.
+         * @throws SecurityException if SIM permissions are missing.
+         * @throws CancellationException if the process is cancelled.
          */
         override suspend fun refreshOperatorInfo() {
-            try {
-                val activeList = permissionManager.getActiveSubscriptions()
+            val activeList = permissionManager.getActiveSubscriptions()
 
-                for (info in activeList) {
-                    val slot = info.simSlotIndex
-                    if (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
-                        val identity = simIdentityRepository.getIdentity(slot)
-                        val displayName = info.displayName?.toString() ?: ""
-                        val carrierName = info.carrierName?.toString() ?: ""
+            for (info in activeList) {
+                val slot = info.simSlotIndex
+                if (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
+                    val identity = simIdentityRepository.getIdentity(slot)
+                    val displayName = info.displayName?.toString() ?: ""
+                    val carrierName = info.carrierName?.toString() ?: ""
 
-                        val mccMnc = SimIdentityUtils.getMccMnc(info)
+                    val mccMnc = SimIdentityUtils.getMccMnc(info)
 
-                        val opName =
-                            OperatorResolver.resolve(
-                                context,
-                                displayName.ifEmpty { carrierName },
-                                mccMnc,
-                                slot,
-                            )
-                        simIdentityRepository.setSimOperator(identity, opName)
-                        simIdentityRepository.setSimCode(identity, mccMnc)
-                    }
+                    val opName =
+                        OperatorResolver.resolve(
+                            context,
+                            displayName.ifEmpty { carrierName },
+                            mccMnc,
+                            slot,
+                        )
+                    simIdentityRepository.setSimOperator(identity, opName)
+                    simIdentityRepository.setSimCode(identity, mccMnc)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Error refreshing operator info", e)
             }
         }
 
@@ -87,34 +81,28 @@ class UsageUseCaseImpl
          * @param remainingMinutes User-specified remaining minutes.
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore operations fail.
+         * @throws InvalidSlotException if slot is invalid.
+         * @throws CancellationException if cancelled.
          */
         override suspend fun adjustMinutes(
             slot: Int,
             remainingMinutes: Int,
         ) {
-            try {
-                val identity = simIdentityRepository.getIdentity(slot)
-                adjustmentMutex.withLock {
-                    val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
-                    val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                    val used = usage?.minutesUsed ?: 0
+            val identity = simIdentityRepository.getIdentity(slot)
+            adjustmentMutex.withLock {
+                val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
+                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                val used = usage?.minutesUsed ?: 0
 
-                    val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
-                    val adj = (safeRemaining - limit).toLong() + used.toLong()
-                    val safeAdj =
-                        adj
-                            .coerceIn(
-                                -Constants.MAX_MINUTES_LIMIT.toLong(),
-                                Constants.MAX_MINUTES_LIMIT.toLong(),
-                            ).toInt()
-                    simUsageAdjustmentRepository.setManualAdjustment(identity, safeAdj)
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: InvalidSlotException) {
-                AppLogger.w("UsageUseCaseImpl: adjustMinutes failed - invalid slot $slot", e)
-            } catch (e: Exception) {
-                AppLogger.e("UsageUseCaseImpl: adjustMinutes failed for slot $slot", e)
+                val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
+                val adj = (safeRemaining - limit).toLong() + used.toLong()
+                val safeAdj =
+                    adj
+                        .coerceIn(
+                            -Constants.MAX_MINUTES_LIMIT.toLong(),
+                            Constants.MAX_MINUTES_LIMIT.toLong(),
+                        ).toInt()
+                simUsageAdjustmentRepository.setManualAdjustment(identity, safeAdj)
             }
         }
 
@@ -125,37 +113,31 @@ class UsageUseCaseImpl
          * @param remainingGb User-specified remaining traffic in GB.
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore operations fail.
+         * @throws com.example.minutewatcher.core.domain.InvalidSlotException if slot is invalid.
+         * @throws CancellationException if cancelled.
          */
         override suspend fun adjustTraffic(
             slot: Int,
             remainingGb: Float,
         ) {
-            try {
-                val identity = simIdentityRepository.getIdentity(slot)
-                adjustmentMutex.withLock {
-                    val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
-                    val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                    val usedMb = usage?.trafficUsedMb ?: 0f
+            val identity = simIdentityRepository.getIdentity(slot)
+            adjustmentMutex.withLock {
+                val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
+                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                val usedMb = usage?.trafficUsedMb ?: 0f
 
-                    val safeRemainingGb =
-                        remainingGb.toDouble().coerceIn(0.0, Constants.MAX_TRAFFIC_LIMIT_GB.toDouble())
-                    val mbPerGb = Constants.MB_PER_GB.toDouble()
-                    val limitGb = limitMb.toDouble() / mbPerGb
-                    val usedGb = usedMb.toDouble() / mbPerGb
-                    val adj = safeRemainingGb - (limitGb - usedGb)
-                    val safeAdj =
-                        adj.coerceIn(
-                            -Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
-                            Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
-                        )
-                    simUsageAdjustmentRepository.setTrafficAdjustment(identity, safeAdj.toFloat())
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: InvalidSlotException) {
-                AppLogger.w("UsageUseCaseImpl: adjustTraffic failed - invalid slot $slot", e)
-            } catch (e: Exception) {
-                AppLogger.e("UsageUseCaseImpl: adjustTraffic failed for slot $slot", e)
+                val safeRemainingGb =
+                    remainingGb.toDouble().coerceIn(0.0, Constants.MAX_TRAFFIC_LIMIT_GB.toDouble())
+                val mbPerGb = Constants.MB_PER_GB.toDouble()
+                val limitGb = limitMb.toDouble() / mbPerGb
+                val usedGb = usedMb.toDouble() / mbPerGb
+                val adj = safeRemainingGb - (limitGb - usedGb)
+                val safeAdj =
+                    adj.coerceIn(
+                        -Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
+                        Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
+                    )
+                simUsageAdjustmentRepository.setTrafficAdjustment(identity, safeAdj.toFloat())
             }
         }
 
@@ -164,18 +146,12 @@ class UsageUseCaseImpl
          *
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore operations fail.
+         * @throws com.example.minutewatcher.core.domain.InvalidSlotException if slot is invalid.
+         * @throws kotlinx.coroutines.CancellationException if cancelled.
          */
         override suspend fun resetCounters(slot: Int) {
-            try {
-                val identity = simIdentityRepository.getIdentity(slot)
-                simUsageResetRepository.resetSimUsageManual(identity)
-                trafficTracker.resetBaseline(identity)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: InvalidSlotException) {
-                AppLogger.w("UsageUseCaseImpl: resetCounters failed - invalid slot $slot", e)
-            } catch (e: Exception) {
-                AppLogger.e("UsageUseCaseImpl: resetCounters failed for slot $slot", e)
-            }
+            val identity = simIdentityRepository.getIdentity(slot)
+            simUsageResetRepository.resetSimUsageManual(identity)
+            trafficTracker.resetBaseline(identity)
         }
     }
