@@ -42,6 +42,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -107,7 +108,7 @@ class SimIdentityRepositoryHangTest {
             },
         )
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = IOException::class)
     fun `getSimIdentity throws error when activeSimsCache hangs`() =
         runTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -126,8 +127,7 @@ class SimIdentityRepositoryHangTest {
                 )
 
             // Mock seedRepository.seedFlow to return a flow that never emits,
-            // which will cause getSeed() to timeout and return Fallback result,
-            // leading to an IllegalStateException.
+            // which will cause getSeed() to timeout and throw IOException.
             whenever(seedRepository.seedFlow).thenReturn(MutableSharedFlow())
 
             // Act
@@ -180,7 +180,7 @@ class SimIdentityRepositoryHangTest {
                     try {
                         identityRepo.getSimIdentity(0)
                         "success"
-                    } catch (_: IllegalStateException) {
+                    } catch (_: java.io.IOException) {
                         "error"
                     }
                 }

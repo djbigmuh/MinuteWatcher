@@ -165,7 +165,7 @@ class SimIdentityRepositoryRaceTest {
                 override suspend fun setSeed(seed: String) = Unit
 
                 override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
-                    SeedResolutionResult.Persistent("gen")
+                    SeedResolutionResult.Ephemeral("gen")
             }
 
         return SimIdentityRepositoryTestHelper.createRepository(

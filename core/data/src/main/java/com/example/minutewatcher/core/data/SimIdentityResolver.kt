@@ -15,7 +15,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -61,7 +60,9 @@ internal class SimIdentityResolver
 
                 // 3. Update cache and persist
                 cache.putManual(slot, identity)
-                persistIdentity(slot, identity)
+                if (isStable) {
+                    persistIdentity(slot, identity)
+                }
 
                 identity
             }
@@ -71,11 +72,17 @@ internal class SimIdentityResolver
             val seed =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     seedFlow.firstOrNull()
-                } ?: SeedResult.Fallback
+                }
 
             return when (seed) {
                 is SeedResult.Real -> seed.value to seed.isStable
-                is SeedResult.Fallback -> UUID.randomUUID().toString() to false
+                is SeedResult.Fallback -> seed.seed to false
+                null -> {
+                    // This is only possible on timeout, we don't have a shared ephemeral seed here easily
+                    // but we should probably avoid random UUID anyway.
+                    // However, resolver is rarely used in ephemeral mode.
+                    throw IOException("Timeout resolving seed result")
+                }
             }
         }
 

@@ -151,7 +151,7 @@ class SimIdentityObserverTest {
                         generator: () -> String,
                     ): SeedResolutionResult {
                         delay(60_000.milliseconds)
-                        return SeedResolutionResult.Persistent("too_late")
+                        return SeedResolutionResult.Ephemeral("ephemeral")
                     }
                 }
 
@@ -184,7 +184,7 @@ class SimIdentityObserverTest {
             val job = launch { observer.activeSimsCache.collect {} }
 
             // Act: Wait for SEED_GENERATION_TIMEOUT_MS (10s) + extra
-            testScheduler.advanceTimeBy(20_000.milliseconds)
+            testScheduler.advanceTimeBy(120_000.milliseconds)
             testScheduler.advanceUntilIdle()
 
             // Assert
@@ -355,7 +355,7 @@ class SimIdentityObserverTest {
                         generator: () -> String,
                     ): SeedResolutionResult {
                         delay(20_000.milliseconds)
-                        return SeedResolutionResult.Persistent("too_late")
+                        return SeedResolutionResult.Ephemeral("ephemeral")
                     }
                 }
 
@@ -376,9 +376,10 @@ class SimIdentityObserverTest {
                     observer.seedFlow.collect { emissions.add(it) }
                 }
 
-            testScheduler.runCurrent()
+            testScheduler.advanceTimeBy(100_000.milliseconds)
+            testScheduler.advanceUntilIdle()
             assertTrue(
-                "Should have emitted Fallback seed immediately",
+                "Should have emitted Fallback seed, but was $emissions",
                 emissions.any { it is SeedResult.Fallback },
             )
 

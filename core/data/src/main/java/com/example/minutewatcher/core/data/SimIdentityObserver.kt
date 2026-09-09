@@ -156,8 +156,16 @@ internal class SimIdentityObserver
 
                         when {
                             initialSeed == null || initialSeed.isEmpty() -> {
-                                // Сида нет или DataStore не ответил — используем Fallback
-                                emit(SeedResult.Fallback)
+                                // First attempt to generate a real seed before falling back
+                                val generationResult = generateSeedWithRetry()
+                                when (generationResult) {
+                                    is SeedResolutionResult.Persistent -> {
+                                        emit(SeedResult.Real(generationResult.seed, isStable = true))
+                                    }
+                                    is SeedResolutionResult.Ephemeral -> {
+                                        emit(SeedResult.Fallback(generationResult.seed))
+                                    }
+                                }
                             }
 
                             else -> {
@@ -174,7 +182,15 @@ internal class SimIdentityObserver
                         )
                     }.catch { e ->
                         AppLogger.e("SimIdentityObserver: seedFlow source error", e)
-                        emit(SeedResult.Fallback)
+                        val fallbackSeedResult =
+                            try {
+                                seedRepository.getOrCreateSeedOrEphemeralFallback {
+                                    UUID.randomUUID().toString()
+                                }
+                            } catch (inner: Exception) {
+                                SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+                            } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+                        emit(SeedResult.Fallback(fallbackSeedResult.seed))
                     }
                 }.distinctUntilChanged()
                 .shareIn(
@@ -418,13 +434,17 @@ internal class SimIdentityObserver
             try {
                 withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
                     seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
-                } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+                } ?: seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("SimIdentityObserver: Seed generation process failed", e)
-                SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
-            }
+                try {
+                    seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
+                } catch (inner: Exception) {
+                    SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+                } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+            } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
 
         companion object {
             private const val MAX_BACKOFF_EXPONENT = 4

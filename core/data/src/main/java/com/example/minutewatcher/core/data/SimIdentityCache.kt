@@ -24,8 +24,18 @@ class SimIdentityCache
          * Returns a canonical instance of the given identity.
          * Ensures referential equality for identical SIMs across the module.
          */
-        fun getOrCreateCanonical(identity: SimIdentity): SimIdentity =
-            canonicalIdentities.putIfAbsent(identity.stableId, identity) ?: identity
+        fun getOrCreateCanonical(identity: SimIdentity): SimIdentity {
+            if (!identity.isStable) {
+                evictUnstableIfNeeded()
+            }
+            return canonicalIdentities.putIfAbsent(identity.stableId, identity) ?: identity
+        }
+
+        private fun evictUnstableIfNeeded() {
+            if (canonicalIdentities.size < MAX_CANONICAL_CACHE) return
+            // Evict ephemeral identities when cache is full to prevent memory leak from random seeds
+            canonicalIdentities.entries.removeIf { !it.value.isStable }
+        }
 
         /**
          * Returns cached identity if valid (TTL not expired).
@@ -67,5 +77,6 @@ class SimIdentityCache
 
         companion object {
             private const val MANUAL_RESOLUTION_CACHE_TTL_MS = 60_000L
+            private const val MAX_CANONICAL_CACHE = 64
         }
     }

@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.io.IOException
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -56,10 +55,7 @@ internal class ActiveSimsFetcher
             val (seedValue, isStable) =
                 when (seed) {
                     is SeedResult.Real -> seed.value to seed.isStable
-                    is SeedResult.Fallback -> {
-                        // Use ephemeral fallback instead of throwing exception
-                        UUID.randomUUID().toString() to false
-                    }
+                    is SeedResult.Fallback -> seed.seed to false
                 }
 
             val discoveryResult = discovery.discoverSims(seedValue, isStable)
@@ -71,6 +67,11 @@ internal class ActiveSimsFetcher
                 infoList.map { simInfo ->
                     cache.getOrCreateCanonical(simInfo.identity)
                 }
+
+            if (!isStable) {
+                AppLogger.w("ActiveSimsFetcher: ephemeral identities not persisted")
+                return SimDiscoveryResult.Available(infoList)
+            }
 
             persistence.retainMigrated(identities.asSequence().map { it.stableId }.toSet())
 

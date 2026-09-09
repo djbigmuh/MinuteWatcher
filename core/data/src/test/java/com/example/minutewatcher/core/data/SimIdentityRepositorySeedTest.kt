@@ -114,10 +114,10 @@ class SimIdentityRepositorySeedTest {
                     ): SeedResolutionResult {
                         val current = storedSeed.replayCache.firstOrNull() ?: ""
                         if (current.isEmpty()) {
-                            delay(60.seconds)
+                            delay(1.seconds)
                         }
                         val seed = current.ifEmpty { generator() }
-                        return SeedResolutionResult.Persistent(seed)
+                        return SeedResolutionResult.Ephemeral(seed)
                     }
                 }
 
@@ -178,8 +178,8 @@ class SimIdentityRepositorySeedTest {
                     override suspend fun getOrCreateSeedOrEphemeralFallback(
                         generator: () -> String,
                     ): SeedResolutionResult {
-                        delay(60.seconds)
-                        return SeedResolutionResult.Persistent("generated")
+                        delay(1.seconds)
+                        return SeedResolutionResult.Ephemeral("generated")
                     }
                 }
 
@@ -247,8 +247,8 @@ class SimIdentityRepositorySeedTest {
                     override suspend fun getOrCreateSeedOrEphemeralFallback(
                         generator: () -> String,
                     ): SeedResolutionResult {
-                        delay(60.seconds)
-                        return SeedResolutionResult.Persistent("generated")
+                        delay(1.seconds)
+                        return SeedResolutionResult.Ephemeral("generated")
                     }
                 }
 

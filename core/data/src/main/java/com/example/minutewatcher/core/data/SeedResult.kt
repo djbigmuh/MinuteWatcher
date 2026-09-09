@@ -9,5 +9,7 @@ internal sealed interface SeedResult {
         val isStable: Boolean = true,
     ) : SeedResult
 
-    data object Fallback : SeedResult
+    data class Fallback(
+        val seed: String,
+    ) : SeedResult
 }

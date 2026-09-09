@@ -442,6 +442,12 @@ class TrafficTracker
             }
 
             val target = result.target
+            val targetSimInfo = activeSims.find { it.slotIndex == target.slot }
+            if (targetSimInfo?.identity?.isStable == false) {
+                AppLogger.w("TrafficTracker: skipping traffic update for unstable identity on slot ${target.slot}")
+                transitionStatus(TrackingStatus.Idle)
+                return
+            }
 
             try {
                 simChangeHandler.withSimChangeLock {

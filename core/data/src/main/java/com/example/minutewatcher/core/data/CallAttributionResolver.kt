@@ -136,7 +136,7 @@ internal class CallAttributionResolver
                 simIdentityRepository
                     .observeActiveSims()
                     .firstOrNull()
-                    ?.find { it.subscriptionId == subId }
+                    ?.find { it.subscriptionId == subId && it.identity.isStable }
                     ?.identity
                     ?.stableId
             }
