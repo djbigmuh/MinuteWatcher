@@ -86,6 +86,46 @@ class SimIdentitySeedRepositoryImplTest {
         }
 
     @Test
+    fun `isEphemeralSeedActive is reset when persistent seed is restored`() =
+        runTest {
+            var shouldFail = true
+            val toggleDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> =
+                        flow {
+                            if (shouldFail) {
+                                throw IOException("Storage unavailable")
+                            }
+                            dataStore.data.collect { emit(it) }
+                        }
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        if (shouldFail) {
+                            throw IOException("Storage unavailable")
+                        }
+                        return dataStore.updateData(transform)
+                    }
+                }
+
+            val repo = SimIdentitySeedRepositoryImpl(toggleDataStore)
+
+            // 1. Storage fails -> Enter ephemeral mode
+            val resultEph = repo.getOrCreateSeedOrEphemeralFallback { "ephemeral" }
+            assertTrue(resultEph is SeedResolutionResult.Ephemeral)
+            assertTrue(repo.isEphemeralSeedActive.value)
+
+            // 2. Storage restored -> Re-run
+            shouldFail = false
+            val resultPersist = repo.getOrCreateSeedOrEphemeralFallback { "ephemeral" }
+            assertTrue(resultPersist is SeedResolutionResult.Persistent)
+            // Flag should be reset
+            assertTrue(
+                "isEphemeralSeedActive should be false after persistent seed restored",
+                !repo.isEphemeralSeedActive.value,
+            )
+        }
+
+    @Test
     fun `setSeed does not wait for retry delays`() =
         runTest {
             var shouldFail = true

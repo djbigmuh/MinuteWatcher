@@ -31,6 +31,7 @@ object SimIdentityRepositoryTestHelper {
                 appSettingsRepository = appSettingsRepository,
                 mockSimProvider = mockSimProvider,
                 fetcher = fetcher,
+                migrationService = migrationService,
                 scope = scope,
                 cache = cache,
             )

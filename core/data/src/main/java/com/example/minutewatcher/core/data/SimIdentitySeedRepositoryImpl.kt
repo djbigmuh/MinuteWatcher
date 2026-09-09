@@ -97,6 +97,19 @@ internal class SimIdentitySeedRepositoryImpl
                 }
                 attempt++
             }
+
+            if (result is SeedResolutionResult.Persistent) {
+                seedMutex.withLock {
+                    if (_isEphemeralSeedActive.value) {
+                        AppLogger.d(
+                            "SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral state.",
+                        )
+                        _isEphemeralSeedActive.value = false
+                        cachedEphemeralSeed = null
+                    }
+                }
+            }
+
             return result
         }
 

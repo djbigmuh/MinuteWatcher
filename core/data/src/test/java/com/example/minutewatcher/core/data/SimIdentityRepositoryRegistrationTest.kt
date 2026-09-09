@@ -156,6 +156,7 @@ class SimIdentityRepositoryRegistrationTest {
                     appSettingsRepository = appSettingsRepository,
                     mockSimProvider = mockSimProvider,
                     fetcher = fetcher,
+                    migrationService = migrationService,
                     scope = backgroundScope,
                     cache = cache,
                 )

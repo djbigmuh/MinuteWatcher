@@ -48,6 +48,7 @@ import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -61,6 +62,7 @@ internal class SimIdentityObserver
         private val appSettingsRepository: AppSettingsRepository,
         private val mockSimProvider: MockSimProvider,
         private val fetcher: ActiveSimsFetcher,
+        private val migrationService: IdentityMigrationService,
         @ApplicationScope private val scope: CoroutineScope,
         private val cache: SimIdentityCache,
     ) : TrackingStatusProvider {
@@ -110,6 +112,9 @@ internal class SimIdentityObserver
         private val generalAttempt = AtomicLong(0)
         private val isObservationInitialized = AtomicBoolean(false)
         private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+        private val lastSeedRef = AtomicReference<SeedResult?>(null)
+        private val migrationTriggered = AtomicBoolean(false)
 
         init {
             scope.launch {
@@ -227,6 +232,9 @@ internal class SimIdentityObserver
                                     loopAttempts++
                                     try {
                                         val result = fetcher.fetchActiveSimsWithRetry(seed)
+                                        if (result is SimDiscoveryResult.Available) {
+                                            checkAndTriggerMigration(seed, result.sims)
+                                        }
                                         val shouldRetry = handleDiscoveryResult(result)
                                         shouldContinue = shouldRetry
                                     } catch (e: SecurityException) {
@@ -429,6 +437,44 @@ internal class SimIdentityObserver
                 .observeAppSettings()
                 .map { it.benchmarkSimCount }
                 .distinctUntilChanged()
+
+        private fun checkAndTriggerMigration(
+            currentSeed: SeedResult,
+            sims: List<ActiveSimInfo>,
+        ) {
+            val lastSeed = lastSeedRef.getAndSet(currentSeed)
+            if (lastSeed is SeedResult.Fallback && currentSeed is SeedResult.Real) {
+                if (migrationTriggered.compareAndSet(false, true)) {
+                    AppLogger.d("SimIdentityObserver: detecting Fallback -> Real transition, triggering migration")
+                    scope.launch {
+                        try {
+                            val outcome = migrationService.migrateFromEphemeralSeed(lastSeed.seed, sims)
+                            AppLogger.d(
+                                "SimIdentityObserver: migration from ephemeral seed finished. " +
+                                    "Outcome: migrated=${outcome.migrated}, conflicts=${outcome.conflicts}, " +
+                                    "failures=${outcome.failures}",
+                            )
+                            if (outcome.failures > 0) {
+                                AppLogger.e("SimIdentityObserver: migration had ${outcome.failures} failures")
+                            }
+                        } catch (e: Exception) {
+                            AppLogger.e("SimIdentityObserver: migration failed with unexpected error", e)
+                        } finally {
+                            // Reset trigger if we ever go back to Fallback?
+                            // TZ says "one-time (guard AtomicBoolean migrationTriggered on a pair of seed values)"
+                            // but if it goes Real -> Fallback -> Real again, should we migrate again?
+                            // Usually ephemeral seed is stable per process, so if we restored persistent one,
+                            // we shouldn't need to migrate again from the SAME eph seed.
+                            // However, if process stays alive and DataStore fails AGAIN, we might get a NEW eph seed.
+                            // But TZ says "guard migrationTriggered on a pair of seed values".
+                        }
+                    }
+                }
+            } else if (currentSeed is SeedResult.Fallback) {
+                // Reset trigger when we are in Fallback, so we can trigger again when we go to Real
+                migrationTriggered.set(false)
+            }
+        }
 
         private suspend fun generateSeedWithRetry(): SeedResolutionResult =
             try {

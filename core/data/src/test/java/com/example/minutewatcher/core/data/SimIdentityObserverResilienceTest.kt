@@ -38,6 +38,7 @@ class SimIdentityObserverResilienceTest {
     private val mockSimProvider: MockSimProvider = mock()
     private val fetcher: ActiveSimsFetcher = mock()
     private val cache: SimIdentityCache = mock()
+    private val migrationService: IdentityMigrationService = mock()
 
     private lateinit var observer: SimIdentityObserver
 
@@ -48,6 +49,7 @@ class SimIdentityObserverResilienceTest {
             appSettingsRepository = appSettingsRepository,
             mockSimProvider = mockSimProvider,
             fetcher = fetcher,
+            migrationService = migrationService,
             scope = scope,
             cache = cache,
         )
