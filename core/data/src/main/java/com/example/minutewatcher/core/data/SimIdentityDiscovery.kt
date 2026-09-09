@@ -9,9 +9,11 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimDiscoveryFailureReason
 import com.example.minutewatcher.core.model.SimDiscoveryResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,7 +43,7 @@ open class SimIdentityDiscovery
                 val listener =
                     object : SubscriptionManager.OnSubscriptionsChangedListener() {
                         override fun onSubscriptionsChanged() {
-                            launch { trySend(Unit) }
+                            trySend(Unit)
                         }
                     }
 
@@ -76,19 +78,24 @@ open class SimIdentityDiscovery
                     }
                 }
 
+                // All registration logic is confined to a single coroutine to avoid races
+                // on the non-thread-safe isListenerRegistered flag.
                 launch {
-                    permissionStateNotifier.changes.collect {
-                        updateListenerRegistration()
-                        trySend(Unit)
-                    }
+                    permissionStateNotifier.changes
+                        .onStart { emit(Unit) }
+                        .collect {
+                            updateListenerRegistration()
+                            trySend(Unit)
+                        }
                 }
 
-                updateListenerRegistration()
-                trySend(Unit)
-
                 awaitClose {
-                    if (isListenerRegistered) {
+                    runCatching {
                         subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                    }.onFailure { e ->
+                        if (e !is CancellationException) {
+                            AppLogger.w("Failed to unregister SubscriptionsChangedListener in awaitClose", e)
+                        }
                     }
                 }
             }
