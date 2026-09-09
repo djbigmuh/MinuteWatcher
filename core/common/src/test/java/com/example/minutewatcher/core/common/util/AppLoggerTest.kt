@@ -35,8 +35,9 @@ class AppLoggerTest {
         val messageSize = 1024
         val largeMessage = "A".repeat(messageSize)
 
-        // Write ~2.0 MB (2000 * 1KB) to trigger rotation (MAX_FILE_SIZE = 1MB)
-        repeat(2000) {
+        // Write ~3.0 MB (3000 * 1KB) to trigger rotation (MAX_FILE_SIZE = 1MB)
+        // We use more than 2MB to ensure rotation happens even with minimal overhead
+        repeat(3000) {
             AppLogger.d(largeMessage)
         }
 
@@ -89,9 +90,13 @@ class AppLoggerTest {
         assertFalse("Should not contain log after shutdown", logFile.readText().contains(markerAfter))
     }
 
-    private fun waitForWorker() {
-        // Since we use CoroutineScope and Dispatchers.IO, we just wait long enough
-        // in Robolectric environment where background work is usually synchronous or fast.
-        Thread.sleep(1000)
+    private fun waitForWorker(timeoutMs: Long = 10000) {
+        val start = System.currentTimeMillis()
+        // Wait for channel to be empty
+        while (AppLogger.getQueueSizeForTest() > 0 && System.currentTimeMillis() - start < timeoutMs) {
+            Thread.sleep(50)
+        }
+        // Give it a bit more time to finish the last write operation (which is synchronous in processLogEntry)
+        Thread.sleep(500)
     }
 }

@@ -18,14 +18,14 @@ class SimIdentityCache
         private val timeProvider: TimeProvider,
     ) {
         private val manualResolutionCache = ConcurrentHashMap<Int, Pair<SimIdentity, Long>>()
-    private val canonicalIdentities = ConcurrentHashMap<String, SimIdentity>()
+        private val canonicalIdentities = ConcurrentHashMap<String, SimIdentity>()
 
-    /**
-     * Returns a canonical instance of the given identity.
-     * Ensures referential equality for identical SIMs across the module.
-     */
-    fun getOrCreateCanonical(identity: SimIdentity): SimIdentity =
-        canonicalIdentities.putIfAbsent(identity.stableId, identity) ?: identity
+        /**
+         * Returns a canonical instance of the given identity.
+         * Ensures referential equality for identical SIMs across the module.
+         */
+        fun getOrCreateCanonical(identity: SimIdentity): SimIdentity =
+            canonicalIdentities.putIfAbsent(identity.stableId, identity) ?: identity
 
         /**
          * Returns cached identity if valid (TTL not expired).

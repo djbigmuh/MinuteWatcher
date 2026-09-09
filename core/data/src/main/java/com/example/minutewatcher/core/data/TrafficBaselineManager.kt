@@ -36,45 +36,45 @@ class TrafficBaselineManager
         private val networkStatsProvider: NetworkStatsProvider,
         private val dataChangeNotifier: DataChangeNotifier,
     ) {
-    suspend fun getRetryCount(identity: String): Int? =
-        simUsageResetRepository
-            .getBaselineRetryCount(identity)
-            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+        suspend fun getRetryCount(identity: String): Int? =
+            simUsageResetRepository
+                .getBaselineRetryCount(identity)
+                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
 
-    suspend fun setRetryCount(
-        identity: String,
-        count: Int,
-    ) {
-        simUsageResetRepository.setBaselineRetryCount(identity, count)
-    }
-
-    suspend fun removeRetry(identity: String) {
-        simUsageResetRepository.setBaselineRetryCount(identity, null)
+        suspend fun setRetryCount(
+            identity: String,
+            count: Int,
+        ) {
+            simUsageResetRepository.setBaselineRetryCount(identity, count)
         }
 
-    suspend fun cleanupRetries(activeIdentities: Set<String>) {
-        simUsageResetRepository.cleanupBaselineRetries(activeIdentities)
+        suspend fun removeRetry(identity: String) {
+            simUsageResetRepository.setBaselineRetryCount(identity, null)
         }
 
-    suspend fun removeRetriesExcept(identity: String) {
-        simUsageResetRepository.cleanupBaselineRetries(setOf(identity))
+        suspend fun cleanupRetries(activeIdentities: Set<String>) {
+            simUsageResetRepository.cleanupBaselineRetries(activeIdentities)
         }
 
-    /**
-     * Queries current mobile bytes since [startTime].
-     *
-     * @param startTime must be a valid timestamp (greater than 0).
-     * Typically this is the `lastResetDate` of the SIM usage.
-     * @throws IllegalArgumentException if [startTime] is 0 or negative.
-     */
+        suspend fun removeRetriesExcept(identity: String) {
+            simUsageResetRepository.cleanupBaselineRetries(setOf(identity))
+        }
+
+        /**
+         * Queries current mobile bytes since [startTime].
+         *
+         * @param startTime must be a valid timestamp (greater than 0).
+         * Typically this is the `lastResetDate` of the SIM usage.
+         * @throws IllegalArgumentException if [startTime] is 0 or negative.
+         */
         fun getCurrentMobileBytes(startTime: Long): StatsResult {
-        if (startTime <= 0L) {
-            return StatsResult.Error(
-                IllegalArgumentException("startTime must be greater than 0, but was $startTime"),
-            )
-        }
+            if (startTime <= 0L) {
+                return StatsResult.Error(
+                    IllegalArgumentException("startTime must be greater than 0, but was $startTime"),
+                )
+            }
             val now = timeProvider.now()
-        return networkStatsProvider.queryMobileBytes(startTime, now)
+            return networkStatsProvider.queryMobileBytes(startTime, now)
         }
 
         suspend fun resetBaseline(
@@ -136,10 +136,10 @@ class TrafficBaselineManager
             }
         }
 
-    private suspend fun incrementRetryCount(identity: String) {
-        val count = getRetryCount(identity) ?: 0
-        setRetryCount(identity, count + 1)
-    }
+        private suspend fun incrementRetryCount(identity: String) {
+            val count = getRetryCount(identity) ?: 0
+            setRetryCount(identity, count + 1)
+        }
 
         private suspend fun syncLastDataSubIdIfNeeded(
             identity: String,

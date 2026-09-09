@@ -28,36 +28,36 @@ open class WidgetLimitManager
     ) {
         private val exceededUpdateCounter = AtomicLong(0L)
 
-    @Volatile
-    private var cachedLimitExceeded: Boolean? = null
+        @Volatile
+        private var cachedLimitExceeded: Boolean? = null
 
-    init {
-        scope.launch {
-            appSettingsRepository.observeAppSettings().collectLatest { settings ->
-                cachedLimitExceeded = settings.widgetLimitExceeded
+        init {
+            scope.launch {
+                appSettingsRepository.observeAppSettings().collectLatest { settings ->
+                    cachedLimitExceeded = settings.widgetLimitExceeded
+                }
             }
         }
-    }
 
-    open fun shouldProbe(): Boolean {
+        open fun shouldProbe(): Boolean {
             val count = exceededUpdateCounter.incrementAndGet()
             return (count % PROBE_INTERVAL_UPDATES) == 0L
         }
 
-    open fun resetCounter() {
+        open fun resetCounter() {
             exceededUpdateCounter.set(0L)
         }
 
-    /**
-     * Updates the in-memory cache of the limit exceeded flag without writing to DataStore.
-     */
-    open fun updateCache(value: Boolean) {
-        cachedLimitExceeded = value
-    }
+        /**
+         * Updates the in-memory cache of the limit exceeded flag without writing to DataStore.
+         */
+        open fun updateCache(value: Boolean) {
+            cachedLimitExceeded = value
+        }
 
-    open fun isLimitExceeded(): Boolean? = cachedLimitExceeded
+        open fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
-    open suspend fun setWidgetLimitExceeded(value: Boolean) {
+        open suspend fun setWidgetLimitExceeded(value: Boolean) {
             cachedLimitExceeded = value
             try {
                 val current = appSettingsRepository.observeAppSettings().value

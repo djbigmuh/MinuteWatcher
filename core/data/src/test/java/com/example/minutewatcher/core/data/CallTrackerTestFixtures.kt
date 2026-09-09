@@ -4,6 +4,7 @@ import android.Manifest
 import android.telephony.SubscriptionInfo
 import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
+import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
@@ -13,7 +14,6 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf

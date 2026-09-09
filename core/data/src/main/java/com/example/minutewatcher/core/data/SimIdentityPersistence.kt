@@ -112,7 +112,7 @@ class SimIdentityPersistence
             }
         }
 
-    private suspend fun fetchCurrentPrefs(): Preferences = dataStore.data.first()
+        private suspend fun fetchCurrentPrefs(): Preferences = dataStore.data.first()
 
         private fun isIdentityUpdateRequired(
             identity: SimIdentity,

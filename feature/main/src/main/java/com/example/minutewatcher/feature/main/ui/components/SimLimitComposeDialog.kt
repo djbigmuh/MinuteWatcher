@@ -151,29 +151,29 @@ private class SimLimitState(
     initialRolloverEnabled: Boolean,
 ) {
     var minutesText by
-    mutableStateOf(
-        TextFieldValue(
-            text = initialMinutesText,
-            selection =
-                if (initialMinutesText == "0") {
-                    TextRange(0, initialMinutesText.length)
-                } else {
-                    TextRange.Zero
-                },
-        ),
-    )
+        mutableStateOf(
+            TextFieldValue(
+                text = initialMinutesText,
+                selection =
+                    if (initialMinutesText == "0") {
+                        TextRange(0, initialMinutesText.length)
+                    } else {
+                        TextRange.Zero
+                    },
+            ),
+        )
     var trafficText by
-    mutableStateOf(
-        TextFieldValue(
-            text = initialTrafficText,
-            selection =
-                if (initialTrafficText == "0" || initialTrafficText == "0.0") {
-                    TextRange(0, initialTrafficText.length)
-                } else {
-                    TextRange.Zero
-                },
-        ),
-    )
+        mutableStateOf(
+            TextFieldValue(
+                text = initialTrafficText,
+                selection =
+                    if (initialTrafficText == "0" || initialTrafficText == "0.0") {
+                        TextRange(0, initialTrafficText.length)
+                    } else {
+                        TextRange.Zero
+                    },
+            ),
+        )
     var rolloverEnabled by mutableStateOf(initialRolloverEnabled)
     var minutesError by mutableStateOf<String?>(null)
     var trafficError by mutableStateOf<String?>(null)

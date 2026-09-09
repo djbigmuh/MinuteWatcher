@@ -53,99 +53,99 @@ class AppSettingsRepositoryImpl
         @AppDataStore private val dataStore: DataStore<Preferences>,
         @ApplicationScope private val scope: CoroutineScope,
     ) : AppSettingsRepository,
-    TrackingStatusProvider {
-    override val key: TrackingKey = TrackingKey.APP_SETTINGS
+        TrackingStatusProvider {
+        override val key: TrackingKey = TrackingKey.APP_SETTINGS
 
-    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-    private fun updateStatus(
-        status: TrackingStatus,
-        force: Boolean,
-    ) {
-        _status.update { current ->
-            val currentPrio = getStatusPriority(current)
-            val newPrio = getStatusPriority(status)
+        private fun updateStatus(
+            status: TrackingStatus,
+            force: Boolean,
+        ) {
+            _status.update { current ->
+                val currentPrio = getStatusPriority(current)
+                val newPrio = getStatusPriority(status)
 
-            if (force || newPrio >= currentPrio) status else current
-        }
-    }
-
-    private fun transitionStatus(
-        newStatus: TrackingStatus,
-        force: Boolean = false,
-    ) {
-        updateStatus(newStatus, force)
-    }
-
-    private fun getStatusPriority(status: TrackingStatus): Int =
-        when (status) {
-            is TrackingStatus.Error ->
-                when (status.type) {
-                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                }
-
-            is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-            else -> 0
+                if (force || newPrio >= currentPrio) status else current
+            }
         }
 
-    private val appSettingsState: StateFlow<AppSettings> =
-        flow {
-            var consecutiveErrors = 0
-            while (true) {
-                try {
-                    dataStore.data
-                        .map { prefs ->
-                            if (consecutiveErrors > 0) {
-                                AppLogger.d(
-                                    "DataStore observation for appSettingsState recovered " +
-                                        "after $consecutiveErrors errors",
-                                )
-                                consecutiveErrors = 0
-                                transitionStatus(TrackingStatus.Active, force = true)
-                            }
-                            prefs.toAppSettings()
-                        }.distinctUntilChanged()
-                        .collect { emit(it) }
+        private fun transitionStatus(
+            newStatus: TrackingStatus,
+            force: Boolean = false,
+        ) {
+            updateStatus(newStatus, force)
+        }
 
-                    AppLogger.w("DataStore flow for appSettingsState completed normally (unexpected)")
-                    break
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    consecutiveErrors++
+        private fun getStatusPriority(status: TrackingStatus): Int =
+            when (status) {
+                is TrackingStatus.Error ->
+                    when (status.type) {
+                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                    }
+
+                is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+                else -> 0
+            }
+
+        private val appSettingsState: StateFlow<AppSettings> =
+            flow {
+                var consecutiveErrors = 0
+                while (true) {
+                    try {
+                        dataStore.data
+                            .map { prefs ->
+                                if (consecutiveErrors > 0) {
+                                    AppLogger.d(
+                                        "DataStore observation for appSettingsState recovered " +
+                                            "after $consecutiveErrors errors",
+                                    )
+                                    consecutiveErrors = 0
+                                    transitionStatus(TrackingStatus.Active, force = true)
+                                }
+                                prefs.toAppSettings()
+                            }.distinctUntilChanged()
+                            .collect { emit(it) }
+
+                        AppLogger.w("DataStore flow for appSettingsState completed normally (unexpected)")
+                        break
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        consecutiveErrors++
                         val delayMs =
                             (INITIAL_RETRY_DELAY_MS * (1 shl (consecutiveErrors - 1)))
                                 .coerceAtMost(MAX_RETRY_DELAY_MS)
 
-                    val isTerminalLike = consecutiveErrors >= LOG_THRESHOLD
-                    val logMessage =
+                        val isTerminalLike = consecutiveErrors >= LOG_THRESHOLD
+                        val logMessage =
                             "DataStore error in appSettingsState (attempt $consecutiveErrors), " +
                                 "restarting in ${delayMs}ms"
 
-                    if (isTerminalLike) {
-                        if (consecutiveErrors % LOG_THRESHOLD == 0) {
-                            AppLogger.e(logMessage, e)
+                        if (isTerminalLike) {
+                            if (consecutiveErrors % LOG_THRESHOLD == 0) {
+                                AppLogger.e(logMessage, e)
+                            }
+                            transitionStatus(
+                                TrackingStatus.Error(
+                                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                                    "Persistent DataStore error: settings observation degraded",
+                                ),
+                            )
+                        } else {
+                            AppLogger.w(logMessage)
                         }
-                        transitionStatus(
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.DATABASE_ERROR,
-                                "Persistent DataStore error: settings observation degraded",
-                            ),
-                        )
-                    } else {
-                        AppLogger.w(logMessage)
-                    }
                         delay(delayMs.milliseconds)
                     }
                 }
-        }.stateIn(
-            scope,
-            SharingStarted.Eagerly,
-            AppSettings(),
-        )
+            }.stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                AppSettings(),
+            )
 
         /**
          * Returns a flow of application settings.

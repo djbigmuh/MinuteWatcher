@@ -42,12 +42,12 @@ class MainViewModel
     ) : ViewModel() {
         // Delegate UI States
         val showLimitDialog = dialogController.showLimitDialog
-    val showDayDialog = dialogController.showDayDialog
-    val showAdjustDialog = dialogController.showAdjustDialog
-    val showTrafficLimitationDialog = dialogController.showTrafficLimitationDialog
-    val showUsageAccessDialog = dialogController.showUsageAccessDialog
-    val showOnboardingDialog: StateFlow<Boolean> get() = dialogController.showOnboardingDialog
-    val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
+        val showDayDialog = dialogController.showDayDialog
+        val showAdjustDialog = dialogController.showAdjustDialog
+        val showTrafficLimitationDialog = dialogController.showTrafficLimitationDialog
+        val showUsageAccessDialog = dialogController.showUsageAccessDialog
+        val showOnboardingDialog: StateFlow<Boolean> get() = dialogController.showOnboardingDialog
+        val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
         val trackingBannerState: StateFlow<TrackingBannerState> get() = controllers.banner.trackingBannerState
         val uiState: StateFlow<SimCardListState> get() = controllers.simData.uiState
@@ -91,24 +91,24 @@ class MainViewModel
             }
         }
 
-    private data class DataForPrompt(
-        val state: SimCardListState,
-        val settings: AppSettings,
-        val usageAccess: Boolean,
-        val limitDialog: LimitDialogData?,
-        val onboardingDialogShowing: Boolean,
-    )
+        private data class DataForPrompt(
+            val state: SimCardListState,
+            val settings: AppSettings,
+            val usageAccess: Boolean,
+            val limitDialog: LimitDialogData?,
+            val onboardingDialogShowing: Boolean,
+        )
 
         // Delegate Dialog/Banner Actions
         fun setLimitDialog(data: LimitDialogData?) = dialogController.setLimitDialog(data)
 
-    fun setDayDialog(data: DayDialogData?) = dialogController.setDayDialog(data)
+        fun setDayDialog(data: DayDialogData?) = dialogController.setDayDialog(data)
 
-    fun setAdjustDialog(data: AdjustDialogData?) = dialogController.setAdjustDialog(data)
+        fun setAdjustDialog(data: AdjustDialogData?) = dialogController.setAdjustDialog(data)
 
-    fun setTrafficLimitationDialog(show: Boolean) = dialogController.setTrafficLimitationDialog(show)
+        fun setTrafficLimitationDialog(show: Boolean) = dialogController.setTrafficLimitationDialog(show)
 
-    fun setUsageAccessDialog(show: Boolean) = dialogController.setUsageAccessDialog(show)
+        fun setUsageAccessDialog(show: Boolean) = dialogController.setUsageAccessDialog(show)
 
         fun setNotificationPermissionRequested() = controllers.settings.setNotificationPermissionRequested()
 
@@ -131,7 +131,7 @@ class MainViewModel
 
         fun retryShortcuts() = controllers.simData.retryShortcuts()
 
-    fun retryTraffic() = controllers.simData.retryTraffic()
+        fun retryTraffic() = controllers.simData.retryTraffic()
 
         fun dismissWidgetError() = controllers.settings.dismissWidgetError()
 
@@ -145,17 +145,17 @@ class MainViewModel
             }
         }
 
-    fun retryWidgetObservation() {
-        viewModelScope.launch {
-            try {
-                controllers.widgetObservationRecovery.get().recover()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("MainViewModel: retryWidgetObservation failed", e)
+        fun retryWidgetObservation() {
+            viewModelScope.launch {
+                try {
+                    controllers.widgetObservationRecovery.get().recover()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainViewModel: retryWidgetObservation failed", e)
+                }
             }
         }
-    }
 
         // Delegate Settings Actions
         fun setTheme(theme: AppTheme) = controllers.settings.setTheme(theme)
@@ -172,7 +172,7 @@ class MainViewModel
             controllers.simData.updateLimits(slot, min, trafMb, roll)
         }
 
-    fun resetUsage(slot: Int) = controllers.simData.resetUsage(slot)
+        fun resetUsage(slot: Int) = controllers.simData.resetUsage(slot)
 
         fun toggleAutoReset(
             slot: Int,
@@ -205,8 +205,8 @@ class MainViewModel
             )
         }
 
-    private suspend fun refreshAndNotify(force: Boolean = false): Boolean =
-        controllers.refresh.refreshAndNotify(
+        private suspend fun refreshAndNotify(force: Boolean = false): Boolean =
+            controllers.refresh.refreshAndNotify(
                 onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
                 force = force,
             )

@@ -30,8 +30,8 @@ class TrafficSimChangeHandler
         private val baselineManager: TrafficBaselineManager,
     ) {
         private val simChangeMutex = Mutex()
-    private val inMemoryLastDataSubId = AtomicInteger(-1)
-    private val lastDataSubIdLoaded = AtomicBoolean(false)
+        private val inMemoryLastDataSubId = AtomicInteger(-1)
+        private val lastDataSubIdLoaded = AtomicBoolean(false)
 
         suspend fun <T> withSimChangeLock(block: suspend () -> T): T = simChangeMutex.withLock { block() }
 

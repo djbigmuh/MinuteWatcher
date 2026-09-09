@@ -65,6 +65,25 @@ class WidgetLayoutTest {
     }
 
     @Test
+    fun `generateLayoutSpec should produce 1 row for SIMPLE mode`() {
+        val uiState =
+            createWidgetUiState(
+                mode = WidgetLayoutMode.SIMPLE,
+                hasMinutes = true,
+                hasTraffic = true,
+            )
+        val sim = uiState.simUiStates.first()
+        // Usage info only = 1 row
+        assertEquals(1, sim.layoutSpec.rows.size)
+    }
+
+    @Test
+    fun `WidgetLayoutMode fromValue should fallback to THREE_LINES for invalid values`() {
+        assertEquals(WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.fromValue(-1))
+        assertEquals(WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.fromValue(999))
+    }
+
+    @Test
     fun `generateLayoutSpec should produce 6 rows for SIX_LINES mode when all data and limits are present`() {
         val uiState =
             createWidgetUiState(

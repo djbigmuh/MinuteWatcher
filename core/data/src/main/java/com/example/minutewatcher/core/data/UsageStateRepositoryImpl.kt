@@ -91,12 +91,12 @@ class UsageStateRepositoryImpl
         private val deps: UsageRepositoryDependencies,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
-    private val isDataLoadedSet = AtomicBoolean(false)
-    private val assembler = SnapshotAssembler()
+        private val isDataLoadedSet = AtomicBoolean(false)
+        private val assembler = SnapshotAssembler()
 
-    override fun isDataLoaded(): Boolean = isDataLoadedSet.get()
+        override fun isDataLoaded(): Boolean = isDataLoadedSet.get()
 
-    private val sharedSimUsagesFlow: StateFlow<List<SimUsage>> =
+        private val sharedSimUsagesFlow: StateFlow<List<SimUsage>> =
             deps.simIdentityRepository
                 .observeActiveSims()
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)

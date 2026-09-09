@@ -217,7 +217,7 @@ object AppLogger {
             workerJob?.cancel()
             workerJob = null
             // Drain channel
-            while (logChannel.tryReceive().isSuccess) { /* empty */
+            while (logChannel.tryReceive().isSuccess) { // empty
             }
         }
     }

@@ -51,4 +51,4 @@ class SemanticInitializerWorker
 
             return Result.success()
         }
-}
+    }

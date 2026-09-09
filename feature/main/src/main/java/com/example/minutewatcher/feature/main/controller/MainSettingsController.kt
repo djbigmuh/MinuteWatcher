@@ -33,7 +33,7 @@ class MainSettingsController
         private val settingsUseCase: SettingsUseCase,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
-    val isInitialSetupCompleted: Flow<Boolean> = migrationFlagsRepository.isInitialSetupCompleted()
+        val isInitialSetupCompleted: Flow<Boolean> = migrationFlagsRepository.isInitialSetupCompleted()
 
         val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> =
             appSettingsRepository

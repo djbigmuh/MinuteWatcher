@@ -18,7 +18,7 @@ import javax.inject.Singleton
 class DataRefreshNotifierImpl
     @Inject
     constructor() : DataRefreshNotifier {
-    private val lastEventId = AtomicLong(0)
+        private val lastEventId = AtomicLong(0)
 
         private val _refreshFlow =
             MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(

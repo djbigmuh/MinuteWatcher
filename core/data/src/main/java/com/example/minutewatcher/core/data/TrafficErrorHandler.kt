@@ -36,9 +36,9 @@ class TrafficErrorHandler
             }
         }
 
-    fun handleInconsistentFirmware(updateStatus: (TrackingStatus) -> Unit) {
+        fun handleInconsistentFirmware(updateStatus: (TrackingStatus) -> Unit) {
             AppLogger.w("TrafficTracker: inconsistent firmware state")
-        updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION))
+            updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION))
         }
 
         fun handleBaselineRetryFailure(

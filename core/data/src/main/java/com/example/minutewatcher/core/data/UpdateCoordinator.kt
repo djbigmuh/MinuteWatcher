@@ -58,65 +58,65 @@ class UpdateCoordinator
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : WidgetUpdateCoordinator {
-    override val key: TrackingKey = TrackingKey.WIDGET_OBSERVATION
+        override val key: TrackingKey = TrackingKey.WIDGET_OBSERVATION
 
-    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-    /**
-     * Updates the coordinator status using a prioritized transition rule to prevent race conditions.
-     * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
-     */
-    private fun transitionStatus(
-        newStatus: TrackingStatus,
-        force: Boolean = false,
-    ) {
-        _status.update { current ->
-            val currentPrio = getStatusPriority(current)
-            val newPrio = getStatusPriority(newStatus)
+        /**
+         * Updates the coordinator status using a prioritized transition rule to prevent race conditions.
+         * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+         */
+        private fun transitionStatus(
+            newStatus: TrackingStatus,
+            force: Boolean = false,
+        ) {
+            _status.update { current ->
+                val currentPrio = getStatusPriority(current)
+                val newPrio = getStatusPriority(newStatus)
 
-            when {
-                force -> newStatus
-                current == newStatus -> current
-                newPrio >= currentPrio -> newStatus
-                // Recovery: Success can clear transient UNKNOWN error
-                newPrio == TrackingStatus.PRIORITY_HEALTHY &&
-                    currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
+                when {
+                    force -> newStatus
+                    current == newStatus -> current
+                    newPrio >= currentPrio -> newStatus
+                    // Recovery: Success can clear transient UNKNOWN error
+                    newPrio == TrackingStatus.PRIORITY_HEALTHY &&
+                        currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
 
-                else -> current
+                    else -> current
+                }
             }
         }
-    }
 
-    private fun getStatusPriority(status: TrackingStatus): Int =
-        when (status) {
-            is TrackingStatus.Error ->
-                when (status.type) {
-                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                }
+        private fun getStatusPriority(status: TrackingStatus): Int =
+            when (status) {
+                is TrackingStatus.Error ->
+                    when (status.type) {
+                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                    }
 
-            is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-            else -> 0
+                is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+                else -> 0
+            }
+
+        private var lastSnapshotHash: Int? = null
+        private var consecutiveUpdateFailures = 0
+        private var observationRestartCount = 0
+        private var degradedCycleCount = 0
+        private val isObservationStarted = AtomicBoolean(false)
+        private val stateMutex = Mutex()
+
+        private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
+        private val setupJob = AtomicReference<Job?>(null)
+        private val monitoringJob = AtomicReference<Job?>(null)
+        private val currentObservationJob = AtomicReference<Job?>(null)
+        private val currentUpdateJob = AtomicReference<Job?>(null)
+
+        init {
+            ensureObservationStarted()
         }
-
-    private var lastSnapshotHash: Int? = null
-    private var consecutiveUpdateFailures = 0
-    private var observationRestartCount = 0
-    private var degradedCycleCount = 0
-    private val isObservationStarted = AtomicBoolean(false)
-    private val stateMutex = Mutex()
-
-    private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
-    private val setupJob = AtomicReference<Job?>(null)
-    private val monitoringJob = AtomicReference<Job?>(null)
-    private val currentObservationJob = AtomicReference<Job?>(null)
-    private val currentUpdateJob = AtomicReference<Job?>(null)
-
-    init {
-        ensureObservationStarted()
-    }
 
         /**
          * Recovers widget observation state.
@@ -263,7 +263,7 @@ class UpdateCoordinator
             }
         }
 
-    private suspend fun waitForInitialSnapshot(): GlobalSnapshot? {
+        private suspend fun waitForInitialSnapshot(): GlobalSnapshot? {
             // Ensure flow produces at least one snapshot within timeout before starting monitoring.
             // This prevents "silent hangs" if the data source is corrupted or inactive.
             // We use a retry loop with exponential backoff to handle slow initial snapshots.
@@ -271,7 +271,7 @@ class UpdateCoordinator
             var attempt = 0
             var delayMs = Constants.Flow.RETRY_DELAY_MS
 
-        while ((attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) && (firstSnapshot == null)) {
+            while ((attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) && (firstSnapshot == null)) {
                 val rawFlow =
                     usageStateRepository
                         .observeSnapshot()
@@ -300,59 +300,59 @@ class UpdateCoordinator
                         "after $MAX_INITIAL_SNAPSHOT_ATTEMPTS attempts",
                 )
             }
-        return firstSnapshot
-    }
-
-    private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
-        try {
-            processSnapshot(snapshot)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
-            val newHash =
-                try {
-                    SnapshotUtils.calculateContentHash(snapshot)
-                } catch (_: Exception) {
-                    0
-                }
-            handleUpdateResult(
-                WidgetUpdateResult.Failure(
-                    isRetryable = false,
-                    reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                ),
-                newHash,
-            )
-            // Rethrow to fail the observation loop and trigger monitoring-based restart.
-            // FlowObservationScope using collectLatest ensures that CancellationException is expected here.
-            throw e
+            return firstSnapshot
         }
-    }
 
-    private fun launchMonitoringJob(newJob: Job): Job? {
-        if (!newJob.isActive) return null
-        // Monitoring completion: if observation fails — restart with exponential delay.
-        return scope.launch {
+        private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
+            try {
+                processSnapshot(snapshot)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
+                val newHash =
+                    try {
+                        SnapshotUtils.calculateContentHash(snapshot)
+                    } catch (_: Exception) {
+                        0
+                    }
+                handleUpdateResult(
+                    WidgetUpdateResult.Failure(
+                        isRetryable = false,
+                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                    ),
+                    newHash,
+                )
+                // Rethrow to fail the observation loop and trigger monitoring-based restart.
+                // FlowObservationScope using collectLatest ensures that CancellationException is expected here.
+                throw e
+            }
+        }
+
+        private fun launchMonitoringJob(newJob: Job): Job? {
+            if (!newJob.isActive) return null
+            // Monitoring completion: if observation fails — restart with exponential delay.
+            return scope.launch {
                 newJob.join()
 
-            // Atomically check if this job is still the current one under mutex
-            val isCurrent =
-                stateMutex.withLock {
-                    currentObservationJob.get() === newJob
-                }
-            if (!isCurrent) return@launch
-
-            val (restartCount, cycles, isEnteringDegraded) =
-                stateMutex.withLock {
-                    val count = ++observationRestartCount
-                    var currentCycles = degradedCycleCount
-                    var enteringDegraded = false
-                    if (count >= MAX_OBSERVATION_RESTARTS) {
-                        currentCycles = ++degradedCycleCount
-                        enteringDegraded = true
+                // Atomically check if this job is still the current one under mutex
+                val isCurrent =
+                    stateMutex.withLock {
+                        currentObservationJob.get() === newJob
                     }
-                    Triple(count, currentCycles, enteringDegraded)
-                }
+                if (!isCurrent) return@launch
+
+                val (restartCount, cycles, isEnteringDegraded) =
+                    stateMutex.withLock {
+                        val count = ++observationRestartCount
+                        var currentCycles = degradedCycleCount
+                        var enteringDegraded = false
+                        if (count >= MAX_OBSERVATION_RESTARTS) {
+                            currentCycles = ++degradedCycleCount
+                            enteringDegraded = true
+                        }
+                        Triple(count, currentCycles, enteringDegraded)
+                    }
 
                 val delayMs =
                     if (isEnteringDegraded) {
@@ -361,197 +361,197 @@ class UpdateCoordinator
                         calculateRestartDelay(restartCount)
                     }
 
-            if (delayMs < 0) return@launch // Permanent stop
+                if (delayMs < 0) return@launch // Permanent stop
 
-            AppLogger.w(
-                "UpdateCoordinator: observation terminated unexpectedly, " +
-                    "scheduling restart #$restartCount in ${delayMs}ms",
-            )
-            delay(delayMs.milliseconds)
+                AppLogger.w(
+                    "UpdateCoordinator: observation terminated unexpectedly, " +
+                        "scheduling restart #$restartCount in ${delayMs}ms",
+                )
+                delay(delayMs.milliseconds)
 
-            // Re-check current job before initiating restart
-            val shouldInitiateRestart =
-                stateMutex.withLock {
-                    currentObservationJob.get() === newJob
-                }
-
-            if (shouldInitiateRestart) {
-                stateMutex.withLock {
-                    lastSnapshotHash = null
-                    consecutiveUpdateFailures = 0
-                    // In degraded mode keep Error status for UI info
-                    if (restartCount < MAX_OBSERVATION_RESTARTS) {
-                        transitionStatus(TrackingStatus.Idle)
+                // Re-check current job before initiating restart
+                val shouldInitiateRestart =
+                    stateMutex.withLock {
+                        currentObservationJob.get() === newJob
                     }
+
+                if (shouldInitiateRestart) {
+                    stateMutex.withLock {
+                        lastSnapshotHash = null
+                        consecutiveUpdateFailures = 0
+                        // In degraded mode keep Error status for UI info
+                        if (restartCount < MAX_OBSERVATION_RESTARTS) {
+                            transitionStatus(TrackingStatus.Idle)
+                        }
+                    }
+                    isObservationStarted.set(false)
+                    ensureObservationStarted()
                 }
-                isObservationStarted.set(false)
-                ensureObservationStarted()
             }
         }
-    }
 
-    private suspend fun handleDegradedMode(
-        restartCount: Int,
-        cycles: Int,
-    ): Long {
-        if (cycles >= MAX_DEGRADED_CYCLES) {
+        private suspend fun handleDegradedMode(
+            restartCount: Int,
+            cycles: Int,
+        ): Long {
+            if (cycles >= MAX_DEGRADED_CYCLES) {
+                AppLogger.e(
+                    "UpdateCoordinator: observation restart limit reached ($restartCount) " +
+                        "and max degraded cycles reached ($cycles). Permanent stop.",
+                )
+                transitionStatus(
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Widget observation permanently stopped after $cycles degraded cycles",
+                    ),
+                    force = true,
+                )
+                return -1 // Signal to stop
+            }
+
             AppLogger.e(
-                "UpdateCoordinator: observation restart limit reached ($restartCount) " +
-                    "and max degraded cycles reached ($cycles). Permanent stop.",
+                "UpdateCoordinator: observation restart limit reached ($restartCount), " +
+                    "entering degraded mode (cycle $cycles)",
             )
             transitionStatus(
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.DATABASE_ERROR,
-                    "Widget observation permanently stopped after $cycles degraded cycles",
+                    "Widget observation failed after $restartCount restarts. " +
+                        "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
                 ),
-                force = true,
-                )
-            return -1 // Signal to stop
-        }
-
-        AppLogger.e(
-            "UpdateCoordinator: observation restart limit reached ($restartCount), " +
-                "entering degraded mode (cycle $cycles)",
-        )
-        transitionStatus(
-            TrackingStatus.Error(
-                TrackingStatus.ErrorType.DATABASE_ERROR,
-                "Widget observation failed after $restartCount restarts. " +
-                    "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
-            ),
             )
-        stateMutex.withLock {
-            observationRestartCount = 0
-        }
-        return MAX_RESTART_COOLDOWN_MS
-    }
-
-    private fun calculateRestartDelay(restartCount: Int): Long {
-        val exponent = (restartCount - 1).coerceAtMost(MAX_RESTART_DELAY_EXPONENT)
-        return (INITIAL_RESTART_DELAY_MS * (1 shl exponent)).coerceAtMost(MAX_RESTART_DELAY_MS)
-    }
-
-    @Suppress("ReturnCount")
-    private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
-        currentCoroutineContext().ensureActive()
-
-        val newHash = SnapshotUtils.calculateContentHash(snapshot)
-
-        val shouldUpdate = checkShouldUpdate(newHash)
-        if (!shouldUpdate) return
-
-        if (snapshot.suppressWidgetUpdate) {
-            // Хэш НЕ обновляется: виджет не обновлён,
-            // следующее изменение данных должно триггернуть обновление.
-            return
-        }
-
-        // Оборачиваем обновление в coroutineScope, чтобы выделить отдельный Job для этого процесса.
-        // Это позволяет внешним вызовам (performForcedUpdate) отменить текущее обновление,
-        // не прерывая весь цикл наблюдения (collectLatest).
-        coroutineScope {
-            currentUpdateJob.set(coroutineContext.job)
-            try {
-                val result = performWidgetUpdate()
-
-                // Проверяем, что снапшот все еще актуален.
-                ensureActive()
-
-                handleUpdateResult(result, newHash)
-            } finally {
-                currentUpdateJob.compareAndSet(coroutineContext.job, null)
+            stateMutex.withLock {
+                observationRestartCount = 0
             }
+            return MAX_RESTART_COOLDOWN_MS
         }
-    }
 
-    private suspend fun checkShouldUpdate(newHash: Int): Boolean =
-        stateMutex.withLock {
-            if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
-                AppLogger.d(
-                    "UpdateCoordinator: widget update suppressed due to too many failures " +
-                        "($consecutiveUpdateFailures)",
-                )
-                return@withLock false
+        private fun calculateRestartDelay(restartCount: Int): Long {
+            val exponent = (restartCount - 1).coerceAtMost(MAX_RESTART_DELAY_EXPONENT)
+            return (INITIAL_RESTART_DELAY_MS * (1 shl exponent)).coerceAtMost(MAX_RESTART_DELAY_MS)
+        }
+
+        @Suppress("ReturnCount")
+        private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
+            currentCoroutineContext().ensureActive()
+
+            val newHash = SnapshotUtils.calculateContentHash(snapshot)
+
+            val shouldUpdate = checkShouldUpdate(newHash)
+            if (!shouldUpdate) return
+
+            if (snapshot.suppressWidgetUpdate) {
+                // Хэш НЕ обновляется: виджет не обновлён,
+                // следующее изменение данных должно триггернуть обновление.
+                return
             }
 
-            if (newHash == lastSnapshotHash) {
-                AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
-                return@withLock false
+            // Оборачиваем обновление в coroutineScope, чтобы выделить отдельный Job для этого процесса.
+            // Это позволяет внешним вызовам (performForcedUpdate) отменить текущее обновление,
+            // не прерывая весь цикл наблюдения (collectLatest).
+            coroutineScope {
+                currentUpdateJob.set(coroutineContext.job)
+                try {
+                    val result = performWidgetUpdate()
+
+                    // Проверяем, что снапшот все еще актуален.
+                    ensureActive()
+
+                    handleUpdateResult(result, newHash)
+                } finally {
+                    currentUpdateJob.compareAndSet(coroutineContext.job, null)
+                }
             }
-            true
         }
 
-    private suspend fun performWidgetUpdate(): WidgetUpdateResult =
-        try {
-            widgetUpdater.updateAll()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("UpdateCoordinator: unexpected widget update failure", e)
-            WidgetUpdateResult.Failure(
-                isRetryable = false,
-                reason = WidgetUpdateResult.FailureReason.TERMINAL,
-            )
-        }
-
-    private suspend fun handleUpdateResult(
-        result: WidgetUpdateResult,
-        newHash: Int,
-    ) {
-        stateMutex.withLock {
-            when (result) {
-                is WidgetUpdateResult.Success -> {
-                    transitionStatus(TrackingStatus.Active, force = true)
-                    observationRestartCount = 0
-                    degradedCycleCount = 0
-                    consecutiveUpdateFailures = 0
-                    // Update hash of the latest successfully processed state.
-                    lastSnapshotHash = newHash
+        private suspend fun checkShouldUpdate(newHash: Int): Boolean =
+            stateMutex.withLock {
+                if (consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                    AppLogger.d(
+                        "UpdateCoordinator: widget update suppressed due to too many failures " +
+                            "($consecutiveUpdateFailures)",
+                    )
+                    return@withLock false
                 }
 
-                is WidgetUpdateResult.Failure -> {
-                    if (!result.wasCoalesced) {
-                        processFailureResult(result)
+                if (newHash == lastSnapshotHash) {
+                    AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
+                    return@withLock false
+                }
+                true
+            }
+
+        private suspend fun performWidgetUpdate(): WidgetUpdateResult =
+            try {
+                widgetUpdater.updateAll()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("UpdateCoordinator: unexpected widget update failure", e)
+                WidgetUpdateResult.Failure(
+                    isRetryable = false,
+                    reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                )
+            }
+
+        private suspend fun handleUpdateResult(
+            result: WidgetUpdateResult,
+            newHash: Int,
+        ) {
+            stateMutex.withLock {
+                when (result) {
+                    is WidgetUpdateResult.Success -> {
+                        transitionStatus(TrackingStatus.Active, force = true)
+                        observationRestartCount = 0
+                        degradedCycleCount = 0
+                        consecutiveUpdateFailures = 0
+                        // Update hash of the latest successfully processed state.
+                        lastSnapshotHash = newHash
+                    }
+
+                    is WidgetUpdateResult.Failure -> {
+                        if (!result.wasCoalesced) {
+                            processFailureResult(result)
+                        }
                     }
                 }
             }
         }
-    }
 
-    private fun processFailureResult(result: WidgetUpdateResult.Failure) {
-        when (result.reason) {
-            WidgetUpdateResult.FailureReason.TRANSIENT -> {
-                handleUpdateFailure()
-            }
+        private fun processFailureResult(result: WidgetUpdateResult.Failure) {
+            when (result.reason) {
+                WidgetUpdateResult.FailureReason.TRANSIENT -> {
+                    handleUpdateFailure()
+                }
 
-            WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED -> {
-                AppLogger.e(
-                    "UpdateCoordinator: terminal limit exceeded (TransactionTooLarge), " +
-                        "resetting hash to force retry on next data change",
-                )
-                transitionStatus(
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.NOT_SUPPORTED,
-                        "Widget size limit exceeded",
-                    ),
+                WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED -> {
+                    AppLogger.e(
+                        "UpdateCoordinator: terminal limit exceeded (TransactionTooLarge), " +
+                            "resetting hash to force retry on next data change",
                     )
-                lastSnapshotHash = null
-            }
-
-            WidgetUpdateResult.FailureReason.TERMINAL -> {
-                // For terminal failures we reset hash to ensure the next data change
-                // will trigger a fresh update attempt, bypassing the hash-match check.
-                AppLogger.w("UpdateCoordinator: terminal failure encountered, resetting hash")
-                transitionStatus(
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "Terminal widget update failure",
-                    ),
+                    transitionStatus(
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.NOT_SUPPORTED,
+                            "Widget size limit exceeded",
+                        ),
                     )
-                lastSnapshotHash = null
+                    lastSnapshotHash = null
+                }
+
+                WidgetUpdateResult.FailureReason.TERMINAL -> {
+                    // For terminal failures we reset hash to ensure the next data change
+                    // will trigger a fresh update attempt, bypassing the hash-match check.
+                    AppLogger.w("UpdateCoordinator: terminal failure encountered, resetting hash")
+                    transitionStatus(
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Terminal widget update failure",
+                        ),
+                    )
+                    lastSnapshotHash = null
+                }
             }
         }
-    }
 
         private fun handleUpdateFailure() {
             consecutiveUpdateFailures++
@@ -601,12 +601,12 @@ class UpdateCoordinator
             }
         }
 
-    private suspend fun performForcedUpdate(): Boolean {
-        val suppressed =
-            stateMutex.withLock {
-                consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES
-            }
-        if (suppressed) {
+        private suspend fun performForcedUpdate(): Boolean {
+            val suppressed =
+                stateMutex.withLock {
+                    consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES
+                }
+            if (suppressed) {
                 AppLogger.w(
                     "UpdateCoordinator: forced widget update suppressed due to too many failures " +
                         "($consecutiveUpdateFailures)",
@@ -614,49 +614,49 @@ class UpdateCoordinator
                 return false
             }
 
-        // Отменяем текущее реактивное обновление, если оно идет.
-        currentUpdateJob.getAndSet(null)?.cancel()
+            // Отменяем текущее реактивное обновление, если оно идет.
+            currentUpdateJob.getAndSet(null)?.cancel()
 
-        // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)
-        widgetUpdater.recover()
+            // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)
+            widgetUpdater.recover()
 
-        return try {
-            val result = widgetUpdater.updateAll()
+            return try {
+                val result = widgetUpdater.updateAll()
 
-            stateMutex.withLock {
-                if (result.isSuccess) {
-                    consecutiveUpdateFailures = 0
-                    observationRestartCount = 0
-                    degradedCycleCount = 0
+                stateMutex.withLock {
+                    if (result.isSuccess) {
+                        consecutiveUpdateFailures = 0
+                        observationRestartCount = 0
+                        degradedCycleCount = 0
 
-                    // Читаем актуальный снимок ПОСЛЕ завершения обновления,
-                    // чтобы lastSnapshotHash соответствовал реальности.
-                    val latestSnapshot = usageStateRepository.observeSnapshot().value
-                    lastSnapshotHash = SnapshotUtils.calculateContentHash(latestSnapshot)
-                    true
-                } else {
-                    handleUpdateFailure()
-                    false
+                        // Читаем актуальный снимок ПОСЛЕ завершения обновления,
+                        // чтобы lastSnapshotHash соответствовал реальности.
+                        val latestSnapshot = usageStateRepository.observeSnapshot().value
+                        lastSnapshotHash = SnapshotUtils.calculateContentHash(latestSnapshot)
+                        true
+                    } else {
+                        handleUpdateFailure()
+                        false
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("Force widget update failed, hash not updated", e)
+                stateMutex.withLock {
+                    handleUpdateFailure()
+                }
+                false
             }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.w("Force widget update failed, hash not updated", e)
-            stateMutex.withLock {
-                handleUpdateFailure()
-            }
-            false
         }
-    }
 
-    private companion object {
-        private const val MAX_RESTART_DELAY_EXPONENT = 4
-        private const val MAX_OBSERVATION_RESTARTS = 5
-        private const val MAX_DEGRADED_CYCLES = 3
-        private const val INITIAL_RESTART_DELAY_MS = 5000L
-        private const val MAX_RESTART_DELAY_MS = 80_000L
-        private const val MAX_RESTART_COOLDOWN_MS = 300_000L
-        private const val MAX_INITIAL_SNAPSHOT_ATTEMPTS = 3
-    }
+        private companion object {
+            private const val MAX_RESTART_DELAY_EXPONENT = 4
+            private const val MAX_OBSERVATION_RESTARTS = 5
+            private const val MAX_DEGRADED_CYCLES = 3
+            private const val INITIAL_RESTART_DELAY_MS = 5000L
+            private const val MAX_RESTART_DELAY_MS = 80_000L
+            private const val MAX_RESTART_COOLDOWN_MS = 300_000L
+            private const val MAX_INITIAL_SNAPSHOT_ATTEMPTS = 3
+        }
     }

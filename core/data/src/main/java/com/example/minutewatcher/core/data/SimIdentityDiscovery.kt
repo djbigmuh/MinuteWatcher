@@ -105,46 +105,46 @@ open class SimIdentityDiscovery
                 emptyList()
             }
 
-    /**
-     * Discovers active SIM cards and returns a structured result.
-     */
-    open fun discoverSims(
-        seed: String,
-        isStable: Boolean = true,
-    ): SimDiscoveryResult {
-        if (!permissionManager.hasPhoneStatePermission()) {
-            return SimDiscoveryResult.PermissionMissing
-        }
+        /**
+         * Discovers active SIM cards and returns a structured result.
+         */
+        open fun discoverSims(
+            seed: String,
+            isStable: Boolean = true,
+        ): SimDiscoveryResult {
+            if (!permissionManager.hasPhoneStatePermission()) {
+                return SimDiscoveryResult.PermissionMissing
+            }
 
-        return try {
-            val subscriptions = getActiveSubscriptions()
-            val defaultDataSubId = getDefaultDataSubscriptionId()
-            val defaultVoiceSubId = getDefaultVoiceSubscriptionId()
+            return try {
+                val subscriptions = getActiveSubscriptions()
+                val defaultDataSubId = getDefaultDataSubscriptionId()
+                val defaultVoiceSubId = getDefaultVoiceSubscriptionId()
 
-            val discoveredSims =
-                subscriptions.map { info ->
-                    val identity = SimIdentityUtils.createIdentityFromInfo(info, seed, isStable)
-                    ActiveSimInfo(
-                        identity = identity,
-                        slotIndex = info.simSlotIndex,
-                        subscriptionId = info.subscriptionId,
-                        iccId = info.iccId,
-                        displayName = info.displayName?.toString(),
-                        carrierName = info.carrierName?.toString(),
-                        mccMnc = SimIdentityUtils.getMccMnc(info),
-                        isDefaultData = info.subscriptionId == defaultDataSubId,
-                        isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
-                    )
-                }
-            SimDiscoveryResult.Available(discoveredSims)
-        } catch (e: SecurityException) {
-            AppLogger.w("Sim discovery failed: security restriction", e)
-            SimDiscoveryResult.PermissionMissing
-        } catch (e: Exception) {
-            AppLogger.e("Sim discovery failed", e)
-            SimDiscoveryResult.Failed(SimDiscoveryFailureReason.UNKNOWN)
+                val discoveredSims =
+                    subscriptions.map { info ->
+                        val identity = SimIdentityUtils.createIdentityFromInfo(info, seed, isStable)
+                        ActiveSimInfo(
+                            identity = identity,
+                            slotIndex = info.simSlotIndex,
+                            subscriptionId = info.subscriptionId,
+                            iccId = info.iccId,
+                            displayName = info.displayName?.toString(),
+                            carrierName = info.carrierName?.toString(),
+                            mccMnc = SimIdentityUtils.getMccMnc(info),
+                            isDefaultData = info.subscriptionId == defaultDataSubId,
+                            isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
+                        )
+                    }
+                SimDiscoveryResult.Available(discoveredSims)
+            } catch (e: SecurityException) {
+                AppLogger.w("Sim discovery failed: security restriction", e)
+                SimDiscoveryResult.PermissionMissing
+            } catch (e: Exception) {
+                AppLogger.e("Sim discovery failed", e)
+                SimDiscoveryResult.Failed(SimDiscoveryFailureReason.UNKNOWN)
+            }
         }
-    }
 
         fun getDefaultDataSubscriptionId(): Int = permissionManager.getDefaultDataSubscriptionId()
 

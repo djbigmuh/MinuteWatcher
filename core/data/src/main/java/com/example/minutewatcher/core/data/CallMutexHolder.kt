@@ -11,7 +11,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class CallMutexHolder
-@Inject
-constructor() {
-    val mutex = Mutex()
-}
+    @Inject
+    constructor() {
+        val mutex = Mutex()
+    }

@@ -46,8 +46,8 @@ class ResetManager
          * atomicity for individual SIM reset operations.
          */
         private val resetMutex = Mutex()
-    private val lastResetCheck = ConcurrentHashMap<String, Long>()
-    private val pendingResets = ConcurrentHashMap.newKeySet<String>()
+        private val lastResetCheck = ConcurrentHashMap<String, Long>()
+        private val pendingResets = ConcurrentHashMap.newKeySet<String>()
 
         /**
          * Checks and performs automatic resets for all active SIMs.
@@ -151,30 +151,30 @@ class ResetManager
             }
         }
 
-    private suspend fun checkAndPerformSingleReset(
-        simInfo: ActiveSimInfo,
-        now: Long,
-        resetIdentities: MutableSet<String>,
-    ): Boolean {
-        val identity = simInfo.identity.stableId
-        val usage =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                simUsageRepository.getSimUsage(identity).first()
+        private suspend fun checkAndPerformSingleReset(
+            simInfo: ActiveSimInfo,
+            now: Long,
+            resetIdentities: MutableSet<String>,
+        ): Boolean {
+            val identity = simInfo.identity.stableId
+            val usage =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    simUsageRepository.getSimUsage(identity).first()
+                }
+
+            if (usage == null) {
+                AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
+                return false
             }
 
-        if (usage == null) {
-            AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
-            return false
+            val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
+            if (resetPerformed) {
+                resetIdentities.add(identity)
+            }
+            return true
         }
 
-        val resetPerformed = checkAndPerformResetForSimInternal(simInfo, now, usage)
-        if (resetPerformed) {
-            resetIdentities.add(identity)
-        }
-        return true
-        }
-
-    private suspend fun cleanupStaleCheckTimestamps(activeSims: List<ActiveSimInfo>) {
+        private suspend fun cleanupStaleCheckTimestamps(activeSims: List<ActiveSimInfo>) {
             resetMutex.withLock {
                 val activeIdentitySet = activeSims.asSequence().map { it.identity.stableId }.toSet()
                 lastResetCheck.keys.removeAll { it !in activeIdentitySet }

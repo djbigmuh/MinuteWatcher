@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main
 
 import androidx.lifecycle.SavedStateHandle
+import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -31,7 +32,6 @@ import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import com.example.minutewatcher.feature.main.controller.TrackingRecoveryController
-import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow

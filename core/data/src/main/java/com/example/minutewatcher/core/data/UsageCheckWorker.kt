@@ -59,26 +59,26 @@ class UsageCheckWorker
                 }
             }
 
-    private suspend fun executeWork(): Result =
-        try {
-            withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
-                deps.usageUseCase.refreshOperatorInfo()
-            } ?: run {
-                AppLogger.w("UsageCheckWorker: refreshOperatorInfo timed out, continuing")
+        private suspend fun executeWork(): Result =
+            try {
+                withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
+                    deps.usageUseCase.refreshOperatorInfo()
+                } ?: run {
+                    AppLogger.w("UsageCheckWorker: refreshOperatorInfo timed out, continuing")
+                }
+                checkUsageAndNotify()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                AppLogger.w("UsageCheckWorker: Network or storage error, retrying. ${e.message}")
+                Result.retry()
+            } catch (e: SecurityException) {
+                AppLogger.e("UsageCheckWorker: Permission error (unexpected)", e)
+                Result.failure()
+            } catch (e: Exception) {
+                AppLogger.e("UsageCheckWorker failed due to unexpected error", e)
+                Result.failure()
             }
-            checkUsageAndNotify()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: IOException) {
-            AppLogger.w("UsageCheckWorker: Network or storage error, retrying. ${e.message}")
-            Result.retry()
-        } catch (e: SecurityException) {
-            AppLogger.e("UsageCheckWorker: Permission error (unexpected)", e)
-            Result.failure()
-        } catch (e: Exception) {
-            AppLogger.e("UsageCheckWorker failed due to unexpected error", e)
-            Result.failure()
-        }
 
         // @Suppress("ReturnCount") is required for early exits on permission checks and timeouts.
         @Suppress("ReturnCount")
@@ -106,7 +106,7 @@ class UsageCheckWorker
             }
         }
 
-    private suspend fun tryPerformAutoReset() {
+        private suspend fun tryPerformAutoReset() {
             try {
                 val allReset = deps.autoResetUseCase.performAutoReset(shouldNotify = false)
                 if (!allReset) {
@@ -117,7 +117,7 @@ class UsageCheckWorker
             } catch (e: Exception) {
                 AppLogger.e("UsageCheckWorker: Auto-reset failed with error, continuing", e)
             }
-    }
+        }
 
         private suspend fun handleRefreshTimeout(refreshResult: RefreshResult.Timeout): Result {
             val snapshot = refreshResult.snapshot

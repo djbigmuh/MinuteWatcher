@@ -64,145 +64,145 @@ internal class SimIdentityObserver
         @ApplicationScope private val scope: CoroutineScope,
         private val cache: SimIdentityCache,
     ) : TrackingStatusProvider {
-    override val key: TrackingKey = TrackingKey.SIM_DISCOVERY
+        override val key: TrackingKey = TrackingKey.SIM_DISCOVERY
 
-    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
 
-    /**
-     * Updates the tracker status using a prioritized transition rule to prevent race conditions.
-     * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
-     */
-    private fun transitionStatus(
-        newStatus: TrackingStatus,
-        force: Boolean = false,
-    ) {
-        _status.update { current ->
-            val currentPrio = getStatusPriority(current)
-            val newPrio = getStatusPriority(newStatus)
+        /**
+         * Updates the tracker status using a prioritized transition rule to prevent race conditions.
+         * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+         */
+        private fun transitionStatus(
+            newStatus: TrackingStatus,
+            force: Boolean = false,
+        ) {
+            _status.update { current ->
+                val currentPrio = getStatusPriority(current)
+                val newPrio = getStatusPriority(newStatus)
 
-            when {
-                force -> newStatus
-                current == newStatus -> current
-                newPrio >= currentPrio -> newStatus
-                // Recovery: Success can clear transient UNKNOWN error
-                newPrio == TrackingStatus.PRIORITY_HEALTHY &&
-                    currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
+                when {
+                    force -> newStatus
+                    current == newStatus -> current
+                    newPrio >= currentPrio -> newStatus
+                    // Recovery: Success can clear transient UNKNOWN error
+                    newPrio == TrackingStatus.PRIORITY_HEALTHY &&
+                        currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
 
-                else -> current
+                    else -> current
+                }
             }
         }
-    }
 
-    private fun getStatusPriority(status: TrackingStatus): Int =
-        when (status) {
-            is TrackingStatus.Error ->
-                when (status.type) {
-                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                }
-
-            TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-            else -> 0
-        }
-
-    private val generalAttempt = AtomicLong(0)
-    private val isObservationInitialized = AtomicBoolean(false)
-    private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-
-    init {
-        scope.launch {
-            try {
-                val initialSeed = seedRepository.seedFlow.first()
-                if (initialSeed.isEmpty()) {
-                    AppLogger.d("SimIdentityObserver: Initial seed empty, triggering generation")
-                    generateSeedWithRetry()
-                }
-            } catch (e: Exception) {
-                AppLogger.e("SimIdentityObserver: Failed to check/generate initial seed", e)
-            }
-        }
-    }
-
-    override suspend fun recover() {
-        if (!isObservationInitialized.get()) {
-            AppLogger.w("SimIdentityObserver: recover() called before observation was initialized, ignoring")
-            return
-        }
-        generalAttempt.set(0)
-        transitionStatus(TrackingStatus.Idle, force = true)
-
-        // Trigger seed re-generation/check on recovery
-        scope.launch {
-            generateSeedWithRetry()
-            manualTrigger.emit(Unit)
-        }
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val seedFlow: Flow<SeedResult> =
-        manualTrigger
-            .onStart { emit(Unit) }
-            .flatMapLatest {
-                flow {
-                    // Ждем первого значения из репозитория.
-                    // В DataStore оно всегда есть (хотя бы пустая строка).
-                    // Используем таймаут для защиты от "зависшего" DataStore.
-                    val initialSeed =
-                        withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                            seedRepository.seedFlow.first()
-                        }
-
-                    when {
-                        initialSeed == null || initialSeed.isEmpty() -> {
-                            // Сида нет или DataStore не ответил — используем Fallback
-                            emit(SeedResult.Fallback)
-                        }
-
-                        else -> {
-                            // Сид есть — используем его
-                            emit(SeedResult.Real(initialSeed, isStable = true))
-                        }
+        private fun getStatusPriority(status: TrackingStatus): Int =
+            when (status) {
+                is TrackingStatus.Error ->
+                    when (status.type) {
+                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
                     }
 
-                    // Подписка на будущие изменения
-                    emitAll(
-                        seedRepository.seedFlow
-                            .filter { it.isNotEmpty() }
-                            .map { SeedResult.Real(it, isStable = true) },
-                    )
-                }.catch { e ->
+                TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+                else -> 0
+            }
+
+        private val generalAttempt = AtomicLong(0)
+        private val isObservationInitialized = AtomicBoolean(false)
+        private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+        init {
+            scope.launch {
+                try {
+                    val initialSeed = seedRepository.seedFlow.first()
+                    if (initialSeed.isEmpty()) {
+                        AppLogger.d("SimIdentityObserver: Initial seed empty, triggering generation")
+                        generateSeedWithRetry()
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e("SimIdentityObserver: Failed to check/generate initial seed", e)
+                }
+            }
+        }
+
+        override suspend fun recover() {
+            if (!isObservationInitialized.get()) {
+                AppLogger.w("SimIdentityObserver: recover() called before observation was initialized, ignoring")
+                return
+            }
+            generalAttempt.set(0)
+            transitionStatus(TrackingStatus.Idle, force = true)
+
+            // Trigger seed re-generation/check on recovery
+            scope.launch {
+                generateSeedWithRetry()
+                manualTrigger.emit(Unit)
+            }
+        }
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        val seedFlow: Flow<SeedResult> =
+            manualTrigger
+                .onStart { emit(Unit) }
+                .flatMapLatest {
+                    flow {
+                        // Ждем первого значения из репозитория.
+                        // В DataStore оно всегда есть (хотя бы пустая строка).
+                        // Используем таймаут для защиты от "зависшего" DataStore.
+                        val initialSeed =
+                            withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                                seedRepository.seedFlow.first()
+                            }
+
+                        when {
+                            initialSeed == null || initialSeed.isEmpty() -> {
+                                // Сида нет или DataStore не ответил — используем Fallback
+                                emit(SeedResult.Fallback)
+                            }
+
+                            else -> {
+                                // Сид есть — используем его
+                                emit(SeedResult.Real(initialSeed, isStable = true))
+                            }
+                        }
+
+                        // Подписка на будущие изменения
+                        emitAll(
+                            seedRepository.seedFlow
+                                .filter { it.isNotEmpty() }
+                                .map { SeedResult.Real(it, isStable = true) },
+                        )
+                    }.catch { e ->
                         AppLogger.e("SimIdentityObserver: seedFlow source error", e)
                         emit(SeedResult.Fallback)
                     }
-            }.distinctUntilChanged()
-            .shareIn(
-                scope,
-                SharingStarted.Eagerly,
-                replay = 1,
-            )
+                }.distinctUntilChanged()
+                .shareIn(
+                    scope,
+                    SharingStarted.Eagerly,
+                    replay = 1,
+                )
 
-    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
-        seedFlow
-            .onEach {
-                // Reset status to Idle when seed changes, clearing transient errors.
-                // This is safe to run on each seed update as it only clears non-permission errors.
-                _status.update { current ->
-                    if (current is TrackingStatus.Error &&
-                        current.type != TrackingStatus.ErrorType.PERMISSION_MISSING
-                    ) {
-                        TrackingStatus.Idle
-                    } else {
-                        current
+        @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+        private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
+            seedFlow
+                .onEach {
+                    // Reset status to Idle when seed changes, clearing transient errors.
+                    // This is safe to run on each seed update as it only clears non-permission errors.
+                    _status.update { current ->
+                        if (current is TrackingStatus.Error &&
+                            current.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+                        ) {
+                            TrackingStatus.Idle
+                        } else {
+                            current
+                        }
                     }
-                }
-            }.flatMapLatest { seed ->
-                merge(
-                    discovery.observeSubscriptionChanges(),
-                    manualTrigger,
-                ).debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
+                }.flatMapLatest { seed ->
+                    merge(
+                        discovery.observeSubscriptionChanges(),
+                        manualTrigger,
+                    ).debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                         .flatMapLatest {
                             flow {
                                 var shouldContinue = true
@@ -305,69 +305,69 @@ internal class SimIdentityObserver
                                 emit(emptyList())
                             }
                         }
-            }.distinctUntilChanged()
+                }.distinctUntilChanged()
 
-    private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
-        result: SimDiscoveryResult,
-    ): Boolean {
-        var shouldRetry = false
-        when (result) {
-            is SimDiscoveryResult.Available -> {
-                transitionStatus(TrackingStatus.Active)
-                emit(result.sims)
+        private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
+            result: SimDiscoveryResult,
+        ): Boolean {
+            var shouldRetry = false
+            when (result) {
+                is SimDiscoveryResult.Available -> {
+                    transitionStatus(TrackingStatus.Active)
+                    emit(result.sims)
+                }
+
+                is SimDiscoveryResult.PermissionMissing -> {
+                    shouldRetry = handlePermissionMissing()
+                }
+
+                is SimDiscoveryResult.Unsupported -> {
+                    transitionStatus(
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "SIM discovery unsupported",
+                        ),
+                    )
+                    emit(emptyList())
+                }
+
+                is SimDiscoveryResult.Failed -> {
+                    shouldRetry = handleDiscoveryFailure(result.reason)
+                }
             }
+            return shouldRetry
+        }
 
-            is SimDiscoveryResult.PermissionMissing -> {
-                shouldRetry = handlePermissionMissing()
-            }
+        private suspend fun FlowCollector<List<ActiveSimInfo>>.handlePermissionMissing(): Boolean {
+            generalAttempt.set(0)
+            transitionStatus(
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    "Permission missing",
+                ),
+            )
+            emit(emptyList())
+            return false
+        }
 
-            is SimDiscoveryResult.Unsupported -> {
+        private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryFailure(
+            reason: SimDiscoveryFailureReason,
+        ): Boolean {
+            val currentAttempt = generalAttempt.incrementAndGet()
+            return if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
+                generalAttempt.set(0)
+                AppLogger.e(
+                    "SimIdentityObserver: physicalActiveSims discovery stopped " +
+                        "after $currentAttempt consecutive logical failures: $reason",
+                )
                 transitionStatus(
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
-                        "SIM discovery unsupported",
+                        "SIM discovery stopped after $currentAttempt failures: $reason",
                     ),
-                    )
-                emit(emptyList())
-            }
-
-            is SimDiscoveryResult.Failed -> {
-                shouldRetry = handleDiscoveryFailure(result.reason)
-            }
-        }
-        return shouldRetry
-    }
-
-    private suspend fun FlowCollector<List<ActiveSimInfo>>.handlePermissionMissing(): Boolean {
-        generalAttempt.set(0)
-        transitionStatus(
-            TrackingStatus.Error(
-                TrackingStatus.ErrorType.PERMISSION_MISSING,
-                "Permission missing",
-            ),
-            )
-        emit(emptyList())
-        return false
-    }
-
-    private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryFailure(
-        reason: SimDiscoveryFailureReason,
-    ): Boolean {
-        val currentAttempt = generalAttempt.incrementAndGet()
-        return if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
-            generalAttempt.set(0)
-            AppLogger.e(
-                "SimIdentityObserver: physicalActiveSims discovery stopped " +
-                    "after $currentAttempt consecutive logical failures: $reason",
-            )
-            transitionStatus(
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "SIM discovery stopped after $currentAttempt failures: $reason",
-                ),
                 )
-            false
-        } else {
+                false
+            } else {
                 val backoff =
                     INITIAL_BACKOFF_MS * (1 shl minOf(currentAttempt.toInt(), MAX_BACKOFF_EXPONENT))
                 AppLogger.e(
@@ -376,16 +376,16 @@ internal class SimIdentityObserver
                 )
                 emit(emptyList())
                 delay(backoff.milliseconds)
-            true
+                true
+            }
         }
-    }
 
-    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
-        combine(
-            physicalActiveSims,
-            observeBenchmarkSimCount(),
-        ) { physical, benchmarkSimCount ->
+        @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+        val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+            combine(
+                physicalActiveSims,
+                observeBenchmarkSimCount(),
+            ) { physical, benchmarkSimCount ->
                 val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
 
                 when {
@@ -393,38 +393,38 @@ internal class SimIdentityObserver
                     mocks != null -> mocks
                     else -> physical
                 }
-        }.distinctUntilChanged()
-            .onEach { cleanupCache(it) }
-            .onStart { isObservationInitialized.set(true) }
+            }.distinctUntilChanged()
+                .onEach { cleanupCache(it) }
+                .onStart { isObservationInitialized.set(true) }
                 .stateIn(
                     scope,
                     SharingStarted.Eagerly,
                     emptyList(),
                 )
 
-    private fun cleanupCache(sims: List<ActiveSimInfo>) {
-        val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
-        cache.cleanupManual(activeSlots)
-        SimCardMapper.cleanupSlots(activeSlots)
-    }
-
-    private fun observeBenchmarkSimCount(): Flow<Int> =
-        appSettingsRepository
-            .observeAppSettings()
-            .map { it.benchmarkSimCount }
-            .distinctUntilChanged()
-
-    private suspend fun generateSeedWithRetry(): SeedResolutionResult =
-        try {
-            withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
-            } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("SimIdentityObserver: Seed generation process failed", e)
-            SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+        private fun cleanupCache(sims: List<ActiveSimInfo>) {
+            val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
+            cache.cleanupManual(activeSlots)
+            SimCardMapper.cleanupSlots(activeSlots)
         }
+
+        private fun observeBenchmarkSimCount(): Flow<Int> =
+            appSettingsRepository
+                .observeAppSettings()
+                .map { it.benchmarkSimCount }
+                .distinctUntilChanged()
+
+        private suspend fun generateSeedWithRetry(): SeedResolutionResult =
+            try {
+                withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                    seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
+                } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("SimIdentityObserver: Seed generation process failed", e)
+                SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+            }
 
         companion object {
             private const val MAX_BACKOFF_EXPONENT = 4

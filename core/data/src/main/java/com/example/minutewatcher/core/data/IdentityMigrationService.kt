@@ -41,24 +41,24 @@ open class IdentityMigrationService
         @AppDataStore private val appDataStore: DataStore<Preferences>,
         @SimDataStore private val simDataStore: DataStore<Preferences>,
     ) {
-    data class MigrationOutcome(
-        val migrated: Int = 0,
-        val conflicts: Int = 0,
-        val failures: Int = 0,
-        val partialFailure: Boolean = false,
-    ) {
-        operator fun plus(other: MigrationOutcome): MigrationOutcome =
-            MigrationOutcome(
-                migrated = this.migrated + other.migrated,
-                conflicts = this.conflicts + other.conflicts,
-                failures = this.failures + other.failures,
-                // Conflicts are considered a resolved state, not a failure.
-                // We only mark partialFailure if actual technical failures occurred.
-                partialFailure = this.partialFailure || other.partialFailure,
-            )
+        data class MigrationOutcome(
+            val migrated: Int = 0,
+            val conflicts: Int = 0,
+            val failures: Int = 0,
+            val partialFailure: Boolean = false,
+        ) {
+            operator fun plus(other: MigrationOutcome): MigrationOutcome =
+                MigrationOutcome(
+                    migrated = this.migrated + other.migrated,
+                    conflicts = this.conflicts + other.conflicts,
+                    failures = this.failures + other.failures,
+                    // Conflicts are considered a resolved state, not a failure.
+                    // We only mark partialFailure if actual technical failures occurred.
+                    partialFailure = this.partialFailure || other.partialFailure,
+                )
 
-        fun hasChanges(): Boolean = (migrated > 0) || (conflicts > 0)
-    }
+            fun hasChanges(): Boolean = (migrated > 0) || (conflicts > 0)
+        }
 
         private val migrationMutex = Mutex()
 
@@ -192,60 +192,60 @@ open class IdentityMigrationService
                 }
             }
 
-    /**
-     * Migrates data from identities generated with an ephemeral seed to those generated with a persistent seed.
-     *
-     * @param ephemeralSeed The ephemeral seed used during DataStore unavailability.
-     * @param activeSims The list of currently active SIM info.
-     * @return The combined outcome of all migration attempts.
-     */
-    suspend fun migrateFromEphemeralSeed(
-        ephemeralSeed: String,
-        activeSims: List<ActiveSimInfo>,
-    ): MigrationOutcome =
-        migrationMutex.withLock {
-            val mappings = mutableListOf<Pair<String, String>>()
-            for (simInfo in activeSims) {
-                val ephemeralIdentity =
-                    SimIdentityUtils.createIdentityFromInfo(simInfo, ephemeralSeed)
-                val persistentIdentity = simInfo.identity
+        /**
+         * Migrates data from identities generated with an ephemeral seed to those generated with a persistent seed.
+         *
+         * @param ephemeralSeed The ephemeral seed used during DataStore unavailability.
+         * @param activeSims The list of currently active SIM info.
+         * @return The combined outcome of all migration attempts.
+         */
+        suspend fun migrateFromEphemeralSeed(
+            ephemeralSeed: String,
+            activeSims: List<ActiveSimInfo>,
+        ): MigrationOutcome =
+            migrationMutex.withLock {
+                val mappings = mutableListOf<Pair<String, String>>()
+                for (simInfo in activeSims) {
+                    val ephemeralIdentity =
+                        SimIdentityUtils.createIdentityFromInfo(simInfo, ephemeralSeed)
+                    val persistentIdentity = simInfo.identity
 
-                if (ephemeralIdentity.stableId != persistentIdentity.stableId) {
-                    AppLogger.d(
-                        "IdentityMigrationService: Preparing ephemeral migration for slot ${simInfo.slotIndex} " +
-                            "(${ephemeralIdentity.stableId} -> ${persistentIdentity.stableId})",
-                    )
-                    mappings.add("_" + ephemeralIdentity.stableId to "_" + persistentIdentity.stableId)
+                    if (ephemeralIdentity.stableId != persistentIdentity.stableId) {
+                        AppLogger.d(
+                            "IdentityMigrationService: Preparing ephemeral migration for slot ${simInfo.slotIndex} " +
+                                "(${ephemeralIdentity.stableId} -> ${persistentIdentity.stableId})",
+                        )
+                        mappings.add("_" + ephemeralIdentity.stableId to "_" + persistentIdentity.stableId)
+                    }
                 }
+
+                if (mappings.isEmpty()) return MigrationOutcome()
+
+                var totalOutcome = MigrationOutcome()
+                totalOutcome += migrateDataStoreBatch(appDataStore, mappings, "app_settings")
+                totalOutcome += migrateDataStoreBatch(simDataStore, mappings, "sim_settings")
+                totalOutcome
             }
 
-            if (mappings.isEmpty()) return MigrationOutcome()
-
-            var totalOutcome = MigrationOutcome()
-            totalOutcome += migrateDataStoreBatch(appDataStore, mappings, "app_settings")
-            totalOutcome += migrateDataStoreBatch(simDataStore, mappings, "sim_settings")
-            totalOutcome
-        }
-
-    private suspend fun performMigration(activeIdentity: SimIdentity): MigrationOutcome {
+        private suspend fun performMigration(activeIdentity: SimIdentity): MigrationOutcome {
             val identity = activeIdentity.stableId
-        val slotIndex = activeIdentity.slotIndex
+            val slotIndex = activeIdentity.slotIndex
 
-        val legacySuffixes = if (slotIndex != null) findLegacySuffixes(activeIdentity) else emptyList()
+            val legacySuffixes = if (slotIndex != null) findLegacySuffixes(activeIdentity) else emptyList()
             val newSuffix = "_$identity"
             val mappings = legacySuffixes.filter { it != newSuffix }.map { it to newSuffix }
 
-        return if (mappings.isEmpty()) {
-            MigrationOutcome()
-        } else {
-            executeMigrationBatch(activeIdentity, mappings)
+            return if (mappings.isEmpty()) {
+                MigrationOutcome()
+            } else {
+                executeMigrationBatch(activeIdentity, mappings)
+            }
         }
-    }
 
-    private suspend fun executeMigrationBatch(
-        activeIdentity: SimIdentity,
-        mappings: List<Pair<String, String>>,
-    ): MigrationOutcome {
+        private suspend fun executeMigrationBatch(
+            activeIdentity: SimIdentity,
+            mappings: List<Pair<String, String>>,
+        ): MigrationOutcome {
             var totalOutcome = MigrationOutcome()
 
             // 1. Batch migrate App Settings
@@ -267,15 +267,15 @@ open class IdentityMigrationService
                     subIdForCleanup = subIdForCleanup,
                 )
 
-        logMigrationSummary(activeIdentity.stableId, totalOutcome)
+            logMigrationSummary(activeIdentity.stableId, totalOutcome)
 
-        return totalOutcome
-    }
+            return totalOutcome
+        }
 
-    private fun logMigrationSummary(
-        identity: String,
-        totalOutcome: MigrationOutcome,
-    ) {
+        private fun logMigrationSummary(
+            identity: String,
+            totalOutcome: MigrationOutcome,
+        ) {
             if (totalOutcome.hasChanges()) {
                 AppLogger.d(
                     "Migration completed for identity $identity: " +
@@ -288,7 +288,7 @@ open class IdentityMigrationService
             }
         }
 
-    private suspend fun findLegacySuffixes(activeIdentity: SimIdentity): List<String> {
+        private suspend fun findLegacySuffixes(activeIdentity: SimIdentity): List<String> {
             val suffixes = mutableListOf<String>()
 
             // 1. V1 Slot-based Migration:
@@ -335,7 +335,7 @@ open class IdentityMigrationService
             return suffixes.distinct()
         }
 
-    private suspend fun migrateDataStoreBatch(
+        private suspend fun migrateDataStoreBatch(
             dataStore: DataStore<Preferences>,
             mappings: List<Pair<String, String>>,
             storeName: String,
@@ -345,55 +345,55 @@ open class IdentityMigrationService
             var conflictCount = 0
             var failureCount = 0
 
-        try {
-            dataStore.edit { prefs ->
-                // 1. Migrate keys based on suffixes
-                for ((legacySuffix, newSuffix) in mappings) {
-                    val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
+            try {
+                dataStore.edit { prefs ->
+                    // 1. Migrate keys based on suffixes
+                    for ((legacySuffix, newSuffix) in mappings) {
+                        val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
 
-                    for (oldKey in keysToMigrate) {
-                        val baseName = oldKey.name.removeSuffix(legacySuffix)
-                        val newKeyName = baseName + newSuffix
+                        for (oldKey in keysToMigrate) {
+                            val baseName = oldKey.name.removeSuffix(legacySuffix)
+                            val newKeyName = baseName + newSuffix
 
-                        when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
-                            MigrationResult.SUCCESS -> {
-                                migratedCount++
-                                prefs.remove(oldKey)
-                            }
+                            when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
+                                MigrationResult.SUCCESS -> {
+                                    migratedCount++
+                                    prefs.remove(oldKey)
+                                }
 
-                            MigrationResult.CONFLICT -> {
-                                conflictCount++
-                                // Conflict resolved by keeping modern value and backing up legacy to
-                                // conflict_<key>. Old legacy key must be removed to prevent infinite
-                                // migration loops.
-                                prefs.remove(oldKey)
-                            }
+                                MigrationResult.CONFLICT -> {
+                                    conflictCount++
+                                    // Conflict resolved by keeping modern value and backing up legacy to
+                                    // conflict_<key>. Old legacy key must be removed to prevent infinite
+                                    // migration loops.
+                                    prefs.remove(oldKey)
+                                }
 
-                            MigrationResult.FAILURE -> {
-                                failureCount++
+                                MigrationResult.FAILURE -> {
+                                    failureCount++
+                                }
                             }
                         }
                     }
-                }
 
-                // 2. Perform cleanup if requested (usually for simDataStore)
-                if (subIdForCleanup != null) {
-                    val keysToRemove =
-                        prefs
-                            .asMap()
-                            .keys
-                            .asSequence()
-                            .filter { it.name.startsWith("subscription_id_icc_") }
-                            .filter { prefs[it] == subIdForCleanup }
-                            .toList()
-                    keysToRemove.forEach { prefs.remove(it) }
+                    // 2. Perform cleanup if requested (usually for simDataStore)
+                    if (subIdForCleanup != null) {
+                        val keysToRemove =
+                            prefs
+                                .asMap()
+                                .keys
+                                .asSequence()
+                                .filter { it.name.startsWith("subscription_id_icc_") }
+                                .filter { prefs[it] == subIdForCleanup }
+                                .toList()
+                        keysToRemove.forEach { prefs.remove(it) }
+                    }
                 }
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("IdentityMigrationService: Batch migration failed for $storeName", e)
-            return MigrationOutcome(failures = mappings.size, partialFailure = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("IdentityMigrationService: Batch migration failed for $storeName", e)
+                return MigrationOutcome(failures = mappings.size, partialFailure = true)
             }
 
             return MigrationOutcome(
@@ -466,17 +466,17 @@ open class IdentityMigrationService
             }
         }
 
-    /**
-     * Migrates a single key-value pair or backs it up if a conflict occurs.
-     *
-     * **Conflict Resolution Policy:**
-     * If a modern identity-based key already exists with a different value than the legacy key:
-     * 1. The modern value wins and remains unchanged.
-     * 2. The legacy value is backed up to a new key prefixed with "conflict_".
-     * 3. The original legacy key is removed (handled by the caller) to mark migration as resolved.
-     *
-     * @return [MigrationResult.SUCCESS] if migrated or values matched, [MigrationResult.CONFLICT] if backed up.
-     */
+        /**
+         * Migrates a single key-value pair or backs it up if a conflict occurs.
+         *
+         * **Conflict Resolution Policy:**
+         * If a modern identity-based key already exists with a different value than the legacy key:
+         * 1. The modern value wins and remains unchanged.
+         * 2. The legacy value is backed up to a new key prefixed with "conflict_".
+         * 3. The original legacy key is removed (handled by the caller) to mark migration as resolved.
+         *
+         * @return [MigrationResult.SUCCESS] if migrated or values matched, [MigrationResult.CONFLICT] if backed up.
+         */
         private fun <T> MutablePreferences.migrateOrBackup(
             newKey: Preferences.Key<T>,
             conflictKey: Preferences.Key<T>,

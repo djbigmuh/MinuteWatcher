@@ -67,47 +67,47 @@ internal class SimIdentityResolver
             }
         }
 
-    private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): Pair<String, Boolean> {
+        private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): Pair<String, Boolean> {
             val seed =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     seedFlow.firstOrNull()
                 } ?: SeedResult.Fallback
 
-        return when (seed) {
-            is SeedResult.Real -> seed.value to seed.isStable
-            is SeedResult.Fallback -> UUID.randomUUID().toString() to false
-        }
-    }
-
-    private suspend fun resolveIdentityInternal(
-        slot: Int,
-        seedValue: String,
-        isStable: Boolean,
-    ): SimIdentity =
-        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-            val result = discovery.discoverSims(seedValue, isStable)
-            val sims =
-                when (result) {
-                    is SimDiscoveryResult.Available -> result.sims
-                    else -> emptyList()
-                }
-            sims.find { it.slotIndex == slot }?.identity ?: throw SimNotFoundException(slot)
-        } ?: throw IOException("Timeout resolving identity for slot $slot")
-
-    private suspend fun persistIdentity(
-        slot: Int,
-        identity: SimIdentity,
-    ) {
-        try {
-            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                persistence.saveSimIdentitiesInfo(listOf(identity))
-            } ?: run {
-                AppLogger.w("SimIdentityResolver: persistence write timed out for slot $slot")
+            return when (seed) {
+                is SeedResult.Real -> seed.value to seed.isStable
+                is SeedResult.Fallback -> UUID.randomUUID().toString() to false
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
         }
+
+        private suspend fun resolveIdentityInternal(
+            slot: Int,
+            seedValue: String,
+            isStable: Boolean,
+        ): SimIdentity =
+            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                val result = discovery.discoverSims(seedValue, isStable)
+                val sims =
+                    when (result) {
+                        is SimDiscoveryResult.Available -> result.sims
+                        else -> emptyList()
+                    }
+                sims.find { it.slotIndex == slot }?.identity ?: throw SimNotFoundException(slot)
+            } ?: throw IOException("Timeout resolving identity for slot $slot")
+
+        private suspend fun persistIdentity(
+            slot: Int,
+            identity: SimIdentity,
+        ) {
+            try {
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    persistence.saveSimIdentitiesInfo(listOf(identity))
+                } ?: run {
+                    AppLogger.w("SimIdentityResolver: persistence write timed out for slot $slot")
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
+            }
         }
     }

@@ -83,148 +83,148 @@ class InitialSetupWorker
             }
         }
 
-    private suspend fun checkAndPerformMigrations(): Result? {
-        val migrationV1Completed = fetchMigrationV1Flag()
-        val migrationStabilityCompleted = fetchMigrationStabilityFlag()
+        private suspend fun checkAndPerformMigrations(): Result? {
+            val migrationV1Completed = fetchMigrationV1Flag()
+            val migrationStabilityCompleted = fetchMigrationStabilityFlag()
 
-        if (migrationV1Completed && migrationStabilityCompleted) {
+            if (migrationV1Completed && migrationStabilityCompleted) {
+                return null
+            }
+
+            val hasPermission = deps.permissionManager.hasPhoneStatePermission()
+
+            return if (!hasPermission) {
+                handleMigrationWithoutPermission(migrationV1Completed)
+            } else {
+                handleMigrationWithPermission(migrationV1Completed)
+            }
+        }
+
+        private suspend fun fetchMigrationV1Flag(): Boolean =
+            try {
+                deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout()
+            } catch (e: IOException) {
+                AppLogger.e("InitialSetupWorker: Critical error reading migrationV1 flag", e)
+                throw IOException("Failed to read migrationV1 flag", e)
+            } ?: throw IOException("DataStore timeout reading migrationV1 flag")
+
+        private suspend fun fetchMigrationStabilityFlag(): Boolean =
+            try {
+                deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout()
+            } catch (e: IOException) {
+                AppLogger.e("InitialSetupWorker: Critical error reading migrationStability flag", e)
+                throw IOException("Failed to read migrationStability flag", e)
+            } ?: throw IOException("DataStore timeout reading migrationStability flag")
+
+        private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): Result? {
+            val hasLegacyData =
+                try {
+                    deps.migrationService.hasLegacyData()
+                } catch (e: IOException) {
+                    AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
+                    return Result.retry()
+                }
+
+            if (hasLegacyData) {
+                AppLogger.d("Migration deferred: permission missing but legacy data exists")
+            } else {
+                if (!v1Completed) {
+                    deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+                    deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                    AppLogger.d("Migration V1 skipped: no legacy data found")
+                }
+                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+                deps.migrationService.markSchemaCurrent()
+            }
             return null
         }
 
-        val hasPermission = deps.permissionManager.hasPhoneStatePermission()
-
-        return if (!hasPermission) {
-            handleMigrationWithoutPermission(migrationV1Completed)
-        } else {
-            handleMigrationWithPermission(migrationV1Completed)
-        }
-    }
-
-    private suspend fun fetchMigrationV1Flag(): Boolean =
-        try {
-            deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout()
-        } catch (e: IOException) {
-            AppLogger.e("InitialSetupWorker: Critical error reading migrationV1 flag", e)
-            throw IOException("Failed to read migrationV1 flag", e)
-        } ?: throw IOException("DataStore timeout reading migrationV1 flag")
-
-    private suspend fun fetchMigrationStabilityFlag(): Boolean =
-        try {
-            deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout()
-        } catch (e: IOException) {
-            AppLogger.e("InitialSetupWorker: Critical error reading migrationStability flag", e)
-            throw IOException("Failed to read migrationStability flag", e)
-        } ?: throw IOException("DataStore timeout reading migrationStability flag")
-
-    private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): Result? {
-        val hasLegacyData =
+        private suspend fun handleMigrationWithPermission(v1Completed: Boolean): Result? {
+            var activeSims: List<ActiveSimInfo>? = null
             try {
-                deps.migrationService.hasLegacyData()
+                activeSims = getActiveSimsWithRetry()
             } catch (e: IOException) {
-                AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
-                return Result.retry()
+                AppLogger.w("InitialSetupWorker: Failed to get active SIMs for migration, retrying", e)
             }
 
-        if (hasLegacyData) {
-            AppLogger.d("Migration deferred: permission missing but legacy data exists")
-        } else {
-            if (!v1Completed) {
-                deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
-                deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                AppLogger.d("Migration V1 skipped: no legacy data found")
-            }
-            deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-            deps.migrationService.markSchemaCurrent()
-        }
-        return null
-    }
-
-    private suspend fun handleMigrationWithPermission(v1Completed: Boolean): Result? {
-        var activeSims: List<ActiveSimInfo>? = null
-        try {
-            activeSims = getActiveSimsWithRetry()
-        } catch (e: IOException) {
-            AppLogger.w("InitialSetupWorker: Failed to get active SIMs for migration, retrying", e)
-        }
-
-        var finalResult: Result? = null
-        if (activeSims == null) {
-            finalResult = Result.retry()
-        } else {
-            val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
-            var hasLegacyData: Boolean? = null
-            try {
-                hasLegacyData = deps.migrationService.hasLegacyData(activeIdentities)
-            } catch (e: IOException) {
-                AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
-            }
-
-            if (hasLegacyData == null) {
+            var finalResult: Result? = null
+            if (activeSims == null) {
                 finalResult = Result.retry()
-            } else if (activeSims.isEmpty()) {
-                handleEmptySimsMigration(v1Completed, hasLegacyData)
             } else {
-                finalResult = performActualMigration(activeSims)
-            }
-        }
-        return finalResult
-    }
-
-    private suspend fun handleEmptySimsMigration(
-        v1Completed: Boolean,
-        hasLegacyData: Boolean,
-    ) {
-        if (hasLegacyData) {
-            AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
-        } else {
-            if (!v1Completed) {
-                deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
-                deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
-            }
-            deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-            deps.migrationService.markSchemaCurrent()
-        }
-    }
-
-    private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =
-        try {
-            var totalFailures = 0
-            var totalConflicts = 0
-            activeSims.forEach { info ->
-                val outcome = deps.migrationService.migrateLegacyData(info.identity)
-                totalFailures += outcome.failures
-                totalConflicts += outcome.conflicts
+                val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
+                var hasLegacyData: Boolean? = null
+                try {
+                    hasLegacyData = deps.migrationService.hasLegacyData(activeIdentities)
+                } catch (e: IOException) {
+                    AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
                 }
 
-            if (totalConflicts > 0) {
-                AppLogger.w(
-                    "InitialSetupWorker: Migration resolved $totalConflicts conflicts (legacy values backed up).",
-                )
-            }
-
-            if (totalFailures > 0) {
-                AppLogger.e("InitialSetupWorker: Migration finished with $totalFailures failures.")
-                if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
-                    AppLogger.w("InitialSetupWorker: Retrying migration (attempt $runAttemptCount)")
-                    return Result.retry()
+                if (hasLegacyData == null) {
+                    finalResult = Result.retry()
+                } else if (activeSims.isEmpty()) {
+                    handleEmptySimsMigration(v1Completed, hasLegacyData)
                 } else {
-                    AppLogger.e(
-                        "InitialSetupWorker: Max migration attempts reached. " +
-                            "Marking as completed despite failures.",
+                    finalResult = performActualMigration(activeSims)
+                }
+            }
+            return finalResult
+        }
+
+        private suspend fun handleEmptySimsMigration(
+            v1Completed: Boolean,
+            hasLegacyData: Boolean,
+        ) {
+            if (hasLegacyData) {
+                AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
+            } else {
+                if (!v1Completed) {
+                    deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+                    deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                    AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
+                }
+                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+                deps.migrationService.markSchemaCurrent()
+            }
+        }
+
+        private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =
+            try {
+                var totalFailures = 0
+                var totalConflicts = 0
+                activeSims.forEach { info ->
+                    val outcome = deps.migrationService.migrateLegacyData(info.identity)
+                    totalFailures += outcome.failures
+                    totalConflicts += outcome.conflicts
+                }
+
+                if (totalConflicts > 0) {
+                    AppLogger.w(
+                        "InitialSetupWorker: Migration resolved $totalConflicts conflicts (legacy values backed up).",
                     )
                 }
-            }
 
-            deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
-            deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-            deps.migrationService.markSchemaCurrent()
-            AppLogger.d("Identity migrations completed in InitialSetupWorker")
-            null
-        } catch (e: IOException) {
-            AppLogger.w("InitialSetupWorker: Migration failed due to IO error, retrying", e)
-            Result.retry()
-        }
+                if (totalFailures > 0) {
+                    AppLogger.e("InitialSetupWorker: Migration finished with $totalFailures failures.")
+                    if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
+                        AppLogger.w("InitialSetupWorker: Retrying migration (attempt $runAttemptCount)")
+                        return Result.retry()
+                    } else {
+                        AppLogger.e(
+                            "InitialSetupWorker: Max migration attempts reached. " +
+                                "Marking as completed despite failures.",
+                        )
+                    }
+                }
+
+                deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+                deps.migrationService.markSchemaCurrent()
+                AppLogger.d("Identity migrations completed in InitialSetupWorker")
+                null
+            } catch (e: IOException) {
+                AppLogger.w("InitialSetupWorker: Migration failed due to IO error, retrying", e)
+                Result.retry()
+            }
 
         private suspend fun getActiveSimsWithRetry(): List<ActiveSimInfo> {
             deps.simIdentityRepository
@@ -244,7 +244,7 @@ class InitialSetupWorker
             return secondAttempt ?: throw IOException("Timeout observing active SIMs")
         }
 
-    private companion object {
-        private const val MAX_MIGRATION_ATTEMPTS = 3
-    }
+        private companion object {
+            private const val MAX_MIGRATION_ATTEMPTS = 3
+        }
     }

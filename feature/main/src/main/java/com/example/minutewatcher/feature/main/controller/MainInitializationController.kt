@@ -51,93 +51,93 @@ class MainInitializationController
             }
         }
 
-    private fun claimInitialization(): Boolean {
-        while (true) {
-            val current = _initializationState.value
-            if (current !is InitializationState.NotStarted && current !is InitializationState.Failed) {
-                return false
+        private fun claimInitialization(): Boolean {
+            while (true) {
+                val current = _initializationState.value
+                if (current !is InitializationState.NotStarted && current !is InitializationState.Failed) {
+                    return false
+                }
+                if (_initializationState.compareAndSet(current, InitializationState.InProgress)) {
+                    return true
+                }
             }
-            if (_initializationState.compareAndSet(current, InitializationState.InProgress)) {
+        }
+
+        private suspend fun runInitializationLoop(
+            lastRefreshAt: Long,
+            onUpdateLastRefreshAt: (Long) -> Unit,
+        ): Boolean {
+            var isSuccess = false
+            var isTerminal = false
+            var retryDelay = Constants.Flow.RETRY_DELAY_MS
+
+            var attempt = 0
+            while (attempt < MAX_INIT_RETRIES && !isSuccess && !isTerminal) {
+                try {
+                    performInitializationTasks()
+                    val outcome = refreshController.refreshSimCardsInternal()
+                    isSuccess = handleRefreshOutcome(outcome, attempt, lastRefreshAt, onUpdateLastRefreshAt)
+
+                    if (!isSuccess && isTerminalFailure(outcome)) {
+                        isTerminal = true
+                    }
+                } catch (e: CancellationException) {
+                    _initializationState.value = InitializationState.Failed
+                    throw e
+                } catch (e: SecurityException) {
+                    AppLogger.e("initializeApp: SecurityException encountered, stopping initialization", e)
+                    isTerminal = true
+                } catch (e: Exception) {
+                    AppLogger.e("initializeApp: attempt ${attempt + 1} failed with exception", e)
+                }
+
+                if (!isSuccess && !isTerminal && attempt < (MAX_INIT_RETRIES - 1)) {
+                    delay(retryDelay.milliseconds)
+                    retryDelay *= 2
+                }
+                attempt++
+            }
+            return isSuccess
+        }
+
+        private fun isTerminalFailure(outcome: MainSimRefreshController.RefreshOutcome): Boolean =
+            (outcome is MainSimRefreshController.RefreshOutcome.Failed) &&
+                (outcome.exception is SecurityException)
+
+        private fun handleRefreshOutcome(
+            outcome: MainSimRefreshController.RefreshOutcome,
+            attempt: Int,
+            lastRefreshAt: Long,
+            onUpdateLastRefreshAt: (Long) -> Unit,
+        ): Boolean {
+            val isSuccess =
+                (outcome is MainSimRefreshController.RefreshOutcome.Completed) &&
+                    (outcome.result is RefreshResult.Success)
+
+            if (isSuccess) {
+                if (lastRefreshAt == 0L) {
+                    onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
+                }
                 return true
             }
-        }
-    }
 
-    private suspend fun runInitializationLoop(
-        lastRefreshAt: Long,
-        onUpdateLastRefreshAt: (Long) -> Unit,
-    ): Boolean {
-        var isSuccess = false
-        var isTerminal = false
-        var retryDelay = Constants.Flow.RETRY_DELAY_MS
-
-        var attempt = 0
-        while (attempt < MAX_INIT_RETRIES && !isSuccess && !isTerminal) {
-            try {
-                performInitializationTasks()
-                val outcome = refreshController.refreshSimCardsInternal()
-                isSuccess = handleRefreshOutcome(outcome, attempt, lastRefreshAt, onUpdateLastRefreshAt)
-
-                if (!isSuccess && isTerminalFailure(outcome)) {
-                    isTerminal = true
-                }
-            } catch (e: CancellationException) {
-                _initializationState.value = InitializationState.Failed
-                throw e
-            } catch (e: SecurityException) {
-                AppLogger.e("initializeApp: SecurityException encountered, stopping initialization", e)
-                isTerminal = true
-            } catch (e: Exception) {
-                AppLogger.e("initializeApp: attempt ${attempt + 1} failed with exception", e)
-            }
-
-            if (!isSuccess && !isTerminal && attempt < (MAX_INIT_RETRIES - 1)) {
-                delay(retryDelay.milliseconds)
-                retryDelay *= 2
-            }
-            attempt++
-        }
-        return isSuccess
-    }
-
-    private fun isTerminalFailure(outcome: MainSimRefreshController.RefreshOutcome): Boolean =
-        (outcome is MainSimRefreshController.RefreshOutcome.Failed) &&
-            (outcome.exception is SecurityException)
-
-    private fun handleRefreshOutcome(
-        outcome: MainSimRefreshController.RefreshOutcome,
-        attempt: Int,
-        lastRefreshAt: Long,
-        onUpdateLastRefreshAt: (Long) -> Unit,
-    ): Boolean {
-        val isSuccess =
-            (outcome is MainSimRefreshController.RefreshOutcome.Completed) &&
-                (outcome.result is RefreshResult.Success)
-
-        if (isSuccess) {
-            if (lastRefreshAt == 0L) {
-                onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
-            }
-            return true
+            logFailure(outcome, attempt)
+            return false
         }
 
-        logFailure(outcome, attempt)
-        return false
-    }
-
-    private fun logFailure(
-        outcome: MainSimRefreshController.RefreshOutcome,
-        attempt: Int,
-    ) {
-        if (outcome is MainSimRefreshController.RefreshOutcome.Failed &&
-            outcome.exception is SecurityException
+        private fun logFailure(
+            outcome: MainSimRefreshController.RefreshOutcome,
+            attempt: Int,
         ) {
-            AppLogger.e("initializeApp: SecurityException during refresh, stopping", outcome.exception)
-        } else {
-            if (outcome is MainSimRefreshController.RefreshOutcome.SkippedAlreadyInProgress) {
-                AppLogger.d("initializeApp: refresh already in progress, will retry")
-            }
-            AppLogger.w("initializeApp: attempt ${attempt + 1} failed with outcome: $outcome")
+            if (outcome is MainSimRefreshController.RefreshOutcome.Failed &&
+                outcome.exception is SecurityException
+            ) {
+                AppLogger.e("initializeApp: SecurityException during refresh, stopping", outcome.exception)
+            } else {
+                if (outcome is MainSimRefreshController.RefreshOutcome.SkippedAlreadyInProgress) {
+                    AppLogger.d("initializeApp: refresh already in progress, will retry")
+                }
+                AppLogger.w("initializeApp: attempt ${attempt + 1} failed with outcome: $outcome")
             }
         }
 

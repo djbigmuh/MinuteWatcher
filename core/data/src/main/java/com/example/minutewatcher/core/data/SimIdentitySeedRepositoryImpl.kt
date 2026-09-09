@@ -29,10 +29,10 @@ internal class SimIdentitySeedRepositoryImpl
         @SimDataStore private val dataStore: DataStore<Preferences>,
     ) : SimIdentitySeedRepository {
         private val seedMutex = Mutex()
-    private var cachedEphemeralSeed: String? = null
+        private var cachedEphemeralSeed: String? = null
 
-    private val _isEphemeralSeedActive = MutableStateFlow(false)
-    override val isEphemeralSeedActive: StateFlow<Boolean> = _isEphemeralSeedActive.asStateFlow()
+        private val _isEphemeralSeedActive = MutableStateFlow(false)
+        override val isEphemeralSeedActive: StateFlow<Boolean> = _isEphemeralSeedActive.asStateFlow()
 
         override val seedFlow: Flow<String> =
             dataStore.data.map { preferences ->
@@ -52,56 +52,56 @@ internal class SimIdentitySeedRepositoryImpl
             }
         }
 
-    override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
-        val result = tryGetPersistentSeed(generator)
-        if (result != null) return result
+        override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
+            val result = tryGetPersistentSeed(generator)
+            if (result != null) return result
 
-        // Fallback to ephemeral seed under mutex (cache management only)
-        return seedMutex.withLock {
-            AppLogger.e(
-                "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
-                    "All SIM identities will change. Previous statistics will be orphaned.",
-            )
-            _isEphemeralSeedActive.value = true
-            val seed = cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
-            SeedResolutionResult.Ephemeral(seed)
+            // Fallback to ephemeral seed under mutex (cache management only)
+            return seedMutex.withLock {
+                AppLogger.e(
+                    "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
+                        "All SIM identities will change. Previous statistics will be orphaned.",
+                )
+                _isEphemeralSeedActive.value = true
+                val seed = cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
+                SeedResolutionResult.Ephemeral(seed)
+            }
         }
-    }
 
-    private suspend fun tryGetPersistentSeed(generator: () -> String): SeedResolutionResult? {
-        var result: SeedResolutionResult? = null
-        var attempt = 0
-        while (result == null && attempt < MAX_RETRIES) {
-            try {
-                dataStore.edit { preferences ->
-                    val currentSeed = preferences[DataStoreKeys.SIM_IDENTITY_SEED]
-                    if (currentSeed.isNullOrEmpty()) {
-                        val newSeed = generator()
-                        preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
-                        AppLogger.d("SimIdentitySeedRepositoryImpl: New seed generated and stored.")
-                        result = SeedResolutionResult.Persistent(newSeed)
+        private suspend fun tryGetPersistentSeed(generator: () -> String): SeedResolutionResult? {
+            var result: SeedResolutionResult? = null
+            var attempt = 0
+            while (result == null && attempt < MAX_RETRIES) {
+                try {
+                    dataStore.edit { preferences ->
+                        val currentSeed = preferences[DataStoreKeys.SIM_IDENTITY_SEED]
+                        if (currentSeed.isNullOrEmpty()) {
+                            val newSeed = generator()
+                            preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
+                            AppLogger.d("SimIdentitySeedRepositoryImpl: New seed generated and stored.")
+                            result = SeedResolutionResult.Persistent(newSeed)
+                        } else {
+                            result = SeedResolutionResult.Persistent(currentSeed)
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: IOException) {
+                    if (attempt == MAX_RETRIES - 1) {
+                        AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
                     } else {
-                        result = SeedResolutionResult.Persistent(currentSeed)
+                        val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
+                        AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying persistent seed access in ${delayMs}ms...")
+                        delay(delayMs.milliseconds)
                     }
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: IOException) {
-                if (attempt == MAX_RETRIES - 1) {
-                    AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
-                } else {
-                    val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
-                    AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying persistent seed access in ${delayMs}ms...")
-                    delay(delayMs.milliseconds)
-                }
+                attempt++
             }
-            attempt++
+            return result
         }
-        return result
-    }
 
-    companion object {
-        private const val MAX_RETRIES = 3
-        private const val INITIAL_RETRY_DELAY_MS = 500L
-    }
+        companion object {
+            private const val MAX_RETRIES = 3
+            private const val INITIAL_RETRY_DELAY_MS = 500L
+        }
     }

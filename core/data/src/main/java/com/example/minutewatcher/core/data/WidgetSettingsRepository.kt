@@ -251,38 +251,38 @@ class WidgetSettingsRepository
             return failedSlots
         }
 
-    private suspend fun mapSlotToSettings(
-        slot: Int,
-        simSettings: SimSettingsState,
-        simSettingsMap: MutableMap<String, SimSettingsState>,
-        failedSlots: MutableList<Int>,
-    ) {
-        try {
-            val identity = simIdentityRepository.getIdentity(slot)
-            simSettingsMap[identity] = simSettings
-            val fallbackKey = "sim_$slot"
-            if (identity != fallbackKey) {
-                simSettingsMap[fallbackKey] = simSettings
-            }
-        } catch (e: SeedUnavailableException) {
-            AppLogger.w(
-                "saveSimSettings: seed unavailable for slot $slot. " +
-                    "Saving with fallback key and last known identity.",
-                e,
-            )
-            simSettingsMap["sim_$slot"] = simSettings
-            simSettings.lastKnownIdentity?.let { lastId ->
-                if (lastId != "sim_$slot") {
-                    simSettingsMap[lastId] = simSettings
+        private suspend fun mapSlotToSettings(
+            slot: Int,
+            simSettings: SimSettingsState,
+            simSettingsMap: MutableMap<String, SimSettingsState>,
+            failedSlots: MutableList<Int>,
+        ) {
+            try {
+                val identity = simIdentityRepository.getIdentity(slot)
+                simSettingsMap[identity] = simSettings
+                val fallbackKey = "sim_$slot"
+                if (identity != fallbackKey) {
+                    simSettingsMap[fallbackKey] = simSettings
                 }
+            } catch (e: SeedUnavailableException) {
+                AppLogger.w(
+                    "saveSimSettings: seed unavailable for slot $slot. " +
+                        "Saving with fallback key and last known identity.",
+                    e,
+                )
+                simSettingsMap["sim_$slot"] = simSettings
+                simSettings.lastKnownIdentity?.let { lastId ->
+                    if (lastId != "sim_$slot") {
+                        simSettingsMap[lastId] = simSettings
+                    }
+                }
+            } catch (e: SimNotFoundException) {
+                AppLogger.w("saveSimSettings: SIM not found in slot $slot. Saving with fallback key.", e)
+                simSettingsMap["sim_$slot"] = simSettings
+            } catch (e: InvalidSlotException) {
+                AppLogger.w("saveSimSettings: invalid slot $slot. Skipping.", e)
+                failedSlots.add(slot)
             }
-        } catch (e: SimNotFoundException) {
-            AppLogger.w("saveSimSettings: SIM not found in slot $slot. Saving with fallback key.", e)
-            simSettingsMap["sim_$slot"] = simSettings
-        } catch (e: InvalidSlotException) {
-            AppLogger.w("saveSimSettings: invalid slot $slot. Skipping.", e)
-            failedSlots.add(slot)
-        }
         }
 
         private fun getFallbackWidgetSettings(
