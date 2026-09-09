@@ -268,7 +268,9 @@ open class CallTracker
                         currentStatus.type.isSticky() &&
                         currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING
                     ) {
-                        AppLogger.d("CallTracker: refreshStatus skipped (sticky ${currentStatus.type} error, not forced)")
+                        AppLogger.d(
+                            "CallTracker: refreshStatus skipped (sticky ${currentStatus.type} error, not forced)",
+                        )
                         return
                     }
                 }
@@ -279,6 +281,11 @@ open class CallTracker
                 }
 
                 val activeCalls = callSessionRepository.getActiveCallSubIds()
+                if (activeCalls == null) {
+                    AppLogger.w("CallTracker: active sessions read timed out, keeping current status")
+                    return
+                }
+
                 AppLogger.d("CallTracker: refreshStatus found ${activeCalls.size} active calls")
                 // We use force = true here because we have successfully re-evaluated the state
                 // and want this result to override any previous error.

@@ -51,6 +51,15 @@ internal class CallEndResolver
 
             val activeSubIds = fetchActiveSubIds()
             return when {
+                activeSubIds == null -> {
+                    ResolveResult.Error(
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.UNKNOWN,
+                            "Timeout reading active call sessions",
+                        ),
+                    )
+                }
+
                 activeSubIds.isEmpty() -> {
                     AppLogger.d("Call ended with unknown subId and no active sessions found")
                     ResolveResult.SubIds(emptyList())
@@ -72,7 +81,7 @@ internal class CallEndResolver
             }
         }
 
-        private suspend fun fetchActiveSubIds(): List<Int> =
+        private suspend fun fetchActiveSubIds(): List<Int>? =
             try {
                 callSessionRepository.getActiveCallSubIds()
             } catch (e: CancellationException) {
@@ -81,7 +90,7 @@ internal class CallEndResolver
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to read active call sessions on unknown subId end", e)
-                emptyList()
+                null
             }
 
         @Suppress("MissingPermission")

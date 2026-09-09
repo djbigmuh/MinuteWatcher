@@ -127,11 +127,12 @@ interface CallSessionRepository {
     suspend fun clearAllCallSessions()
 
     /**
-     * Returns a list of active call subscription IDs.
+     * Returns a list of subscription IDs that currently have active call sessions.
      *
-     * @throws IOException if storage access fails.
+     * @return List of subscription IDs, or null if the operation timed out or failed.
+     * @throws IOException if storage access fails fundamentally.
      */
-    suspend fun getActiveCallSubIds(): List<Int>
+    suspend fun getActiveCallSubIds(): List<Int>?
 }
 
 /**

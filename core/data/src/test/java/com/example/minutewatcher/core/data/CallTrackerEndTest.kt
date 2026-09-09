@@ -513,6 +513,28 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         }
 
     @Test
+    fun `onCallEnded with unknown subId sets error status on getActiveCallSubIds timeout`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            // 1. Mock timeout (null) for active sessions
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(null)
+
+            // 2. Act: end call with unknown subId
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // 3. Assert: status should be Error
+            val status = callTracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+            assertEquals("Timeout reading active call sessions", status.message)
+        }
+
+    @Test
     fun `calculateDurationMinutes rounding 0s to 0m`() =
         runTest(testDispatcher) {
             setupCommonMocks()

@@ -87,7 +87,7 @@ class SettingsRepositoryImplTest {
             }
 
             val activeSubIds = repository.getActiveCallSubIds()
-            assertEquals(setOf(1, 3), activeSubIds.toSet())
+            assertEquals(setOf(1, 3), activeSubIds?.toSet())
         }
 
     @Test

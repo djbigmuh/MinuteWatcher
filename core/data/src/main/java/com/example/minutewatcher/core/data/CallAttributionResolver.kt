@@ -107,8 +107,14 @@ internal class CallAttributionResolver
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("Error reading active call subIds", e)
-                    emptyList()
+                    null
                 }
+
+            if (active == null) {
+                AppLogger.w("CallTracker: active call sessions read failed during attribution")
+                return -1
+            }
+
             if (active.size == 1) {
                 val single = active.first()
                 AppLogger.d("CallTracker: attributed unknown subId event to single active call ($single)")

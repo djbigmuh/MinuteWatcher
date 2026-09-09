@@ -171,10 +171,10 @@ class CallSessionRepositoryImpl
          * Returns a list of subscription IDs that currently have active call sessions.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
+         * @return List of active subIds, or null if reading timed out.
          */
-        override suspend fun getActiveCallSubIds(): List<Int> {
-            val prefs = dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: return emptyList()
+        override suspend fun getActiveCallSubIds(): List<Int>? {
+            val prefs = dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: return null
             return prefs.asMap().entries.mapNotNull { (key, value) ->
                 if ((key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX)) && (((value as? Long) ?: 0L) > 0L)) {
                     key.name.removePrefix(DataStoreKeys.CALL_START_TIME_PREFIX).toIntOrNull()

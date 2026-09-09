@@ -11,6 +11,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.clearInvocations
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -78,6 +81,42 @@ class CallTrackerRecoveryTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             assertEquals(TrackingStatus.Idle, callTracker.status.value)
+        }
+
+    @Test
+    fun `refreshStatus keeps current status on getActiveCallSubIds timeout`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+
+            val mockResolver = mock<CallAttributionResolver>()
+            val tracker =
+                CallTracker(
+                    callSessionRepository,
+                    permissionManager,
+                    backgroundScope,
+                    mockResolver,
+                    mock(),
+                    mock(),
+                    mock(),
+                    permissionStateNotifier,
+                    createMutexHolder(),
+                )
+
+            // 1. Setup Active status
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
+            tracker.refreshStatus(force = true)
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+            clearInvocations(mockResolver)
+
+            // 2. Mock timeout (null)
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(null)
+
+            // 3. Perform refresh
+            tracker.refreshStatus(force = false)
+
+            // 4. Assert: Status still Active, retainOnlyActiveSubIds not called
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+            verify(mockResolver, never()).retainOnlyActiveSubIds(any())
         }
 
     @Test
