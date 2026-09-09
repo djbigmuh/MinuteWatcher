@@ -6,10 +6,8 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -76,7 +74,8 @@ open class WidgetLimitManager
          * Performs a probe update to check if the widget size limit is still exceeded.
          *
          * **Contract:** This method must be called under the updateMutex in WidgetUpdaterImpl
-         * to prevent concurrent persistent state changes.
+         * to prevent concurrent persistent state changes. Flag is only changed based on
+         * Success or LimitExceeded results.
          *
          * @param context The application context.
          * @param updateBlock The suspend block that performs the actual update.
@@ -94,10 +93,14 @@ open class WidgetLimitManager
                         setWidgetLimitExceeded(value = false)
                     }
 
-                    is UpdateResult.GenericFailure,
-                    is UpdateResult.LimitExceeded,
-                    -> {
+                    is UpdateResult.LimitExceeded -> {
                         setWidgetLimitExceeded(value = true)
+                    }
+
+                    is UpdateResult.GenericFailure -> {
+                        // Transient probe failure: do NOT change persistent flag.
+                        // Simplified mode will persist until next successful probe.
+                        AppLogger.w("WidgetLimitManager: probe failed transiently, limit flag unchanged")
                     }
                 }
                 return probeResult
@@ -105,9 +108,6 @@ open class WidgetLimitManager
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Widget: performProbeUpdate failed", e)
-                withContext(NonCancellable) {
-                    setWidgetLimitExceeded(value = true)
-                }
                 throw e
             }
         }
