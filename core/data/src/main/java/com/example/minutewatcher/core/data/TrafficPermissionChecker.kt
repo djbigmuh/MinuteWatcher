@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,13 +12,19 @@ class TrafficPermissionChecker
     constructor(
         private val permissionManager: PermissionManager,
     ) {
-        fun checkPermissions(statusFlow: MutableStateFlow<TrackingStatus>): Boolean {
+        /**
+         * Checks required permissions for traffic tracking.
+         *
+         * @param onError Callback to handle any detected permission or support errors.
+         * @return True if all permissions are granted and telephony is supported.
+         */
+        fun checkPermissions(onError: (TrackingStatus) -> Unit): Boolean {
             val error =
                 when {
                     !permissionManager.isTelephonySupported() -> {
                         AppLogger.w("TrafficPermissionChecker: Telephony/SubscriptionManager not supported")
                         TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
+                            TrackingStatus.ErrorType.NOT_SUPPORTED,
                             "SubscriptionManager unavailable",
                         )
                     }
@@ -39,9 +44,10 @@ class TrafficPermissionChecker
                             "Phone State missing",
                         )
                     }
+
                     else -> null
                 }
-            error?.let { statusFlow.value = it }
+            error?.let { onError(it) }
             return error == null
         }
     }

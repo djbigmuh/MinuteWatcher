@@ -22,6 +22,7 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.TrackingStatusMachine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
@@ -389,13 +390,16 @@ class TrafficTrackerTest {
             var callCount = 0
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
                 callCount++
-                if (callCount == 1) StatsResult.Unavailable else StatsResult.Success(2000L)
+                if (callCount <= 5) StatsResult.Unavailable else StatsResult.Success(2000L)
             }
 
             tracker.updateTrafficUsage()
             verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
-            assertTrue(tracker.status.value is TrackingStatus.Error)
+            runCurrent()
+            assertTrue("Expected Error status, but was ${tracker.status.value}", tracker.status.value is TrackingStatus.Error)
 
+            // Manual retry that succeeds
+            repeat(5) { tracker.updateTrafficUsage() } // Exhaust Unavailable
             tracker.updateTrafficUsage()
             verify(simUsageResetRepository, atLeast(1)).setLastTotalBytes(eq("sim_1"), eq(2000L))
         }
@@ -732,12 +736,14 @@ class TrafficTrackerTest {
         }
 
     private fun setupRaceProxy(tracker: TrafficTracker) {
-        val statusField = TrafficTracker::class.java.getDeclaredField("_status")
+        val statusMachine = tracker.statusMachine
+
+        val statusField = TrackingStatusMachine::class.java.getDeclaredField("_status")
         statusField.isAccessible = true
         @Suppress("UNCHECKED_CAST")
-        val originalStatus = statusField.get(tracker) as MutableStateFlow<TrackingStatus>
+        val originalStatus = statusField.get(statusMachine) as MutableStateFlow<TrackingStatus>
         val racingStatus = RacingStatus(originalStatus)
-        statusField.set(tracker, racingStatus)
+        statusField.set(statusMachine, racingStatus)
     }
 
     @OptIn(

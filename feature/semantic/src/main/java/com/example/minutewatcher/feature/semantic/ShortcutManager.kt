@@ -19,6 +19,7 @@ import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.TrackingStatusMachine
 import com.example.minutewatcher.core.resources.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -26,11 +27,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -66,50 +64,22 @@ class ShortcutManager
     ) : TrackingStatusProvider {
         override val key: TrackingKey = TrackingKey.SHORTCUTS
 
-        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        private val statusMachine = TrackingStatusMachine()
+        override val status: StateFlow<TrackingStatus> = statusMachine.status
 
         private val initMutex = Mutex()
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
         private var job: Job? = null
 
         /**
-         * Updates the tracker status using a prioritized transition rule to prevent race conditions.
-         * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+         * Updates the tracker status using canonical prioritized rules.
          */
         private fun transitionStatus(
             newStatus: TrackingStatus,
             force: Boolean = false,
         ) {
-            _status.update { current ->
-                val currentPrio = getStatusPriority(current)
-                val newPrio = getStatusPriority(newStatus)
-
-                when {
-                    force -> newStatus
-                    current == newStatus -> current
-                    newPrio >= currentPrio -> newStatus
-                    // Recovery: Success can clear transient UNKNOWN error
-                    newPrio == TrackingStatus.PRIORITY_HEALTHY &&
-                        currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
-
-                    else -> current
-                }
-            }
+            statusMachine.transition(newStatus, force)
         }
-
-        private fun getStatusPriority(status: TrackingStatus): Int =
-            when (status) {
-                is TrackingStatus.Error ->
-                    when (status.type) {
-                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                    }
-
-                TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-                else -> 0
-            }
 
         /**
          * Инициализирует наблюдение за snapshot-потоком.

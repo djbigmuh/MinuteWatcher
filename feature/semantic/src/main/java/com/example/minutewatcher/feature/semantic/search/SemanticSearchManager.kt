@@ -18,6 +18,7 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.TrackingStatusMachine
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -26,11 +27,9 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -68,6 +67,19 @@ open class SemanticSearchManager
     ) : TrackingStatusProvider {
         override val key: TrackingKey = TrackingKey.APPSEARCH
 
+        private val statusMachine = TrackingStatusMachine()
+        override val status: StateFlow<TrackingStatus> = statusMachine.status
+
+        /**
+         * Updates the tracker status using canonical prioritized rules.
+         */
+        private fun transitionStatus(
+            newStatus: TrackingStatus,
+            force: Boolean = false,
+        ) {
+            statusMachine.transition(newStatus, force)
+        }
+
         private var lastSnapshotHash: Int? = null
         private var lastSnapshotVersion: SchemaVersion? = null
 
@@ -84,48 +96,6 @@ open class SemanticSearchManager
 
         private var job: Job? = null
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
-
-        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
-
-        /**
-         * Updates the tracker status using a prioritized transition rule to prevent race conditions.
-         * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Ready = Active = Idle.
-         */
-        private fun transitionStatus(
-            newStatus: TrackingStatus,
-            force: Boolean = false,
-        ) {
-            _status.update { current ->
-                val currentPrio = getStatusPriority(current)
-                val newPrio = getStatusPriority(newStatus)
-
-                when {
-                    force -> newStatus
-                    current == newStatus -> current
-                    newPrio >= currentPrio -> newStatus
-                    // Recovery: Healthy state can clear transient generic error (priority 30)
-                    newPrio == TrackingStatus.PRIORITY_HEALTHY &&
-                        currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
-
-                    else -> current
-                }
-            }
-        }
-
-        private fun getStatusPriority(status: TrackingStatus): Int =
-            when (status) {
-                is TrackingStatus.Error ->
-                    when (status.type) {
-                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                    }
-
-                is TrackingStatus.Ready, TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-                TrackingStatus.Indexing -> TrackingStatus.PRIORITY_INDEXING
-                else -> 0
-            }
 
         private val initMutex = Mutex()
         private val indexMutex = Mutex()
@@ -351,9 +321,8 @@ open class SemanticSearchManager
 
                 when (result) {
                     is IndexResult.ActualFailure -> {
-                        _status.update { currentState ->
-                            errorHandler.handleIndexFailure(currentState, result.message)
-                        }
+                        val nextStatus = errorHandler.handleIndexFailure(statusMachine.current, result.message)
+                        transitionStatus(nextStatus)
                     }
 
                     IndexResult.Success -> {

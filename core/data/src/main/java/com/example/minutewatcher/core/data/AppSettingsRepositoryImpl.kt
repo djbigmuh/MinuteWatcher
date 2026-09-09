@@ -14,20 +14,18 @@ import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.TrackingStatusMachine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
@@ -56,40 +54,15 @@ class AppSettingsRepositoryImpl
         TrackingStatusProvider {
         override val key: TrackingKey = TrackingKey.APP_SETTINGS
 
-        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
-
-        private fun updateStatus(
-            status: TrackingStatus,
-            force: Boolean,
-        ) {
-            _status.update { current ->
-                val currentPrio = getStatusPriority(current)
-                val newPrio = getStatusPriority(status)
-
-                if (force || newPrio >= currentPrio) status else current
-            }
-        }
+        private val statusMachine = TrackingStatusMachine()
+        override val status: StateFlow<TrackingStatus> = statusMachine.status
 
         private fun transitionStatus(
             newStatus: TrackingStatus,
             force: Boolean = false,
         ) {
-            updateStatus(newStatus, force)
+            statusMachine.transition(newStatus, force)
         }
-
-        private fun getStatusPriority(status: TrackingStatus): Int =
-            when (status) {
-                is TrackingStatus.Error ->
-                    when (status.type) {
-                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                    }
-
-                is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-                else -> 0
-            }
 
         private val appSettingsState: StateFlow<AppSettings> =
             flow {

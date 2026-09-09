@@ -10,18 +10,16 @@ import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.TrackingStatusMachine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.retryWhen
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -57,28 +55,17 @@ open class CallTracker
         CallTrackingContext {
         override val key: TrackingKey = TrackingKey.CALLS
 
-        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        private val statusMachine = TrackingStatusMachine()
+        override val status: StateFlow<TrackingStatus> = statusMachine.status
 
         /**
-         * Updates the tracker status using a prioritized transition rule to prevent race conditions.
-         * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
-         *
-         * Transitions:
-         * 1. Higher or equal priority always overrides.
-         * 2. Healthy states (Active, Idle) can clear transient UNKNOWN errors.
-         * 3. DATABASE_ERROR and PERMISSION_MISSING are sticky and require 'force' or explicit recovery to clear.
+         * Updates the tracker status using canonical prioritized rules.
          */
         override fun updateStatus(
             status: TrackingStatus,
             force: Boolean,
         ) {
-            _status.update { current ->
-                val currentPrio = getStatusPriority(current)
-                val newPrio = getStatusPriority(status)
-
-                if (force || newPrio >= currentPrio) status else current
-            }
+            statusMachine.transition(status, force)
         }
 
         private fun transitionStatus(
@@ -87,19 +74,6 @@ open class CallTracker
         ) {
             updateStatus(newStatus, force)
         }
-
-        private fun getStatusPriority(status: TrackingStatus): Int =
-            when (status) {
-                is TrackingStatus.Error ->
-                    when (status.type) {
-                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                    }
-
-                is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-                else -> 0
-            }
 
         private enum class State {
             IDLE,
@@ -269,7 +243,7 @@ open class CallTracker
         override suspend fun refreshStatus(force: Boolean) {
             AppLogger.d("CallTracker: refreshStatus called (force=$force)")
             try {
-                val currentStatus = _status.value
+                val currentStatus = statusMachine.current
                 if (!force) {
                     if ((currentStatus is TrackingStatus.Error) &&
                         (currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING)

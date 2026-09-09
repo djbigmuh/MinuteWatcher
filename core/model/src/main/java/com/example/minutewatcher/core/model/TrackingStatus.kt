@@ -1,5 +1,9 @@
 package com.example.minutewatcher.core.model
 
+/**
+ * Represents the current tracking status of a component.
+ * Transition logic is managed by [TrackingStatusMachine].
+ */
 sealed interface TrackingStatus {
     data object Active : TrackingStatus
 

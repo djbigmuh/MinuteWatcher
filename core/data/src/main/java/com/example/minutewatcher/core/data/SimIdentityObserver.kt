@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.model.SimDiscoveryFailureReason
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.TrackingStatusMachine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,7 +22,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,7 +41,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
@@ -68,46 +67,18 @@ internal class SimIdentityObserver
     ) : TrackingStatusProvider {
         override val key: TrackingKey = TrackingKey.SIM_DISCOVERY
 
-        private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        private val statusMachine = TrackingStatusMachine()
+        override val status: StateFlow<TrackingStatus> = statusMachine.status
 
         /**
-         * Updates the tracker status using a prioritized transition rule to prevent race conditions.
-         * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+         * Updates the tracker status using canonical prioritized rules.
          */
         private fun transitionStatus(
             newStatus: TrackingStatus,
             force: Boolean = false,
         ) {
-            _status.update { current ->
-                val currentPrio = getStatusPriority(current)
-                val newPrio = getStatusPriority(newStatus)
-
-                when {
-                    force -> newStatus
-                    current == newStatus -> current
-                    newPrio >= currentPrio -> newStatus
-                    // Recovery: Success can clear transient UNKNOWN error
-                    newPrio == TrackingStatus.PRIORITY_HEALTHY &&
-                        currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
-
-                    else -> current
-                }
-            }
+            statusMachine.transition(newStatus, force)
         }
-
-        private fun getStatusPriority(status: TrackingStatus): Int =
-            when (status) {
-                is TrackingStatus.Error ->
-                    when (status.type) {
-                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                    }
-
-                TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-                else -> 0
-            }
 
         private val generalAttempt = AtomicLong(0)
         private val isObservationInitialized = AtomicBoolean(false)
@@ -210,14 +181,11 @@ internal class SimIdentityObserver
                 .onEach {
                     // Reset status to Idle when seed changes, clearing transient errors.
                     // This is safe to run on each seed update as it only clears non-permission errors.
-                    _status.update { current ->
-                        if (current is TrackingStatus.Error &&
-                            current.type != TrackingStatus.ErrorType.PERMISSION_MISSING
-                        ) {
-                            TrackingStatus.Idle
-                        } else {
-                            current
-                        }
+                    val current = statusMachine.current
+                    if (current is TrackingStatus.Error &&
+                        current.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+                    ) {
+                        transitionStatus(TrackingStatus.Idle)
                     }
                 }.flatMapLatest { seed ->
                     merge(

@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
@@ -16,17 +17,15 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.TrackingStatusMachine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -86,42 +85,19 @@ class TrafficTracker
     ) : TrackingStatusProvider {
         override val key: TrackingKey = TrackingKey.TRAFFIC
 
-        private var _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
-        override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+        @VisibleForTesting
+        internal val statusMachine = TrackingStatusMachine()
+        override val status: StateFlow<TrackingStatus> = statusMachine.status
 
         /**
-         * Updates the tracker status using a prioritized transition rule to prevent race conditions.
-         * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
-         *
-         * Transitions:
-         * 1. Higher or equal priority always overrides.
-         * 2. Healthy states (Active, Idle) can clear transient UNKNOWN errors.
-         * 3. DATABASE_ERROR and PERMISSION_MISSING are sticky and require 'force' or explicit recovery to clear.
+         * Updates the tracker status using prioritized canonical rules.
          */
         private fun transitionStatus(
             newStatus: TrackingStatus,
             force: Boolean = false,
         ) {
-            _status.update { current ->
-                val currentPrio = getStatusPriority(current)
-                val newPrio = getStatusPriority(newStatus)
-
-                if (force || newPrio >= currentPrio) newStatus else current
-            }
+            statusMachine.transition(newStatus, force)
         }
-
-        private fun getStatusPriority(status: TrackingStatus): Int =
-            when (status) {
-                is TrackingStatus.Error ->
-                    when (status.type) {
-                        TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
-                        TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
-                        else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
-                    }
-
-                is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
-                else -> 0
-            }
 
         private val trafficMutex = Mutex()
         private val initMutex = Mutex()
@@ -294,7 +270,7 @@ class TrafficTracker
             }
             simChangeHandler.withSimChangeLock {
                 trafficMutex.withLock {
-                    if (!permissionChecker.checkPermissions(_status)) return@withLock
+                    if (!permissionChecker.checkPermissions { transitionStatus(it) }) return@withLock
                     baselineManager.resetBaseline(
                         identity = identity,
                         updateStatus = { transitionStatus(it) },
@@ -338,20 +314,13 @@ class TrafficTracker
             message: String?,
             type: TrackingStatus.ErrorType = TrackingStatus.ErrorType.UNKNOWN,
         ) {
-            _status.update { current ->
-                // Race protection: if a successful update already set status to Active,
-                // do not overwrite it with a stale timeout error.
-                if (message == TrafficUpdateTimeoutException.MESSAGE && current is TrackingStatus.Active) {
-                    current
-                } else {
-                    val error = TrackingStatus.Error(type, message)
-                    val currentPrio = getStatusPriority(current)
-                    val newPrio = getStatusPriority(error)
-                    // Recovery: Success clearing UNKNOWN is handled in transitionStatus,
-                    // but here we are setting Error, so we follow priority.
-                    if (newPrio >= currentPrio) error else current
-                }
+            // Race protection: if a successful update already set status to Active,
+            // do not overwrite it with a stale timeout error.
+            if (message == TrafficUpdateTimeoutException.MESSAGE && statusMachine.current is TrackingStatus.Active) {
+                return
             }
+
+            transitionStatus(TrackingStatus.Error(type, message))
         }
 
         @Suppress("ThrowsCount")
@@ -368,7 +337,7 @@ class TrafficTracker
 
                             clearPreviousTimeoutError()
 
-                            if (!permissionChecker.checkPermissions(_status)) return@withLock
+                            if (!permissionChecker.checkPermissions { transitionStatus(it) }) return@withLock
 
                             handleActiveSims(activeSims)
                         } catch (e: CancellationException) {
@@ -389,16 +358,17 @@ class TrafficTracker
         }
 
         private fun clearPreviousTimeoutError() {
-            _status.update { current ->
-                val isTimeoutError =
-                    (current is TrackingStatus.Error) &&
-                        (current.type == TrackingStatus.ErrorType.UNKNOWN) &&
-                        (
-                            current.message == TrafficUpdateTimeoutException.MESSAGE ||
-                                current.message == "Timeout fetching active sims"
-                        )
-                // We can use direct return here since it's an explicit clearing logic
-                if (isTimeoutError) TrackingStatus.Idle else current
+            val current = statusMachine.current
+            val isTimeoutError =
+                (current is TrackingStatus.Error) &&
+                    (current.type == TrackingStatus.ErrorType.UNKNOWN) &&
+                    (
+                        current.message == TrafficUpdateTimeoutException.MESSAGE ||
+                            current.message == "Timeout fetching active sims"
+                    )
+
+            if (isTimeoutError) {
+                transitionStatus(TrackingStatus.Idle, force = true)
             }
         }
 
