@@ -1,6 +1,6 @@
 [versions]
 agp = "9.4.0"
-kotlin = "2.3.10"
+kotlin = "2.4.10"
 
 [libraries]
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }

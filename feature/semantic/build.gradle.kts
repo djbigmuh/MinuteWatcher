@@ -25,6 +25,12 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    tasks.withType<Test>().configureEach {
+        // Phase 2: Structural acceleration.
+        // Robolectric sandboxes are reused within the same JVM.
+        forkEvery = 10
+    }
 }
 
 ksp {
@@ -51,6 +57,7 @@ dependencies {
     implementation(libs.androidxAppsearchLocalStorage)
     implementation(libs.kotlinxCoroutinesGuava)
 
+    testImplementation(testFixtures(project(":core:android")))
     testImplementation(testFixtures(project(":core:common")))
     testImplementation(libs.junit)
     testImplementation(libs.mockingKotlin)

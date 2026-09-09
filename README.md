@@ -66,7 +66,7 @@ The project uses a few non-stable (Beta/Alpha) versions of critical libraries to
 
 - **JDK**: JDK 21 (Temurin 21.0.12+ recommended).
 - **Environment**: JDK 25 and other versions should not be in the system `PATH` to avoid leakage into child processes (Detekt/KSP).
-- **Gradle**: Explicitly configured via `org.gradle.java.home` in `gradle.properties` for stability.
+- **Gradle**: Configured via local environment or user-level settings for cross-platform compatibility.
 
 ## License
 

@@ -17,6 +17,7 @@ import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.resources.R
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,13 +30,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * ShortcutManager manages dynamic shortcuts for SIM card usage data.
@@ -60,7 +64,7 @@ class ShortcutManager
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val shortcutApplier: ShortcutApplier,
     ) : TrackingStatusProvider {
-        override val key: String = "shortcuts"
+    override val key: TrackingKey = TrackingKey.SHORTCUTS
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
@@ -68,6 +72,44 @@ class ShortcutManager
         private val initMutex = Mutex()
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
         private var job: Job? = null
+
+    /**
+     * Updates the tracker status using a prioritized transition rule to prevent race conditions.
+     * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+     */
+    private fun transitionStatus(
+        newStatus: TrackingStatus,
+        force: Boolean = false,
+    ) {
+        _status.update { current ->
+            val currentPrio = getStatusPriority(current)
+            val newPrio = getStatusPriority(newStatus)
+
+            when {
+                force -> newStatus
+                current == newStatus -> current
+                newPrio >= currentPrio -> newStatus
+                // Recovery: Success can clear transient UNKNOWN error
+                newPrio == TrackingStatus.PRIORITY_HEALTHY &&
+                    currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
+
+                else -> current
+            }
+        }
+    }
+
+    private fun getStatusPriority(status: TrackingStatus): Int =
+        when (status) {
+            is TrackingStatus.Error ->
+                when (status.type) {
+                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                }
+
+            TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+            else -> 0
+        }
 
         /**
          * Инициализирует наблюдение за snapshot-потоком.
@@ -116,7 +158,7 @@ class ShortcutManager
                 }
                 job =
                     scope.launch {
-                        _status.value = TrackingStatus.Active
+                        transitionStatus(TrackingStatus.Active)
                         snapshotFlow
                             .debounce { snapshot ->
                                 if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
@@ -125,7 +167,7 @@ class ShortcutManager
                                     withContext(ioDispatcher) {
                                         updateShortcuts(snapshot)
                                     }
-                                    _status.value = TrackingStatus.Active
+                                    transitionStatus(TrackingStatus.Active)
                                 } catch (e: CancellationException) {
                                     throw e
                                 } catch (
@@ -134,7 +176,7 @@ class ShortcutManager
                                 ) {
                                     AppLogger.e("Failed to update dynamic shortcuts", e)
                                     val type = classifyShortcutError(e)
-                                    _status.value = TrackingStatus.Error(type, e.message)
+                                    transitionStatus(TrackingStatus.Error(type, e.message))
                                 }
                             }
                     }
@@ -147,19 +189,11 @@ class ShortcutManager
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         override suspend fun recover() {
-            val flow = initMutex.withLock { lastSnapshotFlow }
+            val flow =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    initMutex.withLock { lastSnapshotFlow }
+                }
             flow?.let { setupObservation(it) }
-        }
-
-        /**
-         * Sets an error state for the shortcut manager.
-         *
-         * @param message Error message.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         */
-        fun setError(message: String?) {
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
         }
 
         /**
@@ -178,7 +212,7 @@ class ShortcutManager
                     val shortcuts = createShortcuts(snapshot)
                     applyShortcuts(shortcuts)
                 }
-                _status.value = TrackingStatus.Active
+                transitionStatus(TrackingStatus.Active)
                 true
             } catch (e: CancellationException) {
                 throw e
@@ -188,7 +222,7 @@ class ShortcutManager
             ) {
                 AppLogger.e("Failed to update dynamic shortcuts", e)
                 val type = classifyShortcutError(e)
-                _status.value = TrackingStatus.Error(type, e.message)
+                transitionStatus(TrackingStatus.Error(type, e.message))
                 false
             }
 
@@ -227,7 +261,7 @@ class ShortcutManager
             val shortcuts = mutableListOf<ShortcutInfoCompat>()
 
             snapshot.simSnapshots
-                .filter { it.isActive && (it.slot in SimConstants.SUPPORTED_SLOT_INDICES) }
+                .filter { it.slot in SimConstants.SUPPORTED_SLOT_INDICES }
                 .forEach { sim ->
                     createMinutesShortcut(sim)?.let { shortcuts.add(it) }
                     createTrafficShortcut(sim)?.let { shortcuts.add(it) }

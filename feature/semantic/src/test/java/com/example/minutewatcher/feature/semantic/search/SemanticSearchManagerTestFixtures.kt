@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -27,6 +28,9 @@ import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class SemanticSearchManagerTestFixtures {
+    @get:Rule
+    val singletonResetRule = SingletonResetRule()
+
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
@@ -98,7 +102,6 @@ abstract class SemanticSearchManagerTestFixtures {
                     slot = 0,
                     identity = "sim_0",
                     operatorName = "A",
-                    isActive = true,
                     entities =
                         mapOf(
                             PackageType.MINUTES to

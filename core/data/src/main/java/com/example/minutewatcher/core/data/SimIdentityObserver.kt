@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.android.util.SimCardMapper
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -10,6 +11,7 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimDiscoveryFailureReason
 import com.example.minutewatcher.core.model.SimDiscoveryResult
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +41,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
@@ -61,10 +64,48 @@ internal class SimIdentityObserver
         @ApplicationScope private val scope: CoroutineScope,
         private val cache: SimIdentityCache,
     ) : TrackingStatusProvider {
-    override val key: String = "sim_discovery"
+    override val key: TrackingKey = TrackingKey.SIM_DISCOVERY
 
     private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+    /**
+     * Updates the tracker status using a prioritized transition rule to prevent race conditions.
+     * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+     */
+    private fun transitionStatus(
+        newStatus: TrackingStatus,
+        force: Boolean = false,
+    ) {
+        _status.update { current ->
+            val currentPrio = getStatusPriority(current)
+            val newPrio = getStatusPriority(newStatus)
+
+            when {
+                force -> newStatus
+                current == newStatus -> current
+                newPrio >= currentPrio -> newStatus
+                // Recovery: Success can clear transient UNKNOWN error
+                newPrio == TrackingStatus.PRIORITY_HEALTHY &&
+                    currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
+
+                else -> current
+            }
+        }
+    }
+
+    private fun getStatusPriority(status: TrackingStatus): Int =
+        when (status) {
+            is TrackingStatus.Error ->
+                when (status.type) {
+                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                }
+
+            TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+            else -> 0
+        }
 
     private val generalAttempt = AtomicLong(0)
     private val isObservationInitialized = AtomicBoolean(false)
@@ -90,7 +131,7 @@ internal class SimIdentityObserver
             return
         }
         generalAttempt.set(0)
-        _status.value = TrackingStatus.Idle
+        transitionStatus(TrackingStatus.Idle, force = true)
 
         // Trigger seed re-generation/check on recovery
         scope.launch {
@@ -145,13 +186,19 @@ internal class SimIdentityObserver
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
         seedFlow
-            .flatMapLatest { seed ->
-                val currentStatus = _status.value
-                if (currentStatus is TrackingStatus.Error &&
-                    currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING
-                ) {
-                    _status.value = TrackingStatus.Idle
+            .onEach {
+                // Reset status to Idle when seed changes, clearing transient errors.
+                // This is safe to run on each seed update as it only clears non-permission errors.
+                _status.update { current ->
+                    if (current is TrackingStatus.Error &&
+                        current.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+                    ) {
+                        TrackingStatus.Idle
+                    } else {
+                        current
+                    }
                 }
+            }.flatMapLatest { seed ->
                 merge(
                     discovery.observeSubscriptionChanges(),
                     manualTrigger,
@@ -168,11 +215,12 @@ internal class SimIdentityObserver
                                         shouldContinue = shouldRetry
                                     } catch (e: SecurityException) {
                                         AppLogger.w("Permission denied for SIM discovery: ${e.message}")
-                                        _status.value =
+                                        transitionStatus(
                                             TrackingStatus.Error(
                                                 TrackingStatus.ErrorType.PERMISSION_MISSING,
                                                 "SIM permission denied",
-                                            )
+                                            ),
+                                        )
                                         shouldContinue = false
                                     } catch (e: CancellationException) {
                                         throw e
@@ -180,22 +228,27 @@ internal class SimIdentityObserver
                                         throw e
                                     } catch (e: Exception) {
                                         AppLogger.e("SimIdentityObserver: fetchActiveSimsWithRetry failed", e)
-                                        _status.value =
+                                        transitionStatus(
                                             TrackingStatus.Error(
                                                 TrackingStatus.ErrorType.UNKNOWN,
                                                 e.message ?: "Unknown error",
-                                            )
+                                            ),
+                                        )
                                         shouldContinue = false
                                     }
                                 }
 
                                 if (loopAttempts >= MAX_DISCOVERY_LOOP_ATTEMPTS) {
-                                    AppLogger.e("SimIdentityObserver: discovery loop safety limit reached ($MAX_DISCOVERY_LOOP_ATTEMPTS)")
-                                    _status.value =
+                                    AppLogger.e(
+                                        "SimIdentityObserver: discovery loop safety limit reached " +
+                                            "($MAX_DISCOVERY_LOOP_ATTEMPTS)",
+                                    )
+                                    transitionStatus(
                                         TrackingStatus.Error(
                                             TrackingStatus.ErrorType.UNKNOWN,
                                             "SIM discovery loop safety limit reached",
-                                        )
+                                        ),
+                                    )
                                 }
                             }.retryWhen { cause, _ ->
                                 if (cause is CancellationException) return@retryWhen false
@@ -208,11 +261,12 @@ internal class SimIdentityObserver
                                             "after $currentAttempt consecutive IO failures",
                                         cause,
                                     )
-                                    _status.value =
+                                    transitionStatus(
                                         TrackingStatus.Error(
                                             TrackingStatus.ErrorType.UNKNOWN,
                                             "SIM recovery stopped after $currentAttempt consecutive IO failures",
-                                        )
+                                        ),
+                                    )
                                     return@retryWhen false
                                 }
 
@@ -229,22 +283,24 @@ internal class SimIdentityObserver
                                 if (cause is CancellationException) throw cause
                                 if (cause is SecurityException) {
                                     AppLogger.w("SimIdentityObserver: Permission denied in flow: ${cause.message}")
-                                    _status.value =
+                                    transitionStatus(
                                         TrackingStatus.Error(
                                             TrackingStatus.ErrorType.PERMISSION_MISSING,
                                             "SIM permission denied",
-                                        )
+                                        ),
+                                    )
                                     emit(emptyList())
                                     return@catch
                                 }
                                 AppLogger.e("SimIdentityObserver: physicalActiveSims flow error", cause)
 
                                 if (cause !is IOException) {
-                                    _status.value =
+                                    transitionStatus(
                                         TrackingStatus.Error(
                                             TrackingStatus.ErrorType.UNKNOWN,
                                             cause.message ?: "Unexpected flow error",
-                                        )
+                                        ),
+                                    )
                                 }
                                 emit(emptyList())
                             }
@@ -257,7 +313,7 @@ internal class SimIdentityObserver
         var shouldRetry = false
         when (result) {
             is SimDiscoveryResult.Available -> {
-                _status.value = TrackingStatus.Active
+                transitionStatus(TrackingStatus.Active)
                 emit(result.sims)
             }
 
@@ -266,10 +322,11 @@ internal class SimIdentityObserver
             }
 
             is SimDiscoveryResult.Unsupported -> {
-                _status.value =
+                transitionStatus(
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
                         "SIM discovery unsupported",
+                    ),
                     )
                 emit(emptyList())
             }
@@ -283,10 +340,11 @@ internal class SimIdentityObserver
 
     private suspend fun FlowCollector<List<ActiveSimInfo>>.handlePermissionMissing(): Boolean {
         generalAttempt.set(0)
-        _status.value =
+        transitionStatus(
             TrackingStatus.Error(
                 TrackingStatus.ErrorType.PERMISSION_MISSING,
                 "Permission missing",
+            ),
             )
         emit(emptyList())
         return false
@@ -302,10 +360,11 @@ internal class SimIdentityObserver
                 "SimIdentityObserver: physicalActiveSims discovery stopped " +
                     "after $currentAttempt consecutive logical failures: $reason",
             )
-            _status.value =
+            transitionStatus(
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.UNKNOWN,
                     "SIM discovery stopped after $currentAttempt failures: $reason",
+                ),
                 )
             false
         } else {
@@ -346,6 +405,7 @@ internal class SimIdentityObserver
     private fun cleanupCache(sims: List<ActiveSimInfo>) {
         val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
         cache.cleanupManual(activeSlots)
+        SimCardMapper.cleanupSlots(activeSlots)
     }
 
     private fun observeBenchmarkSimCount(): Flow<Int> =

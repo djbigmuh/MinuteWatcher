@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main.util
 
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.PermissionUiState
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -83,7 +84,7 @@ class TrackingBannerMapperTest {
     fun `mapToBannerState shows traffic error banner for non-permission errors`() {
         val state =
             TrackingBannerMapper.mapToBannerState(
-                statusMap = mapOf("traffic" to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN)),
+                statusMap = mapOf(TrackingKey.TRAFFIC to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN)),
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
@@ -99,7 +100,11 @@ class TrackingBannerMapperTest {
         // When permission is missing, we show the Usage Access banner instead
         val state =
             TrackingBannerMapper.mapToBannerState(
-                statusMap = mapOf("traffic" to TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)),
+                statusMap =
+                    mapOf(
+                        TrackingKey.TRAFFIC to
+                            TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING),
+                    ),
                 phoneGranted = true,
                 usageGranted = false,
                 notificationsGranted = true,
@@ -171,7 +176,7 @@ class TrackingBannerMapperTest {
             TrackingBannerMapper.mapToBannerState(
                 statusMap =
                     mapOf(
-                        "traffic" to
+                        TrackingKey.TRAFFIC to
                             TrackingStatus.Error(
                                 TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
                                 slotIndex = 1,
@@ -209,8 +214,8 @@ class TrackingBannerMapperTest {
             TrackingBannerMapper.mapToBannerState(
                 statusMap =
                     mapOf(
-                        "traffic" to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN),
-                        "widget_observation" to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
+                        TrackingKey.TRAFFIC to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN),
+                        TrackingKey.WIDGET_OBSERVATION to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
                     ),
                 phoneGranted = true,
                 usageGranted = false,
@@ -228,7 +233,7 @@ class TrackingBannerMapperTest {
     @Test
     fun `mapToBannerState handles AppSearch DATABASE_ERROR retry limit`() {
         // Case: DATABASE_ERROR shown initially
-        val baseStatus = mapOf("appsearch" to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR))
+        val baseStatus = mapOf(TrackingKey.APPSEARCH to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR))
         var state = mapToBannerStateWithAppSearch(baseStatus, retryCount = 0)
         assertTrue(state.showAppSearchErrorBanner)
 
@@ -239,14 +244,14 @@ class TrackingBannerMapperTest {
 
     @Test
     fun `mapToBannerState suppresses AppSearch NOT_SUPPORTED error`() {
-        val status = mapOf("appsearch" to TrackingStatus.Error(TrackingStatus.ErrorType.NOT_SUPPORTED))
+        val status = mapOf(TrackingKey.APPSEARCH to TrackingStatus.Error(TrackingStatus.ErrorType.NOT_SUPPORTED))
         val state = mapToBannerStateWithAppSearch(status)
         assertFalse(state.showAppSearchErrorBanner)
     }
 
     @Test
     fun `mapToBannerState handles AppSearch dismissal`() {
-        val status = mapOf("appsearch" to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN))
+        val status = mapOf(TrackingKey.APPSEARCH to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN))
 
         // Initially shown
         var state = mapToBannerStateWithAppSearch(status, dismissed = false)
@@ -263,7 +268,7 @@ class TrackingBannerMapperTest {
             TrackingBannerMapper.mapToBannerState(
                 statusMap =
                     mapOf(
-                        "widget_observation" to
+                        TrackingKey.WIDGET_OBSERVATION to
                             TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
                     ),
                 phoneGranted = true,
@@ -317,7 +322,7 @@ class TrackingBannerMapperTest {
     }
 
     private fun mapToBannerStateWithAppSearch(
-        statusMap: Map<String, TrackingStatus>,
+        statusMap: Map<TrackingKey, TrackingStatus>,
         retryCount: Int = 0,
         dismissed: Boolean = false,
     ) = TrackingBannerMapper.mapToBannerState(

@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
+import com.example.minutewatcher.core.model.TrackingKey
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
@@ -23,7 +24,7 @@ class TrackingRecoveryController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         suspend fun retryAppSearch() {
-            trackingStatusRepository.recoverTracking("appsearch")
+            trackingStatusRepository.recoverTracking(TrackingKey.APPSEARCH)
         }
 
         /**
@@ -32,7 +33,7 @@ class TrackingRecoveryController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         suspend fun retryCalls() {
-            trackingStatusRepository.recoverTracking("calls")
+            trackingStatusRepository.recoverTracking(TrackingKey.CALLS)
         }
 
         /**
@@ -41,7 +42,7 @@ class TrackingRecoveryController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         suspend fun retryShortcuts() {
-            trackingStatusRepository.recoverTracking("shortcuts")
+            trackingStatusRepository.recoverTracking(TrackingKey.SHORTCUTS)
         }
 
         /**
@@ -50,6 +51,6 @@ class TrackingRecoveryController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         suspend fun retryTraffic() {
-            trackingStatusRepository.recoverTracking("traffic")
+            trackingStatusRepository.recoverTracking(TrackingKey.TRAFFIC)
         }
     }

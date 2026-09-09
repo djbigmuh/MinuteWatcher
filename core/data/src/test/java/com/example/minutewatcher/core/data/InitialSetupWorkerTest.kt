@@ -26,7 +26,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -225,7 +224,7 @@ class InitialSetupWorkerTest {
         }
 
     @Test
-    fun `doWork resets baseline only for default data SIM`() =
+    fun `doWork updates traffic usage instead of resetting baseline`() =
         runTest {
             val identity1 = SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim1 =
@@ -241,28 +240,15 @@ class InitialSetupWorkerTest {
                     isDefaultVoice = true,
                 )
 
-            val identity2 = SimIdentity("icc_2", 2, 1, IdentitySource.ICCID, isStable = true)
-            val activeSim2 =
-                ActiveSimInfo(
-                    identity2,
-                    1,
-                    2,
-                    "2",
-                    "MegaFon",
-                    "MegaFon",
-                    "25002",
-                    isDefaultData = false,
-                    isDefaultVoice = false,
-                )
-
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim1, activeSim2)))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim1)))
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
 
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(trafficTracker).resetBaseline(eq("icc_1"))
-            verify(trafficTracker, never()).resetBaseline(eq("icc_2"))
+            verify(trafficTracker).updateTrafficUsage()
+            verify(trafficTracker, never()).resetBaseline(any())
+            verify(migrationFlagsRepository).setInitialSetupCompleted(true)
         }
 
     @Test

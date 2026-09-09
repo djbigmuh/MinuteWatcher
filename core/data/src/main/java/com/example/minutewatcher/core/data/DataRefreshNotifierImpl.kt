@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,12 +18,14 @@ import javax.inject.Singleton
 class DataRefreshNotifierImpl
     @Inject
     constructor() : DataRefreshNotifier {
+    private val lastEventId = AtomicLong(0)
+
         private val _refreshFlow =
             MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(
                 replay = 1,
                 extraBufferCapacity = 1,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
-            ).apply { tryEmit(DataRefreshNotifier.RefreshEvent()) }
+            ).apply { tryEmit(DataRefreshNotifier.RefreshEvent(eventId = lastEventId.incrementAndGet())) }
 
         override val refreshFlow = _refreshFlow.asSharedFlow()
 
@@ -37,6 +40,12 @@ class DataRefreshNotifierImpl
             isManual: Boolean,
             suppressWidgetUpdate: Boolean,
         ) {
-            _refreshFlow.emit(DataRefreshNotifier.RefreshEvent(isManual, suppressWidgetUpdate))
+            _refreshFlow.emit(
+                DataRefreshNotifier.RefreshEvent(
+                    isManual = isManual,
+                    suppressWidgetUpdate = suppressWidgetUpdate,
+                    eventId = lastEventId.incrementAndGet(),
+                ),
+            )
         }
     }

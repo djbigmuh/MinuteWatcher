@@ -4,11 +4,11 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -16,7 +16,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-@Suppress("LongParameterList", "CyclomaticComplexMethod", "TooManyFunctions")
+// Suppressing TooManyFunctions as this handler manages the complex end-of-call logic
+// including multi-SIM resolution, duration calculation, and state cleanup.
+@Suppress("TooManyFunctions")
 internal class CallEndHandler
     @Inject
     constructor(
@@ -25,41 +27,34 @@ internal class CallEndHandler
         private val retryHelper: DataStoreRetryHelper,
         private val attributionResolver: CallAttributionResolver,
         private val callMutexHolder: CallMutexHolder,
+        private val sessionCleaner: CallSessionCleaner,
+        private val settingsHandler: CallTrackingSettingsHandler,
+        private val callEndResolver: CallEndResolver,
+        private val dataChangeNotifier: DataChangeNotifier,
     ) {
     @Suppress("LongMethod", "ThrowsCount")
     suspend fun performCallEnd(
         subId: Int,
-        callEndResolver: CallEndResolver,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        checkPermissions: () -> Boolean,
-        cleanupCounters: suspend (Int) -> Unit,
-        refreshStatus: suspend (Boolean) -> Unit,
-        endCallAction: suspend (Int, Boolean) -> Unit,
-        isCallTrackingEnabled: suspend () -> Boolean,
-        clearAllCallSessions: suspend () -> Unit,
-        notifyDataChanged: suspend () -> Unit,
+        context: CallTrackingContext,
     ) {
         var shouldRefreshStatus = false
         try {
-            if (!checkPermissions()) {
+            if (!context.checkPermissions()) {
                 shouldRefreshStatus = true
-                notifyDataChanged()
+                dataChangeNotifier.notifyDataChanged()
                 return
             }
 
             callMutexHolder.mutex.withLock {
-                if ((subId == -1) && !isCallTrackingEnabled()) {
+                if ((subId == -1) && !settingsHandler.isCallTrackingEnabled()) {
                     // If tracking is disabled and subId is unknown (-1), we clear all pending sessions
                     // to ensure no orphaned sessions remain when tracking is turned back on.
                     AppLogger.d("CallTracker: tracking disabled, clearing all sessions")
-                    clearAllCallSessions()
+                    sessionCleaner.clearAllSessions()
                 } else {
                     executeCallEndLogic(
                         subId,
-                        endCallAction,
-                        callEndResolver,
-                        notifyDataChanged,
-                        statusFlow,
+                        context,
                     )
                 }
                 shouldRefreshStatus = true
@@ -70,74 +65,68 @@ internal class CallEndHandler
             shouldRefreshStatus = false
             // Force refresh before rethrowing so status is consistent
             try {
-                refreshStatus(true)
+                context.refreshStatus(true)
             } catch (_: Exception) {
             }
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+            context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message))
             throw e
         } catch (e: SecurityException) {
             shouldRefreshStatus = false
             AppLogger.e("SecurityException in onCallEnded", e)
             // Force refresh before rethrowing so status is consistent
             try {
-                refreshStatus(true)
+                context.refreshStatus(true)
             } catch (_: Exception) {
             }
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
             throw e
         } catch (e: Exception) {
             shouldRefreshStatus = false // Не обновляем статус при неизвестной ошибке
-            handlePerformCallEndError(subId, e, statusFlow, cleanupCounters)
+            handlePerformCallEndError(subId, e, context)
         } finally {
-            finalizeCallEnd(shouldRefreshStatus, refreshStatus)
+            finalizeCallEnd(shouldRefreshStatus, context)
         }
     }
 
     private suspend fun executeCallEndLogic(
         subId: Int,
-        endCallAction: suspend (Int, Boolean) -> Unit,
-        callEndResolver: CallEndResolver,
-        notifyDataChanged: suspend () -> Unit,
-        statusFlow: MutableStateFlow<TrackingStatus>,
+        context: CallTrackingContext,
     ) {
         val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
         if (effectiveSubId != -1) {
-            endCallAction(effectiveSubId, true)
+            endCall(effectiveSubId, true, context)
             return
         }
 
         val result = callEndResolver.resolveUnknownSubIdEnd()
-        handleResolveResult(result, endCallAction, notifyDataChanged, statusFlow)
+        handleResolveResult(result, context)
     }
 
     private suspend fun handleResolveResult(
         result: CallEndResolver.ResolveResult,
-        endCallAction: suspend (Int, Boolean) -> Unit,
-        notifyDataChanged: suspend () -> Unit,
-        statusFlow: MutableStateFlow<TrackingStatus>,
+        context: CallTrackingContext,
     ) {
         when (result) {
             is CallEndResolver.ResolveResult.Error -> {
-                statusFlow.value = result.error
+                context.updateStatus(result.error)
             }
 
             is CallEndResolver.ResolveResult.SubIds -> {
-                processResolvedSubIds(result.ids, endCallAction, notifyDataChanged)
+                processResolvedSubIds(result.ids, context)
             }
         }
     }
 
     private suspend fun processResolvedSubIds(
         subIdsToEnd: List<Int>,
-        endCallAction: suspend (Int, Boolean) -> Unit,
-        notifyDataChanged: suspend () -> Unit,
+        context: CallTrackingContext,
     ) {
         if (subIdsToEnd.isEmpty()) return
 
         val notifyEach = subIdsToEnd.size == 1
         subIdsToEnd.forEach { id ->
             try {
-                endCallAction(id, notifyEach)
+                endCall(id, notifyEach, context)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -145,27 +134,24 @@ internal class CallEndHandler
             }
         }
         if (!notifyEach) {
-            notifyDataChanged()
+            dataChangeNotifier.notifyDataChanged()
         }
     }
 
     private suspend fun handlePerformCallEndError(
         subId: Int,
         e: Exception,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        cleanupCounters: suspend (Int) -> Unit,
+        context: CallTrackingContext,
     ) {
         AppLogger.e("Error in onCallEnded", e)
-        if (statusFlow.value !is TrackingStatus.Error) {
             val error = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-            statusFlow.value = error
-            if (statusFlow.value != error) {
-                statusFlow.value = error
-            }
-        }
+        // Specific rule for CallEndHandler: do not overwrite a legitimate Active status
+        // from a successful concurrent refreshStatus with a stale error from the catch block.
+        // The transitionStatus implementation in CallTracker handles this priority.
+        context.updateStatus(error)
         if (subId != -1) {
             try {
-                cleanupCounters(subId)
+                sessionCleaner.cleanupCounters(subId, context)
             } catch (ex: CancellationException) {
                 throw ex
             } catch (ex: Exception) {
@@ -176,12 +162,12 @@ internal class CallEndHandler
 
     private suspend fun finalizeCallEnd(
         shouldRefreshStatus: Boolean,
-        refreshStatus: suspend (Boolean) -> Unit,
+        context: CallTrackingContext,
     ) {
         if (!shouldRefreshStatus) return
         withContext(NonCancellable) {
             try {
-                refreshStatus(false)
+                context.refreshStatus(false)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -190,26 +176,19 @@ internal class CallEndHandler
         }
     }
 
-    /**
-     * Завершает звонок для указанного subId.
-     * Требует внешней блокировки.
-     */
     suspend fun endCall(
         subId: Int,
         notify: Boolean,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        cleanupCounters: suspend (Int) -> Unit,
-        writeCallDuration: suspend (String, Int, Boolean, Boolean) -> Boolean,
-        isCallTrackingEnabled: suspend () -> Boolean,
+        context: CallTrackingContext,
     ) {
         val endData = fetchCallEndData(subId)
 
-        if (!isCallTrackingEnabled()) {
+        if (!settingsHandler.isCallTrackingEnabled()) {
             AppLogger.d("CallTracker: tracking disabled, clearing session for subId $subId")
-            cleanupCounters(subId)
+            sessionCleaner.cleanupCounters(subId, context)
             return
         }
-        processCallEndLocked(subId, endData, notify, statusFlow, cleanupCounters, writeCallDuration)
+        processCallEndLocked(subId, endData, notify, context)
     }
 
     private suspend fun fetchCallEndData(subId: Int): CallEndData =
@@ -238,17 +217,15 @@ internal class CallEndHandler
         subId: Int,
         data: CallEndData,
         notify: Boolean,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        cleanupCounters: suspend (Int) -> Unit,
-        writeCallDuration: suspend (String, Int, Boolean, Boolean) -> Boolean,
+        context: CallTrackingContext,
     ) {
         if (data.startTimeResult.isFailure) {
-            handleReadStartTimeFailure(subId, data.startTimeResult.exceptionOrNull(), statusFlow, cleanupCounters)
+            handleReadStartTimeFailure(subId, data.startTimeResult.exceptionOrNull(), context)
         } else {
             val startTime = data.startTimeResult.getOrThrow()
             if (startTime == 0L) {
                 AppLogger.d("CallTracker: received IDLE for subId $subId but no session was active")
-            } else if (validateCallDuration(subId, data, statusFlow, cleanupCounters)) {
+            } else if (validateCallDuration(subId, data, context)) {
                 val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
                 val durationSeconds =
                     ((data.currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
@@ -258,12 +235,10 @@ internal class CallEndHandler
                         durationSeconds = durationSeconds,
                         data = data,
                         notify = notify,
-                        statusFlow = statusFlow,
-                        cleanupCounters = cleanupCounters,
-                        writeCallDuration = writeCallDuration,
+                        context = context,
                     )
                 ) {
-                    cleanupCounters(subId)
+                    sessionCleaner.cleanupCounters(subId, context)
                 }
             }
         }
@@ -272,8 +247,7 @@ internal class CallEndHandler
     private suspend fun validateCallDuration(
         subId: Int,
         data: CallEndData,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        cleanupCounters: suspend (Int) -> Unit,
+        context: CallTrackingContext,
     ): Boolean {
         val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
         return when {
@@ -284,14 +258,14 @@ internal class CallEndHandler
                     ) -> {
                 val message = "Call duration exceeded max limit for subId $subId"
                 AppLogger.w("CallTracker: $message, clearing session")
-                statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
-                cleanupCounters(subId)
+                context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
+                sessionCleaner.cleanupCounters(subId, context)
                 false
             }
 
             savedBootTime == 0L -> {
                 AppLogger.w("CallTracker: bootTime not recorded for subId $subId, clearing session")
-                cleanupCounters(subId)
+                sessionCleaner.cleanupCounters(subId, context)
                 false
             }
 
@@ -304,16 +278,14 @@ internal class CallEndHandler
         durationSeconds: Int,
         data: CallEndData,
         notify: Boolean,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        cleanupCounters: suspend (Int) -> Unit,
-        writeCallDuration: suspend (String, Int, Boolean, Boolean) -> Boolean,
+        context: CallTrackingContext,
     ): Boolean =
         when {
             durationSeconds < 0 -> {
                 AppLogger.w(
                     "CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring",
                 )
-                cleanupCounters(subId)
+                sessionCleaner.cleanupCounters(subId, context)
                 false
             }
 
@@ -321,13 +293,13 @@ internal class CallEndHandler
                 AppLogger.w(
                     "CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId",
                 )
-                cleanupCounters(subId)
+                sessionCleaner.cleanupCounters(subId, context)
                 false
             }
 
             data.savedUptimeResult.getOrElse { 0L }.let { (it > 0L) && (data.currentUptime < it) } -> {
                 AppLogger.w("CallTracker: negative uptime duration detected for subId $subId, ignoring")
-                cleanupCounters(subId)
+                sessionCleaner.cleanupCounters(subId, context)
                 false
             }
 
@@ -341,14 +313,16 @@ internal class CallEndHandler
 
                 if (durationSeconds == 0) {
                     AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
-                    cleanupCounters(subId)
+                    sessionCleaner.cleanupCounters(subId, context)
                     false
                 } else if (targetIdentity != null) {
                     val durationMinutes = calculateDurationMinutes(durationSeconds)
-                    writeCallDuration(targetIdentity, durationMinutes, isFallbackUsed, notify)
+                    settingsHandler.writeCallDuration(targetIdentity, durationMinutes, isFallbackUsed, notify)
                     true
                 } else {
-                    attributionResolver.handleAttributionFailure(subId, statusFlow, cleanupCounters)
+                    attributionResolver.handleAttributionFailure(subId, {
+                        context.updateStatus(it)
+                    }, { sessionCleaner.cleanupCounters(it, context) })
                     false
                 }
             }
@@ -357,14 +331,13 @@ internal class CallEndHandler
     private suspend fun handleReadStartTimeFailure(
         subId: Int,
         error: Throwable?,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        cleanupCounters: suspend (Int) -> Unit,
+        context: CallTrackingContext,
     ) {
         (error as? CancellationException)?.let { throw it }
         val message = "Timeout reading session data for subId $subId"
         AppLogger.e(message, error)
-        statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message)
-        cleanupCounters(subId)
+        context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message))
+        sessionCleaner.cleanupCounters(subId, context)
     }
 
     private fun calculateDurationMinutes(seconds: Int): Int =

@@ -31,7 +31,7 @@ object WidgetUiMapper {
         val (textColor, secondaryTextColor) = WidgetColorResolver.resolveTextColors(luminance)
         val fontMultiplier = FontScaleProvider.getMultiplier(state.fontSize)
 
-        val activeSims = snapshot.simSnapshots.filter { it.isActive }
+        val activeSims = snapshot.simSnapshots
         var currentLayoutMode = WidgetLayoutMode.fromValue(state.layoutMode)
 
         val isPreemptivelyLimited =

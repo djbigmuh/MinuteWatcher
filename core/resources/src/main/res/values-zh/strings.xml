@@ -82,6 +82,14 @@
     <string name="onboarding_message">MinuteWatcher 无法自动从您的移动运营商获取套餐详情。\n\n要开始追踪，请手动为每张 SIM 卡设置通话分钟/流量限制以及每月重置日期。此后，应用程序将负责所有监控工作。</string>
     <string name="onboarding_button">知道了</string>
 
+    <!-- Operation Errors -->
+    <!-- TODO: Translate to Chinese -->
+    <string name="error_invalid_sim_slot">Invalid SIM slot index: %1$d</string>
+    <string name="error_storage_unavailable">Storage unavailable for slot %1$d. Retry later.</string>
+    <string name="error_sim_removed">SIM was removed from slot %1$d</string>
+    <string name="error_operation_failed_retry">Operation failed after retry.</string>
+    <string name="error_unknown">Unknown error: %1$s</string>
+
     <!-- Dialogs -->
     <string name="cancel_button">取消</string>
     <string name="save_button">保存</string>

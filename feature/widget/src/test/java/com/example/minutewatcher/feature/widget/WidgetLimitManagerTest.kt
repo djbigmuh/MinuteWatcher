@@ -104,10 +104,10 @@ class WidgetLimitManagerTest {
 
             val result =
                 manager.performProbeUpdate(mock()) { _, _ ->
-                    UpdateResult.LimitExceeded
+                    UpdateResult.LimitExceeded(wasFull = true)
                 }
 
-            assertEquals(UpdateResult.LimitExceeded, result)
+            assertEquals(UpdateResult.LimitExceeded(wasFull = true), result)
             verify(appSettingsRepository).updateAppSettings(any())
         }
 

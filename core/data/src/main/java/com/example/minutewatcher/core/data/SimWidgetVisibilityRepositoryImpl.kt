@@ -146,13 +146,16 @@ class SimWidgetVisibilityRepositoryImpl
             }
         }
 
-    override suspend fun getAllIdentitiesWithSettings(): List<String> {
-        return dataStore.data.map { prefs ->
-            prefs.asMap().keys.mapNotNull { key ->
-                extractIdentity(key.name)
-            }.distinct()
-        }.first()
-    }
+    override suspend fun getAllIdentitiesWithSettings(): List<String> =
+        dataStore.data
+            .map { prefs ->
+                prefs
+                    .asMap()
+                    .keys
+                    .mapNotNull { key ->
+                        extractIdentity(key.name)
+                    }.distinct()
+            }.first()
 
         /**
          * Extracts identity from a DataStore key name by matching known widget prefixes.

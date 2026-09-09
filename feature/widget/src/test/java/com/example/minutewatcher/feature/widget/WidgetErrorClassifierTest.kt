@@ -48,7 +48,7 @@ class WidgetErrorClassifierTest {
 
         val result = classifier.classifyUpdateError(e, isFullAttempt = true)
 
-        assertEquals(UpdateResult.LimitExceeded, result)
+        assertEquals(UpdateResult.LimitExceeded(wasFull = true), result)
     }
 
     @Test

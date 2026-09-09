@@ -16,6 +16,7 @@ interface DataRefreshNotifier {
     data class RefreshEvent(
         val isManual: Boolean = false,
         val suppressWidgetUpdate: Boolean = false,
+        val eventId: Long = 0L,
     )
 
     /**

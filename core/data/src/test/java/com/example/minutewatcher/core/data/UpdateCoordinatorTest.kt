@@ -801,7 +801,6 @@ class UpdateCoordinatorTest {
                     slot = 0,
                     identity = "sim_0",
                     operatorName = "MTS",
-                    isActive = true,
                     autoResetDay = 1,
                     entities =
                         mapOf(
@@ -1507,7 +1506,9 @@ class UpdateCoordinatorTest {
                         return WidgetUpdateResult.Success()
                     }
 
-                    override suspend fun recover() {}
+                    override suspend fun recover() {
+                        // No-op for test
+                    }
                 }
 
             val coordinator =

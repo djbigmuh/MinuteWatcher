@@ -6,7 +6,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
-import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import dagger.assisted.Assisted
@@ -37,25 +36,19 @@ class SemanticInitializerWorker
             searchManager.initialize(snapshotFlow)
             shortcutManager.initialize(snapshotFlow)
 
-            // Perform initial indexing and shortcut update synchronously to catch immediate failures
+            // Perform initial indexing and shortcut update synchronously to catch immediate failures.
+            // We log the outcome but return success to avoid infinite WorkManager retries,
+            // as error state is visible in the UI and can be retried manually.
             val searchResult = searchManager.indexInitialSnapshot(initialSnapshot)
-            val searchSuccess = searchResult is SemanticSearchManager.IndexResult.Success
             val shortcutSuccess = shortcutManager.updateShortcutsSync(initialSnapshot)
 
-            if (!searchSuccess) {
-                val status = searchManager.status.value
-                if (status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.DATABASE_ERROR) {
-                    AppLogger.w("SemanticInitializerWorker: AppSearch database error. Manual retry required via UI.")
-                    return Result.success()
-                }
+            if (searchResult !is SemanticSearchManager.IndexResult.Success) {
+                AppLogger.w("SemanticInitializerWorker: initial AppSearch indexing failed: $searchResult")
+            }
+            if (!shortcutSuccess) {
+                AppLogger.w("SemanticInitializerWorker: initial shortcut update failed")
             }
 
-            return if (searchSuccess && shortcutSuccess) {
-                Result.success()
-            } else {
-                // For non-fatal errors, we return success to avoid infinite retries
-                // but the error state is still visible in the UI for manual retry.
-                Result.success()
-            }
+            return Result.success()
         }
-    }
+}

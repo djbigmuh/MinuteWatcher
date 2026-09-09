@@ -62,6 +62,7 @@ class TrafficTrackerResilienceTest {
             errorHandler = errorHandler,
             permissionChecker = permissionChecker,
             permissionStateNotifier = permissionStateNotifier,
+            dataChangeNotifier = mock(),
             scope = scope.backgroundScope,
         )
 
@@ -73,7 +74,6 @@ class TrafficTrackerResilienceTest {
             }
 
             val tracker = createTracker(this)
-            tracker.ensureStarted()
             runCurrent()
 
             // 1 from observer, 1 from init (Attempt 1)
@@ -102,7 +102,6 @@ class TrafficTrackerResilienceTest {
             whenever(simIdentityRepository.observeActiveSims()).thenAnswer { throw SecurityException("No permission") }
 
             val tracker = createTracker(this)
-            tracker.ensureStarted()
             runCurrent()
 
             // 1 from observer, 1 from init
@@ -120,7 +119,6 @@ class TrafficTrackerResilienceTest {
             whenever(simIdentityRepository.observeActiveSims()).thenAnswer { throw TrafficUpdateTimeoutException() }
 
             val tracker = createTracker(this)
-            tracker.ensureStarted()
             runCurrent()
 
             // 1 from observer, 1 from init
@@ -146,7 +144,6 @@ class TrafficTrackerResilienceTest {
             }
 
             val tracker = createTracker(this)
-            tracker.ensureStarted()
             runCurrent()
 
             // Let init retries finish (calls 2, 3, 4)

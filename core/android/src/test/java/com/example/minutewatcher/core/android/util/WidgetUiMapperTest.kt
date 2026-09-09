@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.android.util
 
 import android.graphics.Color
+import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MeasurementUnit
@@ -16,12 +17,16 @@ import com.example.minutewatcher.core.model.WidgetStrings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class WidgetUiMapperTest {
+    @get:Rule
+    val singletonResetRule = SingletonResetRule()
+
     private val widgetStrings =
         WidgetStrings(
             usedText = "Used",
@@ -43,7 +48,6 @@ class WidgetUiMapperTest {
                             slot = 0,
                             identity = "sim_0",
                             operatorName = "MTS",
-                            isActive = true,
                             entities =
                                 mapOf(
                                     PackageType.MINUTES to
@@ -151,7 +155,6 @@ class WidgetUiMapperTest {
                             slot = 0,
                             identity = "sim_0",
                             operatorName = "MTS",
-                            isActive = true,
                             entities =
                                 mapOf(
                                     PackageType.MINUTES to
@@ -206,7 +209,7 @@ class WidgetUiMapperTest {
                 timestamp = System.currentTimeMillis(),
                 simSnapshots =
                     listOf(
-                        SimSnapshot(0, "sim_0", "Operator", true, emptyMap(), 1),
+                        SimSnapshot(0, "sim_0", "Operator", emptyMap(), 1),
                     ),
                 capabilities = emptyList(),
             )
@@ -247,7 +250,6 @@ class WidgetUiMapperTest {
                             slot = 0,
                             identity = "sim_0",
                             operatorName = "MTS",
-                            isActive = true,
                             entities =
                                 mapOf(
                                     PackageType.DATA to
@@ -363,7 +365,7 @@ class WidgetUiMapperTest {
                 timestamp = System.currentTimeMillis(),
                 simSnapshots =
                     listOf(
-                        SimSnapshot(0, "sim_0", "Operator", true, emptyMap(), 1),
+                        SimSnapshot(0, "sim_0", "Operator", emptyMap(), 1),
                     ),
                 capabilities = emptyList(),
             )
@@ -393,7 +395,7 @@ class WidgetUiMapperTest {
                 timestamp = System.currentTimeMillis(),
                 simSnapshots =
                     listOf(
-                        SimSnapshot(0, "sim_0", "Operator", true, emptyMap(), 1),
+                        SimSnapshot(0, "sim_0", "Operator", emptyMap(), 1),
                     ),
                 capabilities = emptyList(),
             )
@@ -409,7 +411,7 @@ class WidgetUiMapperTest {
             )
         assertFalse(
             "showSim should be false when config missing and load succeeded",
-            uiStateNormal.simUiStates[0].showSim
+            uiStateNormal.simUiStates[0].showSim,
         )
 
         // Scenario 2: Config missing, load failed -> showSim should be true (fallback)

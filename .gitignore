@@ -51,3 +51,9 @@ app/benchmark-config.txt
 diag_gradle.ps1
 diag_result.txt
 
+# Junk and local output files
+*.exe
+*_output.txt
+files_with_*.txt
+.android/
+

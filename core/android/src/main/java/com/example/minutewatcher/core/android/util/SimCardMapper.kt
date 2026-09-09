@@ -58,6 +58,17 @@ object SimCardMapper {
         }
     }
 
+    /**
+     * Clears all cache entries for testing.
+     */
+    @VisibleForTesting
+    fun resetForTest() {
+        synchronized(this) {
+            negativeLogged.clear()
+            slotCallCounters.clear()
+        }
+    }
+
     fun map(
         context: Context,
         slot: Int,
@@ -68,9 +79,10 @@ object SimCardMapper {
             return createDefaultModel(slot, usage.identity)
         }
 
-        val version = synchronized(this) {
-            slotCallCounters.computeIfAbsent(slot) { AtomicLong(0) }.incrementAndGet()
-        }
+        val version =
+            synchronized(this) {
+                slotCallCounters.computeIfAbsent(slot) { AtomicLong(0) }.incrementAndGet()
+            }
 
         val hasNegativeValues =
             usage.minutesUsed < 0 ||

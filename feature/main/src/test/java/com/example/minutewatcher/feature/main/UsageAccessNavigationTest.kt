@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -64,6 +65,7 @@ class UsageAccessNavigationTest {
     private val usageStateRepository: UsageStateRepository = mock()
     private val trackingStatusRepository: TrackingStatusRepository = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
+    private val migrationFlagsRepository: MigrationFlagsRepository = mock()
     private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
@@ -93,6 +95,8 @@ class UsageAccessNavigationTest {
         whenever(permissionRepository.phoneStatePermissionGranted).thenReturn(phonePermissionFlow)
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
+        whenever(seedRepository.isEphemeralSeedActive).thenReturn(MutableStateFlow(false))
+        whenever(migrationFlagsRepository.isInitialSetupCompleted()).thenReturn(flowOf(true))
 
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(seedRepository.isEphemeralSeedActive).thenReturn(MutableStateFlow(false))
@@ -138,6 +142,7 @@ class UsageAccessNavigationTest {
         val settingsController =
             MainSettingsController(
                 appSettingsRepository = appSettingsRepository,
+                migrationFlagsRepository = migrationFlagsRepository,
                 settingsUseCase = settingsUseCase,
                 scope = scope,
             )

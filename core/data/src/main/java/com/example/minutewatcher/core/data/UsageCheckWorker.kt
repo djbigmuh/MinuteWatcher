@@ -43,7 +43,7 @@ class UsageCheckWorker
          * Выполняет периодическую проверку использования.
          *
          * **Строгое соблюдение API:** на AOSP refresh() завершается за миллисекунды.
-         * Таймаут 30 сек — защитный запас.
+         * Таймаут 2 мин — защитный запас для компенсации деградации DataStore на кастомных прошивках.
          *
          * **Отклонение кастомной прошивки:** таймаут указывает на деградацию
          * DataStore на кастомной прошивке. Это проблема прошивки.
@@ -144,9 +144,7 @@ class UsageCheckWorker
 
             val appSettings = fetchAppSettingsWithRetry()
             for (simSnapshot in snapshot.simSnapshots) {
-                if (simSnapshot.isActive) {
-                    processActiveSimSnapshot(simSnapshot, appSettings)
-                }
+                processActiveSimSnapshot(simSnapshot, appSettings)
             }
         }
 

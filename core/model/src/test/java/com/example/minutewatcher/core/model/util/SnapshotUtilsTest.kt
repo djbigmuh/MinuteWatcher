@@ -100,8 +100,8 @@ class SnapshotUtilsTest {
         val map1 = linkedMapOf(PackageType.MINUTES to e1, PackageType.DATA to e2)
         val map2 = linkedMapOf(PackageType.DATA to e2, PackageType.MINUTES to e1)
 
-        val sim1 = SimSnapshot(0, "ABC", "ABC", true, map1, autoResetDay = 1)
-        val sim2 = SimSnapshot(0, "ABC", "ABC", true, map2, autoResetDay = 1)
+        val sim1 = SimSnapshot(0, "ABC", "ABC", map1, autoResetDay = 1)
+        val sim2 = SimSnapshot(0, "ABC", "ABC", map2, autoResetDay = 1)
 
         val s1 =
             GlobalSnapshot(
@@ -131,7 +131,7 @@ class SnapshotUtilsTest {
         // Default autoResetDay is 1 in createSnapshot helper
 
         val entity = s1.simSnapshots[0].entities[PackageType.MINUTES]!!
-        val sim2 = SimSnapshot(0, "ABC", "ABC", true, mapOf(PackageType.MINUTES to entity), autoResetDay = 2)
+        val sim2 = SimSnapshot(0, "ABC", "ABC", mapOf(PackageType.MINUTES to entity), autoResetDay = 2)
         val s2 = s1.copy(simSnapshots = listOf(sim2))
 
         assertNotEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
@@ -176,7 +176,7 @@ class SnapshotUtilsTest {
                 lastUpdateTime = 0,
                 sourceType = DataSourceType.SYSTEM,
             )
-        return SimSnapshot(slot, "ABC", operatorName, true, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
+        return SimSnapshot(slot, "ABC", operatorName, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
     }
 
     private fun createSnapshot(
@@ -203,7 +203,7 @@ class SnapshotUtilsTest {
                 lastUpdateTime = lastUpdateTime,
                 sourceType = DataSourceType.SYSTEM,
             )
-        val sim = SimSnapshot(0, "ABC", operatorName, true, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
+        val sim = SimSnapshot(0, "ABC", operatorName, mapOf(PackageType.MINUTES to entity), autoResetDay = 1)
         return GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
             timestamp = timestamp,

@@ -14,6 +14,10 @@ import kotlin.coroutines.EmptyCoroutineContext
  * Обобщенный класс для управления циклом наблюдения за потоком данных.
  * Реализует паттерн управления джобом: отмена старого, запуск нового,
  * сохранение последнего потока для восстановления.
+ *
+ * **Thread Safety:** Safe to call from any context.
+ * **Semantics:** Uses `collectLatest` which ensures only the latest value is processed,
+ * cancelling previous value processing if a new one arrives.
  */
 class FlowObservationScope<T>(
     private val scope: CoroutineScope,
@@ -23,6 +27,8 @@ class FlowObservationScope<T>(
     private var lastFlow: Flow<T>? = null
     private var lastCollector: (suspend (T) -> Unit)? = null
     private var lastContext: CoroutineContext = EmptyCoroutineContext
+
+    @Volatile
     private var currentJob: Job? = null
 
     /**
@@ -58,7 +64,7 @@ class FlowObservationScope<T>(
                 currentJob?.cancel()
                 val newJob =
                     scope.launch(lastContext) {
-                        flow.collect { collector(it) }
+                        flow.collectLatest { collector(it) }
                     }
                 currentJob = newJob
                 newJob

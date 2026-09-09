@@ -13,15 +13,23 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.android.testing.SingletonResetRule
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import org.junit.Before
+import org.junit.Rule
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class CallTrackerTestFixtures {
+    @get:Rule
+    val singletonResetRule = SingletonResetRule()
+
     protected val context: android.content.Context = ApplicationProvider.getApplicationContext()
     protected val simIdentityRepository: SimIdentityRepository = mock()
     protected val simUsageRepository: SimUsageRepository = mock()
@@ -41,8 +49,8 @@ abstract class CallTrackerTestFixtures {
             currentUptime = 500000000L,
         )
 
-    protected val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
-    protected val testScope = kotlinx.coroutines.test.TestScope(testDispatcher)
+    protected open val testDispatcher = StandardTestDispatcher()
+    protected val testScope by lazy { TestScope(testDispatcher) }
 
     @Before
     open fun setup() {
@@ -66,27 +74,45 @@ abstract class CallTrackerTestFixtures {
         whenever(permissionManager.isTelephonySupported()).thenReturn(true)
     }
 
-    internal fun createTracker(): CallTracker {
+    internal fun createTracker(scope: CoroutineScope = testScope): CallTracker {
         val attributionResolver = createAttributionResolver()
         val mutexHolder = createMutexHolder()
-        val startHandler = createStartHandler(attributionResolver, mutexHolder)
-        val endHandler = createEndHandler(attributionResolver, mutexHolder)
-        val sessionCleaner = createSessionCleaner(attributionResolver)
         val settingsHandler = createSettingsHandler()
+        val sessionCleaner = createSessionCleaner(attributionResolver)
         val endResolver = createEndResolver()
+
+        val startHandler =
+            CallStartHandler(
+                callSessionRepository,
+                timeProvider,
+                retryHelper,
+                attributionResolver,
+                mutexHolder,
+                sessionCleaner,
+                settingsHandler,
+            )
+        val endHandler =
+            CallEndHandler(
+                callSessionRepository,
+                timeProvider,
+                retryHelper,
+                attributionResolver,
+                mutexHolder,
+                sessionCleaner,
+                settingsHandler,
+                endResolver,
+                dataChangeNotifier,
+            )
 
         return CallTracker(
             callSessionRepository = callSessionRepository,
-            dataChangeNotifier = dataChangeNotifier,
             permissionManager = permissionManager,
-            scope = testScope,
+            scope = scope,
             attributionResolver = attributionResolver,
             startHandler = startHandler,
             endHandler = endHandler,
             sessionCleaner = sessionCleaner,
-            settingsHandler = settingsHandler,
             permissionStateNotifier = permissionStateNotifier,
-            callEndResolver = endResolver,
             callMutexHolder = mutexHolder,
         )
     }
@@ -109,6 +135,8 @@ abstract class CallTrackerTestFixtures {
         retryHelper,
         attributionResolver,
         mutexHolder,
+        createSessionCleaner(attributionResolver),
+        createSettingsHandler(),
     )
 
     internal fun createEndHandler(
@@ -120,6 +148,10 @@ abstract class CallTrackerTestFixtures {
         retryHelper,
         attributionResolver,
         mutexHolder,
+        createSessionCleaner(attributionResolver),
+        createSettingsHandler(),
+        createEndResolver(),
+        dataChangeNotifier,
     )
 
     internal fun createMutexHolder() = CallMutexHolder()

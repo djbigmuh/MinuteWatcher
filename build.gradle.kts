@@ -1,3 +1,7 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import org.jlleitschuh.gradle.ktlint.KtlintExtension
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
+
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.androidApplication) apply false
@@ -13,50 +17,26 @@ plugins {
 }
 
 subprojects {
-    // NOTE: Remaining deprecation warnings in this block (ReportingExtension.file)
-    // originate from the Detekt 1.23.8 plugin itself and cannot be fixed without
-    // upgrading to Detekt 2.x (currently in alpha).
-    apply(plugin = "io.gitlab.arturbosch.detekt")
+    apply(plugin = "dev.detekt")
 
-    configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+    extensions.configure<dev.detekt.gradle.extensions.DetektExtension>("detekt") {
         // Lint baseline captures ONLY pre-existing issues.
         // New code MUST NOT be added to the baseline — fix issues at the source.
         // When refactoring a file, remove its entries from the baseline first.
         config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-        baseline = file("$projectDir/detekt-baseline.xml")
-        buildUponDefaultConfig = true
-        allRules = false
+        baseline.set(file("$projectDir/detekt-baseline.xml"))
+        buildUponDefaultConfig.set(true)
+        allRules.set(false)
     }
 
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
-    configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+    configure<KtlintExtension> {
         android.set(true)
         ignoreFailures.set(false)
         reporters {
-            reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
-            reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
-        }
-    }
-
-    // NOTE: Detekt 1.23.8 + Gradle 9.7 + Kotlin 2.4 requires explicit jvmToolchain and reportsDir override.
-    // This workaround must be revisited when upgrading Detekt to 2.x.
-    tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-        val reporting = project.extensions.getByType<ReportingExtension>()
-        reportsDir.set(
-            reporting.baseDirectory.dir("detekt").map { it.asFile },
-        )
-
-        // Detekt 1.23.8 embeds Kotlin 1.9, which cannot parse Java version strings >= 25.
-        // Force JDK 21 toolchain regardless of the host JAVA_HOME to avoid
-        // java.lang.IllegalArgumentException during JVM version parsing.
-        // This is a strict API compatibility requirement, not a heuristic.
-        project.extensions.findByType<JavaToolchainService>()?.let { toolchains ->
-            jdkHome.set(
-                toolchains.launcherFor {
-                    languageVersion.set(JavaLanguageVersion.of(21))
-                }.map { it.metadata.installationPath }
-            )
+            reporter(ReporterType.PLAIN)
+            reporter(ReporterType.CHECKSTYLE)
         }
     }
 
@@ -78,9 +58,18 @@ subprojects {
         systemProperty("robolectric.sdk", "37")
         // Robolectric и Mockito требуют --add-opens для JDK 17+ из-за использования internal API.
         // Это строгое соответствие требованиям инструментов тестирования, не эвристика.
-        maxHeapSize = "3072m"
-        maxParallelForks = 1
-        forkEvery = 1
+        // При 48Гб ОЗУ и 12 ядрах увеличена квота памяти и форков для ускорения.
+        // Phase 1: Parallel execution across modules.
+        // Phase 2: Structural acceleration via sandbox reuse (forkEvery > 1).
+        // Isolation is maintained by SingletonResetRule and AppLoggerResetRule.
+        maxHeapSize = "1536m"
+        maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
+        forkEvery = 1 // Default. Optimized in subprojects.
+
+        // Disable JaCoCo agent by default to speed up test execution.
+        // Enable only when -Pcoverage is passed (e.g., in CI coverage jobs).
+        extensions.findByType(JacocoTaskExtension::class.java)?.isEnabled =
+            providers.gradleProperty("coverage").isPresent
 
         jvmArgs(
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",

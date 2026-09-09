@@ -24,4 +24,12 @@ sealed interface TrackingStatus {
         NOT_SUPPORTED,
         UNKNOWN,
     }
+
+    companion object {
+        const val PRIORITY_PERMISSION_MISSING = 50
+        const val PRIORITY_DATABASE_ERROR = 40
+        const val PRIORITY_TRANSIENT_ERROR = 30
+        const val PRIORITY_HEALTHY = 20
+        const val PRIORITY_INDEXING = 10
+    }
 }

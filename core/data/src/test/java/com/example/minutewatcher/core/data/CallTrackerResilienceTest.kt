@@ -16,7 +16,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerResilienceTest : CallTrackerTestFixtures() {
-
     @Test
     fun `ensureStarted retries if permissionStateNotifier throws during initialization`() =
         runTest(testDispatcher) {

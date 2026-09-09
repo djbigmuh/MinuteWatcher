@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.controller
 
+import androidx.annotation.StringRes
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -13,6 +14,7 @@ import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -101,8 +103,9 @@ class MainSimDataController
          * UI должен отобразить эту ошибку и очистить её после показа.
          */
         data class OperationError(
-            val message: String,
+            @StringRes val messageRes: Int,
             val slot: Int,
+            val args: List<Any> = emptyList(),
         )
 
         private val _lastOperationError = MutableStateFlow<OperationError?>(null)
@@ -370,27 +373,28 @@ class MainSimDataController
             when (e) {
                 is InvalidSlotException -> {
                     AppLogger.e("InvalidSlotException during $operationName for slot $slot", e)
-                    OperationError("Invalid SIM slot index: $slot", slot)
+                    OperationError(R.string.error_invalid_sim_slot, slot, listOf(slot))
                 }
 
                 is SeedUnavailableException -> {
                     AppLogger.e("SeedUnavailableException during $operationName for slot $slot", e)
-                    OperationError("Storage unavailable for slot ${e.slot ?: slot}. Retry later.", e.slot ?: slot)
+                    val errorSlot = e.slot ?: slot
+                    OperationError(R.string.error_storage_unavailable, errorSlot, listOf(errorSlot))
                 }
 
                 is SimNotFoundException -> {
                     AppLogger.w("SimNotFoundException during $operationName for slot $slot", e)
-                    OperationError("SIM was removed from slot ${e.slot}", e.slot)
+                    OperationError(R.string.error_sim_removed, e.slot, listOf(e.slot))
                 }
 
                 is IOException -> {
                     AppLogger.e("Terminal IOException during $operationName for slot $slot after retry", e)
-                    OperationError(e.message ?: "Operation failed after retry.", slot)
+                    OperationError(R.string.error_operation_failed_retry, slot)
                 }
 
                 else -> {
                     AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
-                    OperationError(e.message ?: "Unknown error", slot)
+                    OperationError(R.string.error_unknown, slot, listOf(e.message ?: "??"))
                 }
             }
 
@@ -422,6 +426,11 @@ class MainSimDataController
         private companion object {
             private const val MAX_RETRY_ATTEMPTS = 3L
             private const val RETRY_BASE_DELAY_MS = 500L
-            private const val MAX_RETRY_EXPONENT = 4 // max ~8 секунд
+
+            /**
+             * Max exponent for retry delay. With base 500ms and 3 attempts,
+             * the actual max delay is 500 * 2^2 = 2000ms.
+             */
+            private const val MAX_RETRY_EXPONENT = 2
         }
     }

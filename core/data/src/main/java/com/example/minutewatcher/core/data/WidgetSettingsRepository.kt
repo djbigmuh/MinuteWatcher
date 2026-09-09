@@ -121,18 +121,25 @@ class WidgetSettingsRepository
                     val settingsByIdentity = batch[identity]
                     val settingsByFallback = batch[fallbackKey]
 
-                    val settings = when {
-                        settingsByIdentity != null -> settingsByIdentity
-                        settingsByFallback != null -> {
-                            AppLogger.w("WidgetSettingsRepository: settings found ONLY via fallback key for slot ${info.slotIndex}")
-                            settingsByFallback
-                        }
+                    val settings =
+                        when {
+                            settingsByIdentity != null -> settingsByIdentity
+                            settingsByFallback != null -> {
+                                AppLogger.w(
+                                    "WidgetSettingsRepository: settings found ONLY via fallback key for slot " +
+                                        "${info.slotIndex}",
+                                )
+                                settingsByFallback
+                            }
 
-                        else -> {
-                            AppLogger.w("WidgetSettingsRepository: settings not found for slot ${info.slotIndex} (identity: $identity, fallback: $fallbackKey)")
-                            null
+                            else -> {
+                                AppLogger.w(
+                                    "WidgetSettingsRepository: settings not found for slot ${info.slotIndex} " +
+                                        "(identity: $identity, fallback: $fallbackKey)",
+                                )
+                                null
+                            }
                         }
-                    }
 
                     info.slotIndex to (settings ?: SimSettingsState()).copy(lastKnownIdentity = identity)
                 }
@@ -232,31 +239,7 @@ class WidgetSettingsRepository
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()
             val failedSlots = mutableListOf<Int>()
             for ((slot, simSettings) in state.simStates) {
-                try {
-                    val identity = simIdentityRepository.getIdentity(slot)
-                    simSettingsMap[identity] = simSettings
-                    val fallbackKey = "sim_$slot"
-                    if (identity != fallbackKey) {
-                        simSettingsMap[fallbackKey] = simSettings
-                    }
-                } catch (e: SeedUnavailableException) {
-                    AppLogger.w(
-                        "saveSimSettings: seed unavailable for slot $slot. Saving with fallback key and last known identity.",
-                        e
-                    )
-                    simSettingsMap["sim_$slot"] = simSettings
-                    simSettings.lastKnownIdentity?.let { lastId ->
-                        if (lastId != "sim_$slot") {
-                            simSettingsMap[lastId] = simSettings
-                        }
-                    }
-                } catch (e: SimNotFoundException) {
-                    AppLogger.w("saveSimSettings: SIM not found in slot $slot. Saving with fallback key.", e)
-                    simSettingsMap["sim_$slot"] = simSettings
-                } catch (e: InvalidSlotException) {
-                    AppLogger.w("saveSimSettings: invalid slot $slot. Skipping.", e)
-                    failedSlots.add(slot)
-                }
+                mapSlotToSettings(slot, simSettings, simSettingsMap, failedSlots)
             }
             if (simSettingsMap.isNotEmpty()) {
                 simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
@@ -266,6 +249,40 @@ class WidgetSettingsRepository
                 failedSlots.addAll(state.simStates.keys)
             }
             return failedSlots
+        }
+
+    private suspend fun mapSlotToSettings(
+        slot: Int,
+        simSettings: SimSettingsState,
+        simSettingsMap: MutableMap<String, SimSettingsState>,
+        failedSlots: MutableList<Int>,
+    ) {
+        try {
+            val identity = simIdentityRepository.getIdentity(slot)
+            simSettingsMap[identity] = simSettings
+            val fallbackKey = "sim_$slot"
+            if (identity != fallbackKey) {
+                simSettingsMap[fallbackKey] = simSettings
+            }
+        } catch (e: SeedUnavailableException) {
+            AppLogger.w(
+                "saveSimSettings: seed unavailable for slot $slot. " +
+                    "Saving with fallback key and last known identity.",
+                e,
+            )
+            simSettingsMap["sim_$slot"] = simSettings
+            simSettings.lastKnownIdentity?.let { lastId ->
+                if (lastId != "sim_$slot") {
+                    simSettingsMap[lastId] = simSettings
+                }
+            }
+        } catch (e: SimNotFoundException) {
+            AppLogger.w("saveSimSettings: SIM not found in slot $slot. Saving with fallback key.", e)
+            simSettingsMap["sim_$slot"] = simSettings
+        } catch (e: InvalidSlotException) {
+            AppLogger.w("saveSimSettings: invalid slot $slot. Skipping.", e)
+            failedSlots.add(slot)
+        }
         }
 
         private fun getFallbackWidgetSettings(

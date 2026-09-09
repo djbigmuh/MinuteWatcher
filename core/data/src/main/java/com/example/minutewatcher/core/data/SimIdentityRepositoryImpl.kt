@@ -24,6 +24,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * - [SimIdentityPersistence] for DataStore operations.
  *
  * Safe to call from any coroutine context.
+ *
+ * NOTE: Suppressing TooManyFunctions as this repository is the main gateway for SIM management,
+ * exposing a rich set of observer and resolution APIs used by data and feature layers.
  */
 @Suppress("TooManyFunctions")
 @Singleton

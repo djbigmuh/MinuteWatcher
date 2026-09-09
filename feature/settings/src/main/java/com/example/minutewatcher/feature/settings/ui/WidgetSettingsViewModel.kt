@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.settings.ui
 
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -11,6 +12,7 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -61,6 +63,7 @@ class WidgetSettingsViewModel
     constructor(
         private val loader: WidgetSettingsLoader,
         private val saver: WidgetSettingsSaver,
+        @ApplicationScope private val appScope: CoroutineScope,
         usageStateRepository: UsageStateRepository,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
     private val autoSaveTrigger =
@@ -152,10 +155,15 @@ class WidgetSettingsViewModel
                 }
             } else {
                 if (pendingUpdates.size >= MAX_PENDING_UPDATES) {
-                    AppLogger.e("WidgetSettingsViewModel: pendingUpdates limit reached, clearing queue")
+                    AppLogger.w("WidgetSettingsViewModel: pendingUpdates limit reached, merging queue")
+                    val existing = pendingUpdates.toList()
                     pendingUpdates.clear()
+                    pendingUpdates.add { base ->
+                        existing.fold(base) { acc, t -> t(acc) }.let { transform(it) }
+                    }
+                } else {
+                    pendingUpdates.add(transform)
                 }
-                pendingUpdates.add(transform)
                 AppLogger.d("WidgetSettingsViewModel: update queued (total: ${pendingUpdates.size})")
             }
         }
@@ -196,10 +204,15 @@ class WidgetSettingsViewModel
                 }
             } else {
                 if (pendingUpdates.size >= MAX_PENDING_UPDATES) {
-                    AppLogger.e("WidgetSettingsViewModel: pendingUpdates limit reached, clearing queue")
+                    AppLogger.w("WidgetSettingsViewModel: pendingUpdates limit reached, merging queue")
+                    val existing = pendingUpdates.toList()
                     pendingUpdates.clear()
+                    pendingUpdates.add { base ->
+                        existing.fold(base) { acc, t -> t(acc) }.let { simTransform(it) }
+                    }
+                } else {
+                    pendingUpdates.add(simTransform)
                 }
-                pendingUpdates.add(simTransform)
                 AppLogger.d("WidgetSettingsViewModel: SIM update queued (total: ${pendingUpdates.size})")
             }
         }
@@ -213,7 +226,9 @@ class WidgetSettingsViewModel
         synchronized(pendingUpdatesLock) {
             val currentSettings = state.value.settings
             if (currentSettings != null && lastSavedSettings != null && currentSettings != lastSavedSettings) {
-                AppLogger.w("WidgetSettingsViewModel: overwriting modified settings with loaded data and pending updates!")
+                AppLogger.w(
+                    "WidgetSettingsViewModel: overwriting modified settings with loaded data and pending updates!",
+                )
             }
 
             var merged = loaded
@@ -265,11 +280,12 @@ class WidgetSettingsViewModel
 
                 // If SIM list failed to load, show information that settings were saved partially.
                 // We treat this as success for internal state, but notify the user via PartialSuccess.
-                val finalResult = if (result is SaveResult.Success && settingsToSave?.simListLoadFailed == true) {
-                    SaveResult.PartialSuccess(skippedSimSettings = true)
-                } else {
-                    result
-                }
+                val finalResult =
+                    if (result is SaveResult.Success && settingsToSave?.simListLoadFailed == true) {
+                        SaveResult.PartialSuccess(skippedSimSettings = true)
+                    } else {
+                        result
+                    }
 
                 reduce { copy(saveResult = finalResult) }
             } catch (e: CancellationException) {
@@ -344,10 +360,19 @@ class WidgetSettingsViewModel
         val lastSaved = lastSavedSettings
 
         if (currentSettings != null && lastSaved != null && currentSettings != lastSaved) {
-            if (currentState.isSaving) {
-                AppLogger.d("WidgetSettingsViewModel: unsaved changes onCleared, but save is already in progress")
-            } else {
-                AppLogger.w("WidgetSettingsViewModel: onCleared with UNSAVED changes! Emergency save in onCleared is disabled to avoid ANR.")
+            // Perform emergency save in application scope to ensure changes are persisted
+            // even if the ViewModel is destroyed.
+            appScope.launch {
+                try {
+                    withTimeoutOrNull(FLUSH_TIMEOUT) {
+                        saveMutex.withLock {
+                            AppLogger.d("WidgetSettingsViewModel: Emergency flush in onCleared")
+                            executeSave(currentSettings)
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetSettingsViewModel: Emergency save failed", e)
+                }
             }
         }
         super.onCleared()
@@ -355,6 +380,7 @@ class WidgetSettingsViewModel
 
     companion object {
         private val LOAD_TIMEOUT: Duration = 15.seconds
+        private val FLUSH_TIMEOUT: Duration = 10.seconds
         private const val MAX_PENDING_UPDATES = 10
     }
 }

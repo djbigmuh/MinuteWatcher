@@ -4,7 +4,6 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,7 +16,7 @@ internal class CallSessionCleaner
     ) {
         suspend fun cleanupCounters(
             subId: Int,
-            statusFlow: MutableStateFlow<TrackingStatus>,
+            context: CallTrackingContext,
         ) {
             try {
                 callSessionRepository.setCallStartTime(subId, 0L)
@@ -28,11 +27,12 @@ internal class CallSessionCleaner
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Session cleanup failed for subId $subId", e)
-                statusFlow.value =
+                context.updateStatus(
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
                         "Session cleanup failed: ${e.message}",
-                    )
+                    ),
+                )
                 throw e
             } finally {
                 attributionResolver.clearFailures(subId)

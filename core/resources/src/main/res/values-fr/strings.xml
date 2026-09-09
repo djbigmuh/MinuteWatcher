@@ -82,6 +82,14 @@
     <string name="onboarding_message">MinuteWatcher ne peut pas récupérer automatiquement les détails de votre forfait auprès de votre opérateur mobile.\n\nPour commencer le suivi, veuillez définir manuellement vos limites de minutes/données et le jour de réinitialisation mensuel pour chaque carte SIM. L\'application s\'occupera de toute la surveillance à partir de ce moment-là.</string>
     <string name="onboarding_button">J\'ai compris</string>
 
+    <!-- Operation Errors -->
+    <!-- TODO: Translate to French -->
+    <string name="error_invalid_sim_slot">Invalid SIM slot index: %1$d</string>
+    <string name="error_storage_unavailable">Storage unavailable for slot %1$d. Retry later.</string>
+    <string name="error_sim_removed">SIM was removed from slot %1$d</string>
+    <string name="error_operation_failed_retry">Operation failed after retry.</string>
+    <string name="error_unknown">Unknown error: %1$s</string>
+
     <!-- Dialogs -->
     <string name="cancel_button">Annuler</string>
     <string name="save_button">Enregistrer</string>

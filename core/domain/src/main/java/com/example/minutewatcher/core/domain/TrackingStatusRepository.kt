@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.domain
 
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
@@ -18,10 +19,10 @@ interface TrackingStatusRepository {
      * @throws IOException if recovery fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
-    suspend fun recoverTracking(key: String)
+    suspend fun recoverTracking(key: TrackingKey)
 
     /**
      * Observes the status of all tracking components.
      */
-    fun observeTrackingStatus(): Flow<Map<String, TrackingStatus>>
+    fun observeTrackingStatus(): Flow<Map<TrackingKey, TrackingStatus>>
 }

@@ -144,7 +144,6 @@ class UsageCheckWorkerTest {
                                 slot = 0,
                                 identity = "sim_0",
                                 operatorName = "MTS",
-                                isActive = true,
                                 entities =
                                     mapOf(
                                         PackageType.MINUTES to
@@ -218,7 +217,6 @@ class UsageCheckWorkerTest {
                                 slot = 0,
                                 identity = "sim_0",
                                 operatorName = "MTS",
-                                isActive = true,
                                 entities =
                                     mapOf(
                                         PackageType.DATA to
@@ -279,7 +277,6 @@ class UsageCheckWorkerTest {
                                 slot = 0,
                                 identity = "sim_0",
                                 operatorName = "MTS",
-                                isActive = true,
                                 entities =
                                     mapOf(
                                         PackageType.MINUTES to
@@ -340,7 +337,6 @@ class UsageCheckWorkerTest {
                                 slot = 0,
                                 identity = "sim_0",
                                 operatorName = "MTS",
-                                isActive = true,
                                 entities =
                                     mapOf(
                                         PackageType.MINUTES to
@@ -398,7 +394,6 @@ class UsageCheckWorkerTest {
                                 slot = 0,
                                 identity = "sim_0",
                                 operatorName = "MTS",
-                                isActive = true,
                                 entities =
                                     mapOf(
                                         PackageType.DATA to
@@ -488,7 +483,6 @@ class UsageCheckWorkerTest {
                                 slot = 0,
                                 identity = "sim_0",
                                 operatorName = "MTS",
-                                isActive = true,
                                 entities =
                                     mapOf(
                                         PackageType.MINUTES to
@@ -550,7 +544,6 @@ class UsageCheckWorkerTest {
                                 slot = 0,
                                 identity = identity,
                                 operatorName = "MTS",
-                                isActive = true,
                                 entities =
                                     mapOf(
                                         PackageType.MINUTES to

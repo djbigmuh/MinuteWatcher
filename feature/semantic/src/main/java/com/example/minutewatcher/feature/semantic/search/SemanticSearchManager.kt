@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CancellationException
@@ -24,7 +25,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -66,7 +66,7 @@ open class SemanticSearchManager
         private val ioDispatcher: CoroutineDispatcher,
         private val timeProvider: TimeProvider,
     ) : TrackingStatusProvider {
-        override val key: String = "appsearch"
+    override val key: TrackingKey = TrackingKey.APPSEARCH
 
     private var lastSnapshotHash: Int? = null
     private var lastSnapshotVersion: SchemaVersion? = null
@@ -87,6 +87,45 @@ open class SemanticSearchManager
 
         private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
         override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+    /**
+     * Updates the tracker status using a prioritized transition rule to prevent race conditions.
+     * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Ready = Active = Idle.
+     */
+    private fun transitionStatus(
+        newStatus: TrackingStatus,
+        force: Boolean = false,
+    ) {
+        _status.update { current ->
+            val currentPrio = getStatusPriority(current)
+            val newPrio = getStatusPriority(newStatus)
+
+            when {
+                force -> newStatus
+                current == newStatus -> current
+                newPrio >= currentPrio -> newStatus
+                // Recovery: Healthy state can clear transient generic error (priority 30)
+                newPrio == TrackingStatus.PRIORITY_HEALTHY &&
+                    currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
+
+                else -> current
+            }
+        }
+    }
+
+    private fun getStatusPriority(status: TrackingStatus): Int =
+        when (status) {
+            is TrackingStatus.Error ->
+                when (status.type) {
+                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                }
+
+            is TrackingStatus.Ready, TrackingStatus.Active, TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+            TrackingStatus.Indexing -> TrackingStatus.PRIORITY_INDEXING
+            else -> 0
+        }
 
         private val initMutex = Mutex()
         private val indexMutex = Mutex()
@@ -123,12 +162,29 @@ open class SemanticSearchManager
         override suspend fun recover() {
             initMutex.withLock {
                 errorHandler.resetFailures()
-                indexMutex.withLock {
-                    lastSnapshotHash = null
-                    lastSnapshotVersion = null
-                    consecutiveMutexTimeouts.set(0)
-                    mutexBackoffMs.set(INITIAL_BACKOFF_MS)
+
+                val acquired =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        indexMutex.withLock {
+                            lastSnapshotHash = null
+                            lastSnapshotVersion = null
+                            consecutiveMutexTimeouts.set(0)
+                            mutexBackoffMs.set(INITIAL_BACKOFF_MS)
+                        }
+                        true
+                    } ?: false
+
+                if (!acquired) {
+                    AppLogger.e("SemanticSearchManager: recovery blocked by indexing mutex")
+                    transitionStatus(
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Recovery blocked: indexing in progress or stuck",
+                        ),
+                    )
+                    return
                 }
+
                 val flow =
                     lastSnapshotFlow ?: run {
                         AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
@@ -141,19 +197,30 @@ open class SemanticSearchManager
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
-                indexMutex.withLock {
-                    lastSnapshotHash = null
-                    lastSnapshotVersion = null
-                    try {
-                        indexer.cleanupStalePackageTypes(sessionManager) { newStatus ->
-                            _status.value = newStatus
+                val acquired =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        indexMutex.withLock {
+                            lastSnapshotHash = null
+                            lastSnapshotVersion = null
+                            try {
+                                indexer.cleanupStalePackageTypes(sessionManager) { newStatus ->
+                                    transitionStatus(newStatus)
+                                }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("SemanticSearchManager: stale package types cleanup failed during init", e)
+                            }
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("SemanticSearchManager: stale package types cleanup failed during init", e)
-                    }
+                        true
+                    } ?: false
+
+                if (!acquired) {
+                    AppLogger.w(
+                        "SemanticSearchManager: initialization stale data cleanup blocked, proceeding with observation",
+                    )
                 }
+
                 setupObservation(snapshotFlow)
             }
         }
@@ -201,7 +268,7 @@ open class SemanticSearchManager
     private suspend fun processSnapshotInternal(snapshot: GlobalSnapshot) {
         currentCoroutineContext().ensureActive()
         try {
-            _status.value = TrackingStatus.Indexing
+            transitionStatus(TrackingStatus.Indexing)
             val result =
                 try {
                     indexSnapshot(snapshot)
@@ -217,7 +284,7 @@ open class SemanticSearchManager
             throw e
         } catch (e: Exception) {
             AppLogger.e("SemanticSearchManager: error processing snapshot in collect", e)
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            transitionStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
         }
     }
 
@@ -228,6 +295,8 @@ open class SemanticSearchManager
             }
 
             is IndexResult.ActualFailure -> {
+                // Actual failure is already handled inside indexSnapshot update logic.
+                // This branch is kept for exhaustiveness.
             }
 
             IndexResult.MutexTimeout -> {
@@ -238,6 +307,7 @@ open class SemanticSearchManager
 
     private fun handleMutexTimeout() {
         val count = consecutiveMutexTimeouts.get()
+        // Log as debug for transient timeouts, warning if it persists.
         if (count < MAX_MUTEX_TIMEOUT_RETRIES) {
             AppLogger.d(
                 "SemanticSearchManager: indexing skipped due to mutex timeout (cycle $count)",
@@ -250,39 +320,30 @@ open class SemanticSearchManager
         }
         }
 
-        fun setError(message: String?) {
-            _status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
-        }
-
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     internal suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
-        val acquired =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                indexMutex.lock()
-                true
-            } ?: false
-
-        if (!acquired) {
+        if (!indexMutex.tryLock()) {
             val count = consecutiveMutexTimeouts.incrementAndGet()
             val currentBackoff = mutexBackoffMs.get()
             mutexBackoffMs.set(min(currentBackoff * 2, MAX_BACKOFF_MS))
 
             if (count >= 2) {
-                _status.value =
+                transitionStatus(
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
                         "Indexing mutex stuck",
+                    ),
                     )
             }
-            delay(currentBackoff.milliseconds)
-            resetLastSnapshotState()
+            // We do not delay here to avoid blocking the observation collect path.
+            // Any further data changes or manual actions will trigger a new indexing attempt.
             return IndexResult.MutexTimeout
         }
 
-        consecutiveMutexTimeouts.set(0)
-        mutexBackoffMs.set(INITIAL_BACKOFF_MS)
+        try {
+            consecutiveMutexTimeouts.set(0)
+            mutexBackoffMs.set(INITIAL_BACKOFF_MS)
 
-        return try {
             val result =
                 withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
                     performIndexSnapshotLocked(snapshot)
@@ -297,14 +358,14 @@ open class SemanticSearchManager
 
                 IndexResult.Success -> {
                     errorHandler.resetFailures()
-                    _status.value = TrackingStatus.Ready(timeProvider.now())
+                    transitionStatus(TrackingStatus.Ready(timeProvider.now()), force = true)
                 }
 
                 IndexResult.MutexTimeout -> {
-                    // Handled by return
+                    // Should not happen in performIndexSnapshotLocked
                 }
             }
-            result
+            return result
         } finally {
             indexMutex.unlock()
         }
@@ -312,17 +373,17 @@ open class SemanticSearchManager
 
     @Suppress("ReturnCount", "TooGenericExceptionCaught")
     private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): IndexResult {
-        val hasActiveSims = snapshot.simSnapshots.any { it.isActive }
-        val currentHash = if (hasActiveSims) SnapshotUtils.calculateContentHash(snapshot) else null
+        val hasSims = snapshot.simSnapshots.isNotEmpty()
+        val currentHash = if (hasSims) SnapshotUtils.calculateContentHash(snapshot) else null
 
-        if (hasActiveSims &&
+        if (hasSims &&
             (currentHash == lastSnapshotHash) &&
             (snapshot.version == lastSnapshotVersion)
         ) {
             return IndexResult.Success
         }
 
-        if (!sessionManager.ensureSession({ _status.value = it })) {
+        if (!sessionManager.ensureSession({ transitionStatus(it) })) {
             resetLastSnapshotState()
             return IndexResult.ActualFailure("Failed to ensure AppSearch session")
         }
@@ -352,7 +413,7 @@ open class SemanticSearchManager
     ): IndexResult {
         AppLogger.w("AppSearch schema mismatch, retrying with force override")
         sessionManager.closeSession()
-        return if (sessionManager.ensureSession({ _status.value = it }, forceOverride = true)) {
+        return if (sessionManager.ensureSession({ transitionStatus(it) }, forceOverride = true)) {
             try {
                 executeIndexingInternal(snapshot, currentHash)
             } catch (e: CancellationException) {
@@ -378,7 +439,7 @@ open class SemanticSearchManager
             withContext(ioDispatcher) {
                 // Ensure the session is valid and active immediately before usage.
                 // sessionManager.ensureSession is synchronized internally.
-                if (!sessionManager.ensureSession({ _status.value = it })) {
+                if (!sessionManager.ensureSession({ transitionStatus(it) })) {
                     AppLogger.e("AppSearch session could not be ensured in executeIndexingInternal")
                     return@withContext IndexResult.ActualFailure("AppSearch session could not be ensured")
                 }
@@ -416,7 +477,7 @@ open class SemanticSearchManager
         limit: Int = 10,
     ): Result<List<SearchResult>> =
         withContext(ioDispatcher) {
-            if (!sessionManager.ensureSession({ _status.value = it })) {
+            if (!sessionManager.ensureSession({ transitionStatus(it) })) {
                 return@withContext Result.failure(
                     AppSearchException(
                         AppSearchResult.RESULT_INTERNAL_ERROR,
@@ -457,6 +518,12 @@ open class SemanticSearchManager
     private companion object {
         private const val INITIAL_BACKOFF_MS = 1000L
         private const val MAX_BACKOFF_MS = 30_000L
+
+        /**
+         * Maximum consecutive mutex timeouts before escalating to warning in logs.
+         * This threshold prevents log spamming for transient contention while ensuring
+         * persistent issues are visible.
+         */
         private const val MAX_MUTEX_TIMEOUT_RETRIES = 3
     }
 }

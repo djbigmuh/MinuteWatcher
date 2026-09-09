@@ -26,7 +26,6 @@ object SnapshotUtils {
 
         val content =
             snapshot.simSnapshots
-                .filter { it.isActive }
                 .sortedBy { it.slot }
                 .map { sim ->
                     sim.slot to (

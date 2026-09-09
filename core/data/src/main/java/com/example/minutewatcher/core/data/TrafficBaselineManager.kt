@@ -4,19 +4,23 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Manages traffic baseline (reset, retry, probe).
+ *
+ * Invariant: `lastTotalBytes` for an identity must always correspond to the total mobile bytes
+ * in the window [lastResetDate, now] at the time of the last successful update.
+ * Any baseline reset or initialization must query the same window to ensure correct delta calculation.
  *
  * Safe to call from any coroutine context.
  */
@@ -30,53 +34,66 @@ class TrafficBaselineManager
         private val permissionManager: PermissionManager,
         private val timeProvider: TimeProvider,
         private val networkStatsProvider: NetworkStatsProvider,
+        private val dataChangeNotifier: DataChangeNotifier,
     ) {
-    private val retryMutex = Mutex()
-    private val retryCounts = mutableMapOf<String, Int>()
-
     suspend fun getRetryCount(identity: String): Int? =
-        retryMutex.withLock {
-            retryCounts[identity]
-        }
+        simUsageResetRepository
+            .getBaselineRetryCount(identity)
+            .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
 
     suspend fun setRetryCount(
         identity: String,
         count: Int,
-    ) = retryMutex.withLock {
-        retryCounts[identity] = count
+    ) {
+        simUsageResetRepository.setBaselineRetryCount(identity, count)
     }
 
-    suspend fun removeRetry(identity: String) =
-        retryMutex.withLock {
-            retryCounts.remove(identity)
+    suspend fun removeRetry(identity: String) {
+        simUsageResetRepository.setBaselineRetryCount(identity, null)
         }
 
-    suspend fun cleanupRetries(activeIdentities: Set<String>) =
-        retryMutex.withLock {
-            retryCounts.keys.retainAll(activeIdentities)
+    suspend fun cleanupRetries(activeIdentities: Set<String>) {
+        simUsageResetRepository.cleanupBaselineRetries(activeIdentities)
         }
 
-    suspend fun removeRetriesExcept(identity: String) =
-        retryMutex.withLock {
-            retryCounts.entries.removeIf { it.key != identity }
+    suspend fun removeRetriesExcept(identity: String) {
+        simUsageResetRepository.cleanupBaselineRetries(setOf(identity))
         }
 
+    /**
+     * Queries current mobile bytes since [startTime].
+     *
+     * @param startTime must be a valid timestamp (greater than 0).
+     * Typically this is the `lastResetDate` of the SIM usage.
+     * @throws IllegalArgumentException if [startTime] is 0 or negative.
+     */
         fun getCurrentMobileBytes(startTime: Long): StatsResult {
+        if (startTime <= 0L) {
+            return StatsResult.Error(
+                IllegalArgumentException("startTime must be greater than 0, but was $startTime"),
+            )
+        }
             val now = timeProvider.now()
-            val effectiveStart = if (startTime == 0L) now else startTime
-            return networkStatsProvider.queryMobileBytes(effectiveStart, now)
+        return networkStatsProvider.queryMobileBytes(startTime, now)
         }
 
         suspend fun resetBaseline(
             identity: String,
-            status: MutableStateFlow<TrackingStatus>,
-            onSuccess: suspend () -> Unit,
+            updateStatus: (TrackingStatus) -> Unit,
+            incrementRetryOnFailure: Boolean = false,
+            onSuccess: suspend () -> Unit = {},
         ) {
             try {
+                // Ensure tracking window is initialized. If lastResetDate was 0, it becomes 'now'.
+                simUsageResetRepository.ensureTrackingWindowInitialized(identity)
+
                 val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
                 if (usage == null) {
                     AppLogger.e("TrafficBaselineManager: timeout fetching usage for $identity during baseline reset")
-                    status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout fetching usage")
+                    updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout fetching usage"))
+                    if (incrementRetryOnFailure) {
+                        incrementRetryCount(identity)
+                    }
                     return
                 }
                 val statsResult = getCurrentMobileBytes(usage.lastResetDate)
@@ -90,7 +107,8 @@ class TrafficBaselineManager
                     AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
 
                     removeRetry(identity)
-                    status.value = TrackingStatus.Active
+                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
+                    updateStatus(TrackingStatus.Active)
                 } else {
                     val message =
                         if (statsResult is StatsResult.Error) {
@@ -99,18 +117,29 @@ class TrafficBaselineManager
                         } else {
                             "Stats unavailable"
                         }
-                    status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+                    updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
+                    if (incrementRetryOnFailure) {
+                        incrementRetryCount(identity)
+                    }
                 }
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException in TrafficTracker", e)
-                status.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+                updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Error in resetBaseline", e)
-                status.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
+                if (incrementRetryOnFailure) {
+                    incrementRetryCount(identity)
+                }
             }
         }
+
+    private suspend fun incrementRetryCount(identity: String) {
+        val count = getRetryCount(identity) ?: 0
+        setRetryCount(identity, count + 1)
+    }
 
         private suspend fun syncLastDataSubIdIfNeeded(
             identity: String,

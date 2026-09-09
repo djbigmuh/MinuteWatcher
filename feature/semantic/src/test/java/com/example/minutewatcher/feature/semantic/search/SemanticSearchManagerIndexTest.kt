@@ -50,7 +50,6 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
                             slot = 1,
                             identity = "sim_1",
                             operatorName = "B",
-                            isActive = true,
                             entities =
                                 mapOf(
                                     PackageType.DATA to createEntity(1, PackageType.DATA, 50),
@@ -162,7 +161,6 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
                             slot = 1,
                             identity = "sim_1",
                             operatorName = "B",
-                            isActive = true,
                             entities =
                                 mapOf(
                                     PackageType.DATA to createEntity(1, PackageType.DATA, 50),

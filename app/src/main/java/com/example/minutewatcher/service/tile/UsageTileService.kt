@@ -24,6 +24,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Service for the Quick Settings tile showing SIM usage information.
+ *
+ * **Contract:**
+ * - Strict TileService/PendingIntent API: only documented constants are valid.
+ *   Passing undocumented values causes SystemUI crashes on some OEM ROMs.
+ *   See: https://developer.android.com/reference/android/service/quicksettings/Tile#setState(int)
+ *   See: https://developer.android.com/reference/android/app/PendingIntent#flags
+ *   Do NOT use @SuppressLint("WrongConstant") — fix the constant instead.
+ */
 @AndroidEntryPoint
 class UsageTileService : TileService() {
     @Inject lateinit var semanticRepository: SemanticRepository
@@ -85,11 +95,6 @@ class UsageTileService : TileService() {
             Intent().setClassName(packageName, navigationProvider.mainActivityClassName).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-        // Strict TileService/PendingIntent API: only documented constants are valid.
-        // Passing undocumented values causes SystemUI crashes on some OEM ROMs.
-        // See: https://developer.android.com/reference/android/service/quicksettings/Tile#setState(int)
-        // See: https://developer.android.com/reference/android/app/PendingIntent#flags
-        // Do NOT use @SuppressLint("WrongConstant") — fix the constant instead.
         val wrapper =
             PendingIntentActivityWrapper(
                 this,
@@ -105,8 +110,8 @@ class UsageTileService : TileService() {
         val tile = qsTile ?: return
         val snapshot = semanticRepository.snapshot.value
 
-        // Filter active SIMs and pick the one with most critical status or just slot 0
-        val activeSims = snapshot.simSnapshots.filter { it.isActive }
+        // Use all SIMs from snapshot (already filtered by active physical SIMs in repository)
+        val activeSims = snapshot.simSnapshots
         if (activeSims.isEmpty()) {
             tile.applyState(TileState.UNAVAILABLE)
             tile.label = getString(R.string.no_sim_found)
@@ -163,11 +168,6 @@ class UsageTileService : TileService() {
     }
 
     private fun Tile.applyState(state: TileState) {
-        // Strict TileService/PendingIntent API: only documented constants are valid.
-        // Passing undocumented values causes SystemUI crashes on some OEM ROMs.
-        // See: https://developer.android.com/reference/android/service/quicksettings/Tile#setState(int)
-        // See: https://developer.android.com/reference/android/app/PendingIntent#flags
-        // Do NOT use @SuppressLint("WrongConstant") — fix the constant instead.
         this.state =
             when (state) {
                 TileState.ACTIVE -> Tile.STATE_ACTIVE

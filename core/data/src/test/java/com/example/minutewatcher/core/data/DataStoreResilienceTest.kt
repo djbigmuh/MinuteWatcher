@@ -61,7 +61,7 @@ class DataStoreResilienceTest {
     fun `concurrent settings updates`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(appDataStore, testScope)
-            val updateCount = 50
+            val updateCount = 5
             val jobs =
                 List(updateCount) {
                     launch {

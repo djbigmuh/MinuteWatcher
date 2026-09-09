@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CancellationException
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -56,10 +58,48 @@ class UpdateCoordinator
         private val usageStateRepository: UsageStateRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : WidgetUpdateCoordinator {
-        override val key: String = "widget_observation"
+    override val key: TrackingKey = TrackingKey.WIDGET_OBSERVATION
 
     private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+    /**
+     * Updates the coordinator status using a prioritized transition rule to prevent race conditions.
+     * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+     */
+    private fun transitionStatus(
+        newStatus: TrackingStatus,
+        force: Boolean = false,
+    ) {
+        _status.update { current ->
+            val currentPrio = getStatusPriority(current)
+            val newPrio = getStatusPriority(newStatus)
+
+            when {
+                force -> newStatus
+                current == newStatus -> current
+                newPrio >= currentPrio -> newStatus
+                // Recovery: Success can clear transient UNKNOWN error
+                newPrio == TrackingStatus.PRIORITY_HEALTHY &&
+                    currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
+
+                else -> current
+            }
+        }
+    }
+
+    private fun getStatusPriority(status: TrackingStatus): Int =
+        when (status) {
+            is TrackingStatus.Error ->
+                when (status.type) {
+                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                }
+
+            is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+            else -> 0
+        }
 
     private var lastSnapshotHash: Int? = null
     private var consecutiveUpdateFailures = 0
@@ -69,6 +109,7 @@ class UpdateCoordinator
     private val stateMutex = Mutex()
 
     private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
+    private val setupJob = AtomicReference<Job?>(null)
     private val monitoringJob = AtomicReference<Job?>(null)
     private val currentObservationJob = AtomicReference<Job?>(null)
     private val currentUpdateJob = AtomicReference<Job?>(null)
@@ -84,19 +125,49 @@ class UpdateCoordinator
          */
         override suspend fun recover() {
             AppLogger.d("UpdateCoordinator: recover() called, resetting all counters")
+
+            // 1. Cancel and join any pending setup (initial SIM wait)
+            setupJob.get()?.let { job ->
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job.cancelAndJoin()
+                } ?: job.cancel()
+            }
+
+            // 2. Cancel and join current observation and monitoring
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                 observationScope.getJob()?.cancelAndJoin()
             }
             observationScope.shutdown()
-            monitoringJob.get()?.cancelAndJoin()
 
-            stateMutex.withLock {
-                observationRestartCount = 0
-                degradedCycleCount = 0
-                lastSnapshotHash = null
-                consecutiveUpdateFailures = 0
-                _status.value = TrackingStatus.Idle
+            monitoringJob.get()?.let { job ->
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job.cancelAndJoin()
+                } ?: job.cancel()
             }
+
+            // 3. Reset state under mutex
+            val stateResetSuccess =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    stateMutex.withLock {
+                        observationRestartCount = 0
+                        degradedCycleCount = 0
+                        lastSnapshotHash = null
+                        consecutiveUpdateFailures = 0
+                        transitionStatus(TrackingStatus.Idle)
+                    }
+                    true
+                } ?: false
+
+            if (!stateResetSuccess) {
+                AppLogger.e("UpdateCoordinator: recovery blocked by stateMutex")
+                transitionStatus(
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Recovery blocked: state lock stuck",
+                    ),
+                )
+            }
+
             widgetUpdater.recover()
 
             isObservationStarted.set(false)
@@ -104,36 +175,42 @@ class UpdateCoordinator
         }
 
         private fun ensureObservationStarted() {
-            // Быстрая проверка: если уже запущено и активно — выходим
+            // Fast check: if already started and active — exit
             if (isObservationStarted.get()) {
                 val job = observationScope.getJob()
                 if (job != null && job.isActive) return
             }
 
-            // Пытаемся захватить право на запуск
+            // Try to capture launch rights
             if (!isObservationStarted.compareAndSet(false, true)) {
-                // Другой поток уже запускает — выходим
+                // Already being launched by another thread — exit
                 return
             }
 
-            scope.launch {
-                try {
-                    usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
-                    AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
-                    setupObservation()
-                } catch (e: CancellationException) {
-                    isObservationStarted.set(false)
-                    throw e
-                } catch (e: Exception) {
-                    isObservationStarted.set(false)
-                    AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
-                    _status.value =
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Failed to start widget observation: ${e.message}",
+            val newSetupJob =
+                scope.launch {
+                    try {
+                        usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
+                        AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
+                        setupObservation()
+                    } catch (e: CancellationException) {
+                        isObservationStarted.set(false)
+                        throw e
+                    } catch (e: Exception) {
+                        isObservationStarted.set(false)
+                        AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
+                        transitionStatus(
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                "Failed to start widget observation: ${e.message}",
+                            ),
                         )
+                    } finally {
+                        setupJob.compareAndSet(coroutineContext.job, null)
+                    }
                 }
-            }
+
+            setupJob.getAndSet(newSetupJob)?.cancel()
         }
 
         @OptIn(FlowPreview::class)
@@ -147,11 +224,12 @@ class UpdateCoordinator
                 val firstSnapshot = waitForInitialSnapshot()
 
                 if (firstSnapshot == null) {
-                    _status.value =
+                    transitionStatus(
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.DATABASE_ERROR,
                             "Widget observation failed to start",
-                        )
+                        ),
+                    )
                     return
                 }
 
@@ -163,16 +241,16 @@ class UpdateCoordinator
                             if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
                         }
 
-                monitoringJob.get()?.cancel()
                 val newJob =
                     observationScope.observe(flow, handler) { snapshot ->
                         processSnapshotSafe(snapshot)
                     }
 
-                currentObservationJob.set(newJob)
-                val monitoring = launchMonitoringJob(newJob)
-                monitoringJob.set(monitoring)
-                _status.value = TrackingStatus.Active
+                stateMutex.withLock {
+                    currentObservationJob.set(newJob)
+                    monitoringJob.getAndSet(launchMonitoringJob(newJob))?.cancel()
+                    transitionStatus(TrackingStatus.Active, force = true)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -253,10 +331,16 @@ class UpdateCoordinator
 
     private fun launchMonitoringJob(newJob: Job): Job? {
         if (!newJob.isActive) return null
-        // Мониторинг завершения: если наблюдение упало — перезапускаем с экспоненциальной задержкой.
+        // Monitoring completion: if observation fails — restart with exponential delay.
         return scope.launch {
                 newJob.join()
-                if (currentObservationJob.get() !== newJob) return@launch
+
+            // Atomically check if this job is still the current one under mutex
+            val isCurrent =
+                stateMutex.withLock {
+                    currentObservationJob.get() === newJob
+                }
+            if (!isCurrent) return@launch
 
             val (restartCount, cycles, isEnteringDegraded) =
                 stateMutex.withLock {
@@ -285,13 +369,19 @@ class UpdateCoordinator
             )
             delay(delayMs.milliseconds)
 
-            if (observationScope.getJob() === newJob) {
+            // Re-check current job before initiating restart
+            val shouldInitiateRestart =
+                stateMutex.withLock {
+                    currentObservationJob.get() === newJob
+                }
+
+            if (shouldInitiateRestart) {
                 stateMutex.withLock {
                     lastSnapshotHash = null
                     consecutiveUpdateFailures = 0
-                    // В деградированном режиме оставляем Error для информирования UI
+                    // In degraded mode keep Error status for UI info
                     if (restartCount < MAX_OBSERVATION_RESTARTS) {
-                        _status.value = TrackingStatus.Idle
+                        transitionStatus(TrackingStatus.Idle)
                     }
                 }
                 isObservationStarted.set(false)
@@ -309,10 +399,12 @@ class UpdateCoordinator
                 "UpdateCoordinator: observation restart limit reached ($restartCount) " +
                     "and max degraded cycles reached ($cycles). Permanent stop.",
             )
-            _status.value =
+            transitionStatus(
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.DATABASE_ERROR,
                     "Widget observation permanently stopped after $cycles degraded cycles",
+                ),
+                force = true,
                 )
             return -1 // Signal to stop
         }
@@ -321,11 +413,12 @@ class UpdateCoordinator
             "UpdateCoordinator: observation restart limit reached ($restartCount), " +
                 "entering degraded mode (cycle $cycles)",
         )
-        _status.value =
+        transitionStatus(
             TrackingStatus.Error(
                 TrackingStatus.ErrorType.DATABASE_ERROR,
                 "Widget observation failed after $restartCount restarts. " +
                     "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
+            ),
             )
         stateMutex.withLock {
             observationRestartCount = 0
@@ -406,18 +499,21 @@ class UpdateCoordinator
         newHash: Int,
     ) {
         stateMutex.withLock {
-            if (result.isSuccess) {
-                _status.value = TrackingStatus.Active
-                observationRestartCount = 0
-                degradedCycleCount = 0
-                consecutiveUpdateFailures = 0
-                // Записываем хэш только если он изменился или не был установлен.
-                // Это предотвращает перезапись более новым хэшем при гонках.
-                if (lastSnapshotHash == null || lastSnapshotHash != newHash) {
+            when (result) {
+                is WidgetUpdateResult.Success -> {
+                    transitionStatus(TrackingStatus.Active, force = true)
+                    observationRestartCount = 0
+                    degradedCycleCount = 0
+                    consecutiveUpdateFailures = 0
+                    // Update hash of the latest successfully processed state.
                     lastSnapshotHash = newHash
                 }
-            } else if ((result is WidgetUpdateResult.Failure) && !result.wasCoalesced) {
-                processFailureResult(result)
+
+                is WidgetUpdateResult.Failure -> {
+                    if (!result.wasCoalesced) {
+                        processFailureResult(result)
+                    }
+                }
             }
         }
     }
@@ -433,10 +529,11 @@ class UpdateCoordinator
                     "UpdateCoordinator: terminal limit exceeded (TransactionTooLarge), " +
                         "resetting hash to force retry on next data change",
                 )
-                _status.value =
+                transitionStatus(
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.NOT_SUPPORTED,
                         "Widget size limit exceeded",
+                    ),
                     )
                 lastSnapshotHash = null
             }
@@ -445,10 +542,11 @@ class UpdateCoordinator
                 // For terminal failures we reset hash to ensure the next data change
                 // will trigger a fresh update attempt, bypassing the hash-match check.
                 AppLogger.w("UpdateCoordinator: terminal failure encountered, resetting hash")
-                _status.value =
+                transitionStatus(
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Terminal widget update failure",
+                    ),
                     )
                 lastSnapshotHash = null
             }
@@ -466,11 +564,12 @@ class UpdateCoordinator
                     "UpdateCoordinator: reached max consecutive failures ($consecutiveUpdateFailures). " +
                         "Updates suppressed.",
                 )
-                _status.value =
+                transitionStatus(
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.DATABASE_ERROR,
                         "Widget updates suppressed after $consecutiveUpdateFailures failures",
-                    )
+                    ),
+                )
             }
         }
 

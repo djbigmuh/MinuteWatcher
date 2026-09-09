@@ -36,20 +36,21 @@ import kotlinx.coroutines.CancellationException
  * Основной класс виджета MinuteWatcher.
  * Рендерит состояние SIM-карт на домашнем экране.
  *
+ * @param forceFullRender If true, forces the full layout rendering by ignoring
+ * the global `widgetLimitExceeded` flag during this specific render pass.
+ * This is used for probe updates to see if the full layout can now fit.
+ *
+ * **Note:** Since Glance `updateAll` updates all instances of the widget,
+ * calling it with a specific `forceFullRender` value will affect all
+ * currently placed widgets on the home screen for that render pass.
+ *
  * Строгое соблюдение API: все компоненты используют Glance API
  * в соответствии с документацией. На AOSP Glance обеспечивает
  * стабильный рендер; отклонения возможны только на кастомных прошивках.
  */
-class MinutesGlanceWidget : GlanceAppWidget() {
-    companion object {
-        /**
-         * Flag to override the global limit exceeded setting during a probe update.
-         * Only valid within the same process.
-         */
-        @Volatile
-        var isProbeActive: Boolean = false
-    }
-
+class MinutesGlanceWidget(
+    internal val forceFullRender: Boolean = false,
+) : GlanceAppWidget() {
     /**
      * Hilt EntryPoint для виджета.
      * Позволяет получать зависимости в виджете через EntryPointAccessors.
@@ -162,7 +163,7 @@ class MinutesGlanceWidget : GlanceAppWidget() {
         val settingsState =
             try {
                 val loaded = widgetSettingsLoader.load()
-                if (isProbeActive) loaded.copy(widgetLimitExceeded = false) else loaded
+                if (forceFullRender) loaded.copy(widgetLimitExceeded = false) else loaded
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

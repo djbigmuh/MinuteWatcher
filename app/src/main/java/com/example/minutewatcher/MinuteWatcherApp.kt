@@ -8,6 +8,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.data.CallTracker
+import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
@@ -29,6 +31,12 @@ class MinuteWatcherApp :
 
     @Inject lateinit var usageStateRepository: UsageStateRepository
 
+    @Inject
+    lateinit var callTracker: CallTracker
+
+    @Inject
+    lateinit var trafficTracker: TrafficTracker
+
     @Inject @ApplicationScope
     lateinit var applicationScope: CoroutineScope
 
@@ -37,6 +45,9 @@ class MinuteWatcherApp :
         AppLogger.init(this)
 
         WorkManager.initialize(this, workManagerConfiguration)
+
+        // Eagerly start trackers to ensure they are ready for events and UI observation.
+        callTracker.ensureStarted()
 
         // Defer semantic layer initialization to improve cold start performance.
         // Using WorkManager ensures that initialization is attempted reliably even if the

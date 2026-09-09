@@ -5,7 +5,8 @@ Thank you for your interest in contributing to MinuteWatcher! To maintain high c
 ## Development Environment Requirements
 - **JDK 21** (Temurin 21.0.12+) is the mandatory version for all developers.
 - Higher versions (like **JDK 25**) must not be present in the system `PATH` as they cause compatibility issues with Detekt 1.x.
-- Always use `org.gradle.java.home` in your `gradle.properties` to ensure consistency.
+- Set your JDK path locally via the `JAVA_HOME` environment variable or in your user-level
+  `~/.gradle/gradle.properties` (using `org.gradle.java.home`). Do not commit this setting to the project repository.
 
 ## Testing Policy
 
@@ -71,3 +72,13 @@ As a general rule, we prefer stable releases. However, some non-stable versions 
 
 - **Gradle Version Catalog:** When updating `AGP` (Android Gradle Plugin) or `Kotlin` versions, you MUST update both
   `gradle/libs.versions.toml` and `gradle/build-logic.versions.toml` to keep the main project and build-logic in sync.
+
+## Build Performance
+
+Current build and test execution settings include several "stability workarounds" that may impact performance:
+
+- `org.gradle.parallel=false` and `org.gradle.configuration-cache=false` in `gradle.properties`.
+- `maxParallelForks = 1` and `forkEvery = 1` for unit tests to prevent memory leaks and race conditions in
+  Robolectric/Hilt tests.
+  These settings are intentional for the current project state and should not be changed without a comprehensive
+  verification of CI stability.

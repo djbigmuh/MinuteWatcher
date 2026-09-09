@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -44,14 +45,15 @@ class InitialSetupWorker
                     AppLogger.w("InitialSetupWorker: Auto-reset failed with error, continuing.", e)
                 }
 
-                // Reset traffic baseline after reboot for the current default data SIM
-                val activeSimsForTraffic = getActiveSimsWithRetry()
-                val defaultDataSubId = deps.permissionManager.getDefaultDataSubscriptionId()
-                activeSimsForTraffic
-                    .filter { (it.subscriptionId == defaultDataSubId) || it.isDefaultData }
-                    .forEach { info ->
-                        deps.trafficTracker.resetBaseline(info.identity.stableId)
-                    }
+                // Update traffic usage after reboot to capture any traffic since last update.
+                // updateTrafficUsage() correctly handles baseline alignment and SIM changes.
+                try {
+                    deps.trafficTracker.updateTrafficUsage()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("InitialSetupWorker: Traffic update failed, continuing.", e)
+                }
 
                 // Final refresh after all changes to capture results of auto-reset
                 deps.usageStateRepository.refresh()
@@ -64,6 +66,8 @@ class InitialSetupWorker
                     deps.workScheduler.schedulePeriodicUsageCheck()
                 }
 
+                deps.migrationFlagsRepository.setInitialSetupCompleted(true)
+
                 return Result.success()
             } catch (e: CancellationException) {
                 throw e
@@ -71,16 +75,10 @@ class InitialSetupWorker
                 AppLogger.w("InitialSetupWorker: Network or storage error, retrying. ${e.message}")
                 return Result.retry()
             } catch (e: SecurityException) {
-                try {
-                    AppLogger.e("InitialSetupWorker: Permission error (unexpected)", e)
-                } catch (_: Exception) {
-                }
+                AppLogger.e("InitialSetupWorker: Permission error (unexpected)", e)
                 return Result.failure()
             } catch (e: Exception) {
-                try {
-                    AppLogger.e("InitialSetupWorker failed due to unexpected error", e)
-                } catch (_: Exception) {
-                }
+                AppLogger.e("InitialSetupWorker failed due to unexpected error", e)
                 return Result.failure()
             }
         }
@@ -192,27 +190,28 @@ class InitialSetupWorker
     private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =
         try {
             var totalFailures = 0
-            var hasPartialFailure = false
+            var totalConflicts = 0
             activeSims.forEach { info ->
                 val outcome = deps.migrationService.migrateLegacyData(info.identity)
                 totalFailures += outcome.failures
-                if (outcome.partialFailure) {
-                    hasPartialFailure = true
+                totalConflicts += outcome.conflicts
                 }
+
+            if (totalConflicts > 0) {
+                AppLogger.w(
+                    "InitialSetupWorker: Migration resolved $totalConflicts conflicts (legacy values backed up).",
+                )
             }
 
-            if ((totalFailures > 0) || hasPartialFailure) {
-                AppLogger.e(
-                    "InitialSetupWorker: Migration finished with failures or conflicts " +
-                        "(failures=$totalFailures, partial=$hasPartialFailure)",
-                )
+            if (totalFailures > 0) {
+                AppLogger.e("InitialSetupWorker: Migration finished with $totalFailures failures.")
                 if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
                     AppLogger.w("InitialSetupWorker: Retrying migration (attempt $runAttemptCount)")
                     return Result.retry()
                 } else {
                     AppLogger.e(
                         "InitialSetupWorker: Max migration attempts reached. " +
-                            "Marking as completed despite failures/conflicts.",
+                            "Marking as completed despite failures.",
                     )
                 }
             }
@@ -233,9 +232,15 @@ class InitialSetupWorker
                 .firstWithTimeout()
                 ?.let { return it }
 
-            AppLogger.w("InitialSetupWorker: observeActiveSims timed out, retrying with 15s...")
+            AppLogger.w(
+                "InitialSetupWorker: observeActiveSims timed out, retrying with " +
+                    "${Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS / Constants.Time.MILLIS_IN_SECOND}s...",
+            )
 
-            val secondAttempt = deps.simIdentityRepository.observeActiveSims().firstWithTimeout(15000L)
+            val secondAttempt =
+                deps.simIdentityRepository.observeActiveSims().firstWithTimeout(
+                    Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS,
+                )
             return secondAttempt ?: throw IOException("Timeout observing active SIMs")
         }
 

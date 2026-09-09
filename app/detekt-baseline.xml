@@ -2,7 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>MaxLineLength:UsageTileService.kt$UsageTileService$// WrongConstant is suppressed because Intent.FLAG_ACTIVITY_NEW_TASK is the correct flag for starting an activity from a Service,</ID>
-    <ID>TooManyFunctions:MainActivity.kt$MainActivity : AppCompatActivity</ID>
+      <ID>TooManyFunctions:MainActivity.kt:MainActivity : AppCompatActivity</ID>
   </CurrentIssues>
 </SmellBaseline>

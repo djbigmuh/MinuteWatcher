@@ -15,6 +15,7 @@ import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -29,8 +30,12 @@ import kotlin.math.roundToLong
  * Tracks and manages call duration and traffic usage for SIM identities.
  * AOSP DataStore compliant.
  * Safe to call from any coroutine context.
+ *
+ * NOTE: Suppressing TooManyFunctions as this repository consolidates all usage-related persistence logic
+ * for calls and traffic, implementing multiple domain interfaces for a unified DataStore source.
  */
 @Singleton
+@Suppress("TooManyFunctions")
 class SimUsageRepositoryImpl
     @Inject
     constructor(
@@ -334,6 +339,61 @@ class SimUsageRepositoryImpl
                 prefs[DataStoreKeys.lastTotalBytesKey(identity)] = totalBytes
             }
         }
+
+    override suspend fun ensureTrackingWindowInitialized(identity: String): Boolean {
+        if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) return false
+
+        return resetMutex.withLock {
+            var initialized = false
+            dataStore.edit { prefs ->
+                val lastResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: 0L
+                if (lastResetDate == 0L) {
+                    val now = timeProvider.now()
+                    prefs[DataStoreKeys.lastResetDateKey(identity)] = now
+                    // Window starts now, so initial total bytes in [now, now] is 0.
+                    prefs[DataStoreKeys.lastTotalBytesKey(identity)] = 0L
+                    AppLogger.d("Initialized tracking window for $identity: lastResetDate=$now, baseline=0")
+                    initialized = true
+                }
+            }
+            initialized
+        }
+    }
+
+    override fun getBaselineRetryCount(identity: String): Flow<Int?> {
+        if (SimConstants.isInvalid(identity)) return flowOf(null)
+        return dataStore.data.map { it[DataStoreKeys.baselineRetryCountKey(identity)] }
+    }
+
+    override suspend fun setBaselineRetryCount(
+        identity: String,
+        count: Int?,
+    ) {
+        if (SimConstants.isInvalid(identity)) return
+        dataStore.edit { prefs ->
+            val key = DataStoreKeys.baselineRetryCountKey(identity)
+            if (count == null) {
+                prefs.remove(key)
+            } else {
+                prefs[key] = count
+            }
+        }
+    }
+
+    override suspend fun cleanupBaselineRetries(activeIdentities: Set<String>) {
+        dataStore.edit { prefs ->
+            val allKeys = prefs.asMap().keys.toList() // Avoid concurrent modification
+            val prefix = "baseline_retry_count_"
+            allKeys.forEach { key ->
+                if (key.name.startsWith(prefix)) {
+                    val identity = key.name.removePrefix(prefix)
+                    if (identity !in activeIdentities) {
+                        prefs.remove(key)
+                    }
+                }
+            }
+        }
+    }
 
         companion object {
             /**

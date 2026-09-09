@@ -1,12 +1,11 @@
 [versions]
 agp = "9.4.0"
-kotlin = "2.3.10"
-kotlinComposePlugin = "2.4.10"
+kotlin = "2.4.10"
 coreKtx = "1.19.0"
 hiltVersion = "2.60.1"
 lifecycle = "2.11.0"
 datastore = "1.2.1"
-ksp = "2.3.10"
+ksp = "2.3.11"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 androidxTestCore = "1.6.1"
@@ -37,7 +36,7 @@ colorpickerview = "2.4.0"
 appsearch = "1.1.0"
 kotlinxCoroutines = "1.11.0"
 kotlinxCoroutinesTest = "1.11.0"
-detekt = "1.23.8"
+detekt = "2.0.0-alpha.6"
 screenshot = "0.0.1-alpha16"
 
 [libraries]
@@ -116,10 +115,10 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 androidTest = { id = "com.android.test", version.ref = "agp" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinComposePlugin" }
+kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 hiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "hiltVersion" }
 kotlinKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidxBaselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "14.2.0" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
 screenshot = { id = "com.android.compose.screenshot", version.ref = "screenshot" }

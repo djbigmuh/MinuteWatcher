@@ -22,7 +22,7 @@ class WidgetErrorClassifier
                 is IllegalArgumentException -> {
                     if (isRemoteViewsLimitException(e)) {
                         logLimitExceeded(e, isFullAttempt)
-                        UpdateResult.LimitExceeded
+                        UpdateResult.LimitExceeded(wasFull = isFullAttempt)
                     } else {
                         AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
                         UpdateResult.GenericFailure(isRetryable = true)
@@ -42,7 +42,7 @@ class WidgetErrorClassifier
                 is RuntimeException -> {
                     if (isRemoteViewsLimitException(e)) {
                         logLimitExceeded(e, isFullAttempt)
-                        UpdateResult.LimitExceeded
+                        UpdateResult.LimitExceeded(wasFull = isFullAttempt)
                     } else {
                         AppLogger.e("Widget update failed with RuntimeException: ${e.message}", e)
                         UpdateResult.GenericFailure(isRetryable = true)

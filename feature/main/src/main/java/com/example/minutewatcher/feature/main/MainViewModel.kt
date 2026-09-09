@@ -12,6 +12,7 @@ import com.example.minutewatcher.feature.main.controller.MainInitializationContr
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -46,6 +47,7 @@ class MainViewModel
     val showTrafficLimitationDialog = dialogController.showTrafficLimitationDialog
     val showUsageAccessDialog = dialogController.showUsageAccessDialog
     val showOnboardingDialog: StateFlow<Boolean> get() = dialogController.showOnboardingDialog
+    val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
         val trackingBannerState: StateFlow<TrackingBannerState> get() = controllers.banner.trackingBannerState
         val uiState: StateFlow<SimCardListState> get() = controllers.simData.uiState

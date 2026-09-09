@@ -1,10 +1,13 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,8 +29,13 @@ class TrackingStatusRepositoryImpl
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if recovery fails.
          */
-        override suspend fun recoverTracking(key: String) {
-            statusProviders.find { it.key == key }?.recover()
+        override suspend fun recoverTracking(key: TrackingKey) {
+            val provider = statusProviders.find { it.key == key }
+            if (provider != null) {
+                provider.recover()
+            } else {
+                AppLogger.e("TrackingStatusRepository: No provider found for key $key. DI configuration error?")
+            }
         }
 
         /**
@@ -35,7 +43,10 @@ class TrackingStatusRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun observeTrackingStatus(): Flow<Map<String, TrackingStatus>> {
+        override fun observeTrackingStatus(): Flow<Map<TrackingKey, TrackingStatus>> {
+            if (statusProviders.isEmpty()) {
+                return flowOf(emptyMap())
+            }
             val flows =
                 statusProviders.map { provider ->
                     provider.status.map { status -> provider.key to status }

@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.CallSessionRepository
+import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -71,17 +72,40 @@ class TrafficTrackerTest {
     private val permissionManager: PermissionManager = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
     private val permissionChangesFlow = MutableSharedFlow<Unit>(replay = 1)
+    private val dataChangeNotifier: DataChangeNotifier = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1700000000000L)
+    private val retryCounts = mutableMapOf<String, MutableStateFlow<Int?>>()
 
     @Before
     fun setup() {
         initTestLogger()
+        retryCounts.clear()
         setupPermissionMocks()
         setupIdentityMocks()
         setupUsageMocks()
         whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(0L))
-        whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(0L))
+        whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
+
+        whenever(simUsageResetRepository.getBaselineRetryCount(any())).thenAnswer {
+            val identity = it.arguments[0] as String
+            retryCounts.getOrPut(identity) { MutableStateFlow(null) }
+        }
+        runBlocking {
+            whenever(simUsageResetRepository.setBaselineRetryCount(any(), any())).thenAnswer {
+                val identity = it.arguments[0] as String
+                val count = it.arguments[1] as? Int
+                retryCounts.getOrPut(identity) { MutableStateFlow(null) }.value = count
+            }
+            whenever(simUsageResetRepository.cleanupBaselineRetries(any())).thenAnswer {
+                val active = it.arguments[0] as Set<String>
+                retryCounts.entries.removeIf { !active.contains(it.key) }
+            }
+        }
+
         whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
+        runBlocking {
+            whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
+        }
     }
 
     private fun setupPermissionMocks() {
@@ -531,7 +555,6 @@ class TrafficTrackerTest {
             }
 
             val localTracker = createTracker(backgroundScope)
-            localTracker.ensureStarted()
             testScheduler.advanceUntilIdle()
 
             shouldThrow.set(false)
@@ -559,7 +582,6 @@ class TrafficTrackerTest {
             }
 
             val localTracker = createTracker(backgroundScope)
-            localTracker.ensureStarted()
             testScheduler.advanceUntilIdle()
 
             shouldThrow.set(false)
@@ -656,11 +678,57 @@ class TrafficTrackerTest {
             testScheduler.advanceUntilIdle()
             updateJob.join()
 
-            // Проверяем, что статус в итоге остался Error, так как catch блок в updateTrafficUsage его восстановил
-            val finalStatus = tracker.status.value
-            val isError = finalStatus is TrackingStatus.Error
-            assertTrue("Expected Error status to be preserved after race, but was $finalStatus", isError)
-            assertEquals(TrafficUpdateTimeoutException.MESSAGE, (finalStatus as TrackingStatus.Error).message)
+            // Verification: Since we removed the yield-restore logic, the Active status set by the
+            // RacingStatus proxy (simulating a late-finishing update) should NOT be overwritten by the timeout error.
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+        }
+
+    @Test
+    fun `updateTrafficUsage calls notifyDataChanged on successful write`() =
+        runTest {
+            val tracker = startTracker()
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(35000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            tracker.updateTrafficUsage()
+
+            verify(dataChangeNotifier).notifyDataChanged(updateWidget = eq(true), force = eq(false))
+        }
+
+    @Test
+    fun `updateTrafficUsage with fetchActiveSims timeout does NOT cleanup retries`() =
+        runTest {
+            val tracker = startTracker()
+
+            // 1. Force timeout in fetchActiveSims
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+
+            tracker.updateTrafficUsage()
+
+            // 2. Status should be Error
+            val status = tracker.status.value
+            assertTrue("Status should be Error, but was $status", status is TrackingStatus.Error)
+            assertEquals("Timeout fetching active sims", (status as TrackingStatus.Error).message)
+
+            // 3. Verify cleanupBaselineRetries was NOT called
+            verify(simUsageResetRepository, never()).cleanupBaselineRetries(any())
+        }
+
+    @Test
+    fun `updateTrafficUsage with empty active SIMs DOES cleanup retries`() =
+        runTest {
+            val tracker = startTracker()
+
+            // 1. Return empty list from fetchActiveSims
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+
+            tracker.updateTrafficUsage()
+
+            // 2. Status should be Idle
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
+
+            // 3. Verify cleanupBaselineRetries was called with empty set
+            verify(simUsageResetRepository).cleanupBaselineRetries(eq(emptySet()))
         }
 
     private fun setupRaceProxy(tracker: TrafficTracker) {
@@ -724,13 +792,13 @@ class TrafficTrackerTest {
                 permissionManager,
                 timeProvider,
                 networkStatsProvider,
+                dataChangeNotifier,
             )
         val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
         val simChangeHandler =
             TrafficSimChangeHandler(
                 callSessionRepository,
                 simIdentityRepository,
-                simUsageResetRepository,
                 baselineManager,
             )
         val targetResolver = TrafficTargetResolver(permissionManager)
@@ -747,6 +815,7 @@ class TrafficTrackerTest {
             errorHandler = TrafficErrorHandler(),
             permissionChecker = TrafficPermissionChecker(permissionManager),
             permissionStateNotifier = permissionStateNotifier,
+            dataChangeNotifier = dataChangeNotifier,
             scope = scope,
         )
     }
@@ -766,6 +835,6 @@ private fun createSimUsage(id: String) =
         trafficAdjustmentGb = 0f,
         autoReset = true,
         autoResetDay = 1,
-        lastResetDate = 0L,
+        lastResetDate = 1700000000000L - 1000000L,
         rolloverEnabled = false,
     )

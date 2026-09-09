@@ -4,6 +4,7 @@ import androidx.appsearch.app.AppSearchResult
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
@@ -23,6 +24,68 @@ import java.util.concurrent.atomic.AtomicInteger
 @Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
+    @Test
+    fun `tryLock failure does not reset or update lastSnapshotHash`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+
+            // 1. Initial successful indexing to set hash
+            val snapshot1 = createSnapshotWithOneSim()
+            manager.indexSnapshot(snapshot1)
+
+            val hash1 = SnapshotUtils.calculateContentHash(snapshot1)
+            assertEquals(hash1, getPrivateField(manager, "lastSnapshotHash"))
+
+            // 2. Lock mutex and try to index another snapshot
+            val indexMutex = getPrivateField(manager, "indexMutex") as Mutex
+            indexMutex.lock()
+            try {
+                val snapshot2 = createTestSnapshot(101)
+                val result = manager.indexSnapshot(snapshot2)
+                assertEquals(SemanticSearchManager.IndexResult.MutexTimeout, result)
+
+                // 3. Verify hash is still the old one and NOT null
+                assertEquals(
+                    "Hash should remain unchanged on mutex timeout",
+                    hash1,
+                    getPrivateField(manager, "lastSnapshotHash"),
+                )
+            } finally {
+                indexMutex.unlock()
+            }
+        }
+
+    @Test
+    fun `recover finishes within timeout even if indexMutex is stuck`() =
+        runTest(testDispatcher) {
+            val manager = createManager(backgroundScope)
+            val indexMutex = getPrivateField(manager, "indexMutex") as Mutex
+
+            indexMutex.lock()
+            try {
+                // recover() should not hang forever
+                manager.recover()
+
+                assertTrue(
+                    "Status should be Error due to blocked recovery, but was ${manager.status.value}",
+                    manager.status.value is TrackingStatus.Error,
+                )
+                val status = manager.status.value as TrackingStatus.Error
+                assertTrue(status.message?.contains("Recovery blocked") == true)
+            } finally {
+                indexMutex.unlock()
+            }
+        }
+
+    private fun getPrivateField(
+        obj: Any,
+        fieldName: String,
+    ): Any? {
+        val field = obj.javaClass.getDeclaredField(fieldName)
+        field.isAccessible = true
+        return field.get(obj)
+    }
+
     @Test
     fun `putDocuments failure sets error status and does not update hash`() =
         runTest(testDispatcher) {
@@ -103,7 +166,6 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                             slot = 1,
                             identity = "sim_1",
                             operatorName = "B",
-                            isActive = true,
                             entities =
                                 mapOf(
                                     PackageType.DATA to createEntity(1, PackageType.DATA, 50),

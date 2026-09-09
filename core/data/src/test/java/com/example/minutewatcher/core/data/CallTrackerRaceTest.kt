@@ -108,7 +108,6 @@ class CallTrackerRaceTest {
         val mutexHolder = CallMutexHolder()
         return CallTracker(
             callSessionRepository = callSessionRepository,
-            dataChangeNotifier = dataChangeNotifier,
             permissionManager = permissionManager,
             scope = testScope,
             attributionResolver = attributionResolver,
@@ -119,6 +118,8 @@ class CallTrackerRaceTest {
                     retryHelper,
                     attributionResolver,
                     mutexHolder,
+                    sessionCleaner,
+                    settingsHandler,
                 ),
             endHandler =
                 CallEndHandler(
@@ -127,11 +128,13 @@ class CallTrackerRaceTest {
                     retryHelper,
                     attributionResolver,
                     mutexHolder,
+                    sessionCleaner,
+                    settingsHandler,
+                    endResolver,
+                    dataChangeNotifier,
                 ),
             sessionCleaner = sessionCleaner,
-            settingsHandler = settingsHandler,
             permissionStateNotifier = permissionStateNotifier,
-            callEndResolver = endResolver,
             callMutexHolder = mutexHolder,
         )
     }

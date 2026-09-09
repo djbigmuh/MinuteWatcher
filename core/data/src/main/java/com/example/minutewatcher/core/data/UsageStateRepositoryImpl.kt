@@ -3,6 +3,8 @@ package com.example.minutewatcher.core.data
 import android.content.Context
 import com.example.minutewatcher.core.android.util.SimCardMapper
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
+import com.example.minutewatcher.core.data.semantic.SemanticVersion
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -32,12 +34,47 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
+
+/**
+ * Assembler for [GlobalSnapshot] that ensures [DataRefreshNotifier.RefreshEvent] flags are one-shot.
+ */
+internal class SnapshotAssembler {
+    private val lastProcessedEventId = AtomicLong(-1)
+
+    fun assemble(
+        usages: List<SimUsage>,
+        event: DataRefreshNotifier.RefreshEvent,
+        timestamp: Long,
+        semanticVersion: SemanticVersion,
+        semanticCapabilities: SemanticCapabilities,
+        mapSimSnapshot: (SimUsage, Long) -> SimSnapshot,
+    ): GlobalSnapshot {
+        val simSnapshots = usages.map { mapSimSnapshot(it, timestamp) }
+
+        // If this event has already been used for a snapshot, clear its flags.
+        // This makes isManual/suppressWidgetUpdate one-shot.
+        val isNewEvent = lastProcessedEventId.getAndSet(event.eventId) != event.eventId
+        val isManual = if (isNewEvent) event.isManual else false
+        val suppress = if (isNewEvent) event.suppressWidgetUpdate else false
+
+        return GlobalSnapshot(
+            version = semanticVersion.getVersion(),
+            timestamp = timestamp,
+            simSnapshots = simSnapshots,
+            capabilities = semanticCapabilities.getCapabilities(),
+            isManualUpdate = isManual,
+            suppressWidgetUpdate = suppress,
+        )
+    }
+}
 
 /**
  * Implementation of [UsageStateRepository] that aggregates usage data into [GlobalSnapshot]s.
@@ -55,22 +92,16 @@ class UsageStateRepositoryImpl
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository {
     private val isDataLoadedSet = AtomicBoolean(false)
+    private val assembler = SnapshotAssembler()
 
     override fun isDataLoaded(): Boolean = isDataLoadedSet.get()
 
-        private val simUsagesFlow: Flow<List<SimUsage>> =
+    private val sharedSimUsagesFlow: StateFlow<List<SimUsage>> =
             deps.simIdentityRepository
                 .observeActiveSims()
                 .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                 .distinctUntilChanged()
                 .flatMapLatest { sims ->
-                    val activeSlots =
-                        sims
-                            .asSequence()
-                            .map { it.slotIndex }
-                            .toSet()
-                    SimCardMapper.cleanupSlots(activeSlots)
-
                     if (sims.isEmpty()) {
                         flowOf(emptyList())
                     } else {
@@ -82,33 +113,27 @@ class UsageStateRepositoryImpl
                             },
                         ) { it.toList() }
                     }
+                }.onEach { usages ->
+                    if (usages.isNotEmpty()) {
+                        isDataLoadedSet.set(true)
+                    }
                 }.catch { e ->
                     AppLogger.e("UsageStateRepository: Critical error in simUsagesFlow", e)
                     emit(emptyList())
-                }
-
-    private val simUsagesSharedFlow: StateFlow<List<SimUsage>> =
-        combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, _ ->
-            if (usages.isNotEmpty()) {
-                isDataLoadedSet.set(true)
-            }
-            usages
-        }.stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue = emptyList(),
-            )
+                }.stateIn(
+                    scope = scope,
+                    started = SharingStarted.Eagerly,
+                    initialValue = emptyList(),
+                )
 
         /**
          * Returns a flow of all active SIM usages.
-         *
-         * Combines persistent usage data with real-time refresh events.
          *
          * @return [Flow] of [SimUsage] list.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          */
-        override fun observeSimUsages(): Flow<List<SimUsage>> = simUsagesSharedFlow
+        override fun observeSimUsages(): Flow<List<SimUsage>> = sharedSimUsagesFlow
 
         /**
          * Returns a flow of UI models for all active SIM cards.
@@ -120,7 +145,7 @@ class UsageStateRepositoryImpl
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> =
-            observeSimUsages()
+            sharedSimUsagesFlow
                 .map { usages ->
                     usages
                         .asSequence()
@@ -131,26 +156,16 @@ class UsageStateRepositoryImpl
                 }
 
         private val snapshotFlow: StateFlow<GlobalSnapshot> =
-            combine(simUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, event ->
-                createSnapshot(usages, event)
+            combine(sharedSimUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, event ->
+                assembler.assemble(
+                    usages = usages,
+                    event = event,
+                    timestamp = deps.timeProvider.now(),
+                    semanticVersion = deps.semanticVersion,
+                    semanticCapabilities = deps.semanticCapabilities,
+                    mapSimSnapshot = { usage, ts -> mapSimSnapshot(usage, ts) },
+                )
             }.stateIn(scope, SharingStarted.Eagerly, createEmptySnapshot())
-
-        private fun createSnapshot(
-            usages: List<SimUsage>,
-            event: DataRefreshNotifier.RefreshEvent,
-        ): GlobalSnapshot {
-            val timestamp = deps.timeProvider.now()
-            val simSnapshots = usages.map { mapSimSnapshot(it, timestamp) }
-
-            return GlobalSnapshot(
-                version = deps.semanticVersion.getVersion(),
-                timestamp = timestamp,
-                simSnapshots = simSnapshots,
-                capabilities = deps.semanticCapabilities.getCapabilities(),
-                isManualUpdate = event.isManual,
-                suppressWidgetUpdate = event.suppressWidgetUpdate,
-            )
-        }
 
         private fun mapSimSnapshot(
             usage: SimUsage,
@@ -158,7 +173,6 @@ class UsageStateRepositoryImpl
         ): SimSnapshot {
             val slot = usage.slotIndex
             val operatorName = usage.operator
-            val isActive = true // Every item in usages corresponds to an active physical SIM
 
             val minutes =
                 MinutesModel.calculate(
@@ -198,7 +212,6 @@ class UsageStateRepositoryImpl
                 slot = slot,
                 identity = usage.identity,
                 operatorName = operatorName,
-                isActive = isActive,
                 entities = entities,
                 autoResetDay = usage.autoResetDay,
             )

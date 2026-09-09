@@ -8,7 +8,9 @@ sealed class UpdateResult {
         val wasFull: Boolean,
     ) : UpdateResult()
 
-    data object LimitExceeded : UpdateResult()
+    data class LimitExceeded(
+        val wasFull: Boolean,
+    ) : UpdateResult()
 
     data class GenericFailure(
         val isRetryable: Boolean,
@@ -19,13 +21,13 @@ sealed class UpdateResult {
  * High-level outcome of a widget update attempt, guiding the retry loop.
  */
 sealed class UpdateOutcome {
-    data class Success(
-        val shouldStop: Boolean = true,
-    ) : UpdateOutcome()
+    data object Success : UpdateOutcome()
 
     data object Retry : UpdateOutcome()
 
     data object Stop : UpdateOutcome()
 
-    data object LimitExceeded : UpdateOutcome()
+    data class LimitExceeded(
+        val wasFull: Boolean,
+    ) : UpdateOutcome()
 }

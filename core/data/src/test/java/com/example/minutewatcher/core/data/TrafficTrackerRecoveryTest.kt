@@ -63,6 +63,7 @@ class TrafficTrackerRecoveryTest {
             errorHandler = errorHandler,
             permissionChecker = permissionChecker,
             permissionStateNotifier = permissionStateNotifier,
+            dataChangeNotifier = mock(),
             scope = scope.backgroundScope,
         )
 
@@ -79,8 +80,7 @@ class TrafficTrackerRecoveryTest {
                 simFlow
             }
 
-            val tracker = createTracker(this)
-            tracker.ensureStarted()
+            createTracker(this)
             runCurrent()
 
             // Let all 3 init attempts fail

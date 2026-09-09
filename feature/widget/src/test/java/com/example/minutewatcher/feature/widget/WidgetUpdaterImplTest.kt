@@ -271,7 +271,10 @@ class WidgetUpdaterImplTest {
 
             assertTrue("updateAll should return success even on LimitExceeded", result.isSuccess)
             assertEquals("performWidgetUpdate should be called twice", 2, callCount)
-            assertFalse("widgetLimitExceeded flag should be reset", mockSettings.value.widgetLimitExceeded)
+            assertTrue(
+                "widgetLimitExceeded flag should persist after simplified fallback",
+                mockSettings.value.widgetLimitExceeded,
+            )
         }
 
     @Test
@@ -374,8 +377,8 @@ class WidgetUpdaterImplTest {
 
             assertTrue("updateAll should succeed after simplified fallback", result.isSuccess)
             assertEquals(2, callCount)
-            assertFalse(
-                "Limit flag should be reset after successful simplified update",
+            assertTrue(
+                "Limit flag should NOT be reset after successful simplified update",
                 mockSettings.value.widgetLimitExceeded,
             )
         }
@@ -842,30 +845,131 @@ class WidgetUpdaterImplTest {
 
             val updater = createUpdater(backgroundScope, rendererMock)
 
-            // 1. First call: hits LimitExceeded, handleLimitExceeded called once.
+            // 1. First call: hits LimitExceeded.
             updater.updateAll()
+            // 1st attempt FULL (fail), 2nd attempt fallback SIMPLIFIED (fail).
+            // retryManager does up to 3 attempts.
+            // In our case:
+            // Attempt 1: FULL fail -> UpdateOutcome.Retry (limitExceededHandled set to true)
+            // Attempt 2: SIMPLIFIED fail -> UpdateOutcome.Stop (limitExceededHandled is true, wasFull is false)
+            // Call ends with failure.
             assertEquals(1, simplifiedCallCount)
 
             // 2. Second call: resolveRenderMode uses SIMPLIFIED.
-            // Simplified attempt fails -> handleLimitExceeded called.
-            // Flag should prevent the simplified recovery attempt inside handleLimitExceeded.
+            // Simplified attempt fails. limitExceededHandled is reset at start of call.
+            // performSingleUpdate -> SIMPLIFIED fail.
+            // outcome.wasFull is false. It enters else branch -> UpdateOutcome.Stop.
             updater.updateAll()
-            assertEquals("Flag should prevent repeat in handleLimitExceeded", 2, simplifiedCallCount)
+            assertEquals("Should NOT retry simplified if it fails", 2, simplifiedCallCount)
 
             // 3. Third call: success, flag should NOT be reset by success anymore.
-            // Still in SIMPLIFIED mode because limitManager wasn't reset (wasFull=false).
             shouldFail = false
             updater.updateAll()
             assertEquals(3, simplifiedCallCount)
 
-            // 4. Call recover() explicitly to reset the limitExceededHandled flag.
+            // 4. Call recover() explicitly - reset limitExceededHandled (though it's already false at start of calls)
             updater.recover()
 
-            // 5. Fifth call: set to fail again, handleLimitExceeded should be allowed once more.
+            // 5. Fifth call: set to fail again.
             shouldFail = true
             updater.updateAll()
-            // 4th simplified call from performSingleUpdate (still SIMPLIFIED mode),
-            // 5th from handleLimitExceeded (allowed because recover() reset the flag).
-            assertEquals("Flag should be reset after recover", 5, simplifiedCallCount)
+            // 4th simplified call from performSingleUpdate, fails, STOPS.
+            assertEquals(4, simplifiedCallCount)
+        }
+
+    @Test
+    fun `state machine transition FULL to SIMPLIFIED to PROBE to FULL`() =
+        runTest {
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            @Suppress("UNCHECKED_CAST")
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
+                val transform = it.arguments[0] as (AppSettings) -> AppSettings
+                mockSettings.value = transform(mockSettings.value)
+            }
+
+            var shouldExceedLimit = false
+            var fullRenderCount = 0
+            var simplifiedRenderCount = 0
+
+            val rendererMock =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        if (forceFull) {
+                            fullRenderCount++
+                            if (shouldExceedLimit) {
+                                throw IllegalArgumentException("Too large", TransactionTooLargeException())
+                            }
+                        } else {
+                            simplifiedRenderCount++
+                        }
+                    }
+                }
+
+            val updater = createUpdater(backgroundScope, rendererMock)
+
+            // 1. Start in FULL mode, success
+            updater.updateAll()
+            assertEquals(1, fullRenderCount)
+            assertEquals(0, simplifiedRenderCount)
+            assertFalse(mockSettings.value.widgetLimitExceeded)
+
+            // 2. Next update, FULL fails -> switches to SIMPLIFIED
+            shouldExceedLimit = true
+            updater.updateAll()
+            assertEquals(2, fullRenderCount) // Failed attempt
+            assertEquals(1, simplifiedRenderCount) // Fallback success
+            assertTrue("Flag must be set after LimitExceeded", mockSettings.value.widgetLimitExceeded)
+
+            // 3. Subsequent updates should use SIMPLIFIED mode directly (no more full render failures)
+            // exceededUpdateCounter is now 1.
+            repeat(8) {
+                updater.updateAll()
+            }
+            // After 8 more calls, exceededUpdateCounter is 9.
+            assertEquals("Full render count should not increase during simplified cycles", 2, fullRenderCount)
+            assertEquals(9, simplifiedRenderCount) // 1 initial fallback + 8 repeat
+            assertTrue("Flag must persist during simplified cycles", mockSettings.value.widgetLimitExceeded)
+
+            // 4. 10th update since limit set (11th total call to resolveRenderMode) should be a PROBE (FULL)
+            // but shouldProbe() is called in each resolveRenderMode emission.
+            // Let's check:
+            // 2nd updateAll: 1st resolveRenderMode call -> count=1.
+            // repeat(8): 8 calls -> count=9.
+            // Next updateAll: count=10 -> PROBE.
+
+            // Still failing
+            updater.updateAll()
+            assertEquals("10th update since limit should be a PROBE (FULL)", 3, fullRenderCount)
+            assertEquals("PROBE failure should fallback to SIMPLIFIED", 10, simplifiedRenderCount)
+            assertTrue("Flag must still persist after failed PROBE", mockSettings.value.widgetLimitExceeded)
+
+            // 5. 11th update is SIMPLIFIED again (count=11)
+            updater.updateAll()
+            assertEquals(3, fullRenderCount)
+            assertEquals(11, simplifiedRenderCount)
+
+            // 6. Next PROBE (at count=20)
+            repeat(7) { updater.updateAll() } // 12, 13, 14, 15, 16, 17, 18 -> count=18
+            assertEquals(3, fullRenderCount)
+            assertEquals(18, simplifiedRenderCount)
+
+            // Now make FULL succeed
+            shouldExceedLimit = false
+
+            // Call 19: count hits 20 -> PROBE (FULL)
+            updater.updateAll()
+            assertEquals("19th call should attempt FULL probe", 4, fullRenderCount)
+            assertEquals(18, simplifiedRenderCount) // No fallback needed
+            assertFalse("Flag must be cleared after successful FULL probe", mockSettings.value.widgetLimitExceeded)
+
+            // 7. Next update is back to normal FULL (count was reset)
+            updater.updateAll()
+            assertEquals(5, fullRenderCount)
+            assertEquals(18, simplifiedRenderCount)
         }
 }

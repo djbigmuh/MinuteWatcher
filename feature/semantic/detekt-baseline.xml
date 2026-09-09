@@ -2,7 +2,9 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ReturnCount:ShortcutManager.kt$ShortcutManager$private fun createMinutesShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat?</ID>
-    <ID>ReturnCount:ShortcutManager.kt$ShortcutManager$private fun createTrafficShortcut(sim: com.example.minutewatcher.core.model.SimSnapshot): ShortcutInfoCompat?</ID>
+      <ID>
+          ThrowsCount:SemanticSearchManagerTestFixtures.kt:SemanticSearchManagerTestFixtures.FakeAppSearchSessionWrapper$override
+          suspend fun setSchema
+      </ID>
   </CurrentIssues>
 </SmellBaseline>

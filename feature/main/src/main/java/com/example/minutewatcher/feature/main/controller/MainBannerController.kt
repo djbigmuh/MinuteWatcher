@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
@@ -59,10 +61,48 @@ constructor(
     seedRepository: SimIdentitySeedRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) : TrackingStatusProvider {
-    override val key: String = "banners"
+    override val key: TrackingKey = TrackingKey.BANNERS
 
     private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
     override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+    /**
+     * Updates the coordinator status using a prioritized transition rule to prevent race conditions.
+     * Priority: PERMISSION_MISSING > DATABASE_ERROR > UNKNOWN (Error) > Active = Idle.
+     */
+    private fun transitionStatus(
+        newStatus: TrackingStatus,
+        force: Boolean = false,
+    ) {
+        _status.update { current ->
+            val currentPrio = getStatusPriority(current)
+            val newPrio = getStatusPriority(newStatus)
+
+            when {
+                force -> newStatus
+                current == newStatus -> current
+                newPrio >= currentPrio -> newStatus
+                // Recovery: Success can clear transient UNKNOWN error
+                newPrio == TrackingStatus.PRIORITY_HEALTHY &&
+                    currentPrio == TrackingStatus.PRIORITY_TRANSIENT_ERROR -> newStatus
+
+                else -> current
+            }
+        }
+    }
+
+    private fun getStatusPriority(status: TrackingStatus): Int =
+        when (status) {
+            is TrackingStatus.Error ->
+                when (status.type) {
+                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                }
+
+            is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+            else -> 0
+        }
 
         private val appSearchRetryCount = MutableStateFlow(value = 0)
         private val appSearchBannerDismissed = MutableStateFlow(value = false)
@@ -88,9 +128,10 @@ constructor(
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
 
     private val isObservationStarted = AtomicBoolean(false)
-    private val observationScope = FlowObservationScope<Map<String, TrackingStatus>>(scope, "MainBannerController")
+    private val observationScope =
+        FlowObservationScope<Map<TrackingKey, TrackingStatus>>(scope, "MainBannerController")
 
-    val trackingStatus: StateFlow<Map<String, TrackingStatus>> by lazy {
+    val trackingStatus: StateFlow<Map<TrackingKey, TrackingStatus>> by lazy {
         trackingStatusRepository
             .get()
             .observeTrackingStatus()
@@ -154,7 +195,7 @@ constructor(
     )
 
     private data class BannerInputs(
-        val statusMap: Map<String, TrackingStatus>,
+        val statusMap: Map<TrackingKey, TrackingStatus>,
         val phoneGranted: Boolean,
         val usageGranted: Boolean,
         val notificationsGranted: Boolean,
@@ -192,14 +233,15 @@ constructor(
 
                 // Update _status based on banner errors
                 val hasError = statusMap.values.any { it is TrackingStatus.Error }
-                _status.value =
+                transitionStatus(
                     if (hasError) {
                         TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Banner errors detected")
                     } else {
                         TrackingStatus.Active
-                    }
+                    },
+                )
 
-                val appsearch = statusMap["appsearch"]
+                val appsearch = statusMap[TrackingKey.APPSEARCH]
                 val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
                 if (currentErrorType != lastAppSearchErrorType) {
                     lastAppSearchErrorType = currentErrorType
@@ -214,10 +256,11 @@ constructor(
         job.invokeOnCompletion { cause ->
             if (cause != null && cause !is CancellationException) {
                 AppLogger.e("MainBannerController: Banner observation failed", cause)
-                _status.value =
+                transitionStatus(
                     TrackingStatus.Error(
                         TrackingStatus.ErrorType.UNKNOWN,
                         "Banner observation failed: ${cause.message}",
+                    ),
                     )
                 isObservationStarted.set(false)
             }
@@ -237,7 +280,7 @@ constructor(
         isObservationStarted.set(false)
         appSearchRetryCount.value = 0
         appSearchBannerDismissed.value = false
-        _status.value = TrackingStatus.Idle
+        transitionStatus(TrackingStatus.Idle, force = true)
         ensureObservationStarted()
     }
 }

@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
-import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -21,7 +20,6 @@ import kotlin.time.Duration.Companion.milliseconds
 class TrafficSimChangeHandlerTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
-    private val simUsageResetRepository: SimUsageResetRepository = mock()
     private val baselineManager: TrafficBaselineManager = mock()
 
     private lateinit var handler: TrafficSimChangeHandler
@@ -33,7 +31,6 @@ class TrafficSimChangeHandlerTest {
             TrafficSimChangeHandler(
                 callSessionRepository,
                 simIdentityRepository,
-                simUsageResetRepository,
                 baselineManager,
             )
     }

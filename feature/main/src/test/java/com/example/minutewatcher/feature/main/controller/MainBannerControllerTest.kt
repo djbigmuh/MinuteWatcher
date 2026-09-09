@@ -2,11 +2,13 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.PermissionUiState
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,13 +38,14 @@ class MainBannerControllerTest {
     private val trackingStatusRepository: TrackingStatusRepository = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository = mock()
+    private val migrationFlagsRepository: MigrationFlagsRepository = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
 
     private val phonePermissionFlow = MutableStateFlow(value = true)
     private val usageStatsPermissionFlow = MutableStateFlow(value = true)
     private val notificationPermissionFlow = MutableStateFlow(value = true)
     private val appSettingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = true))
-    private val trackingStatusFlow = MutableSharedFlow<Map<String, TrackingStatus>>(replay = 1)
+    private val trackingStatusFlow = MutableSharedFlow<Map<TrackingKey, TrackingStatus>>(replay = 1)
     private val isEphemeralSeedActiveFlow = MutableStateFlow(value = false)
 
     @Before
@@ -55,6 +58,7 @@ class MainBannerControllerTest {
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(appSettingsFlow)
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(trackingStatusFlow)
         whenever(seedRepository.isEphemeralSeedActive).thenReturn(isEphemeralSeedActiveFlow.asStateFlow())
+        whenever(migrationFlagsRepository.isInitialSetupCompleted()).thenReturn(kotlinx.coroutines.flow.flowOf(true))
     }
 
     private fun createController(scope: CoroutineScope) =

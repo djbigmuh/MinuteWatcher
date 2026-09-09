@@ -219,7 +219,7 @@ class MainActivity : AppCompatActivity() {
                 // Injected ioDispatcher prevents potential ANR on slow storage.
                 lifecycleScope.launch(ioDispatcher) {
                     try {
-                        workScheduler.scheduleInitialSetup()
+                        workScheduler.scheduleInitialSetup(force = false)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -251,7 +251,14 @@ class MainActivity : AppCompatActivity() {
                     // Injected ioDispatcher prevents potential ANR on slow storage.
                     launch(ioDispatcher) {
                         try {
-                            workScheduler.scheduleInitialSetup()
+                            val initialSetupCompleted = viewModel.isInitialSetupCompleted.first()
+                            // Only schedule if not completed OR if it's the first time we see these
+                            // permissions in this process (KEEP policy in WorkScheduler will
+                            // handle the "already running" case). Screen rotation will not
+                            // trigger this if setup was already completed.
+                            if (!initialSetupCompleted || lastPermissionState == -1) {
+                                workScheduler.scheduleInitialSetup(force = false)
+                            }
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -376,8 +383,11 @@ class MainActivity : AppCompatActivity() {
                 (if (permissionManager.hasUsageStatsPermission()) STATE_BIT_USAGE else 0) or
                 (if (permissionManager.hasNotificationPermission()) STATE_BIT_NOTIFICATION else 0)
 
-        if (lastPermissionState == -1 || (currentState != lastPermissionState)) {
+        if (lastPermissionState != -1 && (currentState != lastPermissionState)) {
             permissionStateNotifier.notifyChanged()
+            // If permissions changed, we might need a fresh setup run.
+            // KEEP policy will avoid duplication if it's already running.
+            permissionHandler.checkPermissionsAndInit()
         }
         lastPermissionState = currentState
     }

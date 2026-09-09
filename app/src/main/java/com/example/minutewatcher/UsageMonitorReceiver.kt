@@ -21,8 +21,8 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
     ) {
         val action = intent.action
 
-        if ((action != TelephonyManager.ACTION_PHONE_STATE_CHANGED) &&
-            (action != "android.telephony.action.PHONE_STATE_CHANGED")
+        if (action != TelephonyManager.ACTION_PHONE_STATE_CHANGED &&
+            action != ACTION_PHONE_STATE_CHANGED_LEGACY
         ) {
             return
         }
@@ -90,5 +90,14 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
             ).result
             .await() // Ensure enqueuing completes before finish()
         AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
+    }
+
+    companion object {
+        /**
+         * Legacy or OEM-specific action for phone state changes.
+         * Some devices/versions might still use this instead of [TelephonyManager.ACTION_PHONE_STATE_CHANGED].
+         */
+        @VisibleForTesting
+        internal const val ACTION_PHONE_STATE_CHANGED_LEGACY = "android.telephony.action.PHONE_STATE_CHANGED"
     }
 }

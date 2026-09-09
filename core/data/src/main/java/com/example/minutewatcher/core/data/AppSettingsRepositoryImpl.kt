@@ -9,19 +9,25 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.TrackingKey
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
@@ -35,50 +41,106 @@ import kotlin.time.Duration.Companion.milliseconds
  * This implementation is AOSP DataStore compliant and follows strict consistency rules
  * for atomic updates using [Mutex].
  * Safe to call from any coroutine context.
+ *
+ * NOTE: Suppressing TooManyFunctions as this repository manages multiple settings groups
+ * with fine-grained update methods, adhering to AOSP DataStore best practices.
  */
 @Singleton
+@Suppress("TooManyFunctions")
 class AppSettingsRepositoryImpl
     @Inject
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
         @ApplicationScope private val scope: CoroutineScope,
-    ) : AppSettingsRepository {
+    ) : AppSettingsRepository,
+    TrackingStatusProvider {
+    override val key: TrackingKey = TrackingKey.APP_SETTINGS
+
+    private val _status = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+    override val status: StateFlow<TrackingStatus> = _status.asStateFlow()
+
+    private fun updateStatus(
+        status: TrackingStatus,
+        force: Boolean,
+    ) {
+        _status.update { current ->
+            val currentPrio = getStatusPriority(current)
+            val newPrio = getStatusPriority(status)
+
+            if (force || newPrio >= currentPrio) status else current
+        }
+    }
+
+    private fun transitionStatus(
+        newStatus: TrackingStatus,
+        force: Boolean = false,
+    ) {
+        updateStatus(newStatus, force)
+    }
+
+    private fun getStatusPriority(status: TrackingStatus): Int =
+        when (status) {
+            is TrackingStatus.Error ->
+                when (status.type) {
+                    TrackingStatus.ErrorType.PERMISSION_MISSING -> TrackingStatus.PRIORITY_PERMISSION_MISSING
+                    TrackingStatus.ErrorType.DATABASE_ERROR -> TrackingStatus.PRIORITY_DATABASE_ERROR
+                    else -> TrackingStatus.PRIORITY_TRANSIENT_ERROR
+                }
+
+            is TrackingStatus.Active, is TrackingStatus.Idle -> TrackingStatus.PRIORITY_HEALTHY
+            else -> 0
+        }
+
     private val appSettingsState: StateFlow<AppSettings> =
         flow {
             var consecutiveErrors = 0
-            while (consecutiveErrors < MAX_CONSECUTIVE_ERRORS) {
+            while (true) {
                 try {
                     dataStore.data
                         .map { prefs ->
-                            consecutiveErrors = 0
+                            if (consecutiveErrors > 0) {
+                                AppLogger.d(
+                                    "DataStore observation for appSettingsState recovered " +
+                                        "after $consecutiveErrors errors",
+                                )
+                                consecutiveErrors = 0
+                                transitionStatus(TrackingStatus.Active, force = true)
+                            }
                             prefs.toAppSettings()
                         }.distinctUntilChanged()
                         .collect { emit(it) }
 
-                    break // DataStore flow completed normally
+                    AppLogger.w("DataStore flow for appSettingsState completed normally (unexpected)")
+                    break
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     consecutiveErrors++
-                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                        AppLogger.e(
-                            "Terminal DataStore error in appSettingsState after " +
-                                "$consecutiveErrors attempts. Settings observation stopped.",
-                            e,
-                        )
-                    } else {
                         val delayMs =
                             (INITIAL_RETRY_DELAY_MS * (1 shl (consecutiveErrors - 1)))
                                 .coerceAtMost(MAX_RETRY_DELAY_MS)
-                        AppLogger.e(
+
+                    val isTerminalLike = consecutiveErrors >= LOG_THRESHOLD
+                    val logMessage =
                             "DataStore error in appSettingsState (attempt $consecutiveErrors), " +
-                                "restarting in ${delayMs}ms",
-                            e,
+                                "restarting in ${delayMs}ms"
+
+                    if (isTerminalLike) {
+                        if (consecutiveErrors % LOG_THRESHOLD == 0) {
+                            AppLogger.e(logMessage, e)
+                        }
+                        transitionStatus(
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                "Persistent DataStore error: settings observation degraded",
+                            ),
                         )
+                    } else {
+                        AppLogger.w(logMessage)
+                    }
                         delay(delayMs.milliseconds)
                     }
                 }
-            }
         }.stateIn(
             scope,
             SharingStarted.Eagerly,
@@ -239,7 +301,7 @@ class AppSettingsRepositoryImpl
         }
 
         companion object {
-            private const val MAX_CONSECUTIVE_ERRORS = 10
+            private const val LOG_THRESHOLD = 5
             private const val INITIAL_RETRY_DELAY_MS = 1000L
             private const val MAX_RETRY_DELAY_MS = 30000L
         }

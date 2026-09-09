@@ -84,4 +84,11 @@ class MigrationFlagsRepositoryImpl
         override suspend fun setMigrationV1Skipped(reason: MigrationSkipReason) {
             dataStore.edit { it[DataStoreKeys.MIGRATION_V1_SKIPPED_REASON] = reason.name }
         }
+
+    override fun isInitialSetupCompleted(): Flow<Boolean> =
+        getData(DataStoreKeys.INITIAL_SETUP_COMPLETED, defaultValue = false)
+
+    override suspend fun setInitialSetupCompleted(completed: Boolean) {
+        dataStore.edit { it[DataStoreKeys.INITIAL_SETUP_COMPLETED] = completed }
+        }
     }

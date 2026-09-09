@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
@@ -45,13 +46,16 @@ fun SimCardScreen(
     val lastOperationError by viewModel.lastOperationError.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(lastOperationError) {
-        val error = lastOperationError ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(
-            message = error.message,
-            withDismissAction = true,
-        )
-        viewModel.dismissOperationError()
+    lastOperationError?.let { error ->
+        @Suppress("SpreadOperator")
+        val message = stringResource(error.messageRes, *error.args.toTypedArray())
+        LaunchedEffect(error) {
+            snackbarHostState.showSnackbar(
+                message = message,
+                withDismissAction = true,
+            )
+            viewModel.dismissOperationError()
+        }
     }
 
     Scaffold(

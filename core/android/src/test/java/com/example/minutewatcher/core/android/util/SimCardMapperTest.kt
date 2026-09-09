@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.android.util
 
 import android.content.Context
+import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -8,6 +9,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -15,6 +17,9 @@ import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class SimCardMapperTest {
+    @get:Rule
+    val singletonResetRule = SingletonResetRule()
+
     private val context: Context = RuntimeEnvironment.getApplication()
 
     @Test

@@ -1,4 +1,6 @@
-# SIM Identity/Discovery Refactoring Plan
+# [ARCHIVE] SIM Identity/Discovery Refactoring Plan
+
+*This is an historical artifact archived from the project root.*
 
 This plan aims to align the SIM identity and discovery logic with documented Android API guarantees, ensure stable internal identifiers, and provide explicit discovery result states.
 
@@ -12,33 +14,33 @@ This plan aims to align the SIM identity and discovery logic with documented And
 
 ### [core:model]
 
-#### [MODIFY] [SimIdentity.kt](file:///D:/backup/MinuteWatcher/core/model/src/main/java/com/example/minutewatcher/core/model/SimIdentity.kt)
+#### [MODIFY] [SimIdentity.kt](../../core/model/src/main/java/com/example/minutewatcher/core/model/SimIdentity.kt)
 - Add `isStable: Boolean` property.
 - Ensure `IdentitySource` covers all cases.
 
-#### [NEW] [SimDiscoveryResult.kt](file:///D:/backup/MinuteWatcher/core/model/src/main/java/com/example/minutewatcher/core/model/SimDiscoveryResult.kt)
+#### [NEW] [SimDiscoveryResult.kt](../../core/model/src/main/java/com/example/minutewatcher/core/model/SimDiscoveryResult.kt)
 - Define a sealed interface for discovery results: `Available`, `PermissionMissing`, `Unsupported`, `Failed`.
 
 ### [core:data]
 
-#### [MODIFY] [SimIdentityDiscovery.kt](file:///D:/backup/MinuteWatcher/core/data/src/main/java/com/example/minutewatcher/core/data/SimIdentityDiscovery.kt)
+#### [MODIFY] [SimIdentityDiscovery.kt](../../core/data/src/main/java/com/example/minutewatcher/core/data/SimIdentityDiscovery.kt)
 - Change return types to `SimDiscoveryResult` where appropriate.
 - Ensure only documented APIs are used.
 
-#### [MODIFY] [ActiveSimsFetcher.kt](file:///D:/backup/MinuteWatcher/core/data/src/main/java/com/example/minutewatcher/core/data/ActiveSimsFetcher.kt)
+#### [MODIFY] [ActiveSimsFetcher.kt](../../core/data/src/main/java/com/example/minutewatcher/core/data/ActiveSimsFetcher.kt)
 - Update to handle the new `SimDiscoveryResult` model.
 
-#### [MODIFY] [SimIdentityObserver.kt](file:///D:/backup/MinuteWatcher/core/data/src/main/java/com/example/minutewatcher/core/data/SimIdentityObserver.kt)
+#### [MODIFY] [SimIdentityObserver.kt](../../core/data/src/main/java/com/example/minutewatcher/core/data/SimIdentityObserver.kt)
 - Explicitly separate Mock SIM logic from production discovery.
 - Use `SimDiscoveryResult` for internal state.
 
-#### [MODIFY] [SimIdentityUtils.kt](file:///D:/backup/MinuteWatcher/core/data/src/main/java/com/example/minutewatcher/core/data/util/SimIdentityUtils.kt)
+#### [MODIFY] [SimIdentityUtils.kt](../../core/data/src/main/java/com/example/minutewatcher/core/data/util/SimIdentityUtils.kt)
 - Refactor `createIdentityFromInfo` to generate stable IDs based on app internal logic.
 - Differentiate between `ICCID` (Stable) and `SUBSCRIPTION_ID`/`SLOT` (Unstable).
 
 ### [Regression Tests]
 
-#### [NEW] [SimDiscoveryRegressionTest.kt](file:///D:/backup/MinuteWatcher/core/data/src/test/java/com/example/minutewatcher/core/data/SimDiscoveryRegressionTest.kt)
+#### [NEW] [SimDiscoveryRegressionTest.kt](../../core/data/src/test/java/com/example/minutewatcher/core/data/SimDiscoveryRegressionTest.kt)
 - Implement all 11 required test scenarios.
 
 ## Verification Plan

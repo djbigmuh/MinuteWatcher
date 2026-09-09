@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,69 +12,71 @@ class TrafficErrorHandler
     constructor() {
         fun handleUpdateError(
             e: Throwable,
-            statusFlow: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
         ) {
             when (e) {
                 is SecurityException -> {
                     AppLogger.e("SecurityException in TrafficTracker", e)
-                    statusFlow.value =
-                        TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+                    updateStatus(
+                        TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message),
+                    )
                 }
 
                 is IOException -> {
                     AppLogger.e("IOException in TrafficTracker", e)
-                    statusFlow.value =
-                        TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+                    updateStatus(
+                        TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message),
+                    )
                 }
 
                 else -> {
                     AppLogger.e("Error updating traffic", e)
-                    statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                    updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
                 }
             }
         }
 
-        fun handleInconsistentFirmware(statusFlow: MutableStateFlow<TrackingStatus>) {
+    fun handleInconsistentFirmware(updateStatus: (TrackingStatus) -> Unit) {
             AppLogger.w("TrafficTracker: inconsistent firmware state")
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
+        updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION))
         }
 
         fun handleBaselineRetryFailure(
             identity: String,
-            statusFlow: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
         ) {
             AppLogger.e("TrafficTracker: baseline reset for $identity failed after all retries")
-            statusFlow.value =
+            updateStatus(
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.DATABASE_ERROR,
                     "Baseline reset failed for $identity",
-                )
+                ),
+            )
         }
 
         fun handleUsageReadTimeout(
             identity: String,
-            statusFlow: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
         ) {
             AppLogger.e("TrafficTracker: getSimUsage timed out for $identity")
-            statusFlow.value =
-                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage")
+            updateStatus(
+                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage"),
+            )
         }
 
         fun handleLastTotalBytesTimeout(
             identity: String,
-            statusFlow: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
         ) {
             AppLogger.e("TrafficTracker: getLastTotalBytes timed out for $identity")
-            statusFlow.value =
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "Timeout reading lastTotalBytes",
-                )
+            updateStatus(
+                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading lastTotalBytes"),
+            )
         }
 
         fun handleStatsFailure(
             statsResult: StatsResult,
-            statusFlow: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
         ) {
             val message =
                 if (statsResult is StatsResult.Error) {
@@ -85,6 +86,6 @@ class TrafficErrorHandler
                     AppLogger.w("Traffic stats unavailable")
                     "Stats unavailable"
                 }
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+            updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
         }
     }

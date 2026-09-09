@@ -82,6 +82,13 @@
     <string name="onboarding_message">MinuteWatcher не может автоматически узнать условия вашего тарифа у оператора связи.\n\nДля начала работы, пожалуйста, укажите вручную лимиты минут/трафика и день ежемесячного обновления для каждой SIM-карты. После этого приложение само будет вести учет.</string>
     <string name="onboarding_button">Понятно</string>
 
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">Неверный индекс слота SIM: %1$d</string>
+    <string name="error_storage_unavailable">Хранилище недоступно для слота %1$d. Попробуйте позже.</string>
+    <string name="error_sim_removed">SIM-карта была извлечена из слота %1$d</string>
+    <string name="error_operation_failed_retry">Операция не удалась после повторной попытки.</string>
+    <string name="error_unknown">Неизвестная ошибка: %1$s</string>
+
     <!-- Dialogs -->
     <string name="cancel_button">Отмена</string>
     <string name="save_button">Сохранить</string>

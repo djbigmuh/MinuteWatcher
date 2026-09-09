@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -24,18 +23,16 @@ internal class CallStartHandler
         private val retryHelper: DataStoreRetryHelper,
         private val attributionResolver: CallAttributionResolver,
         private val callMutexHolder: CallMutexHolder,
+        private val sessionCleaner: CallSessionCleaner,
+        private val settingsHandler: CallTrackingSettingsHandler,
     ) {
     suspend fun executeCallStart(
         subId: Int,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        checkPermissions: () -> Boolean,
-        cleanupCounters: suspend (Int) -> Unit,
-        refreshStatus: suspend (Boolean) -> Unit,
-        isCallTrackingEnabled: suspend () -> Boolean,
+        context: CallTrackingContext,
     ) {
         var shouldRefreshStatus = false
         try {
-            if (!checkPermissions()) {
+            if (!context.checkPermissions()) {
                 shouldRefreshStatus = true
                 return
             }
@@ -48,34 +45,33 @@ internal class CallStartHandler
             }
 
             callMutexHolder.mutex.withLock {
-                if (!isCallTrackingEnabled()) {
+                if (!settingsHandler.isCallTrackingEnabled()) {
                     AppLogger.d("CallTracker: tracking disabled, ignoring OFFHOOK for subId $targetSubId")
-                    cleanupCounters(targetSubId)
+                    sessionCleaner.cleanupCounters(targetSubId, context)
                     shouldRefreshStatus = true
                     return@withLock
                 }
 
                 val startData = fetchCallStartData(targetSubId)
-                processCallStartLocked(targetSubId, startData, statusFlow, cleanupCounters)
+                processCallStartLocked(targetSubId, startData, context)
                 shouldRefreshStatus = true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {
             shouldRefreshStatus = true
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message)
+            context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message))
         } catch (e: SecurityException) {
             shouldRefreshStatus = true
             AppLogger.e("SecurityException in onCallStarted", e)
-            statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message)
+            context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
         } catch (e: Exception) {
             shouldRefreshStatus = true
             AppLogger.e("Error in onCallStarted", e)
-            if (statusFlow.value !is TrackingStatus.Error) {
-                statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-            }
+            val error = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+            context.updateStatus(error)
         } finally {
-            finalizeCallStart(shouldRefreshStatus, refreshStatus)
+            finalizeCallStart(shouldRefreshStatus, context)
         }
     }
 
@@ -108,16 +104,15 @@ internal class CallStartHandler
     private suspend fun processCallStartLocked(
         targetSubId: Int,
         data: CallStartData,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        cleanupCounters: suspend (Int) -> Unit,
+        context: CallTrackingContext,
     ) {
         if (data.startTimeResult.isFailure) {
-            handleStartTimeFailure(targetSubId, data.startTimeResult.exceptionOrNull(), statusFlow, cleanupCounters)
+            handleStartTimeFailure(targetSubId, data.startTimeResult.exceptionOrNull(), context)
         } else {
             val startTime = data.startTimeResult.getOrThrow()
             if (startTime != 0L) {
                 val savedBootTime = data.bootTimeResult.getOrElse { 0L }
-                val isStale = validateSessionStaleness(targetSubId, savedBootTime, data.bootTime, cleanupCounters)
+                val isStale = validateSessionStaleness(targetSubId, savedBootTime, data.bootTime, context)
                 if (!isStale) {
                     handleActiveSession(targetSubId, data)
                     return
@@ -157,7 +152,7 @@ internal class CallStartHandler
         targetSubId: Int,
         savedBootTime: Long,
         currentBootTime: Long,
-        cleanupCounters: suspend (Int) -> Unit,
+        context: CallTrackingContext,
     ): Boolean {
         val isStale =
             (savedBootTime > currentBootTime) ||
@@ -169,7 +164,7 @@ internal class CallStartHandler
         if (isStale) {
             AppLogger.w("CallTracker: clearing stale session for subId $targetSubId")
             try {
-                cleanupCounters(targetSubId)
+                sessionCleaner.cleanupCounters(targetSubId, context)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -182,24 +177,23 @@ internal class CallStartHandler
     private suspend fun handleStartTimeFailure(
         targetSubId: Int,
         error: Throwable?,
-        statusFlow: MutableStateFlow<TrackingStatus>,
-        cleanupCounters: suspend (Int) -> Unit,
+        context: CallTrackingContext,
     ) {
         (error as? CancellationException)?.let { throw it }
         val message = "Timeout reading session data for subId $targetSubId"
         AppLogger.e(message, error)
-        statusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message)
-        cleanupCounters(targetSubId)
+        context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message))
+        sessionCleaner.cleanupCounters(targetSubId, context)
     }
 
     private suspend fun finalizeCallStart(
         shouldRefreshStatus: Boolean,
-        refreshStatus: suspend (Boolean) -> Unit,
+        context: CallTrackingContext,
     ) {
         withContext(NonCancellable) {
             try {
                 if (shouldRefreshStatus) {
-                    refreshStatus(false)
+                    context.refreshStatus(false)
                 }
             } catch (e: Exception) {
                 AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)

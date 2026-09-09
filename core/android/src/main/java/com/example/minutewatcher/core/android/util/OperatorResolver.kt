@@ -149,6 +149,13 @@ object OperatorResolver {
             "2degrees" to "operator_2degrees",
         )
 
+    @VisibleForTesting
+    fun resetForTest() {
+        synchronized(this) {
+            db = null
+        }
+    }
+
     /**
      * Возвращает кешированную базу MCC/MNC.
      * Использует Double-Checked Locking для потокобезопасной инициализации.

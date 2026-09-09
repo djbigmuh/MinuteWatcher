@@ -17,6 +17,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.BenchmarkUseCase
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
 import dagger.Binds
 import dagger.Module
@@ -24,6 +25,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -76,6 +78,10 @@ interface SettingsDataModule {
     @Binds
     @Singleton
     fun bindAppSettingsRepository(impl: AppSettingsRepositoryImpl): AppSettingsRepository
+
+    @Binds
+    @IntoSet
+    fun bindAppSettingsStatus(impl: AppSettingsRepositoryImpl): TrackingStatusProvider
 
     /** Binds the concrete [PermissionStateNotifierImpl] to the [PermissionStateNotifier] interface.
      *  Used by Hilt to manage and notify about application permission states. */

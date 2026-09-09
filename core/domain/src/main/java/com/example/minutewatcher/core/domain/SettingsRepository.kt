@@ -176,4 +176,16 @@ interface MigrationFlagsRepository {
      * @throws IOException if storage access fails.
      */
     suspend fun setMigrationV1Skipped(reason: MigrationSkipReason)
+
+    /**
+     * Returns a flow indicating if initial setup is completed.
+     */
+    fun isInitialSetupCompleted(): Flow<Boolean>
+
+    /**
+     * Sets the initial setup completion state.
+     *
+     * @throws IOException if storage access fails.
+     */
+    suspend fun setInitialSetupCompleted(completed: Boolean)
 }

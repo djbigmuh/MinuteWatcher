@@ -37,7 +37,6 @@ class SnapshotIndexerResilienceTest : SemanticSearchManagerTestFixtures() {
                             slot = 1,
                             identity = "sim_1",
                             operatorName = "B",
-                            isActive = true,
                             entities =
                                 mapOf(
                                     PackageType.MINUTES to createEntity(1, PackageType.MINUTES, 50),

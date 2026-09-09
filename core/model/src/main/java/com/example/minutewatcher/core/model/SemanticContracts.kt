@@ -65,13 +65,12 @@ data class SchemaVersion(
 }
 
 /**
- * Полный снимок состояния SIM-карты.
+ * Full snapshot of a SIM card's state.
  */
 data class SimSnapshot(
     val slot: Int,
     val identity: String,
     val operatorName: String,
-    val isActive: Boolean,
     val entities: Map<PackageType, SemanticEntity>,
     val autoResetDay: Int,
 )

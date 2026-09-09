@@ -2,9 +2,8 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>LongMethod:WidgetLayoutSpecBuilder.kt$WidgetLayoutSpecBuilder$private fun createThreeLinesRows(sim: SimUiState): List&lt;SimLayoutRow&gt;</ID>
-    <ID>LongMethod:WidgetLayoutTest.kt$WidgetLayoutTest$private fun createWidgetUiState( mode: WidgetLayoutMode, hasMinutes: Boolean = true, hasTraffic: Boolean = true, showMinutesLimit: Boolean = false, showTrafficLimit: Boolean = false, ): WidgetUiState</ID>
-    <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_Basic()</ID>
-    <ID>LongMethod:WidgetUiMapperTest.kt$WidgetUiMapperTest$@Test fun testSnapshotToUiState_HidesEmptyTraffic()</ID>
+      <ID>LongMethod:WidgetLayoutTest.kt:WidgetLayoutTest$private fun createWidgetUiState: WidgetUiState</ID>
+      <ID>LongMethod:WidgetUiMapperTest.kt:WidgetUiMapperTest$@Test fun testSnapshotToUiState_Basic</ID>
+      <ID>LongMethod:WidgetUiMapperTest.kt:WidgetUiMapperTest$@Test fun testSnapshotToUiState_HidesEmptyTraffic</ID>
   </CurrentIssues>
 </SmellBaseline>

@@ -145,7 +145,10 @@ class WidgetLayoutTest {
                 showMinutesLimit = false,
             )
         val simNoLimit = uiStateNoLimit.simUiStates.first()
-        val textComponentsNoLimit = simNoLimit.layoutSpec.rows[0].components.filterIsInstance<SimLayoutComponent.Text>()
+        val textComponentsNoLimit =
+            simNoLimit.layoutSpec.rows[0]
+                .components
+                .filterIsInstance<SimLayoutComponent.Text>()
         assertEquals(2, textComponentsNoLimit.size)
         assertEquals("90", textComponentsNoLimit[0].text)
         assertEquals("min.", textComponentsNoLimit[1].text)
@@ -160,7 +163,9 @@ class WidgetLayoutTest {
             )
         val simWithLimit = uiStateWithLimit.simUiStates.first()
         val textComponentsWithLimit =
-            simWithLimit.layoutSpec.rows[0].components.filterIsInstance<SimLayoutComponent.Text>()
+            simWithLimit.layoutSpec.rows[0]
+                .components
+                .filterIsInstance<SimLayoutComponent.Text>()
         assertEquals(3, textComponentsWithLimit.size)
         assertEquals("90", textComponentsWithLimit[0].text)
         assertEquals("/100", textComponentsWithLimit[1].text)
@@ -210,7 +215,7 @@ class WidgetLayoutTest {
                 )
         }
 
-        val simSnapshot = SimSnapshot(0, "MTS", "MTS", true, entities, autoResetDay = 1)
+        val simSnapshot = SimSnapshot(0, "MTS", "MTS", entities, autoResetDay = 1)
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),

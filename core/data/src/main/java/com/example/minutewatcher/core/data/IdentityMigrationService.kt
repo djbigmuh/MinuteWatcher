@@ -52,6 +52,8 @@ open class IdentityMigrationService
                 migrated = this.migrated + other.migrated,
                 conflicts = this.conflicts + other.conflicts,
                 failures = this.failures + other.failures,
+                // Conflicts are considered a resolved state, not a failure.
+                // We only mark partialFailure if actual technical failures occurred.
                 partialFailure = this.partialFailure || other.partialFailure,
             )
 
@@ -361,7 +363,10 @@ open class IdentityMigrationService
 
                             MigrationResult.CONFLICT -> {
                                 conflictCount++
-                                // Keep old key for potential recovery
+                                // Conflict resolved by keeping modern value and backing up legacy to
+                                // conflict_<key>. Old legacy key must be removed to prevent infinite
+                                // migration loops.
+                                prefs.remove(oldKey)
                             }
 
                             MigrationResult.FAILURE -> {
@@ -395,7 +400,7 @@ open class IdentityMigrationService
                 migrated = migratedCount,
                 conflicts = conflictCount,
                 failures = failureCount,
-                partialFailure = (failureCount > 0) || (conflictCount > 0),
+                partialFailure = failureCount > 0,
             )
         }
 
@@ -461,6 +466,17 @@ open class IdentityMigrationService
             }
         }
 
+    /**
+     * Migrates a single key-value pair or backs it up if a conflict occurs.
+     *
+     * **Conflict Resolution Policy:**
+     * If a modern identity-based key already exists with a different value than the legacy key:
+     * 1. The modern value wins and remains unchanged.
+     * 2. The legacy value is backed up to a new key prefixed with "conflict_".
+     * 3. The original legacy key is removed (handled by the caller) to mark migration as resolved.
+     *
+     * @return [MigrationResult.SUCCESS] if migrated or values matched, [MigrationResult.CONFLICT] if backed up.
+     */
         private fun <T> MutablePreferences.migrateOrBackup(
             newKey: Preferences.Key<T>,
             conflictKey: Preferences.Key<T>,

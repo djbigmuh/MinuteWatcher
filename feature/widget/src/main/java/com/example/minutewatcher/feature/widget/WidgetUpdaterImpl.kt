@@ -22,6 +22,15 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * WidgetUpdaterImpl updates all widget instances with coalescing logic.
  * Delegates responsibilities to specialized managers for modularity.
+ *
+ * This class implements a state machine for handling RemoteViews size limits:
+ * 1. FULL: Default mode. Tries to render the complete widget layout.
+ * 2. LimitExceeded: If FULL render fails with TransactionTooLargeException,
+ *    it switches to SIMPLIFIED mode and sets the persistent widgetLimitExceeded flag.
+ * 3. SIMPLIFIED: Renders a reduced layout to fit within Binder limits.
+ * 4. PROBE: Every 10 updates (see PROBE_INTERVAL_UPDATES), it attempts
+ *    a FULL render again to see if the situation has improved (e.g., fewer SIMs).
+ *    If PROBE succeeds, it switches back to FULL and clears the flag.
  */
 @Singleton
 @Suppress("TooManyFunctions")
@@ -37,6 +46,12 @@ class WidgetUpdaterImpl
     ) : WidgetUpdater {
     private val coalescingMutex = Mutex()
     private var activeUpdate: CompletableDeferred<WidgetUpdateResult>? = null
+
+    /**
+     * Tracks whether a LimitExceeded error has been handled within the CURRENT update call.
+     * This prevents redundant flag updates and infinite retry loops if SIMPLIFIED mode also fails.
+     * Reset at the beginning of each update process, on [recover], or when a FULL update succeeds.
+     */
     private var limitExceededHandled = AtomicBoolean(false)
 
     /**
@@ -129,8 +144,8 @@ class WidgetUpdaterImpl
 
     private suspend fun executeUpdateProcess(): WidgetUpdateResult =
         try {
+            limitExceededHandled.set(false)
             var lastOutcome: UpdateOutcome? = null
-            var limitHandledInThisCall = false
             val success =
                 retryManager.updateWithRetry { attempt ->
                     val outcome =
@@ -145,8 +160,7 @@ class WidgetUpdaterImpl
 
                     when (outcome) {
                         is UpdateOutcome.LimitExceeded -> {
-                            if (limitExceededHandled.compareAndSet(false, true)) {
-                                limitHandledInThisCall = true
+                            if (outcome.wasFull && limitExceededHandled.compareAndSet(false, true)) {
                                 limitManager.setWidgetLimitExceeded(value = true)
                                 // Retry to switch to SIMPLIFIED mode in the next iteration
                                 UpdateOutcome.Retry
@@ -164,10 +178,6 @@ class WidgetUpdaterImpl
                 }
 
             if (success) {
-                if (limitHandledInThisCall) {
-                    limitManager.setWidgetLimitExceeded(value = false)
-                    limitExceededHandled.set(false)
-                }
                 WidgetUpdateResult.Success(wasCoalesced = false)
             } else {
                 createFailureResult(lastOutcome)
@@ -276,11 +286,11 @@ class WidgetUpdaterImpl
                     limitManager.setWidgetLimitExceeded(value = false)
                     limitExceededHandled.set(false)
                 }
-                UpdateOutcome.Success(shouldStop = result.wasFull)
+                UpdateOutcome.Success
             }
 
             is UpdateResult.LimitExceeded -> {
-                UpdateOutcome.LimitExceeded
+                UpdateOutcome.LimitExceeded(wasFull = result.wasFull)
             }
 
             is UpdateResult.GenericFailure -> {
@@ -318,9 +328,5 @@ class WidgetUpdaterImpl
             FULL,
             SIMPLIFIED,
             PROBE,
-        }
-
-        companion object {
-            // No-op
         }
     }

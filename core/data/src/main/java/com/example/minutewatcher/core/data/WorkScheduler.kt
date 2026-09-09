@@ -27,10 +27,11 @@ class WorkScheduler
         /**
          * Schedules one-time initial setup work.
          *
-         * Uses [ExistingWorkPolicy.REPLACE] to ensure fresh initialization.
+         * @param force If true, uses [ExistingWorkPolicy.REPLACE] to ensure fresh initialization.
+         *              Otherwise, uses [ExistingWorkPolicy.KEEP].
          * Safe to call from any coroutine context.
          */
-        fun scheduleInitialSetup() {
+        fun scheduleInitialSetup(force: Boolean = false) {
             val workRequest =
                 OneTimeWorkRequestBuilder<InitialSetupWorker>()
                     .setBackoffCriteria(
@@ -38,12 +39,14 @@ class WorkScheduler
                         BACKOFF_SECONDS,
                         TimeUnit.SECONDS,
                     ).build()
-            // REPLACE policy is used to ensure that the setup logic runs immediately
-            // with current permissions and system state, overriding any stale or
-            // pending initialization tasks from previous app launches.
+
+            val policy = if (force) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
+
+            // By default, we use KEEP to avoid cancelling and restarting migrations/setup
+            // on every activity recreation (e.g., screen rotation).
             WorkManager.getInstance(context).enqueueUniqueWork(
                 INITIAL_SETUP_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
+                policy,
                 workRequest,
             )
         }

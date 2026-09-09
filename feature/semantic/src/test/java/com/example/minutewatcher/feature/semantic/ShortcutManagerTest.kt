@@ -89,7 +89,6 @@ class ShortcutManagerTest {
                                 0,
                                 "sim_0",
                                 "MTS",
-                                true,
                                 mapOf(
                                     PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
                                 ),
@@ -112,7 +111,6 @@ class ShortcutManagerTest {
                                 0,
                                 "sim_0",
                                 "Op_$i",
-                                true,
                                 mapOf(
                                     PackageType.MINUTES to createEntity(0, "Op_$i", PackageType.MINUTES, 100, 10),
                                 ),
@@ -142,7 +140,6 @@ class ShortcutManagerTest {
                             0,
                             "sim_0",
                             operator,
-                            true,
                             mapOf(
                                 PackageType.MINUTES to entity,
                             ),
@@ -176,7 +173,6 @@ class ShortcutManagerTest {
                             0,
                             "sim_0",
                             "MTS",
-                            true,
                             mapOf(
                                 PackageType.MINUTES to entity,
                             ),

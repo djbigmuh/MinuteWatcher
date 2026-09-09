@@ -2,6 +2,8 @@ package com.example.minutewatcher.feature.main
 
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.PermissionUiState
+import com.example.minutewatcher.core.model.TrackingKey
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -225,7 +227,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val trackingFlow =
                 MutableStateFlow(
                     mapOf(
-                        "traffic" to
+                        TrackingKey.TRAFFIC to
                             com.example.minutewatcher.core.model.TrackingStatus.Error(
                                 com.example.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN,
                                 "Some error",
@@ -254,11 +256,11 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val trackingFlow =
                 MutableStateFlow(
                     mapOf(
-                        "shortcuts" to
-                            com.example.minutewatcher.core.model.TrackingStatus.Error(
-                                com.example.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN,
+                        TrackingKey.SHORTCUTS to
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
                                 "Some error",
-                            ),
+                            ) as TrackingStatus,
                     ),
                 )
             whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(trackingFlow)

@@ -82,6 +82,14 @@
     <string name="onboarding_message">MinuteWatcher आपके मोबाइल कैरियर से आपके प्लान का विवरण स्वचालित रूप से प्राप्त नहीं कर सकता है।\n\nट्रैकिंग शुरू करने के लिए, कृपया प्रत्येक सिम कार्ड के लिए मिनट/डेटा सीमा और मासिक रीसेट दिन मैन्युअल रूप से सेट करें। ऐप उस बिंदु से आगे की सभी निगरानी को संभालेगा।</string>
     <string name="onboarding_button">समझ गया</string>
 
+    <!-- Operation Errors -->
+    <!-- TODO: Translate to Hindi -->
+    <string name="error_invalid_sim_slot">Invalid SIM slot index: %1$d</string>
+    <string name="error_storage_unavailable">Storage unavailable for slot %1$d. Retry later.</string>
+    <string name="error_sim_removed">SIM was removed from slot %1$d</string>
+    <string name="error_operation_failed_retry">Operation failed after retry.</string>
+    <string name="error_unknown">Unknown error: %1$s</string>
+
     <!-- Dialogs -->
     <string name="cancel_button">रद्द करें</string>
     <string name="save_button">सहेजें</string>

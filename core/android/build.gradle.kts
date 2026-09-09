@@ -15,6 +15,11 @@ android {
     defaultConfig {
     }
 
+    @Suppress("UnstableApiUsage")
+    testFixtures {
+        enable = true
+    }
+
     buildFeatures {
         compose = true
     }
@@ -28,6 +33,13 @@ android {
         unitTests {
             isIncludeAndroidResources = true
         }
+    }
+
+    tasks.withType<Test>().configureEach {
+        // Phase 2: Structural acceleration.
+        // Robolectric sandboxes are reused within the same JVM.
+        // SingletonResetRule handles state cleanup.
+        forkEvery = 10
     }
 }
 
@@ -50,4 +62,9 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.androidxJunit)
+
+    testFixturesApi(libs.junit)
+    testFixturesImplementation(project(":core:common"))
+    testFixturesImplementation(platform(libs.androidxComposeBom))
+    testFixturesImplementation(libs.androidxComposeRuntime)
 }

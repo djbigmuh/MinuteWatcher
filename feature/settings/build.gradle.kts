@@ -29,6 +29,12 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    tasks.withType<Test>().configureEach {
+        // Phase 2: Structural acceleration.
+        // Robolectric sandboxes are reused within the same JVM.
+        forkEvery = 10
+    }
 }
 
 dependencies {
@@ -60,5 +66,6 @@ dependencies {
     testImplementation(libs.mockingCore)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.kotlinxCoroutinesTesting)
+    testImplementation(testFixtures(project(":core:android")))
     testImplementation(testFixtures(project(":core:common")))
 }

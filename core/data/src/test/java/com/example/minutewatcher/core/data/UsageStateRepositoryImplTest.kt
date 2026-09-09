@@ -20,7 +20,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -53,7 +55,7 @@ class UsageStateRepositoryImplTest {
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
         whenever(dataRefreshNotifier.refreshFlow).thenReturn(
             MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(replay = 1).apply {
-                tryEmit(DataRefreshNotifier.RefreshEvent())
+                tryEmit(DataRefreshNotifier.RefreshEvent(eventId = 1L))
             },
         )
         whenever(semanticVersion.getVersion()).thenReturn(SchemaVersion(1, 0, 0))
@@ -213,6 +215,51 @@ class UsageStateRepositoryImplTest {
                 duration >=
                     Constants.Data.SNAPSHOT_TIMEOUT_MS,
             )
+        }
+
+    @Test
+    fun `getSimUsage is collected only once per SIM despite multiple public flow observers`() =
+        runTest {
+            val id = "id_0"
+            val sims = listOf(createActiveSimInfo(id, subId = 1, slot = 0))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(sims))
+
+            var collectionCount = 0
+            val usageFlow =
+                flow {
+                    collectionCount++
+                    emit(createSimUsage(id, slot = 0, subId = 1))
+                }
+            whenever(simUsageRepository.getSimUsage(id)).thenReturn(usageFlow)
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps =
+                        UsageRepositoryDependencies(
+                            simIdentityRepository = simIdentityRepository,
+                            simUsageRepository = simUsageRepository,
+                            semanticCapabilities = semanticCapabilities,
+                            semanticVersion = semanticVersion,
+                            dataRefreshNotifier = dataRefreshNotifier,
+                            timeProvider = timeProvider,
+                        ),
+                    scope = backgroundScope,
+                )
+
+            // Start multiple observers
+            val job1 = launch { repository.observeSimUsages().collect {} }
+            val job2 = launch { repository.observeSnapshot().collect {} }
+            val job3 = launch { repository.observeSimCardUiModels().collect {} }
+
+            testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            assertEquals("Should be collected exactly once per SIM", 1, collectionCount)
+
+            job1.cancel()
+            job2.cancel()
+            job3.cancel()
         }
 
     companion object {

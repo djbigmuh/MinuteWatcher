@@ -201,7 +201,6 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
                                 slot = 0,
                                 identity = "sim_0",
                                 operatorName = "Test",
-                                isActive = true,
                                 entities = emptyMap(),
                                 autoResetDay = 1,
                             ),

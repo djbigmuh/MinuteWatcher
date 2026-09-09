@@ -2,13 +2,14 @@ package com.example.minutewatcher.feature.main.util
 
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.PermissionUiState
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 
 object TrackingBannerMapper {
     @Suppress("LongParameterList")
     fun mapToBannerState(
-        statusMap: Map<String, TrackingStatus>,
+        statusMap: Map<TrackingKey, TrackingStatus>,
         phoneGranted: Boolean,
         usageGranted: Boolean,
         notificationsGranted: Boolean,
@@ -17,41 +18,36 @@ object TrackingBannerMapper {
         appSearchBannerDismissed: Boolean = false,
         isStorageDegraded: Boolean = false,
     ): TrackingBannerState {
-        val traffic = statusMap.getOrDefault("traffic", TrackingStatus.Idle)
-        val appsearch = statusMap.getOrDefault("appsearch", TrackingStatus.Idle)
-        val shortcuts = statusMap.getOrDefault("shortcuts", TrackingStatus.Idle)
-        val calls = statusMap.getOrDefault("calls", TrackingStatus.Idle)
+        val traffic = statusMap.getOrDefault(TrackingKey.TRAFFIC, TrackingStatus.Idle)
+        val appsearch = statusMap.getOrDefault(TrackingKey.APPSEARCH, TrackingStatus.Idle)
+        val shortcuts = statusMap.getOrDefault(TrackingKey.SHORTCUTS, TrackingStatus.Idle)
+        val calls = statusMap.getOrDefault(TrackingKey.CALLS, TrackingStatus.Idle)
 
-        val widgetError = statusMap.getOrDefault("widget_observation", TrackingStatus.Idle) as? TrackingStatus.Error
-        val isDatabaseError = widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
-        val isSizeLimitError = widgetError?.message?.contains("size limit") == true
-        val observationFailed = (isDatabaseError && !isSizeLimitError) || isStorageDegraded
+        val observationFailed = isObservationFailed(statusMap, isStorageDegraded)
 
-        val phonePermanentlyDenied = settings.wasPhonePermissionRequestedBefore && !phoneGranted
         val phonePermissionState =
             determinePhonePermissionState(
                 phoneGranted,
-                phonePermanentlyDenied,
+                settings.wasPhonePermissionRequestedBefore && !phoneGranted,
+            )
+
+        val notificationPermissionState =
+            determineNotificationPermissionState(
+                notificationsGranted,
+                settings,
             )
 
         if (!settings.onboardingCompleted) {
             return TrackingBannerState(
                 phonePermissionState = phonePermissionState,
-                notificationPermissionState =
-                    determineNotificationPermissionState(
-                        notificationsGranted,
-                        settings,
-                    ),
+                notificationPermissionState = notificationPermissionState,
                 notificationsGrantedActual = notificationsGranted,
-                // Ошибки показываем всегда
                 showTrafficErrorBanner = isTrafficError(traffic),
                 showCallsErrorBanner = isCallsError(calls),
                 observationFailed = observationFailed,
                 isStorageDegraded = isStorageDegraded,
             )
         }
-
-        val appSearchErrorType = (appsearch as? TrackingStatus.Error)?.type
 
         return TrackingBannerState(
             phonePermissionState = phonePermissionState,
@@ -66,20 +62,33 @@ object TrackingBannerMapper {
                     appSearchRetryCount,
                     appSearchBannerDismissed,
                 ),
-            appSearchErrorType = appSearchErrorType,
+            appSearchErrorType = (appsearch as? TrackingStatus.Error)?.type,
             appSearchBannerDismissed = appSearchBannerDismissed,
             showShortcutsErrorBanner = isShortcutsError(shortcuts),
             showWidgetErrorBanner = settings.widgetLimitExceeded,
             showInaccurateCallsBanner = settings.inaccurateCallAttributionsCount >= 3,
-            notificationPermissionState =
-                determineNotificationPermissionState(
-                    notificationsGranted,
-                    settings,
-                ),
+            notificationPermissionState = notificationPermissionState,
             notificationsGrantedActual = notificationsGranted,
             observationFailed = observationFailed,
             isStorageDegraded = isStorageDegraded,
         )
+    }
+
+    private fun isObservationFailed(
+        statusMap: Map<TrackingKey, TrackingStatus>,
+        isStorageDegraded: Boolean,
+    ): Boolean {
+        val widgetError =
+            statusMap.getOrDefault(TrackingKey.WIDGET_OBSERVATION, TrackingStatus.Idle) as? TrackingStatus.Error
+        val settingsError =
+            statusMap.getOrDefault(TrackingKey.APP_SETTINGS, TrackingStatus.Idle) as? TrackingStatus.Error
+
+        val isDatabaseError =
+            widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
+                settingsError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
+
+        val isSizeLimitError = widgetError?.message?.contains("size limit") == true
+        return (isDatabaseError && !isSizeLimitError) || isStorageDegraded
     }
 
     private fun determinePhonePermissionState(

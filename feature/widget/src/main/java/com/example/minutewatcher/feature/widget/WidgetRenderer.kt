@@ -7,11 +7,12 @@ import android.content.Context
  *
  * Строгое соблюдение API: режим рендера (упрощённый / полный)
  * определяется внутри MinutesGlanceWidget.provideGlance на основе
- * WidgetSettingsState.widgetLimitExceeded. Внешние флаги не передаются,
- * что исключает race condition.
+ * WidgetSettingsState.widgetLimitExceeded.
  *
- * Отклонение кастомной прошивки: если кастомная прошивка вызывает
- * provideGlance() вне ожидаемого lifecycle — это проблема кастомной прошивки.
+ * Для исключения race condition при параллельных обновлениях (например,
+ * форсированное ручное обновление во время фонового probe), режим
+ * передаётся через экземпляр MinutesGlanceWidget(forceFullRender = ...).
+ * Каждый рендер-проход использует свой изолированный экземпляр виджета.
  */
 interface WidgetRenderer {
     /**

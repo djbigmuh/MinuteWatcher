@@ -2,6 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>MagicNumber:SnapshotUtils.kt$SnapshotUtils$31</ID>
+      <ID>MagicNumber:SnapshotUtils.kt:SnapshotUtils$31</ID>
   </CurrentIssues>
 </SmellBaseline>

@@ -14,11 +14,6 @@ class GlanceWidgetRenderer
             context: Context,
             forceFull: Boolean,
         ) {
-            MinutesGlanceWidget.isProbeActive = forceFull
-            try {
-                MinutesGlanceWidget().updateAll(context)
-            } finally {
-                MinutesGlanceWidget.isProbeActive = false
-            }
+            MinutesGlanceWidget(forceFullRender = forceFull).updateAll(context)
         }
     }

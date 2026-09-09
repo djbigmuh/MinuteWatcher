@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SettingsUseCase
@@ -30,6 +31,7 @@ import com.example.minutewatcher.feature.main.controller.MainSimDataController
 import com.example.minutewatcher.feature.main.controller.MainSimRefreshController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import com.example.minutewatcher.feature.main.controller.TrackingRecoveryController
+import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -56,12 +58,16 @@ abstract class MainViewModelTestFixtures {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule(kotlinx.coroutines.test.UnconfinedTestDispatcher())
 
+    @get:Rule
+    val singletonResetRule = SingletonResetRule()
+
     protected val testDispatcher: TestDispatcher get() = mainDispatcherRule.testDispatcher
     protected val testScope by lazy { TestScope(testDispatcher) }
 
     protected val simIdentityRepository: SimIdentityRepository = mock()
     protected val simLimitsRepository: SimLimitsRepository = mock()
     protected val appSettingsRepository: AppSettingsRepository = mock()
+    protected val migrationFlagsRepository: MigrationFlagsRepository = mock()
     protected val usageStateRepository: UsageStateRepository = mock()
     protected val trackingStatusRepository: TrackingStatusRepository = mock()
     protected val autoResetUseCase: AutoResetUseCase = mock()
@@ -93,6 +99,7 @@ abstract class MainViewModelTestFixtures {
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
         whenever(seedRepository.isEphemeralSeedActive).thenReturn(MutableStateFlow(false))
+        whenever(migrationFlagsRepository.isInitialSetupCompleted()).thenReturn(kotlinx.coroutines.flow.flowOf(true))
 
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
@@ -188,6 +195,7 @@ abstract class MainViewModelTestFixtures {
         val settingsController =
             MainSettingsController(
                 appSettingsRepository = appSettingsRepository,
+                migrationFlagsRepository = migrationFlagsRepository,
                 settingsUseCase = settingsUseCase,
                 scope = scope,
             )

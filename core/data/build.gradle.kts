@@ -54,6 +54,12 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    tasks.withType<Test>().configureEach {
+        // Phase 2: Structural acceleration.
+        // Robolectric sandboxes are reused within the same JVM.
+        forkEvery = 10
+    }
 }
 
 dependencies {
@@ -79,6 +85,7 @@ dependencies {
     testImplementation(libs.daggerHiltAndroidTesting)
     kspTest(libs.daggerHiltCompiler)
 
+    testImplementation(testFixtures(project(":core:android")))
     testImplementation(testFixtures(project(":core:common")))
     testImplementation(libs.junit)
     testImplementation(libs.mockingCore)

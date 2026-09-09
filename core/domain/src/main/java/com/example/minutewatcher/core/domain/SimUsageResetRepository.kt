@@ -10,7 +10,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * All methods are safe to call from any coroutine context.
  * Implementation must comply with AOSP DataStore best practices.
  * Operations are typically bounded by SHORT_TIMEOUT_MS.
+ *
+ * NOTE: Suppressing TooManyFunctions as this repository manages all aspects of SIM usage lifecycle
+ * (resetting, window management, total bytes tracking) through a single interface.
  */
+@Suppress("TooManyFunctions")
 interface SimUsageResetRepository {
     /**
      * Resets SIM usage statistics.
@@ -85,4 +89,39 @@ interface SimUsageResetRepository {
         deltaMb: Float,
         totalBytes: Long,
     )
+
+    /**
+     * Ensures that the tracking window (lastResetDate and lastTotalBytes) is initialized.
+     * If lastResetDate is 0, it is set to the current time, and the baseline is set
+     * to the current total mobile bytes.
+     *
+     * @return true if initialization was performed, false if already initialized.
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
+     */
+    suspend fun ensureTrackingWindowInitialized(identity: String): Boolean
+
+    /**
+     * Returns a flow of the baseline retry count for the identity.
+     */
+    fun getBaselineRetryCount(identity: String): Flow<Int?>
+
+    /**
+     * Sets the baseline retry count for the identity.
+     *
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
+     */
+    suspend fun setBaselineRetryCount(
+        identity: String,
+        count: Int?,
+    )
+
+    /**
+     * Clears retry counts for identities not in the [activeIdentities] set.
+     *
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
+     */
+    suspend fun cleanupBaselineRetries(activeIdentities: Set<String>)
 }

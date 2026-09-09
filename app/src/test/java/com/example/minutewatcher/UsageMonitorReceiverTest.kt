@@ -148,7 +148,7 @@ class UsageMonitorReceiverTest {
 
             // Test the alternative action string
             val intent =
-                Intent("android.telephony.action.PHONE_STATE_CHANGED")
+                Intent(UsageMonitorReceiver.ACTION_PHONE_STATE_CHANGED_LEGACY)
                     .apply {
                         putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_OFFHOOK)
                         putExtra("subscription", 2)

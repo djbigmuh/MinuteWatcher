@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
@@ -60,7 +59,7 @@ internal class CallAttributionResolver
 
         suspend fun handleAttributionFailure(
             subId: Int,
-            statusFlow: MutableStateFlow<TrackingStatus>,
+            updateStatus: (TrackingStatus) -> Unit,
             cleanupAction: suspend (Int) -> Unit,
         ): Boolean {
             val failures = (attributionFailures[subId] ?: 0) + 1
@@ -71,11 +70,12 @@ internal class CallAttributionResolver
                 return true
             }
             AppLogger.w("CallTracker: could not attribute call for subId $subId, attempt $failures")
-            statusFlow.value =
+            updateStatus(
                 TrackingStatus.Error(
                     TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
                     "Could not attribute call to SIM identity",
-                )
+                ),
+            )
             dataChangeNotifier.notifyDataChanged()
             return false
         }

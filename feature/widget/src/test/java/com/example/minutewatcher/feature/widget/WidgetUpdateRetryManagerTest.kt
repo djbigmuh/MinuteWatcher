@@ -28,7 +28,7 @@ class WidgetUpdateRetryManagerTest {
             val result =
                 manager.updateWithRetry {
                     attempts++
-                    UpdateOutcome.Success()
+                    UpdateOutcome.Success
                 }
             assertTrue(result)
             assertEquals(1, attempts)
@@ -41,7 +41,7 @@ class WidgetUpdateRetryManagerTest {
             val result =
                 manager.updateWithRetry {
                     attempts++
-                    if (attempts < 3) UpdateOutcome.Retry else UpdateOutcome.Success()
+                    if (attempts < 3) UpdateOutcome.Retry else UpdateOutcome.Success
                 }
             assertTrue(result)
             assertEquals(3, attempts)
@@ -80,7 +80,7 @@ class WidgetUpdateRetryManagerTest {
             val result =
                 manager.updateWithRetry {
                     attempts++
-                    UpdateOutcome.LimitExceeded
+                    UpdateOutcome.LimitExceeded(wasFull = true)
                 }
             assertFalse(result)
             assertEquals(1, attempts)

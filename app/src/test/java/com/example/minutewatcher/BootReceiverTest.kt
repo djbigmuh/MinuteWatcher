@@ -15,6 +15,10 @@ import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.data.WorkScheduler
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -25,7 +29,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.anyString
+import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.whenever
@@ -43,10 +47,14 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * This is strict Android lifecycle compliance, not optional.
  */
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = TestMinuteWatcherApp::class, sdk = [35])
+@Config(application = HiltTestApplication::class, sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class BootReceiverTest {
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
@@ -55,6 +63,7 @@ class BootReceiverTest {
 
     @Before
     fun setup() {
+        hiltRule.inject()
         context = ApplicationProvider.getApplicationContext()
 
         val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
@@ -145,21 +154,14 @@ class BootReceiverTest {
                     override fun acquirePendingResult() = mockPendingResult
                 }
 
-            // Mock context to throw exception when applicationContext is accessed inside the coroutine.
-            // Note: In BootReceiver, appContext is retrieved BEFORE the coroutine.
-            // So we need to mock something used INSIDE the coroutine.
-            val failingContext = mock(Context::class.java)
-            val mockAppContext = mock(Context::class.java)
-            whenever(failingContext.applicationContext).thenReturn(mockAppContext)
-
-            // WorkManager.getInstance(mockAppContext) will throw if WorkManager is not initialized for this context
-            // and we didn't use WorkManagerTestInitHelper for it.
-            // Or we can mock mockAppContext.getSystemService(...) to throw.
-            whenever(mockAppContext.getSystemService(anyString())).thenThrow(RuntimeException("Intentional failure"))
+            // Use real context but mock workScheduler to throw
+            receiver.workScheduler = mock(WorkScheduler::class.java)
+            whenever(receiver.workScheduler.scheduleInitialSetup(anyBoolean()))
+                .thenThrow(RuntimeException("Intentional failure"))
 
             val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
 
-            receiver.onReceive(failingContext, intent)
+            receiver.onReceive(context, intent)
 
             advanceUntilIdle()
             ShadowLooper.idleMainLooper()

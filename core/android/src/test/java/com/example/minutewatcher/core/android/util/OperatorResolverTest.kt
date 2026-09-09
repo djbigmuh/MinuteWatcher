@@ -2,9 +2,11 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -13,6 +15,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "ru")
 class OperatorResolverTest {
+    @get:Rule
+    val singletonResetRule = SingletonResetRule()
+
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Test

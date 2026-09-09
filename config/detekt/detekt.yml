@@ -2,14 +2,14 @@ complexity:
   active: true
   CyclomaticComplexMethod:
     active: true
-    threshold: 15
+    allowedComplexity: 15
   LongMethod:
     active: true
-    threshold: 60
+    allowedLines: 60
   LongParameterList:
     active: true
-    functionThreshold: 10
-    constructorThreshold: 10
+    allowedFunctionParameters: 10
+    allowedConstructorParameters: 10
 
 coroutines:
   active: true
@@ -46,7 +46,7 @@ style:
   MaxLineLength:
     active: true
     maxLineLength: 120
-  UnusedImports:
+  UnusedImport:
     active: true
   ForbiddenMethodCall:
     active: true

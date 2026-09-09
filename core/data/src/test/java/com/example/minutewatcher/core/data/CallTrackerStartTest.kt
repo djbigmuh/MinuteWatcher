@@ -209,16 +209,13 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             val tracker =
                 object : CallTracker(
                     callSessionRepository = callSessionRepository,
-                    dataChangeNotifier = dataChangeNotifier,
                     permissionManager = permissionManager,
                     scope = testScope,
                     attributionResolver = attributionResolver,
                     startHandler = createStartHandler(attributionResolver, mutexHolder),
                     endHandler = createEndHandler(attributionResolver, mutexHolder),
                     sessionCleaner = sessionCleaner,
-                    settingsHandler = settingsHandler,
                     permissionStateNotifier = permissionStateNotifier,
-                    callEndResolver = createEndResolver(),
                     callMutexHolder = mutexHolder,
                 ) {
                     override suspend fun refreshStatus(force: Boolean) {

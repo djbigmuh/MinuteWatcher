@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.domain
 
+import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
@@ -14,7 +15,7 @@ interface TrackingStatusProvider {
     /**
      * Unique key for the component.
      */
-    val key: String
+    val key: TrackingKey
 
     /**
      * Flow of the current tracking status.

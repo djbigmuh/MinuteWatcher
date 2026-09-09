@@ -1,22 +1,30 @@
 package com.example.minutewatcher.core.common.util
 
+import com.example.minutewatcher.core.common.testing.AppLoggerResetRule
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class AppLoggerRaceTest {
     @get:Rule
+    val loggerResetRule = AppLoggerResetRule()
+
+    @get:Rule
     val tempFolder = TemporaryFolder()
+
+    private lateinit var logDir: File
 
     @Before
     fun setup() {
+        logDir = tempFolder.newFolder("logs")
         AppLogger.resetForTest()
-        AppLogger.initForTest(tempFolder.newFolder(), enabled = true)
+        AppLogger.initForTest(logDir, enabled = true)
     }
 
     @After
@@ -25,49 +33,38 @@ class AppLoggerRaceTest {
     }
 
     @Test
-    fun `ensureWorkerStarted starts only one worker thread even when called concurrently after crash`() {
-        // 1. Start initial worker
-        AppLogger.d("Initial log to start worker")
-
-        // Wait a bit to ensure it started
-        Thread.sleep(200)
-
-        // 2. Simulate worker crash by manually setting workerThread to null
-        // Since we now check thread.isAlive, we must clear the reference to simulate a crash/death
-        val field = AppLogger::class.java.getDeclaredField("workerThread")
-        field.isAccessible = true
-        val oldThread = field.get(AppLogger) as? Thread
-        field.set(AppLogger, null)
-
-        // Kill the old thread so it doesn't count in our check
-        oldThread?.interrupt()
-        Thread.sleep(100)
-
-        // 3. Try to start worker from multiple threads simultaneously
-        val threadCount = 10
+    fun `concurrent logging from multiple threads is safe`() {
+        val threadCount = 20
+        val logsPerThread = 100
         val latch = CountDownLatch(1)
         val startLatch = CountDownLatch(threadCount)
         val completedLatch = CountDownLatch(threadCount)
 
-        repeat(threadCount) {
+        repeat(threadCount) { threadIdx ->
             Thread {
                 startLatch.countDown()
                 latch.await()
-                // Use reflection to call private ensureWorkerStarted
-                val method = AppLogger::class.java.getDeclaredMethod("ensureWorkerStarted")
-                method.isAccessible = true
-                method.invoke(AppLogger)
+                repeat(logsPerThread) { logIdx ->
+                    AppLogger.d("Thread $threadIdx log $logIdx")
+                }
                 completedLatch.countDown()
             }.start()
         }
 
         startLatch.await()
-        latch.countDown() // Release all threads at once
-        completedLatch.await(5, TimeUnit.SECONDS)
+        latch.countDown() // Start all threads at once
+        assertTrue("Logging should complete", completedLatch.await(10, TimeUnit.SECONDS))
 
-        // 4. Count active worker threads
-        val activeWorkers = Thread.getAllStackTraces().keys.count { it.name == "AppLogger-Worker" }
+        // Wait for channel to be processed
+        Thread.sleep(2000)
 
-        assertEquals("Should only have one active worker thread", 1, activeWorkers)
+        val logFile = File(logDir, "logs.txt")
+        assertTrue("Log file should exist", logFile.exists())
+
+        val content = logFile.readText()
+        // We might drop some logs if the channel capacity (8192) is exceeded,
+        // but 20 * 100 = 2000 which is well within capacity.
+        assertTrue("Should contain logs from different threads", content.contains("Thread 0 log 0"))
+        assertTrue("Should contain logs from different threads", content.contains("Thread 19 log 99"))
     }
 }

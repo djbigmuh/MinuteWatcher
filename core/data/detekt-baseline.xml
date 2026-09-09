@@ -2,30 +2,18 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:AppSettingsRepositoryImpl.kt$AppSettingsRepositoryImpl$private fun Preferences.toAppSettings(): AppSettings</ID>
-    <!-- Метод атомарен: инкапсулирует критическую секцию старта звонка. Разделение нарушит логическую целостность транзакции. -->
-    <ID>LongMethod:CallTracker.kt$CallTracker$private suspend fun handleCallStartInternal(subId: Int): Boolean</ID>
-    <ID>LongMethod:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$@Test fun `traffic critical notification uses critical level`()</ID>
-    <ID>LongMethod:WidgetSettingsRepositoryTest.kt$WidgetSettingsRepositoryTest$@Test fun `load should return state populated from app settings`()</ID>
-    <!-- UsageWorkerDependencies является Dependency Aggregator для упрощения конструктора UsageCheckWorker. -->
-    <ID>LongParameterList:UsageWorkerDependencies.kt$UsageWorkerDependencies$( val simUsageRepository: SimUsageRepository, val simIdentityRepository: SimIdentityRepository, val simNotificationFlagsRepository: SimNotificationFlagsRepository, val appSettingsRepository: AppSettingsRepository, val autoResetUseCase: AutoResetUseCase, val trafficTracker: TrafficTracker, val notificationHelper: NotificationHelper, val dataChangeNotifier: DataChangeNotifier, val usageStateRepository: UsageStateRepository, val usageUseCase: UsageUseCase, val simWidgetVisibilityRepository: SimWidgetVisibilityRepository, val timeProvider: TimeProvider, )</ID>
-    <ID>MagicNumber:InitialSetupWorker.kt$InitialSetupWorker$15000L</ID>
-    <ID>MaxLineLength:CallTrackerTest.kt$CallTrackerTest$whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(callTrackingEnabled = false)))</ID>
-    <ID>ReturnCount:CallEventWorker.kt$CallEventWorker$override suspend fun doWork(): Result</ID>
-    <ID>ReturnCount:CallTracker.kt$CallTracker$private suspend fun endCall( subId: Int, notify: Boolean = true, )</ID>
-    <ID>ReturnCount:CallTracker.kt$CallTracker$private suspend fun handleCallStartInternal(subId: Int): Boolean</ID>
-    <ID>ReturnCount:IdentityMigrationService.kt$IdentityMigrationService$private fun Preferences.Key&lt;*&gt;.isLegacyKey(activeIdentities: Set&lt;String&gt;): Boolean</ID>
-    <ID>ReturnCount:InitialSetupWorker.kt$InitialSetupWorker$override suspend fun doWork(): Result</ID>
-    <ID>ReturnCount:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl$override suspend fun getSimIdentity(slot: Int): SimIdentity</ID>
-    <ID>TooGenericExceptionCaught:NotificationHelper.kt$NotificationHelper$e: RuntimeException</ID>
-    <ID>TooGenericExceptionThrown:UsageCheckWorkerTest.kt$UsageCheckWorkerTest$throw RuntimeException("Fatal")</ID>
-    <ID>TooManyFunctions:CallSessionRepositoryImpl.kt$CallSessionRepositoryImpl : CallSessionRepository</ID>
-    <ID>TooManyFunctions:CallTracker.kt$CallTracker : TrackingStatusProvider</ID>
-    <ID>TooManyFunctions:SimIdentityRepositoryImpl.kt$SimIdentityRepositoryImpl : BaseDataStoreRepositorySimIdentityRepository</ID>
-    <ID>TooManyFunctions:SimSettingsKeys.kt$SimSettingsKeys</ID>
-      <ID>TooManyFunctions:DataStoreKeys.kt$DataStoreKeys</ID>
-    <ID>TooManyFunctions:SimUsageRepositoryImpl.kt$SimUsageRepositoryImpl : BaseDataStoreRepositorySimUsageRepositorySimUsageAdjustmentRepositorySimUsageResetRepository</ID>
-    <ID>TooManyFunctions:TrafficTracker.kt$TrafficTracker : TrackingStatusProvider</ID>
-    <ID>TooManyFunctions:UsageDataModule.kt$UsageDataModule</ID>
+      <ID>CyclomaticComplexMethod:AppSettingsRepositoryImpl.kt:AppSettingsRepositoryImpl$private fun
+          Preferences.toAppSettings: AppSettings
+      </ID>
+      <ID>ReturnCount:CallEventWorker.kt:CallEventWorker$override suspend fun doWork: Result</ID>
+      <ID>ReturnCount:IdentityMigrationService.kt:IdentityMigrationService$private fun Preferences.Key&lt;*&gt;.isLegacyKey:
+          Boolean
+      </ID>
+      <ID>ReturnCount:InitialSetupWorker.kt:InitialSetupWorker$override suspend fun doWork: Result</ID>
+      <ID>ThrowsCount:InitialSetupWorker.kt:InitialSetupWorker$override suspend fun doWork: Result</ID>
+      <ID>TooGenericExceptionCaught:NotificationHelper.kt:NotificationHelper$e: RuntimeException</ID>
+      <ID>TooGenericExceptionThrown:UsageCheckWorkerTest.kt:UsageCheckWorkerTest$throw RuntimeException("Fatal")</ID>
+      <ID>TooManyFunctions:DataStoreKeys.kt:DataStoreKeys</ID>
+      <ID>TooManyFunctions:UsageDataModule.kt:UsageDataModule</ID>
   </CurrentIssues>
 </SmellBaseline>

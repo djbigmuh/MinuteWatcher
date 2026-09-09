@@ -49,6 +49,9 @@ internal object DataStoreKeys {
     @JvmStatic val MIGRATION_IDENTITY_STABILITY_COMPLETED =
         booleanPreferencesKey("migration_identity_stability_completed")
 
+    @JvmStatic
+    val INITIAL_SETUP_COMPLETED = booleanPreferencesKey("initial_setup_completed")
+
     @JvmStatic val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
     @JvmStatic val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
@@ -85,6 +88,9 @@ internal object DataStoreKeys {
     @JvmStatic fun callIdentityKey(subId: Int) = stringPreferencesKey("$CALL_IDENTITY_PREFIX$subId")
 
     @JvmStatic fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
+
+    @JvmStatic
+    fun baselineRetryCountKey(identity: String) = intPreferencesKey("baseline_retry_count_$identity")
 
     // Notification states (NotificationSettingsKeys)
     @JvmStatic fun notifiedLowMinutesKey(identity: String) = booleanPreferencesKey("notified_low_minutes_$identity")

@@ -2,10 +2,12 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -27,9 +29,12 @@ class MainSettingsController
     @Inject
     constructor(
         private val appSettingsRepository: AppSettingsRepository,
+        private val migrationFlagsRepository: MigrationFlagsRepository,
         private val settingsUseCase: SettingsUseCase,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
+    val isInitialSetupCompleted: Flow<Boolean> = migrationFlagsRepository.isInitialSetupCompleted()
+
         val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> =
             appSettingsRepository
                 .observeAppSettings()

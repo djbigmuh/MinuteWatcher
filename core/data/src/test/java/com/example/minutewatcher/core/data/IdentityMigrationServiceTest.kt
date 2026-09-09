@@ -245,7 +245,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testMigration_ConflictPreservesLegacyData() =
+    fun testMigration_ConflictPreservesModernValueAndBacksUpLegacy() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
@@ -272,19 +272,19 @@ class IdentityMigrationServiceTest {
                 )
 
             assertEquals(0, outcome.migrated)
-            assertTrue(outcome.conflicts > 0)
+            assertTrue("Conflict count should be > 0", outcome.conflicts > 0)
             assertEquals(0, outcome.failures)
-            assertTrue(outcome.partialFailure)
+            assertFalse("Partial failure should be false for resolved conflicts", outcome.partialFailure)
 
             val prefs = appDataStore.data.first()
-            // 3. New value should be preserved
+            // 3. Modern value should be preserved
             assertEquals(222, prefs[newKey])
-            // 4. Old value should be moved to conflict key
+            // 4. Legacy value should be moved to conflict key
             assertEquals(111, prefs[conflictKey])
-            // 5. Original old key should NOT be removed upon conflict (New Robust Behavior)
-            assertEquals(111, prefs[legacyKey])
-            // 6. hasLegacyData() should still return true (so migration is retried next time)
-            assertTrue(service.hasLegacyData())
+            // 5. Original old key should be REMOVED (Policy Fix)
+            assertNull("Legacy key must be removed after conflict resolution", prefs[legacyKey])
+            // 6. hasLegacyData() should return false (Conflict resolved)
+            assertFalse(service.hasLegacyData())
         }
 
     @Test
