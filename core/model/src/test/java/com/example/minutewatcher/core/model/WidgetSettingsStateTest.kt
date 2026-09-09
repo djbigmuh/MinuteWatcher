@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidgetSettingsStateTest {
@@ -29,7 +30,7 @@ class WidgetSettingsStateTest {
         assertEquals(Constants.Widget.MAX_TRANSPARENCY, validated.transparency)
         assertEquals(Constants.Widget.MAX_FONT_SIZE, validated.fontSize)
         assertEquals(simStates, validated.simStates)
-        assertFalse(validated.widgetLimitExceeded)
+        assertTrue(validated.widgetLimitExceeded)
     }
 
     @Test

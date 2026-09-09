@@ -91,6 +91,8 @@ class MainSettingsController
         /**
          * Dismisses the widget limit exceeded error flag.
          *
+         * This is the canonical way to manually clear the widget error.
+         *
          * **Thread Safety:** Safe to call from any coroutine context.
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */

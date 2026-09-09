@@ -590,7 +590,7 @@ class WidgetSettingsViewModelTest {
             assertEquals(Constants.Widget.MAX_SIM_ARRANGEMENT, captured.simArrangement)
             assertEquals(Constants.Widget.MAX_TRANSPARENCY, captured.transparency)
             assertEquals(Constants.Widget.MAX_FONT_SIZE, captured.fontSize)
-            assertFalse(captured.widgetLimitExceeded)
+            assertTrue(captured.widgetLimitExceeded)
 
             // Test MIN values
             vm.updateSettings {
@@ -1309,6 +1309,22 @@ class WidgetSettingsViewModelTest {
             // Manual cleanup
             viewModel.consumeSaveResult()
             assertEquals(null, viewModel.state.value.saveResult)
+        }
+
+    @Test
+    fun `updateSettings preserves widgetLimitExceeded`() =
+        runTest {
+            initViewModel()
+            viewModel.updateSettings { it.copy(widgetLimitExceeded = true) }
+            runCurrent()
+
+            // Change another setting
+            viewModel.updateSettings { it.copy(fontSize = 1) }
+            runCurrent()
+
+            val currentSettings = viewModel.state.value.settings
+            assertNotNull(currentSettings)
+            assertTrue("widgetLimitExceeded should be preserved", currentSettings!!.widgetLimitExceeded)
         }
 
     @Test
