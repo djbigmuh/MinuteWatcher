@@ -8,8 +8,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -99,5 +102,75 @@ class TrafficSimChangeHandlerTest {
             // 5. Third call - should not retry
             handler.ensureInMemoryLastDataSubId()
             verify(callSessionRepository, times(2)).getLastDataSubId()
+
+            @Test
+            fun `updateLastDataSubId with -1 does NOT set loaded flag`() =
+                runTest {
+                    // 1. Initial state is not loaded
+                    whenever(callSessionRepository.getLastDataSubId()).thenReturn(flow { emit(5) })
+
+                    // 2. Call update with invalid value
+                    handler.updateLastDataSubId(-1)
+
+                    // 3. Flag should still be false, so ensureInMemoryLastDataSubId should still load from repository
+                    handler.ensureInMemoryLastDataSubId()
+
+                    verify(callSessionRepository, times(1)).getLastDataSubId()
+                }
+
+            @Test
+            fun `SIM change detection works after updateLastDataSubId with -1`() =
+                runTest {
+                    // 1. Persisted value is 5
+                    whenever(callSessionRepository.getLastDataSubId()).thenReturn(flow { emit(5) })
+
+                    // 2. Call update with -1 (failed to get default data SIM)
+                    handler.updateLastDataSubId(-1)
+
+                    // 3. New target SIM is 7. handleSimChangeIfNeeded should load 5 first.
+                    whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_7")
+                    val target = TargetInfo(slot = 0, dataSubId = 7)
+
+                    val identity = handler.handleSimChangeIfNeeded(target) { }
+
+                    // 4. Identity should be null because SIM changed (5 -> 7)
+                    Assert.assertNull("Identity should be null on SIM change", identity)
+                    verify(baselineManager).resetBaseline(eq("sim_7"), any(), eq(true), any())
+                }
+        }
+
+    @Test
+    fun `updateLastDataSubId with -1 does NOT set loaded flag`() =
+        runTest {
+            // 1. Initial state is not loaded
+            whenever(callSessionRepository.getLastDataSubId()).thenReturn(flow { emit(5) })
+
+            // 2. Call update with invalid value
+            handler.updateLastDataSubId(-1)
+
+            // 3. Flag should still be false, so ensureInMemoryLastDataSubId should still load from repository
+            handler.ensureInMemoryLastDataSubId()
+
+            verify(callSessionRepository, times(1)).getLastDataSubId()
+        }
+
+    @Test
+    fun `SIM change detection works after updateLastDataSubId with -1`() =
+        runTest {
+            // 1. Persisted value is 5
+            whenever(callSessionRepository.getLastDataSubId()).thenReturn(flow { emit(5) })
+
+            // 2. Call update with -1 (failed to get default data SIM)
+            handler.updateLastDataSubId(-1)
+
+            // 3. New target SIM is 7. handleSimChangeIfNeeded should load 5 first.
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_7")
+            val target = TargetInfo(slot = 0, dataSubId = 7)
+
+            val identity = handler.handleSimChangeIfNeeded(target) { }
+
+            // 4. Identity should be null because SIM changed (5 -> 7)
+            Assert.assertNull("Identity should be null on SIM change", identity)
+            verify(baselineManager).resetBaseline(eq("sim_7"), any(), eq(true), any())
         }
 }

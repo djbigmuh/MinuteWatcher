@@ -136,15 +136,20 @@ class TrafficSimChangeHandler
         }
 
         suspend fun updateLastDataSubId(dataSubId: Int) {
-            lastDataSubIdLoaded.set(true)
-            if ((dataSubId == -1) || (dataSubId == inMemoryLastDataSubId.get())) return
+            if (dataSubId == -1) {
+                // Invalid value: do not touch memory or the loaded flag.
+                return
+            }
+            if (lastDataSubIdLoaded.get() && dataSubId == inMemoryLastDataSubId.get()) return
             inMemoryLastDataSubId.set(dataSubId)
+            lastDataSubIdLoaded.set(true)
             try {
                 callSessionRepository.setLastDataSubId(dataSubId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("TrafficSimChangeHandler: Failed to persist last data subId $dataSubId", e)
+                // in-memory value remains: detecting SIM change is more important than persistence
             }
         }
     }
