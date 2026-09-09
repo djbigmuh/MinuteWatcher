@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -68,7 +69,7 @@ class MainSimDataController
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
-        val uiState: StateFlow<SimCardListState> =
+        private val uiStateSource: Flow<SimCardListState> =
             usageStateRepository
                 .observeSimCardUiModels()
                 .map { models ->
@@ -92,11 +93,19 @@ class MainSimDataController
                     }
                 }.onStart { emit(SimCardListState.Loading) }
                 .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
-                .stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue = SimCardListState.Loading,
-                )
+
+        /**
+         * Observes the UI state of SIM cards.
+         *
+         * @param scope The scope in which to maintain the state flow.
+         * Typically [androidx.lifecycle.viewModelScope].
+         */
+        fun observeUiState(scope: CoroutineScope): StateFlow<SimCardListState> =
+            uiStateSource.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                initialValue = SimCardListState.Loading,
+            )
 
         /**
          * Ошибка последней операции, если она завершилась неудачей.

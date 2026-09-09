@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.controller
 
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -11,16 +12,20 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -34,6 +39,11 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class MainSimDataControllerTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule(
+        UnconfinedTestDispatcher()
+    )
+
     private val usageStateRepository: UsageStateRepository = mock()
     private val trackingRecoveryController: TrackingRecoveryController = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
@@ -77,7 +87,7 @@ class MainSimDataControllerTest {
             simLimitsRepository,
             usageUseCase,
             dataChangeNotifier,
-            StandardTestDispatcher(testScheduler),
+            mainDispatcherRule.testDispatcher,
             backgroundScope,
         )
 
@@ -141,28 +151,57 @@ class MainSimDataControllerTest {
 
     @Test
     fun `uiState stays in Loading when data not loaded and list is empty`() =
-        runTest {
+        runTest(mainDispatcherRule.testDispatcher) {
             val modelsFlow = MutableStateFlow(emptyList<SimCardUiModel>())
             whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(modelsFlow)
             whenever(usageStateRepository.isDataLoaded()).thenReturn(false)
 
             controller = createController()
+            val uiState = controller.observeUiState(backgroundScope)
 
+            val job = launch { uiState.collect {} }
             testScheduler.runCurrent()
-            assertEquals(SimCardListState.Loading, controller.uiState.value)
+            assertEquals(SimCardListState.Loading, uiState.value)
+            job.cancel()
         }
 
     @Test
     fun `uiState transitions to Empty when data loaded and list is empty`() =
-        runTest {
+        runTest(mainDispatcherRule.testDispatcher) {
             val modelsFlow = MutableStateFlow(emptyList<SimCardUiModel>())
             whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(modelsFlow)
             whenever(usageStateRepository.isDataLoaded()).thenReturn(true)
 
             controller = createController()
+            val uiState = controller.observeUiState(backgroundScope)
 
+            val job = launch { uiState.collect {} }
             testScheduler.runCurrent()
-            assertEquals(SimCardListState.Empty, controller.uiState.value)
+            assertEquals(SimCardListState.Empty, uiState.value)
+            job.cancel()
+        }
+
+    @Test
+    fun `observeUiState is lazy and does not start collection on creation`() =
+        runTest {
+            val modelsFlow = MutableSharedFlow<List<SimCardUiModel>>()
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(modelsFlow)
+
+            controller = createController()
+            testScheduler.runCurrent()
+
+            assertEquals("Flow should not be collected yet", 0, modelsFlow.subscriptionCount.value)
+
+            val job = launch {
+                controller.observeUiState(this).collect {}
+            }
+            testScheduler.runCurrent()
+            assertEquals("Flow should be collected after subscription", 1, modelsFlow.subscriptionCount.value)
+
+            job.cancel()
+            testScheduler.runCurrent()
+            // advanceTimeBy(5001) to trigger WhileSubscribed timeout if needed,
+            // but in tests we usually check immediately if it's properly bound.
         }
 
     @Test

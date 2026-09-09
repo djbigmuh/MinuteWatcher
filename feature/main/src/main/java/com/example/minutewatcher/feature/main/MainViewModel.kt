@@ -7,14 +7,17 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.controller.MainDialogController
 import com.example.minutewatcher.feature.main.controller.MainInitializationController
 import com.example.minutewatcher.feature.main.controller.MainViewModelControllers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
@@ -50,10 +53,34 @@ class MainViewModel
         val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
         val trackingBannerState: StateFlow<TrackingBannerState> get() = controllers.banner.trackingBannerState
-        val uiState: StateFlow<SimCardListState> get() = controllers.simData.uiState
+
+        /**
+         * Observes the UI state of SIM cards, bound to the viewModelScope.
+         */
+        val uiState: StateFlow<SimCardListState> =
+            controllers.simData.observeUiState(viewModelScope)
+
         val lastOperationError = controllers.simData.lastOperationError
-        val appTheme: StateFlow<AppTheme> get() = controllers.settings.appTheme
-        val appLanguage: StateFlow<String?> get() = controllers.settings.appLanguage
+
+        /**
+         * Hot flows for theme and language, bound to the viewModelScope.
+         */
+        val appTheme: StateFlow<AppTheme> =
+            controllers.settings.appTheme
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    initialValue = AppTheme.FOLLOW_SYSTEM,
+                )
+
+        val appLanguage: StateFlow<String?> =
+            controllers.settings.appLanguage
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    initialValue = null,
+                )
+
         val highlightedSlot: StateFlow<Int?> = controllers.simData.highlightedSlot
 
         init {

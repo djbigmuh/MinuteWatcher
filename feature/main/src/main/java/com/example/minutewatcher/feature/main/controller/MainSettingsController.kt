@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -35,32 +36,19 @@ class MainSettingsController
     ) {
         val isInitialSetupCompleted: Flow<Boolean> = migrationFlagsRepository.isInitialSetupCompleted()
 
-        val appSettings: StateFlow<com.example.minutewatcher.core.model.AppSettings> =
-            appSettingsRepository
-                .observeAppSettings()
-                .stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue =
-                        com.example.minutewatcher.core.model
-                            .AppSettings(),
-                )
+        /**
+         * Returns a state flow of application settings.
+         * Uses the repository's hot flow directly.
+         */
+        val appSettings: StateFlow<AppSettings> =
+            appSettingsRepository.observeAppSettings()
 
-        val appTheme: StateFlow<AppTheme> =
-            settingsUseCase.appTheme
-                .stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue = AppTheme.FOLLOW_SYSTEM,
-                )
-
-        val appLanguage: StateFlow<String?> =
-            settingsUseCase.appLanguage
-                .stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue = null,
-                )
+        /**
+         * Cold flows for theme and language.
+         * Should be collected in the UI scope (e.g., via viewModelScope.stateIn).
+         */
+        val appTheme: Flow<AppTheme> = settingsUseCase.appTheme
+        val appLanguage: Flow<String?> = settingsUseCase.appLanguage
 
         /**
          * Sets the application theme.
