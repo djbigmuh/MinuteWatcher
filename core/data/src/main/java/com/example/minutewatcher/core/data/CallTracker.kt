@@ -208,11 +208,17 @@ open class CallTracker
             ensureStarted()
             try {
                 initDeferred.await()
-            } catch (@Suppress("SwallowedException") e: CallTrackerStoppedException) {
+            } catch (
+                @Suppress("SwallowedException")
+                e: CallTrackerStoppedException,
+            ) {
                 AppLogger.w("CallTracker: stopped while waiting for init, proceeding anyway")
             } catch (e: CancellationException) {
                 throw e
-            } catch (@Suppress("SwallowedException") e: Exception) {
+            } catch (
+                @Suppress("SwallowedException")
+                e: Exception,
+            ) {
                 AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
             startHandler.executeCallStart(
@@ -241,11 +247,17 @@ open class CallTracker
             ensureStarted()
             try {
                 initDeferred.await()
-            } catch (@Suppress("SwallowedException") e: CallTrackerStoppedException) {
+            } catch (
+                @Suppress("SwallowedException")
+                e: CallTrackerStoppedException,
+            ) {
                 AppLogger.w("CallTracker: stopped while waiting for init, proceeding anyway")
             } catch (e: CancellationException) {
                 throw e
-            } catch (@Suppress("SwallowedException") e: Exception) {
+            } catch (
+                @Suppress("SwallowedException")
+                e: Exception,
+            ) {
                 AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
             endHandler.performCallEnd(

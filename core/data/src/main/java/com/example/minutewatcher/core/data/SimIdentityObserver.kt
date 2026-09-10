@@ -162,7 +162,10 @@ internal class SimIdentityObserver
                                 seedRepository.getOrCreateSeedOrEphemeralFallback {
                                     UUID.randomUUID().toString()
                                 }
-                            } catch (@Suppress("SwallowedException") inner: Exception) {
+                            } catch (
+                                @Suppress("SwallowedException")
+                                inner: Exception,
+                            ) {
                                 SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
                             } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
                         emit(SeedResult.Fallback(fallbackSeedResult.seed))
@@ -454,7 +457,10 @@ internal class SimIdentityObserver
                 AppLogger.e("SimIdentityObserver: Seed generation process failed", e)
                 try {
                     seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
-                } catch (@Suppress("SwallowedException") inner: Exception) {
+                } catch (
+                    @Suppress("SwallowedException")
+                    inner: Exception,
+                ) {
                     SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
                 } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
             } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
