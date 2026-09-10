@@ -27,7 +27,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsViewModelRaceTest {
     @get:Rule

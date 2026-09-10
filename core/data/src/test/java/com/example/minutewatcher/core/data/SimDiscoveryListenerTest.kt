@@ -25,7 +25,6 @@ import org.robolectric.annotation.Config
 import java.util.concurrent.Executor
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimDiscoveryListenerTest {
     private val context: Context = mock()

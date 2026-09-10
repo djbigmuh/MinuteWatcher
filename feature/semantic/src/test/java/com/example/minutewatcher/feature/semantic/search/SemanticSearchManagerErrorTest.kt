@@ -21,7 +21,6 @@ import org.robolectric.annotation.Config
 import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test

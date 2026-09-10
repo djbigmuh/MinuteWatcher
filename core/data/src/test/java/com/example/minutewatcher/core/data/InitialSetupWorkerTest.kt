@@ -36,7 +36,6 @@ import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class InitialSetupWorkerTest {
     private val callTracker: CallTracker = mock()

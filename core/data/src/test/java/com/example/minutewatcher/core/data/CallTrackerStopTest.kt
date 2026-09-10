@@ -23,7 +23,6 @@ import java.lang.reflect.Field
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStopTest : CallTrackerTestFixtures() {
     @Test

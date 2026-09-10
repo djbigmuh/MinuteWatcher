@@ -38,7 +38,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import android.content.pm.ShortcutManager as AndroidShortcutManager
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "en")
+@Config(qualifiers = "en")
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShortcutManagerTest {
     @get:Rule

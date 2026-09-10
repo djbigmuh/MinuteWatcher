@@ -45,7 +45,6 @@ import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 /* Suppressing LargeClass as this test file covers exhaustive scenarios for widget settings,
    including resolution edge cases and persistent state transitions. */

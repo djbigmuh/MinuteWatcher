@@ -25,7 +25,6 @@ import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppSettingsRepositoryResilienceTest {
     @get:Rule

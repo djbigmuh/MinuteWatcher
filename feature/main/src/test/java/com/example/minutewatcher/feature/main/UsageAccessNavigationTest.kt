@@ -51,7 +51,7 @@ import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+@Config(sdk = [35]) // behavior-specific SDK
 class UsageAccessNavigationTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

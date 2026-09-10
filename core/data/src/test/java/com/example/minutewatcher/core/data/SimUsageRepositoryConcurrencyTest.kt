@@ -20,7 +20,6 @@ import java.io.File
 import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimUsageRepositoryConcurrencyTest {
     @get:Rule

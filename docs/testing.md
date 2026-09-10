@@ -61,6 +61,14 @@ $env:ANDROID_PREFS_ROOT=$null; ./gradlew validateDebugScreenshotTest
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew detekt ktlintCheck
 ```
 
+## Robolectric SDK Policy
+
+To maintain test execution speed and minimize overhead, we follow a strict SDK consolidation policy:
+- **Default SDK**: Set globally to **37** via `robolectric.properties` and Gradle system properties.
+- **No Routine Pinning**: Do NOT add `@Config(sdk = [35])` or any other SDK pinning to test classes if it matches the default.
+- **Behavior-Specific Tests**: Pinning a different SDK is ONLY permitted when testing logic that branches based on `Build.VERSION`. In such cases, accompany the `@Config` with a comment: `// behavior-specific SDK`.
+- **Pure Logic**: Tests for classes that do not depend on Android framework (no `android.*` imports) must use the standard JUnit runner, not `RobolectricTestRunner`.
+
 ## Screenshot Testing Guidelines
 
 - **Screen-level tests**: Test each screen in 9 different sizes (Compact, Medium, Expanded combinations).

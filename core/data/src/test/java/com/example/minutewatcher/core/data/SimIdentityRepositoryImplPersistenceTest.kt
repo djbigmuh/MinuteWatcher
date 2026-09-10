@@ -40,7 +40,6 @@ import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityRepositoryImplPersistenceTest {
     @get:Rule

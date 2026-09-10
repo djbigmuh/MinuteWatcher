@@ -20,7 +20,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerRecoveryTest : CallTrackerTestFixtures() {
     // Override dispatcher to use Unconfined for reliable propagation in complex chains

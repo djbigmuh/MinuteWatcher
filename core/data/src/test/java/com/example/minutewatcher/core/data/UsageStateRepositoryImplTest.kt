@@ -39,7 +39,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
 class UsageStateRepositoryImplTest {
     private lateinit var context: Context
     private val simIdentityRepository: SimIdentityRepository = mock()
