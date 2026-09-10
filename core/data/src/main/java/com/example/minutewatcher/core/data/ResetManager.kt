@@ -54,7 +54,8 @@ class ResetManager
          *
          * @param shouldNotify True if a data change notification should be broadcasted after reset.
          * Safe to call from any coroutine context.
-         * @return `true` if all SIMs were successfully processed, `false` otherwise.
+         * @return `true` if all SIMs were successfully processed or skipped due to cooldown.
+         * `false` if at least one SIM failed due to IO error or usage data timeout.
          * @throws kotlinx.coroutines.CancellationException if the reset process is cancelled.
          */
         @Suppress("CyclomaticComplexMethod")
@@ -76,6 +77,7 @@ class ResetManager
             val resetIdentities = mutableSetOf<String>()
             var ioException: IOException? = null
             var successCount = 0
+            var skippedCount = 0
 
             val allProcessed =
                 withTimeoutOrNull(RESET_TOTAL_TIMEOUT_MS.milliseconds) {
@@ -83,6 +85,8 @@ class ResetManager
                         try {
                             if (processSingleSimReset(simInfo, now, nowElapsed, resetIdentities)) {
                                 successCount++
+                            } else {
+                                skippedCount++
                             }
                         } catch (e: CancellationException) {
                             throw e
@@ -92,8 +96,10 @@ class ResetManager
                                 e,
                             )
                             ioException = e
+                            skippedCount++
                         } catch (e: Exception) {
                             AppLogger.e("ResetManager: Unexpected error resetting SIM ${simInfo.identity.stableId}", e)
+                            skippedCount++
                         }
                     }
                     true
@@ -117,7 +123,7 @@ class ResetManager
                 if (shouldNotify) dataChangeNotifier.notifyDataChanged()
             }
 
-            return allProcessed && handleAutoResetResult(ioException, successCount, activeSims.size)
+            return allProcessed && handleAutoResetResult(ioException, skippedCount, successCount, activeSims.size)
         }
 
         private suspend fun processSingleSimReset(
@@ -183,12 +189,14 @@ class ResetManager
 
         private fun handleAutoResetResult(
             ioException: IOException?,
+            skippedCount: Int,
             successCount: Int,
             totalActiveSims: Int,
         ): Boolean {
-            if (ioException != null) {
+            if (ioException != null || skippedCount > 0) {
                 AppLogger.w(
-                    "ResetManager: auto-reset partially failed ($successCount/$totalActiveSims succeeded)",
+                    "ResetManager: auto-reset partially failed " +
+                        "($successCount/$totalActiveSims succeeded, $skippedCount skipped, io=${ioException != null})",
                 )
                 return false
             }

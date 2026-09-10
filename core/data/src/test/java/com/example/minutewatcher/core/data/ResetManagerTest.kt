@@ -11,8 +11,11 @@ import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -374,6 +377,53 @@ class ResetManagerTest {
             d2.await()
 
             // Проверяем, что репозиторий вызван 1 раз
+            verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), any(), any())
+        }
+
+    @Test
+    fun `performAutoReset returns false when getSimUsage times out for one SIM`() =
+        runTest {
+            val id0 = "sim_0"
+            val id1 = "sim_1"
+            val sim0 = createMockSimInfo(id0, 0)
+            val sim1 = createMockSimInfo(id1, 1)
+
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
+
+            // sim0 succeeds
+            whenever(simUsageRepository.getSimUsage(id0)).thenReturn(flowOf(createMockSimUsage(id0)))
+            whenever(simUsageResetRepository.resetSimUsageIfDue(eq(id0), any(), any())).thenReturn(true)
+
+            // sim1 times out (Flow that never emits)
+            whenever(simUsageRepository.getSimUsage(id1)).thenReturn(MutableSharedFlow())
+
+            val result = resetManager.performAutoReset()
+
+            // Result should be false because sim1 was skipped
+            assertFalse("performAutoReset should return false if any SIM is skipped", result)
+
+            // Verify sim0 was still processed
+            verify(simUsageResetRepository).resetSimUsageIfDue(eq(id0), any(), any())
+            verify(trafficTracker).resetBaseline(id0)
+        }
+
+    @Test
+    fun `performAutoReset returns true on cooldown skip`() =
+        runTest {
+            val identity = "sim_0"
+            val sim = createMockSimInfo(identity, 0)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim)))
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createMockSimUsage(identity)))
+            whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any())).thenReturn(true)
+
+            // First call - success
+            assertTrue(resetManager.performAutoReset())
+
+            // Second call immediately after - skipped due to cooldown
+            val result = resetManager.performAutoReset()
+
+            assertTrue("Cooldown skip should still return true", result)
+            // Still only 1 call to repository
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), any(), any())
         }
 
