@@ -58,7 +58,7 @@ class CallStartHandlerUnitTest {
             whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
 
             // Act
-            handler.executeCallStart(1, context)
+            handler.executeCallStart(1, eventElapsedRealtime = -1L, context = context)
 
             // Assert
             verify(callSessionRepository).setCallStartTime(1, 1000L)

@@ -28,6 +28,7 @@ internal class CallStartHandler
     ) {
         suspend fun executeCallStart(
             subId: Int,
+            eventElapsedRealtime: Long,
             context: CallTrackingContext,
         ) {
             var shouldRefreshStatus = false
@@ -52,7 +53,7 @@ internal class CallStartHandler
                         return@withLock
                     }
 
-                    val startData = fetchCallStartData(targetSubId)
+                    val startData = fetchCallStartData(targetSubId, eventElapsedRealtime)
                     shouldRefreshStatus = processCallStartLocked(targetSubId, startData, context)
                 }
             } catch (e: CancellationException) {
@@ -74,7 +75,10 @@ internal class CallStartHandler
             }
         }
 
-        private suspend fun fetchCallStartData(targetSubId: Int): CallStartData {
+        private suspend fun fetchCallStartData(
+            targetSubId: Int,
+            eventElapsedRealtime: Long,
+        ): CallStartData {
             val startTimeResult =
                 retryHelper.readWithRetry(
                     label = "getCallStartTime",
@@ -95,7 +99,7 @@ internal class CallStartHandler
                 identity = savedIdentityResult.getOrNull(),
                 currentIdentity = currentIdentity,
                 now = timeProvider.now(),
-                bootTime = timeProvider.elapsedRealtime(),
+                bootTime = if (eventElapsedRealtime > 0) eventElapsedRealtime else timeProvider.elapsedRealtime(),
                 uptime = timeProvider.uptimeMillis(),
             )
         }

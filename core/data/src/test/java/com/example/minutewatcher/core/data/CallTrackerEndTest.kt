@@ -513,6 +513,31 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         }
 
     @Test
+    fun `onCallEnded uses eventElapsedRealtime for duration calculation`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            // 1. Start recorded at T=1000ms
+            timeProvider.setRealtime(1000L)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(500000000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            // 2. End event captured at T=61000ms (60s duration), but processed at T=120000ms
+            timeProvider.setRealtime(120000L)
+
+            callTracker.onCallEnded(subId = 1, eventElapsedRealtime = 61000L)
+            advanceUntilIdle()
+
+            // 3. Duration should be 60s -> 1 minute (NOT 119s -> 2 minutes)
+            verify(simUsageRepository).incrementMinutesUsed(eq("id_0"), eq(1))
+        }
+
+    @Test
     fun `onCallEnded with unknown subId sets error status on getActiveCallSubIds timeout`() =
         runTest(testDispatcher) {
             setupCommonMocks()

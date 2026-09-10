@@ -35,6 +35,7 @@ internal class CallEndHandler
         @Suppress("LongMethod", "ThrowsCount")
         suspend fun performCallEnd(
             subId: Int,
+            eventElapsedRealtime: Long,
             context: CallTrackingContext,
         ) {
             var shouldRefreshStatus = false
@@ -56,6 +57,7 @@ internal class CallEndHandler
                         shouldRefreshStatus =
                             executeCallEndLogic(
                                 subId,
+                                eventElapsedRealtime,
                                 context,
                             )
                     }
@@ -91,19 +93,21 @@ internal class CallEndHandler
 
         private suspend fun executeCallEndLogic(
             subId: Int,
+            eventElapsedRealtime: Long,
             context: CallTrackingContext,
         ): Boolean {
             val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
             if (effectiveSubId != -1) {
-                return endCall(effectiveSubId, true, context)
+                return endCall(effectiveSubId, eventElapsedRealtime, true, context)
             }
 
             val result = callEndResolver.resolveUnknownSubIdEnd()
-            return handleResolveResult(result, context)
+            return handleResolveResult(result, eventElapsedRealtime, context)
         }
 
         private suspend fun handleResolveResult(
             result: CallEndResolver.ResolveResult,
+            eventElapsedRealtime: Long,
             context: CallTrackingContext,
         ): Boolean =
             when (result) {
@@ -113,13 +117,14 @@ internal class CallEndHandler
                 }
 
                 is CallEndResolver.ResolveResult.SubIds -> {
-                    processResolvedSubIds(result.ids, context)
+                    processResolvedSubIds(result.ids, eventElapsedRealtime, context)
                     true
                 }
             }
 
         private suspend fun processResolvedSubIds(
             subIdsToEnd: List<Int>,
+            eventElapsedRealtime: Long,
             context: CallTrackingContext,
         ) {
             if (subIdsToEnd.isEmpty()) return
@@ -127,7 +132,7 @@ internal class CallEndHandler
             val notifyEach = subIdsToEnd.size == 1
             subIdsToEnd.forEach { id ->
                 try {
-                    endCall(id, notifyEach, context)
+                    endCall(id, eventElapsedRealtime, notifyEach, context)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -179,10 +184,11 @@ internal class CallEndHandler
 
         suspend fun endCall(
             subId: Int,
+            eventElapsedRealtime: Long,
             notify: Boolean,
             context: CallTrackingContext,
         ): Boolean {
-            val endData = fetchCallEndData(subId)
+            val endData = fetchCallEndData(subId, eventElapsedRealtime)
 
             if (!settingsHandler.isCallTrackingEnabled()) {
                 AppLogger.d("CallTracker: tracking disabled, clearing session for subId $subId")
@@ -192,7 +198,10 @@ internal class CallEndHandler
             return processCallEndLocked(subId, endData, notify, context)
         }
 
-        private suspend fun fetchCallEndData(subId: Int): CallEndData =
+        private suspend fun fetchCallEndData(
+            subId: Int,
+            eventElapsedRealtime: Long,
+        ): CallEndData =
             CallEndData(
                 startTimeResult =
                     retryHelper.readWithRetry(
@@ -210,7 +219,7 @@ internal class CallEndHandler
                     retryHelper.readWithRetry(
                         label = "endCall:uptime",
                     ) { callSessionRepository.getUptime(subId) },
-                currentBootTime = timeProvider.elapsedRealtime(),
+                currentBootTime = if (eventElapsedRealtime > 0) eventElapsedRealtime else timeProvider.elapsedRealtime(),
                 currentUptime = timeProvider.uptimeMillis(),
             )
 

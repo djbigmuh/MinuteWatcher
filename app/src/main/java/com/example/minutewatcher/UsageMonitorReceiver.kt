@@ -3,6 +3,7 @@ package com.example.minutewatcher
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import android.telephony.TelephonyManager
 import androidx.annotation.VisibleForTesting
 import androidx.work.Data
@@ -67,6 +68,7 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
                 .Builder()
                 .putString("state", state)
                 .putInt("subId", subId)
+                .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, SystemClock.elapsedRealtime())
                 .build()
 
         val workRequest =

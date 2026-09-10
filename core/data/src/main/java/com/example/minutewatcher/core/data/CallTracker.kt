@@ -195,10 +195,16 @@ open class CallTracker
          * Requires [Manifest.permission.READ_PHONE_STATE].
          * Safe to call from any coroutine context.
          *
+         * @param subId Subscription ID.
+         * @param eventElapsedRealtime Time when the event was captured (SystemClock.elapsedRealtime).
+         * -1 if unknown.
          * @throws CancellationException if the calling coroutine is cancelled.
          * Does NOT throw if the tracker is stopped while waiting for initialization.
          */
-        suspend fun onCallStarted(subId: Int) {
+        suspend fun onCallStarted(
+            subId: Int,
+            eventElapsedRealtime: Long = -1L,
+        ) {
             ensureStarted()
             try {
                 initDeferred.await()
@@ -211,6 +217,7 @@ open class CallTracker
             }
             startHandler.executeCallStart(
                 subId = subId,
+                eventElapsedRealtime = eventElapsedRealtime,
                 context = this,
             )
         }
@@ -221,10 +228,16 @@ open class CallTracker
          * Requires [Manifest.permission.READ_PHONE_STATE].
          * Safe to call from any coroutine context.
          *
+         * @param subId Subscription ID.
+         * @param eventElapsedRealtime Time when the event was captured (SystemClock.elapsedRealtime).
+         * -1 if unknown.
          * @throws CancellationException if the calling coroutine is cancelled.
          * Does NOT throw if the tracker is stopped while waiting for initialization.
          */
-        suspend fun onCallEnded(subId: Int) {
+        suspend fun onCallEnded(
+            subId: Int,
+            eventElapsedRealtime: Long = -1L,
+        ) {
             ensureStarted()
             try {
                 initDeferred.await()
@@ -237,6 +250,7 @@ open class CallTracker
             }
             endHandler.performCallEnd(
                 subId = subId,
+                eventElapsedRealtime = eventElapsedRealtime,
                 context = this,
             )
         }
@@ -331,6 +345,7 @@ open class CallTracker
         ) {
             endHandler.endCall(
                 subId = subId,
+                eventElapsedRealtime = -1L,
                 notify = notify,
                 context = this,
             )

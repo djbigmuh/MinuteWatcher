@@ -23,10 +23,11 @@ class CallEventWorker
             try {
                 val state = inputData.getString("state")
                 val subId = inputData.getInt("subId", -1)
+                val eventElapsedRealtime = inputData.getLong(EXTRA_EVENT_ELAPSED_REALTIME, -1L)
 
                 when (state) {
-                    TelephonyManager.EXTRA_STATE_OFFHOOK -> callTracker.onCallStarted(subId)
-                    TelephonyManager.EXTRA_STATE_IDLE -> callTracker.onCallEnded(subId)
+                    TelephonyManager.EXTRA_STATE_OFFHOOK -> callTracker.onCallStarted(subId, eventElapsedRealtime)
+                    TelephonyManager.EXTRA_STATE_IDLE -> callTracker.onCallEnded(subId, eventElapsedRealtime)
                     else -> AppLogger.w("CallEventWorker: unknown state=$state")
                 }
 
@@ -43,5 +44,9 @@ class CallEventWorker
                 AppLogger.e("CallEventWorker failed with unexpected error", e)
                 return Result.failure()
             }
+        }
+
+        companion object {
+            const val EXTRA_EVENT_ELAPSED_REALTIME = "eventElapsedRealtime"
         }
     }

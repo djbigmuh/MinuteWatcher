@@ -31,14 +31,16 @@ class CallEventWorkerTest {
     }
 
     @Test
-    fun `doWork calls onCallStarted for OFFHOOK`() =
+    fun `doWork calls onCallStarted for OFFHOOK with eventElapsedRealtime`() =
         runTest {
             val subId = 1
+            val eventTime = 12345L
             val inputData =
                 Data
                     .Builder()
                     .putString("state", TelephonyManager.EXTRA_STATE_OFFHOOK)
                     .putInt("subId", subId)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, eventTime)
                     .build()
 
             val worker =
@@ -57,18 +59,20 @@ class CallEventWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(callTracker).onCallStarted(subId)
+            verify(callTracker).onCallStarted(subId, eventTime)
         }
 
     @Test
-    fun `doWork calls onCallEnded for IDLE`() =
+    fun `doWork calls onCallEnded for IDLE with eventElapsedRealtime`() =
         runTest {
             val subId = 1
+            val eventTime = 67890L
             val inputData =
                 Data
                     .Builder()
                     .putString("state", TelephonyManager.EXTRA_STATE_IDLE)
                     .putInt("subId", subId)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, eventTime)
                     .build()
 
             val worker =
@@ -87,7 +91,7 @@ class CallEventWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            verify(callTracker).onCallEnded(subId)
+            verify(callTracker).onCallEnded(subId, eventTime)
         }
 
     @Test

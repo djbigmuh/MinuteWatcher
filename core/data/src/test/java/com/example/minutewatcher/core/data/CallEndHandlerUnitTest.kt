@@ -64,7 +64,7 @@ class CallEndHandlerUnitTest {
             whenever(attributionResolver.resolveTargetIdentity(eq(1), eq("id_1"))).thenReturn("id_1" to false)
 
             // Act
-            handler.endCall(1, notify = true, context = context)
+            handler.endCall(1, eventElapsedRealtime = -1L, notify = true, context = context)
 
             // Assert
             verify(settingsHandler).writeCallDuration(eq("id_1"), eq(1), eq(false), eq(true))

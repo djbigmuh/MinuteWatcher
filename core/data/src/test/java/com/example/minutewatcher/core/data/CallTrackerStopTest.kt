@@ -163,7 +163,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // 3. Assert: executeCallStart should be called (not thrown)
-            verify(startHandler).executeCallStart(eq(1), any())
+            verify(startHandler).executeCallStart(eq(1), eq(-1L), any())
         }
 
     @Test
