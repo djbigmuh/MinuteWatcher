@@ -37,7 +37,7 @@ object FormatUtils {
         val gbUnit = context.getString(R.string.gb_abbr)
         val logic = formatTrafficDisplayLogic(remainingGb, limitGb, showLimit, gbUnit)
         return if (showLimit && limitGb > 0) {
-            "${context.getString(R.string.remaining_text)}$logic"
+            "${context.getString(R.string.remaining_text)} $logic"
         } else {
             logic
         }
@@ -50,9 +50,9 @@ object FormatUtils {
         unit: String,
     ): String =
         if (showLimit && limitGb > 0) {
-            "${formatTrafficGb(remainingGb)} / ${formatTrafficGb(limitGb)} $unit".replace("  ", " ")
+            "${formatTrafficGb(remainingGb)} / ${formatTrafficGb(limitGb)} $unit"
         } else {
-            "${formatTrafficGb(remainingGb)} $unit".replace("  ", " ")
+            "${formatTrafficGb(remainingGb)} $unit"
         }
 
     fun formatMinutesDisplay(
@@ -66,7 +66,7 @@ object FormatUtils {
         val minUnit = context.getString(R.string.minutes_abbr)
         val logic = formatMinutesDisplayLogic(remaining, limit, showLimit, minUnit)
         return if (showLimit && limit > 0) {
-            "${context.getString(R.string.remaining_text)}$logic"
+            "${context.getString(R.string.remaining_text)} $logic"
         } else {
             logic
         }
@@ -79,9 +79,9 @@ object FormatUtils {
         unit: String,
     ): String =
         if (showLimit && limit > 0) {
-            "$remaining / $limit $unit".replace("  ", " ")
+            "$remaining / $limit $unit"
         } else {
-            "$remaining $unit".replace("  ", " ")
+            "$remaining $unit"
         }
 
     fun formatMinutesPlural(

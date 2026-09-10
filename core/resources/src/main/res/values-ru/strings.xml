@@ -66,6 +66,7 @@
     <string name="settings_load_error">Ошибка загрузки настроек</string>
     <string name="sim_list_unavailable_error">Список SIM недоступен. Настройки SIM будут доступны после повторной загрузки.</string>
     <string name="refresh_error">Ошибка обновления данных</string>
+    <string name="check_mark">✓</string>
     <string name="stale_data_warning">Данные могут быть неактуальны</string>
     <string name="notification_permission_permanent_denial">Запрос уведомлений заблокирован. Пожалуйста, включите их в настройках приложения для получения важных алертов о расходе.</string>
     <string name="action_grant">Предоставить</string>
@@ -133,6 +134,11 @@
     <string name="traffic_remaining_text">Трафика осталось:</string>
     <string name="gb_abbr">ГБ</string>
     <string name="auto_reset_day_suffix">число месяца</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
 
     <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html

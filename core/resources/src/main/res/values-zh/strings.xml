@@ -66,6 +66,7 @@
     <string name="settings_load_error">设置加载错误</string>
     <string name="sim_list_unavailable_error">SIM列表不可用。重新加载后SIM设置将可用。</string>
     <string name="refresh_error">数据刷新错误</string>
+    <string name="check_mark">✓</string>
     <string name="stale_data_warning">数据可能已过时</string>
     <string name="notification_permission_permanent_denial">通知已禁用。请在应用设置中开启以接收提醒。</string>
     <string name="action_grant">授予</string>
@@ -124,7 +125,7 @@
     <string name="usage_level_critical">严重不足</string>
 
     <!-- Data & Units -->
-    <string name="remaining_text">剩余: </string>
+    <string name="remaining_text">剩余:</string>
     <string name="used_text">已用</string>
     <string name="limit_text">限制</string>
     <string name="minutes_abbr"> 分钟</string>
@@ -134,6 +135,11 @@
     <string name="traffic_remaining_text">剩余流量: </string>
     <string name="gb_abbr"> GB</string>
     <string name="auto_reset_day_suffix">日</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
 
     <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html

@@ -117,6 +117,8 @@ class MinutesGlanceWidget(
                     .appWidgetBackground(),
             contentAlignment = Alignment.Center,
         ) {
+            // Using refresh_error as a general fallback message.
+            // This is intentional as most provideGlance failures are related to data access.
             Text(
                 text = context.getString(R.string.refresh_error),
                 style =

@@ -66,6 +66,7 @@
     <string name="settings_load_error">सेटिंग्स लोड करने में त्रुटि</string>
     <string name="sim_list_unavailable_error">SIM सूची उपलब्ध नहीं है। पुनः लोड करने के बाद SIM सेटिंग्स उपलब्ध होंगी।</string>
     <string name="refresh_error">डेटा ताज़ा करने में त्रुटि</string>
+    <string name="check_mark">✓</string>
     <string name="stale_data_warning">डेटा पुराना हो सकता है</string>
     <string name="notification_permission_permanent_denial">सूचनाएं अक्षम हैं। अलर्ट प्राप्त करने के लिए कृपया उन्हें ऐप सेटिंग में सक्षम करें।</string>
     <string name="action_grant">अनुमति दें</string>
@@ -124,7 +125,7 @@
     <string name="usage_level_critical">अत्यधिक कम</string>
 
     <!-- Data & Units -->
-    <string name="remaining_text">शेष: </string>
+    <string name="remaining_text">शेष:</string>
     <string name="used_text">उपयोग किया गया</string>
     <string name="limit_text">सीमा</string>
     <string name="minutes_abbr"> मिनट</string>
@@ -134,6 +135,11 @@
     <string name="traffic_remaining_text">शेष ट्रैफ़िक: </string>
     <string name="gb_abbr"> GB</string>
     <string name="auto_reset_day_suffix">महीने का दिन</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
 
     <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html

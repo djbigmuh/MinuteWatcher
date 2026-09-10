@@ -59,7 +59,7 @@ fun LanguageMenu(
                     },
                     trailingIcon = {
                         if (currentLanguage == option.code) {
-                            Text("✓")
+                            Text(stringResource(R.string.check_mark))
                         }
                     },
                 )
@@ -101,7 +101,7 @@ fun ThemeMenu(
                     },
                     trailingIcon = {
                         if (currentTheme == theme) {
-                            Text("✓")
+                            Text(stringResource(R.string.check_mark))
                         }
                     },
                 )

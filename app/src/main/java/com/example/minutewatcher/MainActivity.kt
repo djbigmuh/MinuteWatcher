@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
@@ -128,7 +129,7 @@ class MainActivity : AppCompatActivity() {
 
     @androidx.compose.runtime.Composable
     private fun AppContent() {
-        val themeState by viewModel.appTheme.collectAsState()
+        val themeState by viewModel.appTheme.collectAsStateWithLifecycle()
         val darkTheme = rememberIsDarkTheme(themeState)
 
         MinuteWatcherTheme(darkTheme = darkTheme) {

@@ -66,6 +66,7 @@
     <string name="settings_load_error">Fehler beim Laden der Einstellungen</string>
     <string name="sim_list_unavailable_error">SIM-Liste nicht verfügbar. SIM-Einstellungen sind nach dem Neuladen verfügbar.</string>
     <string name="refresh_error">Datenaktualisierungsfehler</string>
+    <string name="check_mark">✓</string>
     <string name="stale_data_warning">Daten könnten veraltet sein</string>
     <string name="notification_permission_permanent_denial">Benachrichtigungen sind deaktiviert. Bitte aktivieren Sie diese in den App-Einstellungen, um Warnungen zu erhalten.</string>
     <string name="action_grant">Erteilen</string>
@@ -124,7 +125,7 @@
     <string name="usage_level_critical">KRITISCH</string>
 
     <!-- Data & Units -->
-    <string name="remaining_text">Verbleibend: </string>
+    <string name="remaining_text">Verbleibend:</string>
     <string name="used_text">Verbraucht</string>
     <string name="limit_text">Limit</string>
     <string name="minutes_abbr"> Min.</string>
@@ -134,6 +135,11 @@
     <string name="traffic_remaining_text">Verbleibendes Datenvolumen: </string>
     <string name="gb_abbr"> GB</string>
     <string name="auto_reset_day_suffix">Tag des Monats</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
 
     <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html

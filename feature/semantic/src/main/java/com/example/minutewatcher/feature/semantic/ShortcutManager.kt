@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.semantic
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
@@ -34,7 +35,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -240,7 +240,8 @@ class ShortcutManager
                     createTrafficShortcut(sim)?.let { shortcuts.add(it) }
                 }
 
-            return shortcuts.take(MAX_DYNAMIC_SHORTCUTS)
+            val max = ShortcutManagerCompat.getMaxShortcutCountPerActivity(context)
+            return shortcuts.take(max.coerceAtLeast(0))
         }
 
         private fun createMinutesShortcut(sim: SimSnapshot): ShortcutInfoCompat? {
@@ -249,12 +250,23 @@ class ShortcutManager
 
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
-            val label = "${entity.remaining} ${context.getString(R.string.minutes_abbr).trim()}"
-            val longLabel = "$operator: ${context.getString(R.string.remaining_text).trim()} $label"
+            val shortLabel =
+                context.getString(
+                    R.string.shortcut_minutes_short,
+                    entity.remaining,
+                    context.getString(R.string.minutes_abbr).trim(),
+                )
+            val longLabel =
+                context.getString(
+                    R.string.shortcut_long_format,
+                    operator,
+                    context.getString(R.string.remaining_text).trim(),
+                    shortLabel,
+                )
 
             return ShortcutInfoCompat
                 .Builder(context, "minutes_shortcut_$slot")
-                .setShortLabel(label)
+                .setShortLabel(shortLabel)
                 .setLongLabel(longLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
                 .setIntent(createShortcutIntent(slot))
@@ -268,18 +280,23 @@ class ShortcutManager
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
             val trafficGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
-            val label =
-                String.format(
-                    Locale.getDefault(),
-                    "%.1f %s",
+            val shortLabel =
+                context.getString(
+                    R.string.shortcut_traffic_short,
                     trafficGb,
                     context.getString(R.string.gb_abbr).trim(),
                 )
-            val longLabel = "$operator: ${context.getString(R.string.remaining_text).trim()} $label"
+            val longLabel =
+                context.getString(
+                    R.string.shortcut_long_format,
+                    operator,
+                    context.getString(R.string.remaining_text).trim(),
+                    shortLabel,
+                )
 
             return ShortcutInfoCompat
                 .Builder(context, "traffic_shortcut_$slot")
-                .setShortLabel(label)
+                .setShortLabel(shortLabel)
                 .setLongLabel(longLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
                 .setIntent(createShortcutIntent(slot))
@@ -298,9 +315,5 @@ class ShortcutManager
 
         private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
             shortcutApplier.apply(context, shortcuts)
-        }
-
-        companion object {
-            private const val MAX_DYNAMIC_SHORTCUTS = 5
         }
     }

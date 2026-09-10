@@ -141,7 +141,7 @@ class UsageTileService : TileService() {
             } else {
                 // For older versions (API 26-28), subtitle is not supported.
                 // We use a compact "Name: Value" format in the label.
-                tile.label = "$operatorName: $remaining"
+                tile.label = "$operatorName: $remainingText"
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

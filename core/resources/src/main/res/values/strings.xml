@@ -66,6 +66,7 @@
     <string name="settings_load_error">Settings load error</string>
     <string name="sim_list_unavailable_error">SIM list is unavailable. SIM settings will be available after reload.</string>
     <string name="refresh_error">Data refresh error</string>
+    <string name="check_mark">✓</string>
     <string name="stale_data_warning">Data might be outdated</string>
     <string name="notification_permission_permanent_denial">Notifications are disabled. Please enable them in App Settings to receive alerts.</string>
     <string name="action_grant">Grant</string>
@@ -133,6 +134,11 @@
     <string name="traffic_remaining_text">Traffic remaining:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">day of month</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
 
     <string name="label_value_format" translatable="false">%1$s: %2$s</string>
     <string name="value_unit_format" translatable="false">%1$s %2$s</string>

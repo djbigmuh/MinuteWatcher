@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.semantic
 
 import android.content.Context
 import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
@@ -128,7 +129,7 @@ class ShortcutManagerTest {
         }
 
     @Test
-    fun `initialize updates shortcuts immediately with correct labels`() =
+    fun `initialize updates shortcuts immediately with correct labels from resources`() =
         runTest {
             val remainingMinutes = 90L
             val operator = "MTS"
@@ -157,9 +158,40 @@ class ShortcutManagerTest {
             assertEquals(1, shortcuts.size)
 
             val shortcut = shortcuts[0]
+            // Label is now from shortcut_minutes_short resource: "%1$d %2$s" -> "90 min."
             assertEquals("90 min.", shortcut.shortLabel.toString())
-            // In English it should be "MTS: Remaining: 90 min."
+            // Long label is now from shortcut_long_format resource: "%1$s: %2$s %3$s"
+            // "MTS: Remaining: 90 min." (en locale from @Config)
             assertEquals("MTS: Remaining: 90 min.", shortcut.longLabel.toString())
+        }
+
+    @Test
+    fun `shortcuts are limited by platform max count`() =
+        runTest {
+            // Robolectric default max is 15 or 10. Let's force many SIMs.
+            val sims = (0 until 10).map { i ->
+                SimSnapshot(
+                    i,
+                    "sim_$i",
+                    "Op_$i",
+                    mapOf(
+                        PackageType.MINUTES to createEntity(i, "Op_$i", PackageType.MINUTES, 100, 10),
+                        PackageType.DATA to createEntity(i, "Op_$i", PackageType.DATA, 1000, 100)
+                    ),
+                    1
+                )
+            }
+            val flow = MutableStateFlow(createSnapshot(sims))
+
+            shortcutManager.initialize(flow)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            val shortcuts = androidShortcutManager.dynamicShortcuts
+            val maxAllowed = ShortcutManagerCompat.getMaxShortcutCountPerActivity(context)
+
+            assertTrue("Should not exceed max allowed: $maxAllowed, was ${shortcuts.size}", shortcuts.size <= maxAllowed)
+            assertEquals(maxAllowed, shortcuts.size)
         }
 
     @Test
