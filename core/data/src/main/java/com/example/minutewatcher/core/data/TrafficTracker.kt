@@ -107,6 +107,7 @@ class TrafficTracker
         private val initJob = AtomicReference<Job?>(null)
         private var permissionObserverJob: Job? = null
         private var simObserverJob: Job? = null
+        private var lastObservedDataSubId: Int? = null
 
         init {
             isInitializing.set(true)
@@ -161,8 +162,9 @@ class TrafficTracker
             simObserverJob =
                 scope.launch {
                     try {
-                        simIdentityRepository.observeActiveSims().collect {
+                        simIdentityRepository.observeActiveSims().collect { sims ->
                             checkAndScheduleAutoRecovery("SIM change")
+                            handleDefaultDataChange(sims)
                         }
                     } catch (e: CancellationException) {
                         throw e
@@ -170,6 +172,29 @@ class TrafficTracker
                         AppLogger.e("TrafficTracker: SIM observer failed", e)
                     }
                 }
+        }
+
+        private suspend fun handleDefaultDataChange(sims: List<ActiveSimInfo>) {
+            val currentDataSubId = sims.firstOrNull { it.isDefaultData }?.subscriptionId ?: -1
+            val previous = lastObservedDataSubId
+            lastObservedDataSubId = currentDataSubId
+
+            if (previous == null) return // First emission handled by initialization
+            if (previous == currentDataSubId) return // No change in default data SIM
+
+            if (currentDataSubId == -1) {
+                AppLogger.d("TrafficTracker: default data SIM disappeared, skipping update")
+                return
+            }
+
+            AppLogger.d("TrafficTracker: default data SIM changed ($previous -> $currentDataSubId), updating traffic")
+            try {
+                updateTrafficUsage()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: SIM-change triggered update failed", e)
+            }
         }
 
         private suspend fun checkAndScheduleAutoRecovery(reason: String) {
@@ -261,6 +286,7 @@ class TrafficTracker
             initJob.getAndSet(null)?.cancel()
             isInitializing.set(false)
             initializationFailed.set(false)
+            lastObservedDataSubId = null
         }
 
         suspend fun resetBaseline(identity: String) {
