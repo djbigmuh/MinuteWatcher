@@ -248,6 +248,12 @@ object Constants {
      */
     const val CRITICAL_REMAINING_THRESHOLD_PERCENT = 0.10f
 
+    /** Порог критического остатка в процентах (целое число). */
+    const val CRITICAL_THRESHOLD_PERCENT_INT = 10
+
+    /** Порог низкого остатка в процентах (целое число). */
+    const val LOW_THRESHOLD_PERCENT_INT = 20
+
     /**
      * Максимальный лимит минут (44640 = 31 день × 24 часа × 60 минут).
      * Выбран как разумный максимум для месячного лимита минут.

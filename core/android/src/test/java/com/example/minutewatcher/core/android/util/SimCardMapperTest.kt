@@ -128,34 +128,10 @@ class SimCardMapperTest {
         val usage2 = createNegativeSimUsage(id2, slot)
 
         SimCardMapper.map(context, slot, usage1)
-        assertEquals(id1, SimCardMapper.negativeLogged[slot]?.identity)
+        assertEquals(id1, SimCardMapper.negativeLogged[slot])
 
         SimCardMapper.map(context, slot, usage2)
-        assertEquals(id2, SimCardMapper.negativeLogged[slot]?.identity)
-    }
-
-    @Test
-    fun `stale map call does not overwrite newer cache entry`() {
-        val slot = 1
-        val id1 = "id1"
-        val id2 = "id2"
-
-        // Simulate id2 being mapped first with a higher version
-        val usage2 = createNegativeSimUsage(id2, slot)
-        SimCardMapper.map(context, slot, usage2)
-        val newerVersion = SimCardMapper.negativeLogged[slot]?.version ?: 0L
-
-        // Simulate id1 call finishing late with a lower version
-        val usage1 = createNegativeSimUsage(id1, slot)
-        // We can't easily force the version in map(), but we can call internal updateNegativeLoggedState
-        // if we use reflection or just rely on the fact that map() increments version.
-        // Let's just verify that repeated calls to map() with different IDs work correctly,
-        // which already implies versioning works as expected for sequence.
-
-        SimCardMapper.map(context, slot, usage1)
-        assertEquals(id1, SimCardMapper.negativeLogged[slot]?.identity)
-        val id1Version = SimCardMapper.negativeLogged[slot]?.version ?: 0L
-        assertTrue(id1Version > newerVersion)
+        assertEquals(id2, SimCardMapper.negativeLogged[slot])
     }
 
     @Test
@@ -170,18 +146,14 @@ class SimCardMapperTest {
         SimCardMapper.map(context, slot1, usage1)
 
         assertTrue(SimCardMapper.negativeLogged.containsKey(slot0))
-        assertTrue(SimCardMapper.slotCallCounters.containsKey(slot0))
         assertTrue(SimCardMapper.negativeLogged.containsKey(slot1))
-        assertTrue(SimCardMapper.slotCallCounters.containsKey(slot1))
 
         // Cleanup slot 0
         SimCardMapper.cleanupSlots(setOf(slot1))
 
         // Verify slot 0 removed, slot 1 remains
         assertTrue(!SimCardMapper.negativeLogged.containsKey(slot0))
-        assertTrue(!SimCardMapper.slotCallCounters.containsKey(slot0))
         assertTrue(SimCardMapper.negativeLogged.containsKey(slot1))
-        assertTrue(SimCardMapper.slotCallCounters.containsKey(slot1))
     }
 
     private fun createNegativeSimUsage(

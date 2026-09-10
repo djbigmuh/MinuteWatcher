@@ -273,7 +273,7 @@ class UsageCheckWorker
                     .firstWithTimeout() ?: false
             if ((usagePct > monthProg) && !notifiedLow) {
                 val levelRes =
-                    if (remPct < CRITICAL_THRESHOLD) {
+                    if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
                         R.string.usage_level_critical
                     } else {
                         R.string.usage_level_low
@@ -384,7 +384,7 @@ class UsageCheckWorker
                     .firstWithTimeout() ?: false
             if ((usagePct > monthProg) && !notifiedLow) {
                 val levelRes =
-                    if (remPct < CRITICAL_THRESHOLD) {
+                    if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
                         R.string.usage_level_critical
                     } else {
                         R.string.usage_level_low
@@ -408,7 +408,6 @@ class UsageCheckWorker
 
         companion object {
             private const val HUNDRED = 100
-            private const val CRITICAL_THRESHOLD = 10
 
             private const val NOTIFICATION_TYPE_MINUTES = 0
             private const val NOTIFICATION_TYPE_TRAFFIC = 1

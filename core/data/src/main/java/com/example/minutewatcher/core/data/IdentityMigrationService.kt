@@ -107,21 +107,11 @@ open class IdentityMigrationService
         /**
          * Определяет, является ли ключ legacy-форматом, требующим миграции.
          *
-         * **Безопасность prefix-матчинга:**
-         * - Проверка `activeIdentities.any { name.endsWith("_$it") }` выполняется ПЕРВОЙ.
-         *   Если identity активна, ключ НЕ считается legacy, даже если суффикс
-         *   совпадает с legacy-паттерном. Это предотвращает миграцию активных данных.
-         * - Regex `_sub_\d+$` и `_icc_[a-f0-9]+$` используют `$`-якорь,
-         *   что гарантирует матчинг только в конце строки. Ключи вида
-         *   `minutes_used_sub_123` корректно определяются как legacy,
-         *   т.к. заканчиваются на `_sub_123`.
-         * - Ключи вида `widget_show_sim_icc_abc123` НЕ матчатся,
-         *   т.к. заканчиваются на `abc123`, а не на `_sub_N` или `_icc_<hex>`.
-         *
-         * **Эвристика в пределах критерия надёжности:** проверка `endsWith("_sim_$it")`
-         * для SUPPORTED_SLOT_INDICES определяет ключи fallback-формата.
-         * Если SIM с identity `sim_N` не в activeIdentities, её ключи orphaned
-         * и должны быть мигрированы/очищены. Это штатное поведение.
+         * Современные identity имеют форму icc_<hex>/sub_<id>/sim_<n>; их ключи структурно неотличимы
+         * от legacy-суффиксов. Защита:
+         * 1. Проверка activeIdentities выполняется ПЕРВОЙ. Если identity активна, ключ НЕ считается legacy.
+         * 2. Неоднозначность допустима только пока schema version < CURRENT.
+         * Ключи НЕактивных современных identity считаются orphaned-legacy — это штатно: они мигрируются/очищаются.
          */
         private fun Preferences.Key<*>.isLegacyKey(activeIdentities: Set<String>): Boolean {
             val name = this.name
@@ -138,10 +128,7 @@ open class IdentityMigrationService
             }
 
             // Legacy: keys ENDING with _sub_N or _icc_<hash>
-            // Modern: keys containing _sub_/_icc_ IN THE MIDDLE (e.g., minutes_used_sub_123)
-            val legacySubPattern = Regex("_sub_\\d+$")
-            val legacyIccPattern = Regex("_icc_[a-f0-9]+$")
-            return legacySubPattern.containsMatchIn(name) || legacyIccPattern.containsMatchIn(name)
+            return LEGACY_SUB_PATTERN.containsMatchIn(name) || LEGACY_ICC_PATTERN.containsMatchIn(name)
         }
 
         /**
@@ -408,6 +395,11 @@ open class IdentityMigrationService
             SUCCESS,
             CONFLICT,
             FAILURE,
+        }
+
+        private companion object {
+            private val LEGACY_SUB_PATTERN = Regex("_sub_\\d+$")
+            private val LEGACY_ICC_PATTERN = Regex("_icc_[a-f0-9]+$")
         }
 
         private fun MutablePreferences.migrateTypedKey(

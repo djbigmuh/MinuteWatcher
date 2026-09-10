@@ -4,7 +4,7 @@ Thank you for your interest in contributing to MinuteWatcher! To maintain high c
 
 ## Development Environment Requirements
 - **JDK 21** (Temurin 21.0.12+) is the mandatory version for all developers.
-- Higher versions (like **JDK 25**) must not be present in the system `PATH` as they cause compatibility issues with Detekt 1.x.
+- The Detekt/KSP toolchain is highly sensitive to the JDK version. Higher versions (like **JDK 25**) must not be present in the system `PATH`.
 - Set your JDK path locally via the `JAVA_HOME` environment variable or in your user-level
   `~/.gradle/gradle.properties` (using `org.gradle.java.home`). Do not commit this setting to the project repository.
 

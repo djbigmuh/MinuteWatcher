@@ -59,8 +59,6 @@ internal object DataStoreKeys {
     @JvmStatic val WAS_PHONE_PERMISSION_REQUESTED_BEFORE =
         booleanPreferencesKey("was_phone_permission_requested_before")
 
-    @JvmStatic val PHONE_PERMISSION_REQUESTED = booleanPreferencesKey("phone_permission_requested")
-
     @JvmStatic val DATA_SCHEMA_VERSION = intPreferencesKey("data_schema_version")
 
     @JvmStatic val BENCHMARK_SIM_COUNT = intPreferencesKey("benchmark_sim_count")

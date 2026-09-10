@@ -174,7 +174,7 @@ object OperatorResolver {
     private fun loadDbInternal(context: Context): Map<String, String> =
         try {
             val inputStream = context.assets.open("mcc_mnc_db.json")
-            val reader = BufferedReader(InputStreamReader(inputStream))
+            val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
             val jsonString = reader.use { it.readText() }
             val jsonObject = JSONObject(jsonString)
             val map = mutableMapOf<String, String>()

@@ -137,7 +137,6 @@ class MainSettingsController
                 appSettingsRepository.updateAppSettings {
                     it.copy(
                         wasPhonePermissionRequestedBefore = true,
-                        phonePermissionRequested = true,
                     )
                 }
             }

@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.ClampingUtils
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Mappers for converting domain models (SimUsage) to UI models (SimCardUiModel).
@@ -21,14 +20,6 @@ import java.util.concurrent.atomic.AtomicLong
  */
 object SimCardMapper {
     /**
-     * Cache entry for negative logging state.
-     */
-    internal data class LogEntry(
-        val identity: String,
-        val version: Long,
-    )
-
-    /**
      * Кэш identity SIM-карт, для которых уже было залогировано предупреждение
      * об отрицательных значениях. Предотвращает повторное логирование
      * одного и того же identity в одном слоте.
@@ -36,13 +27,7 @@ object SimCardMapper {
      * Использует [ConcurrentHashMap] для потокобезопасности.
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    internal val negativeLogged = ConcurrentHashMap<Int, LogEntry>()
-
-    /**
-     * Счётчики вызовов для каждого слота, обеспечивающие версионность кэша.
-     */
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    internal val slotCallCounters = ConcurrentHashMap<Int, AtomicLong>()
+    internal val negativeLogged = ConcurrentHashMap<Int, String>()
 
     private const val MAX_LOGGED_SIZE = Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS
 
@@ -52,10 +37,7 @@ object SimCardMapper {
      * @param activeSlots The set of currently active SIM slot indices.
      */
     fun cleanupSlots(activeSlots: Set<Int>) {
-        synchronized(this) {
-            negativeLogged.keys.removeIf { it !in activeSlots }
-            slotCallCounters.keys.removeIf { it !in activeSlots }
-        }
+        negativeLogged.keys.removeIf { it !in activeSlots }
     }
 
     /**
@@ -63,10 +45,7 @@ object SimCardMapper {
      */
     @VisibleForTesting
     fun resetForTest() {
-        synchronized(this) {
-            negativeLogged.clear()
-            slotCallCounters.clear()
-        }
+        negativeLogged.clear()
     }
 
     fun map(
@@ -79,11 +58,6 @@ object SimCardMapper {
             return createDefaultModel(slot, usage.identity)
         }
 
-        val version =
-            synchronized(this) {
-                slotCallCounters.computeIfAbsent(slot) { AtomicLong(0) }.incrementAndGet()
-            }
-
         val hasNegativeValues =
             usage.minutesUsed < 0 ||
                 usage.minutesLimit < 0 ||
@@ -92,9 +66,8 @@ object SimCardMapper {
 
         // Кэш negativeLogged подавляет повторное логирование отрицательных
         // значений для одного и того же identity в слоте. При смене SIM
-        // в слоте (identity изменился) старая запись удаляется. Все операции
-        // объединены в один блок для исключения race conditions через версионность.
-        updateNegativeLoggedState(slot, usage, hasNegativeValues, version)
+        // в слоте (identity изменился) старая запись удаляется.
+        updateNegativeLoggedState(slot, usage, hasNegativeValues)
 
         val safeMinutesUsed = ClampingUtils.clamp(usage.minutesUsed, 0, Constants.MAX_MINUTES_LIMIT)
         val safeMinutesLimit = ClampingUtils.clamp(usage.minutesLimit, 0, Constants.MAX_MINUTES_LIMIT)
@@ -148,22 +121,20 @@ object SimCardMapper {
         slot: Int,
         usage: SimUsage,
         hasNegativeValues: Boolean,
-        version: Long,
     ) {
         var shouldLog = false
-        synchronized(this) {
-            negativeLogged.compute(slot) { _, currentEntry ->
-                // Если в кэше уже есть более новая версия (race condition), ничего не меняем.
-                if (currentEntry != null && currentEntry.version > version) return@compute currentEntry
-
-                if (currentEntry?.identity == usage.identity) return@compute currentEntry
-
-                if (hasNegativeValues && (currentEntry != null || negativeLogged.size < MAX_LOGGED_SIZE)) {
+        negativeLogged.compute(slot) { _, currentIdentity ->
+            if (hasNegativeValues) {
+                if (currentIdentity == usage.identity) {
+                    currentIdentity
+                } else if (currentIdentity != null || negativeLogged.size < MAX_LOGGED_SIZE) {
                     shouldLog = true
-                    LogEntry(usage.identity, version)
+                    usage.identity
                 } else {
                     null
                 }
+            } else {
+                null
             }
         }
 

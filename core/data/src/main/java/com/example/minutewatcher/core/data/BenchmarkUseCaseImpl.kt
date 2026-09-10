@@ -68,7 +68,6 @@ class BenchmarkUseCaseImpl
                     onboardingCompleted = true,
                     notificationPermissionRequested = true,
                     wasPhonePermissionRequestedBefore = true,
-                    phonePermissionRequested = true,
                     language = "en",
                     benchmarkSimCount = safeCount,
                 )
