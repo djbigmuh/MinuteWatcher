@@ -31,8 +31,6 @@ interface AppSearchWrapper {
     fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest
 
     fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest
-
-    fun createSearchSpec(query: String): SearchSpec
 }
 
 /**
@@ -86,16 +84,7 @@ internal class AppSearchWrapperImpl
                 .Builder(NAMESPACE)
                 .addIds(ids)
                 .build()
-
-        override fun createSearchSpec(query: String): SearchSpec =
-            SearchSpec
-                .Builder()
-                .addFilterNamespaces(NAMESPACE)
-                .setSnippetCount(SNIPPET_COUNT)
-                .build()
     }
-
-private const val SNIPPET_COUNT = 10
 
 internal class AppSearchSessionWrapperImpl(
     private val session: AppSearchSession,

@@ -164,11 +164,6 @@ abstract class SemanticSearchManagerTestFixtures {
 
         override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
             RemoveByDocumentIdRequest.Builder("usage").addIds(ids).build()
-
-        override fun createSearchSpec(query: String): androidx.appsearch.app.SearchSpec =
-            androidx.appsearch.app.SearchSpec
-                .Builder()
-                .build()
     }
 
     protected class FakeAppSearchSessionWrapper(

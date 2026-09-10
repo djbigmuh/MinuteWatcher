@@ -26,7 +26,6 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.PHONE_STATE_CHANGED" />
-                <action android:name="android.telephony.action.PHONE_STATE_CHANGED" />
             </intent-filter>
         </receiver>
 

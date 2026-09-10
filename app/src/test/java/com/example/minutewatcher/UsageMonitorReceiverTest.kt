@@ -138,37 +138,6 @@ class UsageMonitorReceiverTest {
         }
 
     @Test
-    fun testOnReceiveTelephonyActionEnqueuesWork() =
-        runTest {
-            val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
-            val receiver =
-                object : UsageMonitorReceiver() {
-                    override fun acquirePendingResult() = mockPendingResult
-                }
-
-            // Test the alternative action string
-            val intent =
-                Intent(UsageMonitorReceiver.ACTION_PHONE_STATE_CHANGED_LEGACY)
-                    .apply {
-                        putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_OFFHOOK)
-                        putExtra("subscription", 2)
-                    }
-
-            receiver.onReceive(context, intent)
-
-            advanceUntilIdle()
-            ShadowLooper.idleMainLooper()
-
-            val workInfos =
-                workManager
-                    .getWorkInfosForUniqueWork("CALL_EVENT_2")
-                    .get()
-
-            assertTrue("Work CALL_EVENT_2 should be enqueued for telephony action", workInfos.isNotEmpty())
-            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
-        }
-
-    @Test
     fun testOnReceiveNullStateDoesNotEnqueueWork() =
         runTest {
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)

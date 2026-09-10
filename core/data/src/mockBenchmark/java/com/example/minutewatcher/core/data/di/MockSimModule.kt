@@ -1,6 +1,6 @@
 package com.example.minutewatcher.core.data.di
 
-import com.example.minutewatcher.core.data.DebugMockSimProvider
+import com.example.minutewatcher.core.data.BenchmarkMockSimProvider
 import com.example.minutewatcher.core.data.MockSimProvider
 import dagger.Binds
 import dagger.Module
@@ -14,5 +14,5 @@ import javax.inject.Singleton
 abstract class MockSimModule {
     @Binds
     @Singleton
-    abstract fun bindMockSimProvider(impl: DebugMockSimProvider): MockSimProvider
+    abstract fun bindMockSimProvider(impl: BenchmarkMockSimProvider): MockSimProvider
 }

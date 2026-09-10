@@ -55,9 +55,6 @@ class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var permissionManager: PermissionManager
 
-    @Inject @ApplicationScope
-    lateinit var applicationScope: CoroutineScope
-
     @Inject @IoDispatcher
     lateinit var ioDispatcher: CoroutineDispatcher
 

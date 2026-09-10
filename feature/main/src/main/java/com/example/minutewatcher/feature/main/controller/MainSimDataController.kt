@@ -363,8 +363,8 @@ class MainSimDataController
             try {
                 block()
             } catch (e: IOException) {
-                AppLogger.w("IOException during $operationName for slot $slot, retrying once after 500ms...", e)
-                delay(500.milliseconds)
+                AppLogger.w("IOException during $operationName for slot $slot, retrying once after ${RETRY_BASE_DELAY_MS}ms...", e)
+                delay(RETRY_BASE_DELAY_MS.milliseconds)
                 val success =
                     withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                         block()

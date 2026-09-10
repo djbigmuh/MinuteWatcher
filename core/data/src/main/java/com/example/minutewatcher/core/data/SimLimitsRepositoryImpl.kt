@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,7 +44,7 @@ class SimLimitsRepositoryImpl
         override fun getMonthlyLimit(identity: String): Flow<Int> {
             if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getMonthlyLimit called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(0)
+                return flowOf(0)
             }
             return get(DataStoreKeys.monthlyLimitKey(identity), 0)
         }
@@ -56,7 +57,7 @@ class SimLimitsRepositoryImpl
         override fun getTrafficLimit(identity: String): Flow<Int> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getTrafficLimit called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(0)
+                return flowOf(0)
             }
             return get(DataStoreKeys.trafficLimitKey(identity), 0)
         }
@@ -99,7 +100,7 @@ class SimLimitsRepositoryImpl
         override fun getAutoReset(identity: String): Flow<Boolean> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getAutoReset called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(value = false)
+                return flowOf(value = false)
             }
             return get(DataStoreKeys.autoResetKey(identity), defaultValue = false)
         }
@@ -112,7 +113,7 @@ class SimLimitsRepositoryImpl
         override fun getAutoResetDay(identity: String): Flow<Int> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getAutoResetDay called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(1)
+                return flowOf(1)
             }
             return get(DataStoreKeys.autoResetDayKey(identity), 1)
         }

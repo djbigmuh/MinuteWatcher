@@ -22,9 +22,7 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
     ) {
         val action = intent.action
 
-        if (action != TelephonyManager.ACTION_PHONE_STATE_CHANGED &&
-            action != ACTION_PHONE_STATE_CHANGED_LEGACY
-        ) {
+        if (action != TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
             return
         }
 
@@ -95,11 +93,5 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        /**
-         * Legacy or OEM-specific action for phone state changes.
-         * Some devices/versions might still use this instead of [TelephonyManager.ACTION_PHONE_STATE_CHANGED].
-         */
-        @VisibleForTesting
-        internal const val ACTION_PHONE_STATE_CHANGED_LEGACY = "android.telephony.action.PHONE_STATE_CHANGED"
     }
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -171,7 +172,7 @@ class SimIdentityPersistence
                     SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
                 )
             ) {
-                return kotlinx.coroutines.flow.flowOf("")
+                return flowOf("")
             }
             return combine(
                 getData(DataStoreKeys.simOperatorKey(identity), ""),
@@ -186,7 +187,7 @@ class SimIdentityPersistence
                     SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
                 )
             ) {
-                return kotlinx.coroutines.flow.flowOf(null)
+                return flowOf(null)
             }
             return dataStore.data.map { it[DataStoreKeys.customSimOperatorKey(identity)] }
         }
@@ -218,7 +219,7 @@ class SimIdentityPersistence
                     SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
                 )
             ) {
-                return kotlinx.coroutines.flow.flowOf("")
+                return flowOf("")
             }
             return getData(DataStoreKeys.simCodeKey(identity), "")
         }

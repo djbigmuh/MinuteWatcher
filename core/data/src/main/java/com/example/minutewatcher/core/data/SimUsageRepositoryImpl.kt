@@ -60,7 +60,7 @@ class SimUsageRepositoryImpl
         override fun getSimUsage(identity: String): Flow<SimUsage> {
             if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getSimUsage called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(mapper.createEmptyUsage(identity))
+                return flowOf(mapper.createEmptyUsage(identity))
             }
             return dataStore.data.map { prefs -> mapper.mapToSimUsage(identity, prefs) }
         }
@@ -284,7 +284,7 @@ class SimUsageRepositoryImpl
         override fun getLastResetDate(identity: String): Flow<Long> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getLastResetDate called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(0L)
+                return flowOf(0L)
             }
             return getData(DataStoreKeys.lastResetDateKey(identity), 0L)
         }
@@ -303,7 +303,7 @@ class SimUsageRepositoryImpl
         override fun getLastTotalBytes(identity: String): Flow<Long> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getLastTotalBytes called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(-1L)
+                return flowOf(-1L)
             }
             return getData(DataStoreKeys.lastTotalBytesKey(identity), -1L)
         }

@@ -278,17 +278,6 @@ class TrafficTracker
             }
         }
 
-        fun stop() {
-            permissionObserverJob?.cancel()
-            permissionObserverJob = null
-            simObserverJob?.cancel()
-            simObserverJob = null
-            initJob.getAndSet(null)?.cancel()
-            isInitializing.set(false)
-            initializationFailed.set(false)
-            lastObservedDataSubId = null
-        }
-
         suspend fun resetBaseline(identity: String) {
             if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")

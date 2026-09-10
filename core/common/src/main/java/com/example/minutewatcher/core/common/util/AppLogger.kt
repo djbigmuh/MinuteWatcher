@@ -198,6 +198,13 @@ object AppLogger {
         }
     }
 
+    /**
+     * Shuts down the logger and stops the file worker.
+     *
+     * Used only in tests to ensure clean state and avoid coroutine leaks.
+     * Production code should not call this as the logger should live for the app lifetime.
+     */
+    @VisibleForTesting
     fun shutdown() {
         synchronized(this) {
             isShutdown = true

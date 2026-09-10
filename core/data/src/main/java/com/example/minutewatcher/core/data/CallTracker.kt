@@ -410,9 +410,11 @@ open class CallTracker
 
         /**
          * Stops call tracking and cleans up resources.
-         * Guaranteed to complete or cancel any pending initialization waiters without
-         * throwing [CancellationException] to the callers of [onCallStarted]/[onCallEnded].
+         *
+         * Production code does NOT call this method; tracker lifecycle is bound to the process lifecycle.
+         * Used for testing purposes to ensure isolation.
          */
+        @VisibleForTesting
         fun stop() {
             initJob?.cancel()
             initJob = null

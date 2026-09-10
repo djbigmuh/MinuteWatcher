@@ -52,7 +52,7 @@ class WidgetUpdaterImpl
          * This prevents redundant flag updates and infinite retry loops if SIMPLIFIED mode also fails.
          * Reset at the beginning of each update process, on [recover], or when a FULL update succeeds.
          */
-        private var limitExceededHandled = AtomicBoolean(false)
+        private val limitExceededHandled = AtomicBoolean(false)
 
         /**
          * Triggers an update for all application widgets.

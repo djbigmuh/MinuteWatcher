@@ -100,7 +100,6 @@ open class SemanticSearchManager
         private val initMutex = Mutex()
         private val indexMutex = Mutex()
         private val consecutiveMutexTimeouts = AtomicInteger(0)
-        private val mutexBackoffMs = AtomicLong(INITIAL_BACKOFF_MS)
 
         @VisibleForTesting
         constructor(
@@ -139,7 +138,6 @@ open class SemanticSearchManager
                             lastSnapshotHash = null
                             lastSnapshotVersion = null
                             consecutiveMutexTimeouts.set(0)
-                            mutexBackoffMs.set(INITIAL_BACKOFF_MS)
                         }
                         true
                     } ?: false
@@ -264,13 +262,12 @@ open class SemanticSearchManager
                     errorHandler.resetFailures()
                 }
 
-                is IndexResult.ActualFailure -> {
-                    // Actual failure is already handled inside indexSnapshot update logic.
-                    // This branch is kept for exhaustiveness.
-                }
-
                 IndexResult.MutexTimeout -> {
                     handleMutexTimeout()
+                }
+
+                else -> {
+                    // Actual failure is already handled inside indexSnapshot update logic.
                 }
             }
         }
@@ -293,11 +290,9 @@ open class SemanticSearchManager
         @Suppress("ReturnCount", "TooGenericExceptionCaught")
         internal suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
             if (!indexMutex.tryLock()) {
-                val count = consecutiveMutexTimeouts.incrementAndGet()
-                val currentBackoff = mutexBackoffMs.get()
-                mutexBackoffMs.set(min(currentBackoff * 2, MAX_BACKOFF_MS))
+                consecutiveMutexTimeouts.incrementAndGet()
 
-                if (count >= 2) {
+                if (consecutiveMutexTimeouts.get() >= 2) {
                     transitionStatus(
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -312,7 +307,6 @@ open class SemanticSearchManager
 
             try {
                 consecutiveMutexTimeouts.set(0)
-                mutexBackoffMs.set(INITIAL_BACKOFF_MS)
 
                 val result =
                     withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
@@ -441,6 +435,13 @@ open class SemanticSearchManager
             lastSnapshotVersion = null
         }
 
+        /**
+         * Queries the AppSearch index.
+         *
+         * @param queryExpression The search query.
+         * @param limit Limits the number of returned SearchResults; page control via platform API is not available.
+         * @return A Result containing a list of search results.
+         */
         suspend fun query(
             queryExpression: String,
             limit: Int = 10,
@@ -464,10 +465,11 @@ open class SemanticSearchManager
                     val spec =
                         SearchSpec
                             .Builder()
-                            .setSnippetCount(limit)
+                            .setSnippetCount(SNIPPETS_PER_DOCUMENT)
                             .addFilterNamespaces(AppSearchConstants.NAMESPACE)
                             .build()
-                    Result.success(currentSession.query(queryExpression, spec))
+                    val results = currentSession.query(queryExpression, spec)
+                    Result.success(results.take(limit))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -485,8 +487,7 @@ open class SemanticSearchManager
         suspend fun indexInitialSnapshot(snapshot: GlobalSnapshot): IndexResult = indexSnapshot(snapshot)
 
         private companion object {
-            private const val INITIAL_BACKOFF_MS = 1000L
-            private const val MAX_BACKOFF_MS = 30_000L
+            private const val SNIPPETS_PER_DOCUMENT = 2
 
             /**
              * Maximum consecutive mutex timeouts before escalating to warning in logs.

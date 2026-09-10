@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,7 +40,7 @@ class SimWidgetVisibilityRepositoryImpl
         override fun getSimSettings(identity: String): Flow<SimSettingsState> {
             if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
                 AppLogger.w("getSimSettings called with invalid identity: $identity")
-                return kotlinx.coroutines.flow.flowOf(SimSettingsState(showSim = false))
+                return flowOf(SimSettingsState(showSim = false))
             }
             return dataStore.data.map { prefs ->
                 SimSettingsState(
