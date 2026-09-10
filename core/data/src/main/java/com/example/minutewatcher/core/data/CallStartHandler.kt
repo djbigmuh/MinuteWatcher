@@ -104,6 +104,7 @@ internal class CallStartHandler
             )
         }
 
+        @Suppress("ReturnCount")
         private suspend fun processCallStartLocked(
             targetSubId: Int,
             data: CallStartData,

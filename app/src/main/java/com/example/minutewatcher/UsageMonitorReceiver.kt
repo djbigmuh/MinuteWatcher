@@ -91,7 +91,4 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
             .await() // Ensure enqueuing completes before finish()
         AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
     }
-
-    companion object {
-    }
 }

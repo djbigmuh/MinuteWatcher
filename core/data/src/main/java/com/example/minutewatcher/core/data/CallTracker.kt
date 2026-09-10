@@ -208,11 +208,11 @@ open class CallTracker
             ensureStarted()
             try {
                 initDeferred.await()
-            } catch (e: CallTrackerStoppedException) {
+            } catch (@Suppress("SwallowedException") e: CallTrackerStoppedException) {
                 AppLogger.w("CallTracker: stopped while waiting for init, proceeding anyway")
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (@Suppress("SwallowedException") e: Exception) {
                 AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
             startHandler.executeCallStart(
@@ -241,11 +241,11 @@ open class CallTracker
             ensureStarted()
             try {
                 initDeferred.await()
-            } catch (e: CallTrackerStoppedException) {
+            } catch (@Suppress("SwallowedException") e: CallTrackerStoppedException) {
                 AppLogger.w("CallTracker: stopped while waiting for init, proceeding anyway")
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (@Suppress("SwallowedException") e: Exception) {
                 AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
             endHandler.performCallEnd(
@@ -273,6 +273,7 @@ open class CallTracker
          * **Thread Safety:** Safe to call from any coroutine context. Holds internal mutex
          * during DataStore operations.
          */
+        @Suppress("ReturnCount")
         override suspend fun refreshStatus(force: Boolean) {
             AppLogger.d("CallTracker: refreshStatus called (force=$force)")
             try {

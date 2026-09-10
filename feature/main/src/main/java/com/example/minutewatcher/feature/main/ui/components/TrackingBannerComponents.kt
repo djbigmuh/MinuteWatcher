@@ -1,3 +1,4 @@
+@file:Suppress("TooManyFunctions")
 package com.example.minutewatcher.feature.main.ui.components
 
 import androidx.compose.foundation.layout.Arrangement

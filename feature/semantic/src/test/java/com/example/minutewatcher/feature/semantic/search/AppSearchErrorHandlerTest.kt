@@ -47,7 +47,7 @@ class AppSearchErrorHandlerTest {
     }
 
     @Test
-    fun `handleInitializationError classifies AppSearchException with INTERNAL_ERROR as NOT_SUPPORTED with SERVICE_UNAVAILABLE`() {
+    fun `handleInitializationError classifies AppSearchException with INTERNAL_ERROR as NOT_SUPPORTED`() {
         val exception = AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR)
         val status = errorHandler.handleInitializationError(exception)
         assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)

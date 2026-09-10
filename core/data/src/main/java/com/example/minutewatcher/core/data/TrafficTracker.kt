@@ -174,6 +174,7 @@ class TrafficTracker
                 }
         }
 
+        @Suppress("ReturnCount")
         private suspend fun handleDefaultDataChange(sims: List<ActiveSimInfo>) {
             val currentDataSubId = sims.firstOrNull { it.isDefaultData }?.subscriptionId ?: -1
             val previous = lastObservedDataSubId
@@ -410,6 +411,7 @@ class TrafficTracker
             processActiveSimsTraffic(activeSims)
         }
 
+        @Suppress("ReturnCount")
         private suspend fun processActiveSimsTraffic(activeSims: List<ActiveSimInfo>) {
             val result = targetResolver.resolve(activeSims)
 

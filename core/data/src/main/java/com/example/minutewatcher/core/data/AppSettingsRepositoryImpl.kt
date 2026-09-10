@@ -243,6 +243,7 @@ class AppSettingsRepositoryImpl
             prefs[DataStoreKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
         }
 
+        @Suppress("CyclomaticComplexMethod")
         private fun Preferences.toAppSettings(): AppSettings {
             val default = AppSettings()
             return default.copy(

@@ -113,6 +113,7 @@ open class IdentityMigrationService
          * 2. Неоднозначность допустима только пока schema version < CURRENT.
          * Ключи НЕактивных современных identity считаются orphaned-legacy — это штатно: они мигрируются/очищаются.
          */
+        @Suppress("ReturnCount")
         private fun Preferences.Key<*>.isLegacyKey(activeIdentities: Set<String>): Boolean {
             val name = this.name
             if (name.startsWith("conflict_")) return false

@@ -181,6 +181,7 @@ abstract class SemanticSearchManagerTestFixtures {
         var putDocumentsResultCode: Int = AppSearchResult.RESULT_OK
         var queryResult: List<androidx.appsearch.app.SearchResult> = emptyList()
 
+        @Suppress("ThrowsCount")
         override suspend fun setSchema(request: SetSchemaRequest) {
             if (wrapper.failNextWithInvalidSchema && !request.isForceOverride) {
                 throw AppSearchException(AppSearchResult.RESULT_INVALID_SCHEMA)

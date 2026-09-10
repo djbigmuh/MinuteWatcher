@@ -230,6 +230,7 @@ internal class CallEndHandler
                 currentUptime = timeProvider.uptimeMillis(),
             )
 
+        @Suppress("ReturnCount")
         private suspend fun processCallEndLocked(
             subId: Int,
             data: CallEndData,

@@ -98,6 +98,7 @@ internal class CallAttributionResolver
             return resolveEffectiveSubIdFromActiveCalls()
         }
 
+        @Suppress("ReturnCount")
         suspend fun resolveEffectiveSubIdFromActiveCalls(): Int {
             // 2. Heuristic: if only one call is active, it must be it
             val active =

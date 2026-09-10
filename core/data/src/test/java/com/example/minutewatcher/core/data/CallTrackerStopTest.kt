@@ -120,11 +120,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
 
             val callerJob =
                 launch {
-                    try {
-                        tracker.onCallStarted(1)
-                    } catch (e: Exception) {
-                        throw e
-                    }
+                    tracker.onCallStarted(1)
                 }
             runCurrent()
 
