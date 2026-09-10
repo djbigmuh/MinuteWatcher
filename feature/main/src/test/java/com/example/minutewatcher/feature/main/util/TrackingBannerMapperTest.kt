@@ -264,7 +264,8 @@ class TrackingBannerMapperTest {
 
     @Test
     fun `mapToBannerState reflects observationFailed state`() {
-        val state =
+        // Case 1: Database error on observation
+        var state =
             TrackingBannerMapper.mapToBannerState(
                 statusMap =
                     mapOf(
@@ -276,8 +277,25 @@ class TrackingBannerMapperTest {
                 notificationsGranted = true,
                 settings = AppSettings(onboardingCompleted = true),
             )
-
         assertTrue(state.observationFailed)
+
+        // Case 2: Size limit error (should NOT mark observation as failed, as it's a known non-retryable limit)
+        state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.WIDGET_OBSERVATION to
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.NOT_SUPPORTED,
+                                code = TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT,
+                            ),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state.observationFailed)
     }
 
     @Test

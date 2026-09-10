@@ -505,6 +505,7 @@ class UpdateCoordinator
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.NOT_SUPPORTED,
                             "Widget size limit exceeded",
+                            code = TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT,
                         ),
                     )
                     lastSnapshotHash = null

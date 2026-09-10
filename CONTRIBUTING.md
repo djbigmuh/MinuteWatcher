@@ -57,6 +57,7 @@ We enforce strict static analysis. Your code must pass:
 - **Dependency Inversion:** Feature modules must never depend directly on `:core:data`. Use interfaces defined in `:core:domain`.
 - **Modularity:** Keep `:core:model` free of Android dependencies to ensure high-speed testing.
 - **DI:** Use Hilt for dependency injection and provide specific qualifiers (`@IoDispatcher`, etc.) instead of hardcoded dispatchers.
+- **Machine-readable Errors:** При классификации ошибок в `TrackingStatus.Error` обязательно используйте `type` и `code`. Ветвление логики по тексту сообщения (`message`) СТРОГО ЗАПРЕЩЕНО, так как сообщения предназначены только для логов и пользователя.
 
 ---
 

@@ -17,10 +17,11 @@ class AppSearchErrorHandlerTest {
     private val errorHandler = AppSearchErrorHandler(timeProvider)
 
     @Test
-    fun `handleInitializationError classifies IllegalStateException with not supported as NOT_SUPPORTED`() {
+    fun `handleInitializationError classifies IllegalStateException with not supported as UNKNOWN`() {
         val exception = IllegalStateException("AppSearch is not supported")
         val status = errorHandler.handleInitializationError(exception)
-        assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+        // String parsing is removed, so it should be UNKNOWN now
+        assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
     }
 
     @Test
@@ -31,24 +32,26 @@ class AppSearchErrorHandlerTest {
     }
 
     @Test
-    fun `handleInitializationError classifies DeadObjectException as NOT_SUPPORTED`() {
+    fun `handleInitializationError classifies DeadObjectException as NOT_SUPPORTED with SERVICE_UNAVAILABLE`() {
         val exception = DeadObjectException()
         val status = errorHandler.handleInitializationError(exception)
         assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+        assertEquals(TrackingStatus.ErrorCode.SERVICE_UNAVAILABLE, status.code)
     }
 
     @Test
-    fun `handleInitializationError classifies SecurityException as NOT_SUPPORTED`() {
+    fun `handleInitializationError classifies SecurityException as PERMISSION_MISSING`() {
         val exception = SecurityException()
         val status = errorHandler.handleInitializationError(exception)
-        assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+        assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (status as TrackingStatus.Error).type)
     }
 
     @Test
-    fun `handleInitializationError classifies AppSearchException with INTERNAL_ERROR as NOT_SUPPORTED`() {
+    fun `handleInitializationError classifies AppSearchException with INTERNAL_ERROR as NOT_SUPPORTED with SERVICE_UNAVAILABLE`() {
         val exception = AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR)
         val status = errorHandler.handleInitializationError(exception)
         assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+        assertEquals(TrackingStatus.ErrorCode.SERVICE_UNAVAILABLE, status.code)
     }
 
     @Test

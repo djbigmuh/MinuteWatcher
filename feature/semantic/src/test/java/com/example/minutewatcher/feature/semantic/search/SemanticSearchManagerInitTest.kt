@@ -89,7 +89,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `initialization with IllegalStateException containing not supported sets NOT_SUPPORTED status`() =
+    fun `initialization with IllegalStateException containing not supported now sets DATABASE_ERROR status`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
             fakeWrapper.failSessionCreationWith = IllegalStateException("AppSearch is not supported on this device")
@@ -100,8 +100,10 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
 
             val status = manager.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            // String parsing is removed, so it's no longer NOT_SUPPORTED.
+            // SemanticSearchManager wraps it into IndexingFailure -> DATABASE_ERROR.
             assertEquals(
-                TrackingStatus.ErrorType.NOT_SUPPORTED,
+                TrackingStatus.ErrorType.DATABASE_ERROR,
                 (status as TrackingStatus.Error).type,
             )
         }

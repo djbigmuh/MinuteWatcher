@@ -216,14 +216,6 @@ class ShortcutManager
                     TrackingStatus.ErrorType.PERMISSION_MISSING
                 }
 
-                is IllegalStateException -> {
-                    if (e.message?.contains("context", ignoreCase = true) == true) {
-                        TrackingStatus.ErrorType.NOT_SUPPORTED
-                    } else {
-                        TrackingStatus.ErrorType.UNKNOWN
-                    }
-                }
-
                 else -> {
                     TrackingStatus.ErrorType.UNKNOWN
                 }

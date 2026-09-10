@@ -87,7 +87,9 @@ object TrackingBannerMapper {
             widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
                 settingsError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
 
-        val isSizeLimitError = widgetError?.message?.contains("size limit") == true
+        val isSizeLimitError =
+            widgetError?.code == TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT ||
+                widgetError?.type == TrackingStatus.ErrorType.NOT_SUPPORTED
         return (isDatabaseError && !isSizeLimitError) || isStorageDegraded
     }
 

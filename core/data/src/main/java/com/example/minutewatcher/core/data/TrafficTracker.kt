@@ -330,7 +330,7 @@ class TrafficTracker
             } catch (e: SecurityException) {
                 updateStatusOnError(e.message ?: "Permission missing", TrackingStatus.ErrorType.PERMISSION_MISSING)
             } catch (_: TrafficUpdateTimeoutException) {
-                updateStatusOnError(TrafficUpdateTimeoutException.MESSAGE)
+                updateStatusOnError(TrafficUpdateTimeoutException.MESSAGE, code = TrackingStatus.ErrorCode.TIMEOUT)
             } catch (e: Exception) {
                 updateStatusOnError(e.message ?: "Unknown error")
             }
@@ -339,6 +339,7 @@ class TrafficTracker
         private fun updateStatusOnError(
             message: String?,
             type: TrackingStatus.ErrorType = TrackingStatus.ErrorType.UNKNOWN,
+            code: TrackingStatus.ErrorCode? = null,
         ) {
             // Race protection: if a successful update already set status to Active,
             // do not overwrite it with a stale timeout error.
@@ -346,7 +347,7 @@ class TrafficTracker
                 return
             }
 
-            transitionStatus(TrackingStatus.Error(type, message))
+            transitionStatus(TrackingStatus.Error(type, message, code = code))
         }
 
         @Suppress("ThrowsCount")
@@ -357,7 +358,7 @@ class TrafficTracker
                         try {
                             val activeSims = fetchActiveSims()
                             if (activeSims == null) {
-                                updateStatusOnError("Timeout fetching active sims")
+                                updateStatusOnError("Timeout fetching active sims", code = TrackingStatus.ErrorCode.TIMEOUT)
                                 return@withLock
                             }
 
@@ -385,13 +386,7 @@ class TrafficTracker
 
         private fun clearPreviousTimeoutError() {
             val current = statusMachine.current
-            val isTimeoutError =
-                (current is TrackingStatus.Error) &&
-                    (current.type == TrackingStatus.ErrorType.UNKNOWN) &&
-                    (
-                        current.message == TrafficUpdateTimeoutException.MESSAGE ||
-                            current.message == "Timeout fetching active sims"
-                    )
+            val isTimeoutError = (current is TrackingStatus.Error) && current.code == TrackingStatus.ErrorCode.TIMEOUT
 
             if (isTimeoutError) {
                 transitionStatus(TrackingStatus.Idle, force = true)

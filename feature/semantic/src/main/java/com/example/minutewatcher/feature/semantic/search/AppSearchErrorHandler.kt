@@ -43,8 +43,9 @@ class AppSearchErrorHandler
             return if (isNotSupported) {
                 AppLogger.w("AppSearch is not supported or encountered internal error (code=${e.resultCode}).", e)
                 TrackingStatus.Error(
-                    TrackingStatus.ErrorType.NOT_SUPPORTED,
-                    "AppSearch service not available or failed",
+                    type = TrackingStatus.ErrorType.NOT_SUPPORTED,
+                    message = "AppSearch service not available or failed",
+                    code = TrackingStatus.ErrorCode.SERVICE_UNAVAILABLE,
                 )
             } else {
                 AppLogger.e("AppSearch schema setup failed (force=$forceOverride, code=${e.resultCode})", e)
@@ -57,18 +58,23 @@ class AppSearchErrorHandler
                 throw e
             }
 
+            if (hasCause(e, SecurityException::class.java)) {
+                return TrackingStatus.Error(
+                    type = TrackingStatus.ErrorType.PERMISSION_MISSING,
+                    message = "Permission missing for AppSearch",
+                )
+            }
+
             val isNotSupported =
-                hasCause(e, IllegalStateException::class.java) &&
-                    e.message?.contains("not supported", ignoreCase = true) == true ||
-                    hasCause(e, DeadObjectException::class.java) ||
-                    hasCause(e, SecurityException::class.java) ||
+                hasCause(e, DeadObjectException::class.java) ||
                     (e is AppSearchException && (e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR))
 
             return if (isNotSupported) {
                 AppLogger.w("AppSearch is not supported or service failed on this device.", e)
                 TrackingStatus.Error(
-                    TrackingStatus.ErrorType.NOT_SUPPORTED,
-                    "AppSearch service not available on this device",
+                    type = TrackingStatus.ErrorType.NOT_SUPPORTED,
+                    message = "AppSearch service not available on this device",
+                    code = TrackingStatus.ErrorCode.SERVICE_UNAVAILABLE,
                 )
             } else {
                 AppLogger.e("Fatal AppSearch initialization error", e)

@@ -703,7 +703,7 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `updateTrafficUsage with fetchActiveSims timeout does NOT cleanup retries`() =
+    fun `updateTrafficUsage with fetchActiveSims timeout sets Error with TIMEOUT code`() =
         runTest {
             val tracker = startTracker()
 
@@ -712,13 +712,30 @@ class TrafficTrackerTest {
 
             tracker.updateTrafficUsage()
 
-            // 2. Status should be Error
+            // 2. Status should be Error with TIMEOUT code
             val status = tracker.status.value
-            assertTrue("Status should be Error, but was $status", status is TrackingStatus.Error)
-            assertEquals("Timeout fetching active sims", (status as TrackingStatus.Error).message)
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorCode.TIMEOUT, (status as TrackingStatus.Error).code)
 
-            // 3. Verify cleanupBaselineRetries was NOT called
-            verify(simUsageResetRepository, never()).cleanupBaselineRetries(any())
+            // 3. Next successful update should clear it (via clearPreviousTimeoutError)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, isStable = true),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    iccId = "sim_0",
+                    displayName = "SIM 1",
+                    carrierName = "Carrier 1",
+                    mccMnc = "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            )))
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+            whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
+
+            tracker.updateTrafficUsage()
+            assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
     @Test
