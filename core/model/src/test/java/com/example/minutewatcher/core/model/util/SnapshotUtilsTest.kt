@@ -137,6 +137,14 @@ class SnapshotUtilsTest {
         assertNotEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
     }
 
+    @Test
+    fun `hash remains same when only revision changes`() {
+        val s1 = createSnapshot(remaining = 90).copy(revision = 1L)
+        val s2 = createSnapshot(remaining = 90).copy(revision = 2L)
+
+        assertEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
+    }
+
     private fun createEntity(
         id: String,
         type: PackageType,

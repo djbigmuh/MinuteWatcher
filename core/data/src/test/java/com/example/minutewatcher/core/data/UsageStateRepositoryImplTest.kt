@@ -30,6 +30,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -260,6 +261,51 @@ class UsageStateRepositoryImplTest {
             job1.cancel()
             job2.cancel()
             job3.cancel()
+        }
+
+    @Test
+    fun `refresh returns Success even if wall-clock time does not advance`() =
+        runTest {
+            val refreshEvents = MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(replay = 1)
+            refreshEvents.emit(DataRefreshNotifier.RefreshEvent(eventId = 1L))
+            whenever(dataRefreshNotifier.refreshFlow).thenReturn(refreshEvents)
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps =
+                        UsageRepositoryDependencies(
+                            simIdentityRepository = simIdentityRepository,
+                            simUsageRepository = simUsageRepository,
+                            semanticCapabilities = semanticCapabilities,
+                            semanticVersion = semanticVersion,
+                            dataRefreshNotifier = dataRefreshNotifier,
+                            timeProvider = timeProvider,
+                        ),
+                    scope = backgroundScope,
+                )
+
+            // Trigger initialization
+            backgroundScope.launch { repository.observeSnapshot().collect {} }
+            testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS * 2)
+            testScheduler.runCurrent()
+
+            // 1. Initial state
+            val firstSnapshot = repository.observeSnapshot().value
+            assertEquals(1000L, firstSnapshot.timestamp)
+
+            // 2. Perform refresh. We mock notifyRefresh to emit a NEW event to refreshFlow.
+            // Our FixedTimeProvider stays at 1000L.
+            whenever(dataRefreshNotifier.notifyRefresh(any(), any())).thenAnswer {
+                refreshEvents.tryEmit(DataRefreshNotifier.RefreshEvent(eventId = 2L))
+            }
+
+            val result = repository.refresh()
+
+            assertTrue("Result should be Success even with identical timestamp, was $result", result is RefreshResult.Success)
+            val newSnapshot = (result as RefreshResult.Success).snapshot
+            assertEquals(1000L, newSnapshot.timestamp)
+            assertTrue("Revision must have advanced", newSnapshot.revision > firstSnapshot.revision)
         }
 
     companion object {

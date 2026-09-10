@@ -48,6 +48,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 internal class SnapshotAssembler {
     private val lastProcessedEventId = AtomicLong(-1)
+    private val revisionCounter = AtomicLong(0)
 
     fun assemble(
         usages: List<SimUsage>,
@@ -72,6 +73,7 @@ internal class SnapshotAssembler {
             capabilities = semanticCapabilities.getCapabilities(),
             isManualUpdate = isManual,
             suppressWidgetUpdate = suppress,
+            revision = revisionCounter.incrementAndGet(),
         )
     }
 }
@@ -225,6 +227,7 @@ class UsageStateRepositoryImpl
                 capabilities = deps.semanticCapabilities.getCapabilities(),
                 isManualUpdate = false,
                 suppressWidgetUpdate = false,
+                revision = 0L,
             )
 
         /**
@@ -249,7 +252,7 @@ class UsageStateRepositoryImpl
          * @throws kotlinx.coroutines.CancellationException if the refresh is cancelled.
          */
         override suspend fun refresh(): RefreshResult {
-            val startTimestamp = snapshotFlow.value.timestamp
+            val startRevision = snapshotFlow.value.revision
             val timeout = Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds
 
             // Вызываем уведомление.
@@ -263,7 +266,7 @@ class UsageStateRepositoryImpl
 
             val newSnapshot =
                 withTimeoutOrNull(timeout) {
-                    snapshotFlow.first { it.timestamp > startTimestamp }
+                    snapshotFlow.first { it.revision > startRevision }
                 }
 
             return if (newSnapshot != null) {

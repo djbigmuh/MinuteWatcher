@@ -19,6 +19,7 @@ object SnapshotUtils {
      * - Временные метки (lastUpdateTime, timestamp) — чтобы избежать бесконечных циклов обновления.
      * - Имя оператора — чтобы избежать лишних перерисовок виджета при обновлении метаданных,
      *   если числовые показатели не изменились.
+     * - [GlobalSnapshot.revision] исключён намеренно, т.к. это технический счётчик для refresh().
      */
     fun calculateContentHash(snapshot: GlobalSnapshot): Int {
         var result = snapshot.version.hashCode()

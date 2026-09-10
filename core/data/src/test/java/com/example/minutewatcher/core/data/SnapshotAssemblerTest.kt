@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.model.SchemaVersion
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -83,5 +84,19 @@ class SnapshotAssemblerTest {
                 semanticCapabilities,
             ) { _, _ -> mock() }
         assertTrue(snapshot2.isManualUpdate)
+    }
+
+    @Test
+    fun `assemble increments revision on every call`() {
+        val event = DataRefreshNotifier.RefreshEvent(eventId = 1L)
+
+        val snapshot1 = assembler.assemble(emptyList(), event, 1000L, semanticVersion, semanticCapabilities) { _, _ -> mock() }
+        val snapshot2 = assembler.assemble(emptyList(), event, 1000L, semanticVersion, semanticCapabilities) { _, _ -> mock() }
+        val snapshot3 = assembler.assemble(emptyList(), event, 1000L, semanticVersion, semanticCapabilities) { _, _ -> mock() }
+
+        assertTrue(snapshot2.revision > snapshot1.revision)
+        assertTrue(snapshot3.revision > snapshot2.revision)
+        // Verify it increments even with same timestamp
+        assertEquals(snapshot1.timestamp, snapshot2.timestamp)
     }
 }

@@ -85,4 +85,6 @@ data class GlobalSnapshot(
     val capabilities: List<AppCapability>,
     val isManualUpdate: Boolean = false,
     val suppressWidgetUpdate: Boolean = false,
+    /** Монотонный счётчик ассемблирования. НЕ входит в content-hash и НЕ индексируется. */
+    val revision: Long = 0L,
 )
