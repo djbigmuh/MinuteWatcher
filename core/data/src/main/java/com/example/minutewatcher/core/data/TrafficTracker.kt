@@ -347,7 +347,10 @@ class TrafficTracker
                         try {
                             val activeSims = fetchActiveSims()
                             if (activeSims == null) {
-                                updateStatusOnError("Timeout fetching active sims", code = TrackingStatus.ErrorCode.TIMEOUT)
+                                updateStatusOnError(
+                                    "Timeout fetching active sims",
+                                    code = TrackingStatus.ErrorCode.TIMEOUT,
+                                )
                                 return@withLock
                             }
 

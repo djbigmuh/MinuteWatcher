@@ -169,18 +169,19 @@ class ShortcutManagerTest {
     fun `shortcuts are limited by platform max count`() =
         runTest {
             // Robolectric default max is 15 or 10. Let's force many SIMs.
-            val sims = (0 until 10).map { i ->
-                SimSnapshot(
-                    i,
-                    "sim_$i",
-                    "Op_$i",
-                    mapOf(
-                        PackageType.MINUTES to createEntity(i, "Op_$i", PackageType.MINUTES, 100, 10),
-                        PackageType.DATA to createEntity(i, "Op_$i", PackageType.DATA, 1000, 100)
-                    ),
-                    1
-                )
-            }
+            val sims =
+                (0 until 10).map { i ->
+                    SimSnapshot(
+                        i,
+                        "sim_$i",
+                        "Op_$i",
+                        mapOf(
+                            PackageType.MINUTES to createEntity(i, "Op_$i", PackageType.MINUTES, 100, 10),
+                            PackageType.DATA to createEntity(i, "Op_$i", PackageType.DATA, 1000, 100),
+                        ),
+                        1,
+                    )
+                }
             val flow = MutableStateFlow(createSnapshot(sims))
 
             shortcutManager.initialize(flow)
@@ -190,7 +191,10 @@ class ShortcutManagerTest {
             val shortcuts = androidShortcutManager.dynamicShortcuts
             val maxAllowed = ShortcutManagerCompat.getMaxShortcutCountPerActivity(context)
 
-            assertTrue("Should not exceed max allowed: $maxAllowed, was ${shortcuts.size}", shortcuts.size <= maxAllowed)
+            assertTrue(
+                "Should not exceed max allowed: $maxAllowed, was ${shortcuts.size}",
+                shortcuts.size <= maxAllowed,
+            )
             assertEquals(maxAllowed, shortcuts.size)
         }
 

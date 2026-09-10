@@ -34,7 +34,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -301,7 +300,10 @@ class UsageStateRepositoryImplTest {
 
             val result = repository.refresh()
 
-            assertTrue("Result should be Success even with identical timestamp, was $result", result is RefreshResult.Success)
+            assertTrue(
+                "Result should be Success even with identical timestamp, was $result",
+                result is RefreshResult.Success,
+            )
             val newSnapshot = (result as RefreshResult.Success).snapshot
             assertEquals(1000L, newSnapshot.timestamp)
             assertTrue("Revision must have advanced", newSnapshot.revision > firstSnapshot.revision)

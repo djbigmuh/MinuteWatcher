@@ -24,7 +24,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = TestMinuteWatcherApp::class, sdk = [35])
+@Config(application = TestMinuteWatcherApp::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReceiverAsyncTest {
     private lateinit var context: Context

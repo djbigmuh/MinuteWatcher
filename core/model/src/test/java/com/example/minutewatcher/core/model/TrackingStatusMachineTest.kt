@@ -7,7 +7,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrackingStatusMachineTest {
-
     @Test
     fun `merge should return new status if force is true`() {
         val current = TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING)
@@ -67,27 +66,28 @@ class TrackingStatusMachineTest {
     }
 
     @Test
-    fun `transition updates status correctly`() = runTest {
-        val machine = TrackingStatusMachine(TrackingStatus.Idle)
-        assertEquals(TrackingStatus.Idle, machine.current)
+    fun `transition updates status correctly`() =
+        runTest {
+            val machine = TrackingStatusMachine(TrackingStatus.Idle)
+            assertEquals(TrackingStatus.Idle, machine.current)
 
-        machine.transition(TrackingStatus.Active)
-        assertEquals(TrackingStatus.Active, machine.current)
+            machine.transition(TrackingStatus.Active)
+            assertEquals(TrackingStatus.Active, machine.current)
 
-        machine.transition(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN))
-        assertEquals(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN), machine.current)
+            machine.transition(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN))
+            assertEquals(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN), machine.current)
 
-        // Recovery
-        machine.transition(TrackingStatus.Idle)
-        assertEquals(TrackingStatus.Idle, machine.current)
+            // Recovery
+            machine.transition(TrackingStatus.Idle)
+            assertEquals(TrackingStatus.Idle, machine.current)
 
-        // Sticky error
-        machine.transition(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING))
-        machine.transition(TrackingStatus.Active)
-        assertEquals(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING), machine.current)
+            // Sticky error
+            machine.transition(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING))
+            machine.transition(TrackingStatus.Active)
+            assertEquals(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING), machine.current)
 
-        // Force override
-        machine.transition(TrackingStatus.Idle, force = true)
-        assertEquals(TrackingStatus.Idle, machine.current)
-    }
+            // Force override
+            machine.transition(TrackingStatus.Idle, force = true)
+            assertEquals(TrackingStatus.Idle, machine.current)
+        }
 }

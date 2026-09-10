@@ -16,12 +16,17 @@ import kotlinx.coroutines.flow.update
  * 3. Recovery: HEALTHY снимает TRANSIENT-ошибку (не снимает sticky DATABASE/PERMISSION).
  * 4. Иначе текущий статус сохраняется.
  */
-class TrackingStatusMachine(initial: TrackingStatus = TrackingStatus.Idle) {
+class TrackingStatusMachine(
+    initial: TrackingStatus = TrackingStatus.Idle,
+) {
     private val _status = MutableStateFlow(initial)
     val status: StateFlow<TrackingStatus> = _status.asStateFlow()
     val current: TrackingStatus get() = _status.value
 
-    fun transition(newStatus: TrackingStatus, force: Boolean = false) {
+    fun transition(
+        newStatus: TrackingStatus,
+        force: Boolean = false,
+    ) {
         _status.update { current -> merge(current, newStatus, force) }
     }
 

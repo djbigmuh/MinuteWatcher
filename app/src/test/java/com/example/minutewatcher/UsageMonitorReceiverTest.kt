@@ -40,7 +40,7 @@ import org.robolectric.shadows.ShadowLooper
  * This is strict Android lifecycle compliance, not optional.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = TestMinuteWatcherApp::class, sdk = [35])
+@Config(application = TestMinuteWatcherApp::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class UsageMonitorReceiverTest {
     @get:Rule

@@ -49,7 +49,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = HiltTestApplication::class, sdk = [35])
+@Config(application = HiltTestApplication::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class BootReceiverTest {
     @get:Rule

@@ -219,7 +219,14 @@ internal class CallEndHandler
                     retryHelper.readWithRetry(
                         label = "endCall:uptime",
                     ) { callSessionRepository.getUptime(subId) },
-                currentBootTime = if (eventElapsedRealtime > 0) eventElapsedRealtime else timeProvider.elapsedRealtime(),
+                currentBootTime =
+                    if (eventElapsedRealtime >
+                        0
+                    ) {
+                        eventElapsedRealtime
+                    } else {
+                        timeProvider.elapsedRealtime()
+                    },
                 currentUptime = timeProvider.uptimeMillis(),
             )
 
