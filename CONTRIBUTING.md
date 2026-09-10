@@ -46,8 +46,12 @@ Certain modules require 100% coverage of their public API:
 > Every bug fix must include a regression test that demonstrates the bug and verifies that the fix prevents it from recurring.
 
 ## Static Analysis
-We enforce strict static analysis. Your code must pass:
-- **Detekt:** No new issues should be introduced. Baseline files are for legacy issues only and should be reduced over time.
+We enforce strict static analysis. Every developer MUST run verification before committing.
+- **`.\VERIFY.bat --Quick`**: Rapid check (ktlint + detekt). Use before minor commits.
+- **`.\VERIFY.bat`**: Full verification (ktlint + detekt + lint + tests + build). Use before completing any task.
+
+Your code must pass:
+- **Detekt (2.0.0-alpha.6):** No new issues should be introduced. Baseline files are for legacy issues only and should be reduced over time.
 - **Lint:** The build will fail on any lint error or warning. `MissingTranslation` is a fatal error.
 - **Ktlint:** Code style must follow the established Kotlin standards.
 
@@ -57,6 +61,7 @@ We enforce strict static analysis. Your code must pass:
 - **Dependency Inversion:** Feature modules must never depend directly on `:core:data`. Use interfaces defined in `:core:domain`.
 - **Modularity:** Keep `:core:model` free of Android dependencies to ensure high-speed testing.
 - **DI:** Use Hilt for dependency injection and provide specific qualifiers (`@IoDispatcher`, etc.) instead of hardcoded dispatchers.
+- **Dispatchers:** Все компоненты должны использовать инжектированные диспетчеры через Hilt-квалификаторы (`@IoDispatcher`, `@MainImmediateDispatcher`). Прямое использование `Dispatchers.IO` или `Dispatchers.Default` ЗАПРЕЩЕНО везде, кроме `DispatchersModule` и инфраструктурного класса `AppLogger`.
 - **Machine-readable Errors:** При классификации ошибок в `TrackingStatus.Error` обязательно используйте `type` и `code`. Ветвление логики по тексту сообщения (`message`) СТРОГО ЗАПРЕЩЕНО, так как сообщения предназначены только для логов и пользователя.
 
 ---
