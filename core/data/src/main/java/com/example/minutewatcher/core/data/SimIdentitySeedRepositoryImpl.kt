@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -68,20 +69,37 @@ internal class SimIdentitySeedRepositoryImpl
             }
         }
 
+    /**
+     * Tries to retrieve or create a persistent seed.
+     *
+     * [SeedResolutionResult.Persistent] is returned ONLY if the seed is successfully
+     * read from the persistent store OR successfully written to it (edit returned
+     * without exception).
+     */
         private suspend fun tryGetPersistentSeed(generator: () -> String): SeedResolutionResult? {
-            var result: SeedResolutionResult? = null
             var attempt = 0
-            while (result == null && attempt < MAX_RETRIES) {
+        while (attempt < MAX_RETRIES) {
+            val result =
                 try {
-                    dataStore.edit { preferences ->
-                        val currentSeed = preferences[DataStoreKeys.SIM_IDENTITY_SEED]
-                        if (currentSeed.isNullOrEmpty()) {
-                            val newSeed = generator()
-                            preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
-                            AppLogger.d("SimIdentitySeedRepositoryImpl: New seed generated and stored.")
-                            result = SeedResolutionResult.Persistent(newSeed)
+                    // 1. Clean read without write transaction
+                    val currentSeed = dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED]
+                    if (!currentSeed.isNullOrEmpty()) {
+                        SeedResolutionResult.Persistent(currentSeed)
+                    } else {
+                        // 2. If empty, generate and write idempotently
+                        val newSeed = generator()
+                        val updated =
+                            dataStore.edit { preferences ->
+                                if (preferences[DataStoreKeys.SIM_IDENTITY_SEED].isNullOrEmpty()) {
+                                    preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
+                                }
+                            }
+                        val storedSeed = updated[DataStoreKeys.SIM_IDENTITY_SEED]
+                        if (!storedSeed.isNullOrEmpty()) {
+                            AppLogger.d("SimIdentitySeedRepositoryImpl: New seed stored.")
+                            SeedResolutionResult.Persistent(storedSeed)
                         } else {
-                            result = SeedResolutionResult.Persistent(currentSeed)
+                            null
                         }
                     }
                 } catch (e: CancellationException) {
@@ -89,28 +107,28 @@ internal class SimIdentitySeedRepositoryImpl
                 } catch (e: IOException) {
                     if (attempt == MAX_RETRIES - 1) {
                         AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
+                        null
                     } else {
                         val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
-                        AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying persistent seed access in ${delayMs}ms...")
+                        AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying in ${delayMs}ms...")
                         delay(delayMs.milliseconds)
+                        null
                     }
                 }
-                attempt++
-            }
 
             if (result is SeedResolutionResult.Persistent) {
                 seedMutex.withLock {
                     if (_isEphemeralSeedActive.value) {
-                        AppLogger.d(
-                            "SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral state.",
-                        )
+                        AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
                         _isEphemeralSeedActive.value = false
                         cachedEphemeralSeed = null
                     }
                 }
+                return result
             }
-
-            return result
+            attempt++
+        }
+        return null
         }
 
         companion object {

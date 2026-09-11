@@ -18,4 +18,9 @@ data class AppSettings(
     val widgetLimitExceeded: Boolean = false,
     val inaccurateCallAttributionsCount: Int = 0,
     val callTrackingEnabled: Boolean = true,
+    /**
+     * Whether the settings have been successfully loaded from persistent storage.
+     * Default state is not loaded.
+     */
+    val isLoaded: Boolean = false,
 )

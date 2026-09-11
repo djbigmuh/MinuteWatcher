@@ -115,6 +115,18 @@ internal class SimIdentityObserver
             }
         }
 
+    private fun toSeedResult(result: SeedResolutionResult): SeedResult =
+        when (result) {
+            is SeedResolutionResult.Persistent -> SeedResult.Real(result.seed, isStable = true)
+            is SeedResolutionResult.Ephemeral -> SeedResult.Fallback(result.seed)
+        }
+
+    /**
+     * Flow of the SIM identity seed resolution result.
+     *
+     * [SeedResult.Fallback] is emitted only for Ephemeral seeds (storage unavailable).
+     * This flow ensures that all components use the same seed for identity derivation.
+     */
         @OptIn(ExperimentalCoroutinesApi::class)
         val seedFlow: Flow<SeedResult> =
             manualTrigger
@@ -133,14 +145,7 @@ internal class SimIdentityObserver
                             initialSeed == null || initialSeed.isEmpty() -> {
                                 // First attempt to generate a real seed before falling back
                                 val generationResult = generateSeedWithRetry()
-                                when (generationResult) {
-                                    is SeedResolutionResult.Persistent -> {
-                                        emit(SeedResult.Real(generationResult.seed, isStable = true))
-                                    }
-                                    is SeedResolutionResult.Ephemeral -> {
-                                        emit(SeedResult.Fallback(generationResult.seed))
-                                    }
-                                }
+                                emit(toSeedResult(generationResult))
                             }
 
                             else -> {
@@ -168,7 +173,7 @@ internal class SimIdentityObserver
                             ) {
                                 SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
                             } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
-                        emit(SeedResult.Fallback(fallbackSeedResult.seed))
+                        emit(toSeedResult(fallbackSeedResult))
                     }
                 }.distinctUntilChanged()
                 .shareIn(
@@ -408,6 +413,15 @@ internal class SimIdentityObserver
                 .map { it.benchmarkSimCount }
                 .distinctUntilChanged()
 
+    /**
+     * Checks if a transition from Fallback (ephemeral) seed to Real (persistent) seed
+     * has occurred and triggers identity migration if needed.
+     *
+     * **Migration Guard:** The migration is triggered at most once for a given pair
+     * of seed values (transition from specific Fallback to specific Real).
+     * If the system returns to Fallback state, the trigger is reset to allow
+     * migration if another persistent seed is eventually resolved.
+     */
         private fun checkAndTriggerMigration(
             currentSeed: SeedResult,
             sims: List<ActiveSimInfo>,
@@ -429,14 +443,6 @@ internal class SimIdentityObserver
                             }
                         } catch (e: Exception) {
                             AppLogger.e("SimIdentityObserver: migration failed with unexpected error", e)
-                        } finally {
-                            // Reset trigger if we ever go back to Fallback?
-                            // TZ says "one-time (guard AtomicBoolean migrationTriggered on a pair of seed values)"
-                            // but if it goes Real -> Fallback -> Real again, should we migrate again?
-                            // Usually ephemeral seed is stable per process, so if we restored persistent one,
-                            // we shouldn't need to migrate again from the SAME eph seed.
-                            // However, if process stays alive and DataStore fails AGAIN, we might get a NEW eph seed.
-                            // But TZ says "guard migrationTriggered on a pair of seed values".
                         }
                     }
                 }

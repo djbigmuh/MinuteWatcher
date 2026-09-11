@@ -192,6 +192,12 @@ internal class CallStartHandler
             sessionCleaner.cleanupCounters(targetSubId, context)
         }
 
+    /**
+     * Finalizes the call start process by optionally refreshing the tracker status.
+     *
+     * **Cleanup invariant:** This block does not rethrow exceptions, including [CancellationException].
+     * The cancellation of the outer scope should be checked by the caller.
+     */
         private suspend fun finalizeCallStart(
             shouldRefreshStatus: Boolean,
             context: CallTrackingContext,

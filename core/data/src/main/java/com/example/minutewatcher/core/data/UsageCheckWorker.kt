@@ -142,7 +142,12 @@ class UsageCheckWorker
 
             if (!shouldNotify) return
 
-            val appSettings = fetchAppSettingsWithRetry()
+            val appSettings =
+                fetchAppSettingsWithRetry() ?: run {
+                    AppLogger.w("UsageCheckWorker: skipping notifications, settings load failed")
+                    return
+                }
+
             for (simSnapshot in snapshot.simSnapshots) {
                 processActiveSimSnapshot(simSnapshot, appSettings)
             }
@@ -165,7 +170,7 @@ class UsageCheckWorker
             }
         }
 
-        private suspend fun fetchAppSettingsWithRetry(): AppSettings {
+    private suspend fun fetchAppSettingsWithRetry(): AppSettings? {
             val appSettingsResult =
                 deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: run {
                     AppLogger.w("UsageCheckWorker: AppSettings read timed out, retrying with 10s...")
@@ -175,8 +180,8 @@ class UsageCheckWorker
                 }
 
             return appSettingsResult ?: run {
-                AppLogger.w("UsageCheckWorker: settings load failed, using defaults")
-                AppSettings()
+                AppLogger.w("UsageCheckWorker: settings load failed")
+                null
             }
         }
 

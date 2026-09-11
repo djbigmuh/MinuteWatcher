@@ -14,11 +14,6 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 interface SimWidgetVisibilityRepository {
     /**
-     * Returns a flow of widget settings for the given identity.
-     */
-    fun getSimSettings(identity: String): Flow<SimSettingsState>
-
-    /**
      * Returns a flow of widget settings for a batch of identities.
      */
     fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>>
@@ -30,18 +25,4 @@ interface SimWidgetVisibilityRepository {
      * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>)
-
-    /**
-     * Clears settings for identities that are no longer known.
-     *
-     * @param knownIdentities List of identities that should be preserved.
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun clearOrphanedSettings(knownIdentities: List<String>)
-
-    /**
-     * Returns all identities that currently have widget settings stored.
-     */
-    suspend fun getAllIdentitiesWithSettings(): List<String>
 }

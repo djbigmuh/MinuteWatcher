@@ -268,6 +268,7 @@ class AppSettingsRepositoryImpl
                 widgetFontSize = this[DataStoreKeys.WIDGET_FONT_SIZE] ?: default.widgetFontSize,
                 widgetBackgroundColor = this[DataStoreKeys.WIDGET_BACKGROUND_COLOR] ?: default.widgetBackgroundColor,
                 widgetLimitExceeded = this[DataStoreKeys.WIDGET_LIMIT_EXCEEDED] ?: default.widgetLimitExceeded,
+                isLoaded = true,
             )
         }
 

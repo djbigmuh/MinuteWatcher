@@ -25,21 +25,21 @@ class PermissionManager
     constructor(
         @param:ApplicationContext private val context: Context,
     ) {
+    /**
+     * [SubscriptionManager] is a core dependency.
+     * We use [checkNotNull] to fail fast if it's unavailable, consistent with IdentityDataModule.
+     */
         private val subscriptionManager =
-            context.getSystemService(
-                Context.TELEPHONY_SUBSCRIPTION_SERVICE,
-            ) as? SubscriptionManager
-
-        init {
-            if (subscriptionManager == null) {
-                AppLogger.e("PermissionManager: SubscriptionManager is null. Telephony features will be unavailable.")
-            }
+        checkNotNull(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager) {
+            "TELEPHONY_SUBSCRIPTION_SERVICE unavailable"
         }
 
         /**
          * Returns true if the device supports telephony services (SIM cards).
+         * Since we use fail-fast in the constructor, this always returns true in a healthy environment.
          */
-        fun isTelephonySupported(): Boolean = subscriptionManager != null
+        @Suppress("FunctionOnlyReturningConstant")
+        fun isTelephonySupported(): Boolean = true
 
         fun hasPhoneStatePermission(): Boolean {
             val granted =
@@ -66,7 +66,7 @@ class PermissionManager
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
                 return try {
-                    subscriptionManager?.activeSubscriptionInfoList ?: emptyList()
+                    subscriptionManager.activeSubscriptionInfoList ?: emptyList()
                 } catch (e: SecurityException) {
                     AppLogger.e("PermissionManager: SecurityException in getActiveSubscriptions", e)
                     emptyList()

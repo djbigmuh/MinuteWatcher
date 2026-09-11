@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -75,7 +74,6 @@ class UpdateCoordinator
         private var consecutiveUpdateFailures = 0
         private var observationRestartCount = 0
         private var degradedCycleCount = 0
-        private val isObservationStarted = AtomicBoolean(false)
         private val stateMutex = Mutex()
 
         private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
@@ -123,7 +121,7 @@ class UpdateCoordinator
                         degradedCycleCount = 0
                         lastSnapshotHash = null
                         consecutiveUpdateFailures = 0
-                        transitionStatus(TrackingStatus.Idle)
+                        transitionStatus(TrackingStatus.Idle, force = true)
                     }
                     true
                 } ?: false
@@ -140,22 +138,16 @@ class UpdateCoordinator
 
             widgetUpdater.recover()
 
-            isObservationStarted.set(false)
             ensureObservationStarted()
         }
 
         private fun ensureObservationStarted() {
-            // Fast check: if already started and active — exit
-            if (isObservationStarted.get()) {
-                val job = observationScope.getJob()
-                if (job != null && job.isActive) return
-            }
+            // Check if already active
+            val currentJob = observationScope.getJob()
+            if (currentJob != null && currentJob.isActive) return
 
-            // Try to capture launch rights
-            if (!isObservationStarted.compareAndSet(false, true)) {
-                // Already being launched by another thread — exit
-                return
-            }
+            // Setup already in progress?
+            if (setupJob.get()?.isActive == true) return
 
             val newSetupJob =
                 scope.launch {
@@ -164,10 +156,8 @@ class UpdateCoordinator
                         AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
                         setupObservation()
                     } catch (e: CancellationException) {
-                        isObservationStarted.set(false)
                         throw e
                     } catch (e: Exception) {
-                        isObservationStarted.set(false)
                         AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
                         transitionStatus(
                             TrackingStatus.Error(
@@ -211,15 +201,14 @@ class UpdateCoordinator
                             if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
                         }
 
-                val newJob =
-                    observationScope.observe(flow, handler) { snapshot ->
-                        processSnapshotSafe(snapshot)
-                    }
-
                 stateMutex.withLock {
+                    val newJob =
+                        observationScope.observe(flow, handler) { snapshot ->
+                            processSnapshotSafe(snapshot)
+                        }
                     currentObservationJob.set(newJob)
                     monitoringJob.getAndSet(launchMonitoringJob(newJob))?.cancel()
-                    transitionStatus(TrackingStatus.Active, force = true)
+                    transitionStatus(TrackingStatus.Active)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -275,19 +264,18 @@ class UpdateCoordinator
             return firstSnapshot
         }
 
+    @Suppress("SwallowedException")
         private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
             try {
                 processSnapshot(snapshot)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("SwallowedException")
+                e: Exception,
+            ) {
                 AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
-                val newHash =
-                    try {
-                        SnapshotUtils.calculateContentHash(snapshot)
-                    } catch (_: Exception) {
-                        0
-                    }
+                val newHash = runCatching { SnapshotUtils.calculateContentHash(snapshot) }.getOrDefault(0)
                 handleUpdateResult(
                     WidgetUpdateResult.Failure(
                         isRetryable = false,
@@ -295,14 +283,13 @@ class UpdateCoordinator
                     ),
                     newHash,
                 )
-                // Rethrow to fail the observation loop and trigger monitoring-based restart.
-                // FlowObservationScope using collectLatest ensures that CancellationException is expected here.
-                throw e
+                // Fail the observation loop to trigger monitoring-based restart.
+                // We use CancellationException WITHOUT a non-cancellation cause to prevent crashing test scope.
+                throw CancellationException("Observation loop failed: ${e.message}")
             }
         }
 
-        private fun launchMonitoringJob(newJob: Job): Job? {
-            if (!newJob.isActive) return null
+    private fun launchMonitoringJob(newJob: Job): Job {
             // Monitoring completion: if observation fails — restart with exponential delay.
             return scope.launch {
                 newJob.join()
@@ -356,7 +343,6 @@ class UpdateCoordinator
                             transitionStatus(TrackingStatus.Idle)
                         }
                     }
-                    isObservationStarted.set(false)
                     ensureObservationStarted()
                 }
             }
@@ -391,6 +377,7 @@ class UpdateCoordinator
                     "Widget observation failed after $restartCount restarts. " +
                         "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
                 ),
+                force = true,
             )
             stateMutex.withLock {
                 observationRestartCount = 0
@@ -430,6 +417,14 @@ class UpdateCoordinator
                     ensureActive()
 
                     handleUpdateResult(result, newHash)
+
+                    if (result is WidgetUpdateResult.Failure &&
+                        result.reason == WidgetUpdateResult.FailureReason.TERMINAL
+                    ) {
+                        // Throwing CancellationException here will fail the current observation job
+                        // and trigger the monitoring-based restart with backoffs.
+                        throw CancellationException("Terminal widget update failure")
+                    }
                 } finally {
                     currentUpdateJob.compareAndSet(coroutineContext.job, null)
                 }

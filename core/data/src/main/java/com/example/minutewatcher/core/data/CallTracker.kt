@@ -352,18 +352,6 @@ open class CallTracker
                 false
             }
 
-        private suspend fun endCall(
-            subId: Int,
-            notify: Boolean = true,
-        ) {
-            endHandler.endCall(
-                subId = subId,
-                eventElapsedRealtime = -1L,
-                notify = notify,
-                context = this,
-            )
-        }
-
         private suspend fun clearSessionsAndRefresh(tag: String) {
             var operationCompleted = false
             try {

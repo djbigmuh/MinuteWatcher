@@ -919,55 +919,55 @@ class WidgetUpdaterImplTest {
             // 2. Next update, FULL fails -> switches to SIMPLIFIED
             shouldExceedLimit = true
             updater.updateAll()
-            assertEquals(2, fullRenderCount) // Failed attempt
+            assertEquals(2, fullRenderCount) // 1 success + 1 failed attempt
             assertEquals(1, simplifiedRenderCount) // Fallback success
             assertTrue("Flag must be set after LimitExceeded", mockSettings.value.widgetLimitExceeded)
 
-            // 3. Subsequent updates should use SIMPLIFIED mode directly (no more full render failures)
-            // exceededUpdateCounter is now 1.
-            repeat(8) {
+            // 3. Subsequent updates should use SIMPLIFIED mode directly until probe
+            // exceededUpdateCounter is now 0 (it wasn't incremented on retry attempt).
+            repeat(9) {
                 updater.updateAll()
             }
-            // After 8 more calls, exceededUpdateCounter is 9.
-            assertEquals("Full render count should not increase during simplified cycles", 2, fullRenderCount)
-            assertEquals(9, simplifiedRenderCount) // 1 initial fallback + 8 repeat
-            assertTrue("Flag must persist during simplified cycles", mockSettings.value.widgetLimitExceeded)
+            assertEquals(2, fullRenderCount)
+            assertEquals(10, simplifiedRenderCount) // 1 initial fallback + 9 simplified
 
-            // 4. 10th update since limit set (11th total call to resolveRenderMode) should be a PROBE (FULL)
-            // but shouldProbe() is called in each resolveRenderMode emission.
-            // Let's check:
-            // 2nd updateAll: 1st resolveRenderMode call -> count=1.
-            // repeat(8): 8 calls -> count=9.
-            // Next updateAll: count=10 -> PROBE.
-
-            // Still failing
+            // 4. 10th update since limit should be a PROBE (FULL)
+            // It will fail probe and fallback to SIMPLIFIED
             updater.updateAll()
             assertEquals("10th update since limit should be a PROBE (FULL)", 3, fullRenderCount)
-            assertEquals("PROBE failure should fallback to SIMPLIFIED", 10, simplifiedRenderCount)
-            assertTrue("Flag must still persist after failed PROBE", mockSettings.value.widgetLimitExceeded)
+            assertEquals(11, simplifiedRenderCount) // 10 previous + 1 probe fallback
+            assertTrue("Flag must persist during simplified cycles", mockSettings.value.widgetLimitExceeded)
 
-            // 5. 11th update is SIMPLIFIED again (count=11)
+            // 5. 11th update since limit set is SIMPLIFIED again (count=11)
             updater.updateAll()
             assertEquals(3, fullRenderCount)
-            assertEquals(11, simplifiedRenderCount)
+            assertEquals(12, simplifiedRenderCount)
 
             // 6. Next PROBE (at count=20)
-            repeat(7) { updater.updateAll() } // 12, 13, 14, 15, 16, 17, 18 -> count=18
+            repeat(8) { updater.updateAll() } // 12..19 -> count=19
             assertEquals(3, fullRenderCount)
-            assertEquals(18, simplifiedRenderCount)
+            assertEquals(20, simplifiedRenderCount)
 
-            // Now make FULL succeed
+            updater.updateAll() // count=20 -> PROBE (fails)
+            assertEquals(4, fullRenderCount)
+            assertEquals(21, simplifiedRenderCount)
+
+            // 7. Now make FULL succeed
             shouldExceedLimit = false
 
-            // Call 19: count hits 20 -> PROBE (FULL)
-            updater.updateAll()
-            assertEquals("19th call should attempt FULL probe", 4, fullRenderCount)
-            assertEquals(18, simplifiedRenderCount) // No fallback needed
+            // Next PROBE at count 30
+            repeat(9) { updater.updateAll() } // 21..29 -> count=29
+            assertEquals(4, fullRenderCount)
+            assertEquals(30, simplifiedRenderCount)
+
+            updater.updateAll() // count=30 -> PROBE (succeeds)
+            assertEquals("Successful probe should increment full count", 5, fullRenderCount)
+            assertEquals(30, simplifiedRenderCount) // No fallback needed
             assertFalse("Flag must be cleared after successful FULL probe", mockSettings.value.widgetLimitExceeded)
 
-            // 7. Next update is back to normal FULL (count was reset)
+            // 8. Next update is back to normal FULL (count was reset)
             updater.updateAll()
-            assertEquals(5, fullRenderCount)
-            assertEquals(18, simplifiedRenderCount)
+            assertEquals(6, fullRenderCount)
+            assertEquals(30, simplifiedRenderCount)
         }
 }

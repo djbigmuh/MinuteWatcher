@@ -234,4 +234,36 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             assertEquals("Active subId should be kept", 1, resolver.getFailureCount(activeSubId))
             assertEquals("Inactive subId should be removed", 0, resolver.getFailureCount(inactiveSubId))
         }
+
+    @Test
+    fun `TZ-27 regression - unknown subId end closes single active session even if data SIM is different`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            // SIM 1 has an active session
+            val voiceSubId = 1
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(voiceSubId))
+            whenever(callSessionRepository.getCallStartTime(voiceSubId)).thenReturn(flowOf(now - 10000L))
+            whenever(callSessionRepository.getBootTime(voiceSubId)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getUptime(voiceSubId))
+                .thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
+            whenever(callSessionRepository.getCallIdentity(voiceSubId)).thenReturn(flowOf("id_voice"))
+
+            // SIM 2 is data (not active in call)
+            whenever(callSessionRepository.getCallIdentity(2)).thenReturn(flowOf("id_data"))
+
+            // Act: Call ended with unknown subId
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Assert: Voice session on SIM 1 is closed
+            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(voiceSubId), eq(0L))
+            // Minutes incremented for SIM 1
+            verify(simUsageRepository).incrementMinutesUsed(eq("id_voice"), any())
+            // SIM 2 session was NOT attempted to be closed
+            verify(callSessionRepository, never()).setCallStartTime(eq(2), any())
+        }
 }

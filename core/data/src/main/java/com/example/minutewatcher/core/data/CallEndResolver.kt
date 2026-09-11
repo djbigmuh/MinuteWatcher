@@ -118,7 +118,7 @@ internal class CallEndResolver
         private fun handleAmbiguousIdle(activeSubIds: List<Int>): TrackingStatus.Error {
             val message = "Cannot attribute unknown IDLE event for multiple active calls (${activeSubIds.size})"
             AppLogger.e(message, null)
-            return TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message)
+            return TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, message)
         }
 
         @Suppress("MissingPermission")

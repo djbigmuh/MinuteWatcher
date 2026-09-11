@@ -75,6 +75,7 @@ internal object DataStoreKeys {
     const val BOOT_TIME_PREFIX = "boot_time_"
     const val UPTIME_PREFIX = "uptime_"
     const val CALL_IDENTITY_PREFIX = "call_identity_"
+    const val BASELINE_RETRY_COUNT_PREFIX = "baseline_retry_count_"
 
     // Dynamic keys (DynamicSettingsKeys)
     @JvmStatic fun callStartTimeKey(subId: Int) = longPreferencesKey("$CALL_START_TIME_PREFIX$subId")
@@ -88,7 +89,7 @@ internal object DataStoreKeys {
     @JvmStatic fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
 
     @JvmStatic
-    fun baselineRetryCountKey(identity: String) = intPreferencesKey("baseline_retry_count_$identity")
+    fun baselineRetryCountKey(identity: String) = intPreferencesKey("$BASELINE_RETRY_COUNT_PREFIX$identity")
 
     // Notification states (NotificationSettingsKeys)
     @JvmStatic fun notifiedLowMinutesKey(identity: String) = booleanPreferencesKey("notified_low_minutes_$identity")
@@ -177,7 +178,4 @@ internal object DataStoreKeys {
 
     // Identity Seed (SimIdentitySeedRepositoryImpl)
     @JvmStatic val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
-
-    @JvmStatic
-    val EPHEMERAL_IDENTITY_SEED = stringPreferencesKey("ephemeral_identity_seed")
 }

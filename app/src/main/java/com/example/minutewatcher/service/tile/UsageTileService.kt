@@ -122,16 +122,14 @@ class UsageTileService : TileService() {
             return
         }
 
-        // Simple policy: show the first active SIM for now, or the one with lowest minutes
-        val activeSim =
-            activeSims.minByOrNull {
-                it.entities[PackageType.MINUTES]?.remaining ?: Long.MAX_VALUE
-            } ?: activeSims[0]
+        // Select SIM with limit and lowest minutes, or null if no SIM has limit
+        val activeSim = TileSimSelector.select(activeSims) ?: activeSims[0]
 
         val operatorName = SimUtils.getShortOperatorName(this, activeSim.operatorName)
         val minutes = activeSim.entities[PackageType.MINUTES]
 
-        if (minutes != null) {
+        // Note: remaining == 0 when limit == 0 means "no limit set", not "exhausted".
+        if (minutes != null && minutes.limit > 0) {
             val remaining = minutes.remaining.toInt()
             val remainingText = resources.getQuantityString(R.plurals.minutes_plurals, remaining, remaining)
 

@@ -159,10 +159,10 @@ class TrafficOvercountTest {
             deltaCalculator,
             simChangeHandler,
             TrafficTargetResolver(permissionManager),
-            TrafficErrorHandler(),
             TrafficPermissionChecker(permissionManager),
             permissionStateNotifier,
             dataChangeNotifier,
+            timeProvider,
             backgroundScope,
         )
     }

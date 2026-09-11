@@ -3,13 +3,16 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -171,5 +174,64 @@ class SimIdentitySeedRepositoryImplTest {
             assertTrue("setSeed should have completed", setSeedJob.isCompleted)
 
             firstCall.join()
+        }
+
+    @Test
+    fun `TZ-28 regression - no phantom persistent seed on commit failure`() =
+        runTest {
+            var updateDataCalls = 0
+            val failingDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> = flowOf(emptyPreferences())
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        updateDataCalls++
+                        // Transform is called, but we throw exception on commit
+                        transform(emptyPreferences())
+                        throw IOException("Commit failed")
+                    }
+                }
+
+            val repo = SimIdentitySeedRepositoryImpl(failingDataStore)
+
+            // Act: Try to get seed. It should retry 3 times and then fallback to Ephemeral.
+            // In the buggy code, it would have returned Persistent after the first attempt.
+            val result = repo.getOrCreateSeedOrEphemeralFallback { "gen-seed" }
+
+            // Assert
+            assertTrue(
+                "Result should be Ephemeral because all persistent attempts failed",
+                result is SeedResolutionResult.Ephemeral,
+            )
+            assertEquals("Should have attempted edit 3 times", 3, updateDataCalls)
+        }
+
+    @Test
+    fun `TZ-28 regression - existing seed is read without edit transaction`() =
+        runTest {
+            val existingSeed = "existing-persistent-seed"
+            val prefs = emptyPreferences().toMutablePreferences()
+            prefs[DataStoreKeys.SIM_IDENTITY_SEED] = existingSeed
+
+            var updateDataCalls = 0
+            val countingDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> = flowOf(prefs.toPreferences())
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        updateDataCalls++
+                        return transform(prefs.toPreferences())
+                    }
+                }
+
+            val repo = SimIdentitySeedRepositoryImpl(countingDataStore)
+
+            // Act
+            val result = repo.getOrCreateSeedOrEphemeralFallback { "gen-seed" }
+
+            // Assert
+            assertTrue(result is SeedResolutionResult.Persistent)
+            assertEquals(existingSeed, result.seed)
+            assertEquals("updateData (edit) should NOT have been called for reading existing seed", 0, updateDataCalls)
         }
 }

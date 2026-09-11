@@ -43,6 +43,7 @@ import com.example.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -242,7 +243,9 @@ class MainActivity : AppCompatActivity() {
 
         fun checkPermissionsAndInit() {
             lifecycleScope.launch {
-                val settings = viewModel.appSettings.first()
+                // TZ-38: wait for real settings emission from DataStore
+                // to avoid stale check of wasPhonePermissionRequestedBefore
+                val settings = viewModel.appSettings.filter { it.isLoaded }.first()
                 if (permissionManager.hasPhoneStatePermission()) {
                     // WorkManager.enqueue() performs disk I/O internally.
                     // Injected ioDispatcher prevents potential ANR on slow storage.
@@ -282,7 +285,8 @@ class MainActivity : AppCompatActivity() {
         fun checkNotifications(autoRequest: Boolean) {
             lifecycleScope.launch {
                 if (!permissionManager.hasNotificationPermission()) {
-                    val settings = viewModel.appSettings.first()
+                    // TZ-38: wait for real settings emission
+                    val settings = viewModel.appSettings.filter { it.isLoaded }.first()
                     if (autoRequest && !settings.notificationPermissionRequested) {
                         requestNotificationPermission()
                     }

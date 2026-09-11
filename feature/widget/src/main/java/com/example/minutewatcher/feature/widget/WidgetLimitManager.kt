@@ -37,9 +37,25 @@ open class WidgetLimitManager
             }
         }
 
+    /**
+     * Checks if a probe update should be performed.
+     *
+     * **Note:** This method does NOT increment the update counter.
+     * Callers must ensure the counter is incremented appropriately (e.g., once per update cycle).
+     *
+     * @return True if the current counter value indicates a probe should occur.
+     */
         open fun shouldProbe(): Boolean {
-            val count = exceededUpdateCounter.incrementAndGet()
-            return (count % PROBE_INTERVAL_UPDATES) == 0L
+        val count = exceededUpdateCounter.get()
+        return count > 0 && (count % PROBE_INTERVAL_UPDATES) == 0L
+    }
+
+    /**
+     * Increments the update counter for exceeded states.
+     * Should be called exactly once per update cycle when the limit is exceeded.
+     */
+    open fun incrementUpdateCounter() {
+        exceededUpdateCounter.incrementAndGet()
         }
 
         open fun resetCounter() {

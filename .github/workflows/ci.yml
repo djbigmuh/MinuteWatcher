@@ -1,3 +1,7 @@
+# REFERENCE-ONLY: This workflow is not used in production CI.
+# Local verification is performed via VERIFY.bat.
+# See docs/testing.md for details.
+
 name: Android CI
 
 on:

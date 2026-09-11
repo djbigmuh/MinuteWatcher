@@ -22,7 +22,10 @@ Android provides mobile data usage as an aggregate value for the entire device r
 Call duration is tracked using real-time system state changes.
 - The app does **not** read your call log history.
 - Tracking begins when a call enters the "Off-hook" state and ends when the device returns to "Idle".
-- **Dual-SIM Attribution**: On devices running Android 11 (API 30) and below, if multiple calls are active simultaneously, the system may not provide enough information to perfectly attribute an "end call" event to a specific SIM. In such cases, MinuteWatcher uses a heuristic fallback (attributing to the oldest call or default voice SIM). This limitation is resolved on Android 12+.
+- **Dual-SIM Attribution**: If an "end call" event lacks SIM information (subId = -1), MinuteWatcher attributes it to
+  the only active session. If all calls are ended simultaneously (global IDLE state), all tracked sessions are closed
+  automatically. If multiple sessions remain active and cannot be distinguished, an error banner is displayed instead of
+  guessing. This limitation is mostly resolved on Android 12+ where per-SIM call states are available.
 - **Rounding Logic**: Call duration is rounded **up** to the nearest minute (e.g., a 1-second call adds 1 minute to usage, a 61-second call adds 2 minutes). This aligns with common mobile carrier billing policies.
 
 ### AppSearch Integration

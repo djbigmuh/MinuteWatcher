@@ -28,6 +28,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
@@ -118,11 +120,10 @@ class ShortcutManager
                         oldJob.cancel()
                         try {
                             oldJob.join()
-                        } catch (e: CancellationException) {
-                            throw e
                         } catch (_: Exception) {
                             // Джоб завершён принудительно
                         }
+                        currentCoroutineContext().ensureActive()
                     }
                     job = null
                 }

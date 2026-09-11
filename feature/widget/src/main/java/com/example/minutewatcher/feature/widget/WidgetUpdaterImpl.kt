@@ -224,7 +224,8 @@ class WidgetUpdaterImpl
         }
 
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
-            val mode = resolveRenderMode()
+            val isFirstAttempt = attempt == 1
+            val mode = resolveRenderMode(isFirstAttempt)
 
             AppLogger.d("WidgetUpdater: performing update in mode $mode (attempt $attempt)")
             return when (mode) {
@@ -255,7 +256,7 @@ class WidgetUpdaterImpl
             }
         }
 
-        private suspend fun resolveRenderMode(): RenderMode {
+    private suspend fun resolveRenderMode(isFirstAttempt: Boolean): RenderMode {
             val isExceeded =
                 limitManager.isLimitExceeded() ?: run {
                     val settings =
@@ -272,7 +273,10 @@ class WidgetUpdaterImpl
                 }
 
             return if (isExceeded) {
-                if (limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
+                if (isFirstAttempt) {
+                    limitManager.incrementUpdateCounter()
+                }
+                if (isFirstAttempt && limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
             } else {
                 limitManager.resetCounter()
                 RenderMode.FULL

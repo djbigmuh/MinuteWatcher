@@ -60,7 +60,11 @@ class TrafficErrorHandler
         ) {
             AppLogger.e("TrafficTracker: getSimUsage timed out for $identity")
             updateStatus(
-                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading simUsage"),
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    "Timeout reading simUsage",
+                    code = TrackingStatus.ErrorCode.TIMEOUT,
+                ),
             )
         }
 
@@ -70,7 +74,11 @@ class TrafficErrorHandler
         ) {
             AppLogger.e("TrafficTracker: getLastTotalBytes timed out for $identity")
             updateStatus(
-                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Timeout reading lastTotalBytes"),
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    "Timeout reading lastTotalBytes",
+                    code = TrackingStatus.ErrorCode.TIMEOUT,
+                ),
             )
         }
 

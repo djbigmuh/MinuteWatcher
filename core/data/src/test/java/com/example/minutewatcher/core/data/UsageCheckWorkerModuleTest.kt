@@ -20,7 +20,6 @@ import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -30,7 +29,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
-import org.mockito.kotlin.any
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -93,7 +91,6 @@ class UsageCheckWorkerModuleTest {
                 usageStateRepository.observeSnapshot(),
             ).thenReturn(kotlinx.coroutines.flow.MutableStateFlow(emptySnapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
-            whenever(simWidgetVisibilityRepository.clearOrphanedSettings(any())).thenReturn(Unit)
         }
     }
 

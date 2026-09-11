@@ -15,6 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
@@ -206,5 +207,43 @@ class MainBannerControllerTest {
 
             assertEquals(TrackingStatus.Active, controller.status.value)
             collectJob.cancel()
+        }
+
+    @Test
+    fun `TZ-32 regression - status returns to Active when other providers recover`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val controller = createController(backgroundScope)
+
+            // Simulate status repository behavior: it aggregates all statuses including BANNERS
+            val trafficStatusFlow = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+            backgroundScope.launch {
+                combine(trafficStatusFlow, controller.status) { traffic, banners ->
+                    mapOf(TrackingKey.TRAFFIC to traffic, TrackingKey.BANNERS to banners)
+                }.collect { trackingStatusFlow.tryEmit(it) }
+            }
+            advanceUntilIdle()
+
+            // 1. One provider fails
+            trafficStatusFlow.value = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Fail")
+            advanceUntilIdle()
+
+            // 2. MainBannerController should be in Error
+            assertTrue(
+                "Banners status should be Error when provider fails",
+                controller.status.value is TrackingStatus.Error,
+            )
+
+            // 3. Provider recovers
+            trafficStatusFlow.value = TrackingStatus.Active
+            advanceUntilIdle()
+
+            // BUG: hasError will check statusMap which contains BANNERS=Error (until it recovers)
+            // But MainBannerController will see (TRAFFIC=Active, BANNERS=Error) -> hasError=true -> transition(Error)
+            // It will NEVER transition to Active because it always sees its own Error.
+            assertEquals(
+                "Banners status should return to Active automatically",
+                TrackingStatus.Active,
+                controller.status.value,
+            )
         }
 }

@@ -63,7 +63,9 @@ $SkipFileNames = @(
     'deps_ksp.txt',
     'ktlint_output.txt',
     'make_audit_dump.ps1',
-    'MAKE_AUDIT_DUMP.bat'
+    'MAKE_AUDIT_DUMP.bat',
+    'verify.ps1',
+    'VERIFY.bat'
 )
 
 # Бинарные расширения
@@ -325,6 +327,12 @@ function Parse-DetektReport {
         'core/data/build/reports/detekt/detekt.txt'
     ) | Where-Object { Test-Path $_ }
 
+    if (-not $detektFiles) {
+        Write-Warning "Detekt reports not found. Run .\VERIFY.bat before dumping."
+        Save-Text $detektCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
+        return ,$detektRows
+    }
+
     foreach ($file in $detektFiles) {
         try {
             $content = Get-Content $file -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
@@ -363,6 +371,12 @@ function Parse-LintReport {
         'app/build/reports/lint-results.txt'
     ) | Where-Object { Test-Path $_ }
 
+    if (-not $lintFiles) {
+        Write-Warning "Lint reports not found. Run .\VERIFY.bat before dumping."
+        Save-Text $lintCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
+        return ,$lintRows
+    }
+
     foreach ($file in $lintFiles) {
         try {
             $content = Get-Content $file -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
@@ -400,6 +414,12 @@ function Parse-KtlintReport {
         'ktlint_output.txt',
         'app/build/reports/ktlint/ktlint.txt'
     ) | Where-Object { Test-Path $_ }
+
+    if (-not $ktlintFiles) {
+        Write-Warning "Ktlint reports not found. Run .\VERIFY.bat before dumping."
+        Save-Text $ktlintCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
+        return ,$ktlintRows
+    }
 
     foreach ($file in $ktlintFiles) {
         try {
@@ -534,13 +554,16 @@ function Find-SuspiciousMatches {
     )
 
     $hintsSb = New-Object System.Text.StringBuilder
-    $textFiles = $allFiles | Where-Object { Test-FullDumpExt $_.Extension }
+    $textFiles = $allFiles | Where-Object {
+        Test-FullDumpExt $_.Extension -and
+        ($_.Extension -notmatch '\.(json|md|csv|toml|properties|cfg|ini|txt)$')
+    }
 
     $totalMatches = 0
 
     foreach ($file in $textFiles) {
         if ($file.Length -gt 512KB) { continue }
-        if ($file.Name -like 'make_audit_dump*' -or $file.Name -eq 'MAKE_AUDIT_DUMP.bat') { continue }
+        if ($file.Name -like 'make_audit_dump*' -or $file.Name -eq 'MAKE_AUDIT_DUMP.bat' -or $file.Name -eq 'verify.ps1' -or $file.Name -eq 'VERIFY.bat') { continue }
 
         $lines = @()
         try {
@@ -550,8 +573,14 @@ function Find-SuspiciousMatches {
 
         $patternCounts = @{}
         for ($i = 0; $i -lt $lines.Count; $i++) {
+            $lineText = $lines[$i]
             foreach ($pattern in $patterns) {
-                if ($lines[$i] -match $pattern.Regex) {
+                if ($lineText -match $pattern.Regex) {
+                    # Reduce MAGIC_NUMBER noise in code files
+                    if ($pattern.Name -eq 'MAGIC_NUMBER') {
+                        if ($lineText -match '["' + "'" + ']|//|\*') { continue }
+                    }
+
                     $key = $pattern.Name
                     if (-not $patternCounts.ContainsKey($key)) { $patternCounts[$key] = 0 }
                     $patternCounts[$key]++
@@ -619,6 +648,15 @@ foreach ($relPath in $gitFiles) {
             $allFiles += $file
         }
     }
+}
+
+# --- Untracked (но не игнорируемые) файлы: аудит-дамп их НЕ содержит, предупреждаем явно ---
+$untracked = git ls-files --others --exclude-standard 2>&1 |
+    Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) }
+$untrackedSources = @($untracked | Where-Object { $_ -match '\.(kt|kts|java|xml)$' })
+
+if ($untrackedSources.Count -gt 0) {
+    Write-Warning "Found $($untrackedSources.Count) untracked source files. They will be included in a separate section."
 }
 
 Write-Host "  Found $($allFiles.Count) files" -ForegroundColor Green
@@ -720,6 +758,7 @@ $overview = New-Object System.Text.StringBuilder
 [void]$overview.AppendLine("Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
 [void]$overview.AppendLine("Include tests: $IncludeTests")
 [void]$overview.AppendLine("Total files collected: $($allFiles.Count)")
+[void]$overview.AppendLine("Untracked source files: $($untrackedSources.Count)")
 [void]$overview.AppendLine('')
 [void]$overview.AppendLine("Reports parsed:")
 [void]$overview.AppendLine("  Test results: $($testRows.Count)")
@@ -751,6 +790,12 @@ $diag = New-Object System.Text.StringBuilder
 [void]$diag.AppendLine("JAVA_HOME: $(if ($env:JAVA_HOME) { $env:JAVA_HOME } else { '<not set>' })")
 [void]$diag.AppendLine('')
 
+if ($untrackedSources.Count -gt 0) {
+    [void]$diag.AppendLine("WARNING: untracked source files (NOT included in main dump sections):")
+    foreach ($f in $untrackedSources) { [void]$diag.AppendLine("  $f") }
+    [void]$diag.AppendLine('')
+}
+
 if ($allFiles.Count -lt 10) {
     [void]$diag.AppendLine('WARNING: Very few files were collected.')
 }
@@ -775,6 +820,18 @@ $allFiles | Sort-Object Length -Descending | Select-Object -First 30 | ForEach-O
 
 Save-Text (Join-Path $OutDirFull '99_diagnostics.txt') $diag.ToString()
 
+# --- Untracked Sources Full Dump ---
+$untrackedSb = New-Object System.Text.StringBuilder
+if ($untrackedSources.Count -gt 0) {
+    foreach ($relPath in $untrackedSources) {
+        $fullPath = Join-Path $RootFull $relPath
+        if (Test-Path $fullPath) {
+            Add-FileDump -Sb $untrackedSb -File (Get-Item $fullPath) -ForceFull
+        }
+    }
+}
+Save-Text (Join-Path $OutDirFull '21_untracked_sources.txt') $untrackedSb.ToString()
+
 # ============================================================================
 # Combined Dump
 # ============================================================================
@@ -787,6 +844,7 @@ $combinedSb = New-Object System.Text.StringBuilder
 Append-FileSection -Sb $combinedSb -Path (Join-Path $OutDirFull '00_overview.txt') -Title '00 OVERVIEW'
 Append-FileSection -Sb $combinedSb -Path (Join-Path $OutDirFull '99_diagnostics.txt') -Title '99 DIAGNOSTICS'
 Append-FileSection -Sb $combinedSb -Path (Join-Path $OutDirFull '20_git.txt') -Title '20 GIT'
+Append-FileSection -Sb $combinedSb -Path (Join-Path $OutDirFull '21_untracked_sources.txt') -Title '21 UNTRACKED SOURCES'
 Append-FileSection -Sb $combinedSb -Path (Join-Path $OutDirFull '40_tests_summary.csv') -Title '40 TESTS SUMMARY CSV'
 Append-FileSection -Sb $combinedSb -Path (Join-Path $OutDirFull '41_failing_tests.txt') -Title '41 FAILING TESTS'
 Append-FileSection -Sb $combinedSb -Path (Join-Path $OutDirFull '42_detekt_summary.csv') -Title '42 DETEKT SUMMARY CSV'

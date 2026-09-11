@@ -10,8 +10,6 @@ import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,29 +29,6 @@ class SimWidgetVisibilityRepositoryImpl
     ) : SimWidgetVisibilityRepository {
         // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
         // Это соответствует принципу Dependency Inversion.
-
-        /**
-         * Returns a flow of [SimSettingsState] for the given identity.
-         *
-         * Safe to call from any coroutine context.
-         */
-        override fun getSimSettings(identity: String): Flow<SimSettingsState> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
-                AppLogger.w("getSimSettings called with invalid identity: $identity")
-                return flowOf(SimSettingsState(showSim = false))
-            }
-            return dataStore.data.map { prefs ->
-                SimSettingsState(
-                    showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: true,
-                    showIcon = prefs[DataStoreKeys.showSimIconKey(identity)] ?: true,
-                    showName = prefs[DataStoreKeys.showSimNameKey(identity)] ?: true,
-                    showMinutes = prefs[DataStoreKeys.showMinutesKey(identity)] ?: true,
-                    showMinutesLimit = prefs[DataStoreKeys.showMinutesLimitKey(identity)] ?: false,
-                    showTraffic = prefs[DataStoreKeys.showTrafficKey(identity)] ?: true,
-                    showTrafficLimit = prefs[DataStoreKeys.showTrafficLimitKey(identity)] ?: false,
-                )
-            }
-        }
 
         /**
          * Returns visibility settings for multiple identities.
@@ -103,86 +78,6 @@ class SimWidgetVisibilityRepositoryImpl
                     prefs[DataStoreKeys.showTrafficKey(identity)] = settings.showTraffic
                     prefs[DataStoreKeys.showTrafficLimitKey(identity)] = settings.showTrafficLimit
                 }
-            }
-        }
-
-        /**
-         * Очищает настройки для SIM-карт, которые больше не активны и не присутствуют в настройках.
-         *
-         * Для предотвращения потери данных fallback-ключи формата `sim_<slot>` никогда не
-         * удаляются автоматически, так как они служат последним уровнем защиты при отсутствии
-         * стабильных идентификаторов (например, после сброса настроек сети или на старых API).
-         *
-         * @param knownIdentities Список identity SIM-карт, которые считаются известными (активные + из настроек).
-         */
-        override suspend fun clearOrphanedSettings(knownIdentities: List<String>) {
-            val knownSet = knownIdentities.toSet()
-            // Защита fallback-ключей: ключи вида "sim_<число>" никогда не удаляются
-            // автоматически. Это последний уровень защиты при отсутствии стабильных
-            // идентификаторов (например, после сброса настроек сети или на старых API).
-            //
-            // Строгое соблюдение API: regex ^sim_\d+$ гарантирует, что только
-            // ключи с числовым суффиксом защищаются. Ключи вида "sim_abc"
-            // (не числовой суффикс) НЕ защищаются и могут быть удалены как orphaned.
-            // На AOSP все fallback-ключи имеют формат "sim_<число>".
-            // Отклонение кастомной прошивки: если прошивка генерирует
-            // нечисловые суффиксы — это проблема кастомной прошивки.
-            val fallbackRegex = Regex("^sim_\\d+$")
-
-            dataStore.edit { prefs ->
-                val allKeys = prefs.asMap().keys
-                val orphanedKeys =
-                    allKeys.filter { key ->
-                        val identity = extractIdentity(key.name) ?: return@filter false
-
-                        // Protect sim_$slot fallback keys
-                        val isFallbackKey = fallbackRegex.matches(identity)
-
-                        (identity !in knownSet) && !isFallbackKey
-                    }
-                if (orphanedKeys.isNotEmpty()) {
-                    AppLogger.d("Clearing ${orphanedKeys.size} orphaned widget settings keys")
-                    orphanedKeys.forEach { prefs.remove(it) }
-                }
-            }
-        }
-
-        override suspend fun getAllIdentitiesWithSettings(): List<String> =
-            dataStore.data
-                .map { prefs ->
-                    prefs
-                        .asMap()
-                        .keys
-                        .mapNotNull { key ->
-                            extractIdentity(key.name)
-                        }.distinct()
-                }.first()
-
-        /**
-         * Extracts identity from a DataStore key name by matching known widget prefixes.
-         *
-         * **Prefix Matching:** Uses [DataStoreKeys.ALL_WIDGET_PREFIXES] (ordered by length descending)
-         * to ensure the most specific prefix is matched first.
-         *
-         * **Validation:** Extracted identity must start with a valid prefix (icc_, sub_, sim_)
-         * and must not be empty. This prevents data corruption or incorrect parsing.
-         *
-         * @param keyName Full name of the key in DataStore.
-         * @return Extracted identity or null if the key doesn't belong to widget settings or is invalid.
-         */
-        @Suppress("ReturnCount")
-        private fun extractIdentity(keyName: String): String? {
-            if (!keyName.startsWith("widget_show_")) return null
-
-            val matchedPrefix = DataStoreKeys.ALL_WIDGET_PREFIXES.firstOrNull { keyName.startsWith(it) } ?: return null
-
-            return keyName.removePrefix(matchedPrefix).takeIf { identity ->
-                identity.isNotEmpty() &&
-                    (
-                        identity.startsWith("icc_") ||
-                            identity.startsWith("sub_") ||
-                            identity.startsWith("sim_")
-                    )
             }
         }
     }

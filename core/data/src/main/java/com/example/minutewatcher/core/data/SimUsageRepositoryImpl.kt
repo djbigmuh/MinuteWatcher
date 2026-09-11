@@ -383,7 +383,7 @@ class SimUsageRepositoryImpl
         override suspend fun cleanupBaselineRetries(activeIdentities: Set<String>) {
             dataStore.edit { prefs ->
                 val allKeys = prefs.asMap().keys.toList() // Avoid concurrent modification
-                val prefix = "baseline_retry_count_"
+                val prefix = DataStoreKeys.BASELINE_RETRY_COUNT_PREFIX
                 allKeys.forEach { key ->
                     if (key.name.startsWith(prefix)) {
                         val identity = key.name.removePrefix(prefix)

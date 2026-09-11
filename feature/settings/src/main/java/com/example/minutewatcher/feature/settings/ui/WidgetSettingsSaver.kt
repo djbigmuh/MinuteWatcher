@@ -96,12 +96,7 @@ open class WidgetSettingsSaver
                 val failedSlots = saveSimSettings(state, skipSimSettings)
 
                 if (failedSlots.isEmpty()) {
-                    if (skipSimSettings) {
-                        // Settings were saved fully (general settings), and SIM settings were not saved intentionally.
-                        SaveResult.Success
-                    } else {
-                        SaveResult.Success
-                    }
+                    SaveResult.Success
                 } else {
                     val slotsString = failedSlots.joinToString(", ")
                     SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")

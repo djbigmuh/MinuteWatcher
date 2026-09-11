@@ -3,15 +3,13 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.data.di.DataStoreKeys
+import com.example.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -38,82 +36,6 @@ class SimWidgetVisibilityRepositoryImplTest {
     }
 
     @Test
-    fun `clearOrphanedSettings should NOT remove keys for active multi-segment identities`() =
-        runTest {
-            val identity = "icc_abc123"
-            dataStore.edit { prefs ->
-                prefs[DataStoreKeys.showSimKey(identity)] = true
-                prefs[DataStoreKeys.showSimIconKey(identity)] = false
-            }
-
-            repository.clearOrphanedSettings(listOf(identity))
-
-            val prefs = dataStore.data.first()
-            assertNotNull(prefs[DataStoreKeys.showSimKey(identity)])
-            assertNotNull(prefs[DataStoreKeys.showSimIconKey(identity)])
-        }
-
-    @Test
-    fun `clearOrphanedSettings should NEVER remove fallback keys`() =
-        runTest {
-            val fallbackIdentity = "sim_0"
-            dataStore.edit { prefs ->
-                prefs[DataStoreKeys.showSimKey(fallbackIdentity)] = true
-            }
-
-            // sim_0 is NOT in activeIdentities
-            repository.clearOrphanedSettings(emptyList())
-
-            val prefs = dataStore.data.first()
-            assertNotNull(prefs[DataStoreKeys.showSimKey(fallbackIdentity)])
-        }
-
-    @Test
-    fun `clearOrphanedSettings should remove keys for missing identities`() =
-        runTest {
-            val oldIdentity = "icc_old_gone"
-            val activeIdentity = "icc_active"
-
-            dataStore.edit { prefs ->
-                prefs[DataStoreKeys.showSimKey(oldIdentity)] = true
-                prefs[DataStoreKeys.showSimKey(activeIdentity)] = true
-            }
-
-            repository.clearOrphanedSettings(listOf(activeIdentity))
-
-            val prefs = dataStore.data.first()
-            assertNull(prefs[DataStoreKeys.showSimKey(oldIdentity)])
-            assertNotNull(prefs[DataStoreKeys.showSimKey(activeIdentity)])
-        }
-
-    @Test
-    fun `clearOrphanedSettings should handle all widget prefixes correctly`() =
-        runTest {
-            val identity = "icc_test"
-            dataStore.edit { prefs ->
-                prefs[DataStoreKeys.showSimKey(identity)] = true
-                prefs[DataStoreKeys.showSimIconKey(identity)] = true
-                prefs[DataStoreKeys.showSimNameKey(identity)] = true
-                prefs[DataStoreKeys.showMinutesKey(identity)] = true
-                prefs[DataStoreKeys.showMinutesLimitKey(identity)] = true
-                prefs[DataStoreKeys.showTrafficKey(identity)] = true
-                prefs[DataStoreKeys.showTrafficLimitKey(identity)] = true
-            }
-
-            // Remove it
-            repository.clearOrphanedSettings(emptyList())
-
-            val prefs = dataStore.data.first()
-            assertNull(prefs[DataStoreKeys.showSimKey(identity)])
-            assertNull(prefs[DataStoreKeys.showSimIconKey(identity)])
-            assertNull(prefs[DataStoreKeys.showSimNameKey(identity)])
-            assertNull(prefs[DataStoreKeys.showMinutesKey(identity)])
-            assertNull(prefs[DataStoreKeys.showMinutesLimitKey(identity)])
-            assertNull(prefs[DataStoreKeys.showTrafficKey(identity)])
-            assertNull(prefs[DataStoreKeys.showTrafficLimitKey(identity)])
-        }
-
-    @Test
     fun `getSimSettingsBatch returns defaults for missing keys`() =
         runTest {
             val identity = "icc_new"
@@ -131,37 +53,24 @@ class SimWidgetVisibilityRepositoryImplTest {
         }
 
     @Test
-    fun `clearOrphanedSettings correctly extracts identity for longest prefix match`() =
-        runTest {
-            // Key: widget_show_sim_icon_icc_abc
-            // Identity should be: icc_abc
-            // If prefix widget_show_sim_ matched, identity would be icon_icc_abc (incorrect)
-
-            val identity = "icc_abc"
-            dataStore.edit { prefs ->
-                prefs[DataStoreKeys.showSimIconKey(identity)] = true
-            }
-
-            // Should remove it because icc_abc is NOT in active set
-            repository.clearOrphanedSettings(emptyList())
-
-            val prefs = dataStore.data.first()
-            assertNull(prefs[DataStoreKeys.showSimIconKey(identity)])
-        }
-
-    @Test
-    fun `getAllIdentitiesWithSettings should return all identities from DataStore`() =
+    fun `setSimSettingsBatch correctly saves multiple settings`() =
         runTest {
             val id1 = "icc_1"
             val id2 = "sub_2"
-            dataStore.edit { prefs ->
-                prefs[DataStoreKeys.showSimKey(id1)] = true
-                prefs[DataStoreKeys.showSimKey(id2)] = true
-            }
+            val settings1 = SimSettingsState(showSim = false, showIcon = true)
+            val settings2 = SimSettingsState(showSim = true, showIcon = false)
 
-            val identities = repository.getAllIdentitiesWithSettings()
-            assertTrue(identities.contains(id1))
-            assertTrue(identities.contains(id2))
-            assertEquals(2, identities.size)
+            repository.setSimSettingsBatch(
+                mapOf(
+                    id1 to settings1,
+                    id2 to settings2,
+                ),
+            )
+
+            val prefs = dataStore.data.first()
+            assertEquals(false, prefs[DataStoreKeys.showSimKey(id1)])
+            assertEquals(true, prefs[DataStoreKeys.showSimIconKey(id1)])
+            assertEquals(true, prefs[DataStoreKeys.showSimKey(id2)])
+            assertEquals(false, prefs[DataStoreKeys.showSimIconKey(id2)])
         }
 }

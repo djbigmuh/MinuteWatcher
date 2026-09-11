@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -40,6 +41,7 @@ class TrafficTrackerResilienceTest {
     private val errorHandler: TrafficErrorHandler = mock()
     private val permissionChecker: TrafficPermissionChecker = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
+    private val timeProvider = FixedTimeProvider()
 
     @Before
     fun setup() {
@@ -59,10 +61,10 @@ class TrafficTrackerResilienceTest {
             deltaCalculator = deltaCalculator,
             simChangeHandler = simChangeHandler,
             targetResolver = targetResolver,
-            errorHandler = errorHandler,
             permissionChecker = permissionChecker,
             permissionStateNotifier = permissionStateNotifier,
             dataChangeNotifier = mock(),
+            timeProvider = timeProvider,
             scope = scope.backgroundScope,
         )
 
@@ -77,23 +79,23 @@ class TrafficTrackerResilienceTest {
             runCurrent()
 
             // 1 from observer, 1 from init (Attempt 1)
-            verify(simIdentityRepository, atLeast(2)).observeActiveSims().let {}
+            verify(simIdentityRepository, atLeast(2)).observeActiveSims()
 
             advanceTimeBy(1001.milliseconds)
             runCurrent()
             // Attempt 2
-            verify(simIdentityRepository, atLeast(3)).observeActiveSims().let {}
+            verify(simIdentityRepository, atLeast(3)).observeActiveSims()
 
             advanceTimeBy(2001.milliseconds)
             runCurrent()
             // Attempt 3
-            verify(simIdentityRepository, atLeast(4)).observeActiveSims().let {}
+            verify(simIdentityRepository, atLeast(4)).observeActiveSims()
 
             advanceTimeBy(4001.milliseconds)
             runCurrent()
             // No more attempts (from init coroutine)
-            verify(simIdentityRepository, times(4)).observeActiveSims().let {}
-            verify(permissionStateNotifier, atLeast(1)).changes.let {}
+            verify(simIdentityRepository, times(4)).observeActiveSims()
+            verify(permissionStateNotifier, atLeast(1)).changes
         }
 
     @Test
@@ -105,12 +107,12 @@ class TrafficTrackerResilienceTest {
             runCurrent()
 
             // 1 from observer, 1 from init
-            verify(simIdentityRepository, atLeast(2)).observeActiveSims().let {}
+            verify(simIdentityRepository, atLeast(2)).observeActiveSims()
 
             advanceTimeBy(10.seconds)
             runCurrent()
-            verify(simIdentityRepository, times(2)).observeActiveSims().let {}
-            verify(permissionStateNotifier, atLeast(1)).changes.let {}
+            verify(simIdentityRepository, times(2)).observeActiveSims()
+            verify(permissionStateNotifier, atLeast(1)).changes
         }
 
     @Test
@@ -122,12 +124,12 @@ class TrafficTrackerResilienceTest {
             runCurrent()
 
             // 1 from observer, 1 from init
-            verify(simIdentityRepository, atLeast(2)).observeActiveSims().let {}
+            verify(simIdentityRepository, atLeast(2)).observeActiveSims()
 
             advanceTimeBy(10.seconds)
             runCurrent()
-            verify(simIdentityRepository, times(2)).observeActiveSims().let {}
-            verify(permissionStateNotifier, atLeast(1)).changes.let {}
+            verify(simIdentityRepository, times(2)).observeActiveSims()
+            verify(permissionStateNotifier, atLeast(1)).changes
         }
 
     @Test
@@ -149,15 +151,78 @@ class TrafficTrackerResilienceTest {
             // Let init retries finish (calls 2, 3, 4)
             advanceTimeBy(4000.milliseconds)
             runCurrent()
-            verify(simIdentityRepository, times(4)).observeActiveSims().let {}
+            verify(simIdentityRepository, times(4)).observeActiveSims()
 
             // Act: Recover should try again and succeed (5th call)
             tracker.recover()
             runCurrent()
 
             // Total calls: 1 (observer) + 3 (init) + 1 (recover) = 5
-            verify(simIdentityRepository, times(5)).observeActiveSims().let {}
-            verify(permissionStateNotifier, atLeast(1)).changes.let {}
+            verify(simIdentityRepository, times(5)).observeActiveSims()
+            verify(permissionStateNotifier, atLeast(1)).changes
             assertEquals(TrackingStatus.Idle, tracker.status.value)
+        }
+
+    @Test
+    fun `TZ-29 regression - fresh timeout error is NOT suppressed`() =
+        runTest {
+            val tracker = createTracker(this)
+
+            // 1. Success at T=1000
+            timeProvider.setRealtime(1000L)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            tracker.updateTrafficUsage() // This will set lastSuccessElapsed to 1000
+            runCurrent()
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
+
+            // 2. New update starts at T=2000, fails with timeout
+            timeProvider.setRealtime(2000L)
+            // Mocking timeout by making observeActiveSims never emit (or throw exception)
+            whenever(simIdentityRepository.observeActiveSims()).thenAnswer {
+                throw TrafficUpdateTimeoutException(startElapsed = 2000L)
+            }
+
+            tracker.updateTrafficUsage()
+            runCurrent()
+
+            // Status should be Error(TIMEOUT) because it's a fresh error (2000 > 1000)
+            val status = tracker.status.value as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorCode.TIMEOUT, status.code)
+        }
+
+    @Test
+    fun `TZ-29 regression - stale timeout error IS suppressed by recent success`() =
+        runTest {
+            val tracker = createTracker(this)
+
+            // 1. Update A starts at T=1000, will fail later
+
+            // 2. Update B starts at T=1500 and succeeds at T=1600
+            timeProvider.setRealtime(1600L)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            tracker.updateTrafficUsage()
+            runCurrent()
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
+            // lastSuccessElapsed is now 1600
+
+            // 3. Update A finally fails at T=2000 with its original start time T=1000
+            timeProvider.setRealtime(2000L)
+            whenever(simIdentityRepository.observeActiveSims()).thenAnswer {
+                throw TrafficUpdateTimeoutException(startElapsed = 1000L)
+            }
+
+            tracker.updateTrafficUsage()
+            runCurrent()
+
+            // Status should NOT be Error because success (1600) > start (1000)
+            // Note: in this test setup, it remains Idle (success of Update B)
+            val currentStatus = tracker.status.value
+            val lastSuccess = tracker.lastSuccessElapsed.get()
+            assertEquals(
+                "Status should be suppressed. Current status: $currentStatus, " +
+                    "lastSuccessElapsed: $lastSuccess",
+                TrackingStatus.Idle,
+                currentStatus,
+            )
         }
 }

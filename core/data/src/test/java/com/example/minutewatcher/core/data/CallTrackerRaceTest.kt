@@ -93,9 +93,7 @@ class CallTrackerRaceTest {
         val attributionResolver =
             CallAttributionResolver(
                 simIdentityRepository,
-                callSessionRepository,
                 permissionManager,
-                retryHelper,
                 dataChangeNotifier,
             )
         val endResolver =

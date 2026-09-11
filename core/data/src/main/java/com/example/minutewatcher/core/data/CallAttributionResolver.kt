@@ -2,8 +2,6 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
-import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
-import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.model.Constants
@@ -21,9 +19,7 @@ internal class CallAttributionResolver
     @Inject
     constructor(
         private val simIdentityRepository: SimIdentityRepository,
-        private val callSessionRepository: CallSessionRepository,
         private val permissionManager: PermissionManager,
-        private val retryHelper: DataStoreRetryHelper,
         private val dataChangeNotifier: DataChangeNotifier,
     ) {
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
@@ -78,51 +74,6 @@ internal class CallAttributionResolver
             )
             dataChangeNotifier.notifyDataChanged()
             return false
-        }
-
-        @Suppress("ReturnCount")
-        suspend fun resolveEffectiveSubId(subId: Int): Int {
-            if (subId != -1) return subId
-
-            // 1. Try last data SIM
-            val lastResult =
-                retryHelper.readWithRetry(
-                    label = "resolveEffectiveSubId:lastData",
-                ) { callSessionRepository.getLastDataSubId() }
-            val last = lastResult.getOrElse { -1 }
-            if (last != -1) {
-                AppLogger.d("CallTracker: attributed unknown subId event to last data SIM ($last)")
-                return last
-            }
-
-            return resolveEffectiveSubIdFromActiveCalls()
-        }
-
-        @Suppress("ReturnCount")
-        suspend fun resolveEffectiveSubIdFromActiveCalls(): Int {
-            // 2. Heuristic: if only one call is active, it must be it
-            val active =
-                try {
-                    callSessionRepository.getActiveCallSubIds()
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Error reading active call subIds", e)
-                    null
-                }
-
-            if (active == null) {
-                AppLogger.w("CallTracker: active call sessions read failed during attribution")
-                return -1
-            }
-
-            if (active.size == 1) {
-                val single = active.first()
-                AppLogger.d("CallTracker: attributed unknown subId event to single active call ($single)")
-                return single
-            }
-
-            return -1
         }
 
         fun resolveTargetSubId(subId: Int): Int =

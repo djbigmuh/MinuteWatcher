@@ -96,9 +96,8 @@ internal class CallEndHandler
             eventElapsedRealtime: Long,
             context: CallTrackingContext,
         ): Boolean {
-            val effectiveSubId = attributionResolver.resolveEffectiveSubId(subId)
-            if (effectiveSubId != -1) {
-                return endCall(effectiveSubId, eventElapsedRealtime, true, context)
+            if (subId != -1) {
+                return endCall(subId, eventElapsedRealtime, true, context)
             }
 
             val result = callEndResolver.resolveUnknownSubIdEnd()
@@ -166,6 +165,12 @@ internal class CallEndHandler
             }
         }
 
+    /**
+     * Finalizes the call end process by refreshing the tracker status.
+     *
+     * **Cleanup invariant:** This block does not rethrow exceptions, including [CancellationException].
+     * The cancellation of the outer scope should be checked by the caller.
+     */
         private suspend fun finalizeCallEnd(
             shouldRefreshStatus: Boolean,
             context: CallTrackingContext,
@@ -174,8 +179,6 @@ internal class CallEndHandler
             withContext(NonCancellable) {
                 try {
                     context.refreshStatus(false)
-                } catch (e: CancellationException) {
-                    throw e
                 } catch (e: Exception) {
                     AppLogger.w("CallTracker: refreshStatus failed in finalizeCallEnd", e)
                 }
@@ -188,13 +191,13 @@ internal class CallEndHandler
             notify: Boolean,
             context: CallTrackingContext,
         ): Boolean {
-            val endData = fetchCallEndData(subId, eventElapsedRealtime)
-
             if (!settingsHandler.isCallTrackingEnabled()) {
                 AppLogger.d("CallTracker: tracking disabled, clearing session for subId $subId")
                 sessionCleaner.cleanupCounters(subId, context)
                 return true
             }
+
+            val endData = fetchCallEndData(subId, eventElapsedRealtime)
             return processCallEndLocked(subId, endData, notify, context)
         }
 

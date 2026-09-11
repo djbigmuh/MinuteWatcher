@@ -120,9 +120,7 @@ abstract class CallTrackerTestFixtures {
     internal fun createAttributionResolver() =
         CallAttributionResolver(
             simIdentityRepository,
-            callSessionRepository,
             permissionManager,
-            retryHelper,
             dataChangeNotifier,
         )
 

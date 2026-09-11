@@ -3,8 +3,6 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
-import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
-import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -159,14 +157,10 @@ class EphemeralSeedGatingTest {
     @Test
     fun `CallAttributionResolver resolveIdentity filters unstable identities`() =
         runTest {
-            val callSessionRepository: CallSessionRepository = mock()
-            val retryHelper: DataStoreRetryHelper = mock()
             val resolver =
                 CallAttributionResolver(
                     simIdentityRepository,
-                    callSessionRepository,
                     permissionManager,
-                    retryHelper,
                     dataChangeNotifier,
                 )
 
@@ -201,10 +195,10 @@ class EphemeralSeedGatingTest {
             deltaCalculator,
             simChangeHandler,
             targetResolver,
-            errorHandler,
             permissionChecker,
             permissionStateNotifier,
             dataChangeNotifier,
+            timeProvider,
             scope,
         )
 }

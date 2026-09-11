@@ -468,7 +468,7 @@ class UsageCheckWorkerTest {
         }
 
     @Test
-    fun `doWork uses default settings when AppSettings read times out`() =
+    fun `doWork skips notifications when AppSettings read times out`() =
         runTest {
             val identity = "sim_0"
             val snapshot =
@@ -523,8 +523,8 @@ class UsageCheckWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            // By default AppSettings has notifyLowMinutes = true, so notification SHOULD be sent
-            verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
+            // TZ-40: Settings load failure should NOT lead to notifications (fail-closed)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
 
     @Test

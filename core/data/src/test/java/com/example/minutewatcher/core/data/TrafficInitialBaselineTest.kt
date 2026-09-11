@@ -142,10 +142,10 @@ class TrafficInitialBaselineTest {
             deltaCalculator,
             simChangeHandler,
             TrafficTargetResolver(permissionManager),
-            TrafficErrorHandler(),
             TrafficPermissionChecker(permissionManager),
             permissionStateNotifier,
             mock(),
+            timeProvider,
             backgroundScope,
         )
     }

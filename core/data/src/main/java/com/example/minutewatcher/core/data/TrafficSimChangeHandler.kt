@@ -17,9 +17,11 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Handles SIM card changes and retry logic for traffic tracking.
+ * attributes traffic to.
  *
- * Safe to call from any coroutine context.
+ * **Invariant:** Delta updates are only allowed when the previous data subscription ID
+ * is reliably known. If it's unknown (e.g., due to storage timeout during initialization),
+ * a conservative baseline reset is performed to prevent misattribution.
  */
 @Singleton
 class TrafficSimChangeHandler
@@ -64,6 +66,22 @@ class TrafficSimChangeHandler
             val savedLastDataSubId = inMemoryLastDataSubId.get()
             val targetIdentity = simIdentityRepository.getIdentity(target.slot)
 
+            if (!lastDataSubIdLoaded.get()) {
+                AppLogger.d(
+                    "TrafficSimChangeHandler: previous subId unknown (load failed). " +
+                        "Performing conservative baseline reset for $targetIdentity.",
+                )
+                // Force conservative reset path
+                handleSimChange(
+                    identity = targetIdentity,
+                    currentDataSubId = target.dataSubId,
+                    savedLastDataSubId = -1,
+                    updateStatus = updateStatus,
+                    isSimChanged = true,
+                )
+                return null // Skip delta
+            }
+
             val isSimChanged =
                 (savedLastDataSubId != -1) &&
                     (target.dataSubId != -1) &&
@@ -82,7 +100,7 @@ class TrafficSimChangeHandler
             return if (isSimChanged) {
                 // Read the updated retry count from the map to accurately log the state after the attempt.
                 val retryCount = baselineManager.getRetryCount(targetIdentity) ?: 0
-                handleSkipDelta(target, retryCount, updateStatus)
+                handleSkipDelta(target, retryCount)
                 null
             } else {
                 targetIdentity
@@ -92,11 +110,10 @@ class TrafficSimChangeHandler
         private fun handleSkipDelta(
             target: TargetInfo,
             retryCount: Int,
-            updateStatus: (TrackingStatus) -> Unit,
         ) {
             AppLogger.d("Traffic delta skipped due to SIM change (slot=${target.slot}, retryCount=$retryCount)")
-            // We only report Active if not already in a more important state (like Error)
-            updateStatus(TrackingStatus.Active)
+            // We do NOT update status to Active here, because handleSimChange already
+            // triggered a baseline reset which sets the status (Active or Error).
         }
 
         private suspend fun handleSimChange(

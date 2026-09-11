@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -60,10 +61,10 @@ class TrafficTrackerRecoveryTest {
             deltaCalculator = deltaCalculator,
             simChangeHandler = simChangeHandler,
             targetResolver = targetResolver,
-            errorHandler = errorHandler,
             permissionChecker = permissionChecker,
             permissionStateNotifier = permissionStateNotifier,
             dataChangeNotifier = mock(),
+            timeProvider = FixedTimeProvider(),
             scope = scope.backgroundScope,
         )
 

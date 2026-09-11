@@ -38,6 +38,9 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * MainBannerController manages the state of tracking banners (errors and notifications).
  *
+ * **Invariant:** The aggregator does not include its own status in the input data
+ * to avoid a self-holding error state.
+ *
  * **Thread Safety:** Safe to call from any coroutine context.
  * **Error Handling:** Propagates [CancellationException].
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via observed flows.
@@ -202,8 +205,10 @@ class MainBannerController
                 observationScope.observe(trackingStatus) { statusMap ->
                     currentCoroutineContext().ensureActive()
 
-                    // Update _status based on banner errors
-                    val hasError = statusMap.values.any { it is TrackingStatus.Error }
+                    // Update _status based on banner errors, EXCLUDING our own status
+                    // to avoid self-holding Error state.
+                    val others = statusMap.filterKeys { it != key }
+                    val hasError = others.values.any { it is TrackingStatus.Error }
                     transitionStatus(
                         if (hasError) {
                             TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Banner errors detected")
