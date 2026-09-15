@@ -304,6 +304,10 @@ function Parse-CheckstyleXml {
             }
         } catch { }
     }
+    # De-duplicate rows across variants
+    if ($rows.Count -gt 0) {
+        $rows = $rows | Sort-Object File, Line, Column, Message -Unique
+    }
     return ,$rows
 }
 
@@ -326,7 +330,7 @@ function Parse-DetektReport {
 function Parse-KtlintReport {
     param([string]$OutDir)
     $ktlintCsv = Join-Path $OutDir '44_ktlint_summary.csv'
-    # Use *.xml for ktlint, but ONLY *Check.xml files to avoid redundant Format reports
+    # Use *.xml for ktlint, but ONLY *Check.xml files
     $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*Check.xml' |
         Where-Object { $_.FullName -match '\\build\\reports\\ktlint\\' }
     if (-not $xmlFiles) {
@@ -376,6 +380,9 @@ function Parse-LintReport {
                 }
             }
         } catch { }
+    }
+    if ($rows.Count -gt 0) {
+        $rows = $rows | Sort-Object Severity, ID, Message, File, Line -Unique
     }
     Save-Csv $lintCsv $rows @('Severity', 'ID', 'Message', 'File', 'Line', 'Source')
     return ,$rows
