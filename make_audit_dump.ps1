@@ -210,7 +210,7 @@ function Get-StaleWarning {
     if ($lastCommitEpoch -match '^\d+$') {
         $lastCommitTime = [DateTimeOffset]::FromUnixTimeSeconds($lastCommitEpoch).LocalDateTime
         if ($ReportTime -lt $lastCommitTime) {
-            return " [STALE: report is older than last commit ($($lastCommitTime.ToString('yyyy-MM-dd HH:mm:ss')))]"
+            return " [STALE: report is older than last commit ($($lastCommitTime.ToString('HH:mm:ss')))]"
         }
     }
     return ""
@@ -310,8 +310,9 @@ function Parse-CheckstyleXml {
 function Parse-DetektReport {
     param([string]$OutDir)
     $detektCsv = Join-Path $OutDir '42_detekt_summary.csv'
-    # Use *.xml for detekt to catch debug.xml/release.xml
-    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*.xml' | Where-Object { $_.FullName -match '\\build\\reports\\detekt\\' }
+    # Use *.xml for detekt, but exclude baseline
+    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*.xml' |
+        Where-Object { $_.FullName -match '\\build\\reports\\detekt\\' -and $_.Name -notmatch 'baseline' }
     if (-not $xmlFiles) {
         Save-Text $detektCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
         return @()
@@ -325,7 +326,9 @@ function Parse-DetektReport {
 function Parse-KtlintReport {
     param([string]$OutDir)
     $ktlintCsv = Join-Path $OutDir '44_ktlint_summary.csv'
-    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*.xml' | Where-Object { $_.FullName -match '\\build\\reports\\ktlint\\' }
+    # Use *.xml for ktlint, but ONLY *Check.xml files to avoid redundant Format reports
+    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*Check.xml' |
+        Where-Object { $_.FullName -match '\\build\\reports\\ktlint\\' }
     if (-not $xmlFiles) {
         Save-Text $ktlintCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
         return @()
