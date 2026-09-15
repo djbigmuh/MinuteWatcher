@@ -171,7 +171,7 @@ class UsageCheckWorker
             }
         }
 
-    private suspend fun fetchAppSettingsWithRetry(): AppSettings? {
+        private suspend fun fetchAppSettingsWithRetry(): AppSettings? {
             val appSettingsResult =
                 deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: run {
                     AppLogger.w("UsageCheckWorker: AppSettings read timed out, retrying with 10s...")
@@ -260,10 +260,10 @@ class UsageCheckWorker
             }
         }
 
-    /**
-     * Handles the low minutes alert based on remaining percentage.
-     * Triggered when remaining is below [Constants.LOW_THRESHOLD_PERCENT_INT].
-     */
+        /**
+         * Handles the low minutes alert based on remaining percentage.
+         * Triggered when remaining is below [Constants.LOW_THRESHOLD_PERCENT_INT].
+         */
         private suspend fun handleLowMinutesAlert(
             entity: SemanticEntity,
             remPct: Int,
@@ -275,7 +275,7 @@ class UsageCheckWorker
                     .getNotifiedLowMinutes(identity)
                     .firstWithTimeout() ?: false
 
-        if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
+            if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
                 val levelRes =
                     if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
                         R.string.usage_level_critical
@@ -296,7 +296,7 @@ class UsageCheckWorker
                     )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_MINUTES)
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = true)
-        } else if ((remPct >= Constants.LOW_THRESHOLD_PERCENT_INT) && notifiedLow) {
+            } else if ((remPct >= Constants.LOW_THRESHOLD_PERCENT_INT) && notifiedLow) {
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = false)
             }
         }
@@ -370,10 +370,10 @@ class UsageCheckWorker
             }
         }
 
-    /**
-     * Handles the low traffic alert based on remaining percentage.
-     * Triggered when remaining is below [Constants.LOW_THRESHOLD_PERCENT_INT].
-     */
+        /**
+         * Handles the low traffic alert based on remaining percentage.
+         * Triggered when remaining is below [Constants.LOW_THRESHOLD_PERCENT_INT].
+         */
         private suspend fun handleLowTrafficAlert(
             entity: SemanticEntity,
             remPct: Int,
@@ -386,7 +386,7 @@ class UsageCheckWorker
                     .getNotifiedLowTraffic(identity)
                     .firstWithTimeout() ?: false
 
-        if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
+            if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
                 val levelRes =
                     if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
                         R.string.usage_level_critical
@@ -405,7 +405,7 @@ class UsageCheckWorker
                     )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_TRAFFIC)
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = true)
-        } else if ((remPct >= Constants.LOW_THRESHOLD_PERCENT_INT) && notifiedLow) {
+            } else if ((remPct >= Constants.LOW_THRESHOLD_PERCENT_INT) && notifiedLow) {
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = false)
             }
         }

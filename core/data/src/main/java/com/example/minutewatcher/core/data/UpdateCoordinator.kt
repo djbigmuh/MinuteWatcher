@@ -264,7 +264,7 @@ class UpdateCoordinator
             return firstSnapshot
         }
 
-    @Suppress("SwallowedException")
+        @Suppress("SwallowedException")
         private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
             try {
                 processSnapshot(snapshot)
@@ -289,7 +289,7 @@ class UpdateCoordinator
             }
         }
 
-    private fun launchMonitoringJob(newJob: Job): Job {
+        private fun launchMonitoringJob(newJob: Job): Job {
             // Monitoring completion: if observation fails — restart with exponential delay.
             return scope.launch {
                 newJob.join()
@@ -573,12 +573,12 @@ class UpdateCoordinator
             }
         }
 
-    private data class ForcedUpdateOutcome(
-        val success: Boolean,
-        val contentChangedDuringUpdate: Boolean,
-    )
+        private data class ForcedUpdateOutcome(
+            val success: Boolean,
+            val contentChangedDuringUpdate: Boolean,
+        )
 
-    private suspend fun performForcedUpdate(): ForcedUpdateOutcome {
+        private suspend fun performForcedUpdate(): ForcedUpdateOutcome {
             val suppressed =
                 stateMutex.withLock {
                     consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES
@@ -591,7 +591,7 @@ class UpdateCoordinator
                 return ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
             }
 
-        // Cancel current reactive update if it's in progress.
+            // Cancel current reactive update if it's in progress.
             currentUpdateJob.getAndSet(null)?.cancel()
 
             // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)

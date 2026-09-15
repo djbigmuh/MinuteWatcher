@@ -88,7 +88,7 @@ class WidgetErrorClassifier
             }
         }
 
-    private companion object {
-        private const val MAX_CAUSE_DEPTH = 16
-    }
+        private companion object {
+            private const val MAX_CAUSE_DEPTH = 16
+        }
     }

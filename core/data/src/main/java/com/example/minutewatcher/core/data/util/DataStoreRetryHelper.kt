@@ -22,9 +22,9 @@ import kotlin.time.Duration.Companion.milliseconds
 open class DataStoreRetryHelper
     @Inject
     constructor() {
-    private class Emission<T>(
-        val value: T,
-    )
+        private class Emission<T>(
+            val value: T,
+        )
 
         /**
          * Reads from DataStore with retries on failure or timeout.

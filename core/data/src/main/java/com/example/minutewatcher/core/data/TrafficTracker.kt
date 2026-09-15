@@ -110,8 +110,8 @@ class TrafficTracker
         private val initializationFailed = AtomicBoolean(false)
         private val isInitializing = AtomicBoolean(false)
 
-    @VisibleForTesting
-    internal val lastSuccessElapsed = AtomicLong(0L)
+        @VisibleForTesting
+        internal val lastSuccessElapsed = AtomicLong(0L)
         private val initJob = AtomicReference<Job?>(null)
         private var permissionObserverJob: Job? = null
         private var simObserverJob: Job? = null
@@ -267,28 +267,28 @@ class TrafficTracker
             )
         }
 
-    private fun handleInitError(
-        startElapsed: Long,
-        e: Exception,
-    ) {
-        val type =
-            if (e is SecurityException) {
-                TrackingStatus.ErrorType.PERMISSION_MISSING
-            } else {
-                TrackingStatus.ErrorType.UNKNOWN
-            }
-        val code =
-            if (e is TrafficUpdateTimeoutException) {
-                TrackingStatus.ErrorCode.TIMEOUT
-            } else {
-                null
-            }
-        updateStatusOnError(
-            startElapsed,
-            e.message ?: "Initialization failed",
-            type = type,
-            code = code,
-        )
+        private fun handleInitError(
+            startElapsed: Long,
+            e: Exception,
+        ) {
+            val type =
+                if (e is SecurityException) {
+                    TrackingStatus.ErrorType.PERMISSION_MISSING
+                } else {
+                    TrackingStatus.ErrorType.UNKNOWN
+                }
+            val code =
+                if (e is TrafficUpdateTimeoutException) {
+                    TrackingStatus.ErrorCode.TIMEOUT
+                } else {
+                    null
+                }
+            updateStatusOnError(
+                startElapsed,
+                e.message ?: "Initialization failed",
+                type = type,
+                code = code,
+            )
         }
 
         private fun isTerminalInitError(e: Exception): Boolean =
@@ -457,10 +457,10 @@ class TrafficTracker
                 null
             }
 
-    private suspend fun handleActiveSims(
-        startElapsed: Long,
-        activeSims: List<ActiveSimInfo>,
-    ) {
+        private suspend fun handleActiveSims(
+            startElapsed: Long,
+            activeSims: List<ActiveSimInfo>,
+        ) {
             if (activeSims.isEmpty()) {
                 trafficMutex.withLock {
                     baselineManager.cleanupRetries(emptySet())
@@ -475,7 +475,7 @@ class TrafficTracker
                 baselineManager.cleanupRetries(activeIdentities)
             }
 
-        processActiveSimsTraffic(startElapsed, activeSims)
+            processActiveSimsTraffic(startElapsed, activeSims)
         }
 
         @Suppress("ReturnCount")

@@ -165,12 +165,12 @@ internal class CallEndHandler
             }
         }
 
-    /**
-     * Finalizes the call end process by refreshing the tracker status.
-     *
-     * **Cleanup invariant:** This block does not rethrow exceptions, including [CancellationException].
-     * The cancellation of the outer scope should be checked by the caller.
-     */
+        /**
+         * Finalizes the call end process by refreshing the tracker status.
+         *
+         * **Cleanup invariant:** This block does not rethrow exceptions, including [CancellationException].
+         * The cancellation of the outer scope should be checked by the caller.
+         */
         private suspend fun finalizeCallEnd(
             shouldRefreshStatus: Boolean,
             context: CallTrackingContext,

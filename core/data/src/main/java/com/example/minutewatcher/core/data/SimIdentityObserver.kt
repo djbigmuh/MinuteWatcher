@@ -84,7 +84,7 @@ internal class SimIdentityObserver
         private val generalAttempt = AtomicLong(0)
         private val isObservationInitialized = AtomicBoolean(false)
         private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private val recoveryJob = AtomicReference<Job?>(null)
+        private val recoveryJob = AtomicReference<Job?>(null)
 
         private val lastSeedRef = AtomicReference<SeedResult?>(null)
         private val migrationTriggered = AtomicBoolean(false)
@@ -118,33 +118,33 @@ internal class SimIdentityObserver
             }
         }
 
-    private fun scheduleDiscoveryRecovery(reason: String) {
-        val newJob =
-            scope.launch {
-                delay(DISCOVERY_RECOVERY_COOLDOWN_MS.milliseconds)
-                generalAttempt.set(0)
-                AppLogger.d("SimIdentityObserver: auto-recovery after stop ($reason)")
-                manualTrigger.emit(Unit)
-            }
-        recoveryJob.getAndSet(newJob)?.cancel()
-    }
-
-    private fun cancelRecovery() {
-        recoveryJob.getAndSet(null)?.cancel()
-    }
-
-    private fun toSeedResult(result: SeedResolutionResult): SeedResult =
-        when (result) {
-            is SeedResolutionResult.Persistent -> SeedResult.Real(result.seed, isStable = true)
-            is SeedResolutionResult.Ephemeral -> SeedResult.Fallback(result.seed)
+        private fun scheduleDiscoveryRecovery(reason: String) {
+            val newJob =
+                scope.launch {
+                    delay(DISCOVERY_RECOVERY_COOLDOWN_MS.milliseconds)
+                    generalAttempt.set(0)
+                    AppLogger.d("SimIdentityObserver: auto-recovery after stop ($reason)")
+                    manualTrigger.emit(Unit)
+                }
+            recoveryJob.getAndSet(newJob)?.cancel()
         }
 
-    /**
-     * Flow of the SIM identity seed resolution result.
-     *
-     * [SeedResult.Fallback] is emitted only for Ephemeral seeds (storage unavailable).
-     * This flow ensures that all components use the same seed for identity derivation.
-     */
+        private fun cancelRecovery() {
+            recoveryJob.getAndSet(null)?.cancel()
+        }
+
+        private fun toSeedResult(result: SeedResolutionResult): SeedResult =
+            when (result) {
+                is SeedResolutionResult.Persistent -> SeedResult.Real(result.seed, isStable = true)
+                is SeedResolutionResult.Ephemeral -> SeedResult.Fallback(result.seed)
+            }
+
+        /**
+         * Flow of the SIM identity seed resolution result.
+         *
+         * [SeedResult.Fallback] is emitted only for Ephemeral seeds (storage unavailable).
+         * This flow ensures that all components use the same seed for identity derivation.
+         */
         @OptIn(ExperimentalCoroutinesApi::class)
         val seedFlow: Flow<SeedResult> =
             manualTrigger
@@ -440,15 +440,15 @@ internal class SimIdentityObserver
                 .map { it.benchmarkSimCount }
                 .distinctUntilChanged()
 
-    /**
-     * Checks if a transition from Fallback (ephemeral) seed to Real (persistent) seed
-     * has occurred and triggers identity migration if needed.
-     *
-     * **Migration Guard:** The migration is triggered at most once for a given pair
-     * of seed values (transition from specific Fallback to specific Real).
-     * If the system returns to Fallback state, the trigger is reset to allow
-     * migration if another persistent seed is eventually resolved.
-     */
+        /**
+         * Checks if a transition from Fallback (ephemeral) seed to Real (persistent) seed
+         * has occurred and triggers identity migration if needed.
+         *
+         * **Migration Guard:** The migration is triggered at most once for a given pair
+         * of seed values (transition from specific Fallback to specific Real).
+         * If the system returns to Fallback state, the trigger is reset to allow
+         * migration if another persistent seed is eventually resolved.
+         */
         private fun checkAndTriggerMigration(
             currentSeed: SeedResult,
             sims: List<ActiveSimInfo>,

@@ -256,7 +256,7 @@ class WidgetUpdaterImpl
             }
         }
 
-    private suspend fun resolveRenderMode(isFirstAttempt: Boolean): RenderMode {
+        private suspend fun resolveRenderMode(isFirstAttempt: Boolean): RenderMode {
             val isExceeded =
                 limitManager.isLimitExceeded() ?: run {
                     val settings =
