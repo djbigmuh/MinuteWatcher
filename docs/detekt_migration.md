@@ -26,7 +26,8 @@ natively supports modern JDK versions.
 
 Instead of CI (GitHub Actions), use the local verification script:
 
-- Run `.\VERIFY.bat` and ensure `detekt` and `detektMain` tasks pass.
+- Run `.\VERIFY.bat` and ensure `detekt` task passes.
+  (Note: `detektMain` contains experimental rules and may be run manually for deep analysis).
 
 ## Historical Context (The JDK Workaround)
 

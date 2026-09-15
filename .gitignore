@@ -34,15 +34,17 @@ Thumbs.db
 *.tmp
 *.swp
 
-# Audit scripts
-MAKE_AUDIT_DUMP.bat
-make_audit_dump.ps1
+# Audit scripts (local data only; scripts are now tracked)
 audit_dump/
+verify_status.txt
+verify_output.txt
 
 # Debug/diagnostic artifacts (local only)
 build_log.txt
 deps_ksp.txt
 ksp_log.txt
+detekt_output.txt
+ktlint_output.txt
 
 # Generated benchmark config
 app/benchmark-config.txt
