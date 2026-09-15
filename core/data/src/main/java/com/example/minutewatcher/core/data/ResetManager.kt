@@ -20,8 +20,8 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Manages automatic resets of SIM usage stats based on billing cycles.
@@ -56,7 +56,7 @@ class ResetManager
          * Safe to call from any coroutine context.
          * @return `true` if all SIMs were successfully processed or skipped due to cooldown.
          * `false` if at least one SIM failed due to IO error or usage data timeout.
-         * @throws kotlinx.coroutines.CancellationException if the reset process is cancelled.
+         * @throws CancellationException if the reset process is cancelled.
          */
         @Suppress("CyclomaticComplexMethod")
         override suspend fun performAutoReset(shouldNotify: Boolean): Boolean {
@@ -228,7 +228,7 @@ class ResetManager
         }
 
         companion object {
-            private val CHECK_INTERVAL_MS = 1.hours.inWholeMilliseconds
+            private val CHECK_INTERVAL_MS = 45.minutes.inWholeMilliseconds
             private const val RESET_TOTAL_TIMEOUT_MS = 30_000L
         }
     }

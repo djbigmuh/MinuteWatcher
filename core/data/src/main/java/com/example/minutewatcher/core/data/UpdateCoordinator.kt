@@ -39,11 +39,10 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Единый механизм обновления.
+ * Centralized update mechanism.
  *
- * Координатор является Singleton и использует ApplicationScope, поэтому цикл
- * наблюдения за снимками состояния (observeSnapshot) живет в течение всего
- * времени работы приложения.
+ * Coordinator is a Singleton and uses ApplicationScope, so the observation
+ * cycle (observeSnapshot) lives for the entire application lifetime.
  */
 @Singleton
 @Suppress("TooManyFunctions")
@@ -147,7 +146,8 @@ class UpdateCoordinator
             if (currentJob != null && currentJob.isActive) return
 
             // Setup already in progress?
-            if (setupJob.get()?.isActive == true) return
+            val activeSetup = setupJob.get()
+            if (activeSetup != null && activeSetup.isActive) return
 
             val newSetupJob =
                 scope.launch {
@@ -400,20 +400,19 @@ class UpdateCoordinator
             if (!shouldUpdate) return
 
             if (snapshot.suppressWidgetUpdate) {
-                // Хэш НЕ обновляется: виджет не обновлён,
-                // следующее изменение данных должно триггернуть обновление.
+                // Hash is NOT updated: widget is not updated, next data change should trigger update.
                 return
             }
 
-            // Оборачиваем обновление в coroutineScope, чтобы выделить отдельный Job для этого процесса.
-            // Это позволяет внешним вызовам (performForcedUpdate) отменить текущее обновление,
-            // не прерывая весь цикл наблюдения (collectLatest).
+            // Wrap update in coroutineScope to allocate a separate Job for this process.
+            // This allows external calls (performForcedUpdate) to cancel current update
+            // without interrupting the whole observation cycle.
             coroutineScope {
                 currentUpdateJob.set(coroutineContext.job)
                 try {
                     val result = performWidgetUpdate()
 
-                    // Проверяем, что снапшот все еще актуален.
+                    // Check that the snapshot is still relevant.
                     ensureActive()
 
                     handleUpdateResult(result, newHash)
@@ -556,20 +555,30 @@ class UpdateCoordinator
             if (!updateWidget) return true
 
             return if (force) {
-                val success = performForcedUpdate()
-                if (success) {
-                    dataRefreshNotifier.notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+                val outcome = performForcedUpdate()
+                if (outcome.success) {
+                    dataRefreshNotifier.notifyRefresh(
+                        isManual = true,
+                        // Suppress reactive update ONLY if data DID NOT change during render.
+                        // If it did — let the reactive cycle immediately finish updating the widget.
+                        suppressWidgetUpdate = !outcome.contentChangedDuringUpdate,
+                    )
                 }
-                success
+                outcome.success
             } else {
                 dataRefreshNotifier.notifyRefresh(isManual = false, suppressWidgetUpdate = false)
-                // Реактивный путь в init обработает обновление, если данные изменились.
-                // Мы возвращаем true, так как уведомление успешно отправлено.
+                // Reactive path in init will handle the update if data changed.
+                // We return true as the notification was successfully sent.
                 true
             }
         }
 
-        private suspend fun performForcedUpdate(): Boolean {
+    private data class ForcedUpdateOutcome(
+        val success: Boolean,
+        val contentChangedDuringUpdate: Boolean,
+    )
+
+    private suspend fun performForcedUpdate(): ForcedUpdateOutcome {
             val suppressed =
                 stateMutex.withLock {
                     consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES
@@ -579,17 +588,23 @@ class UpdateCoordinator
                     "UpdateCoordinator: forced widget update suppressed due to too many failures " +
                         "($consecutiveUpdateFailures)",
                 )
-                return false
+                return ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
             }
 
-            // Отменяем текущее реактивное обновление, если оно идет.
+        // Cancel current reactive update if it's in progress.
             currentUpdateJob.getAndSet(null)?.cancel()
 
             // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)
             widgetUpdater.recover()
 
             return try {
+                // Snapshot that is guaranteed to be not newer than what the renderer will see.
+                val snapshotBefore = usageStateRepository.observeSnapshot().value
+                val hashBefore = SnapshotUtils.calculateContentHash(snapshotBefore)
+
                 val result = widgetUpdater.updateAll()
+
+                val hashAfter = SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
 
                 stateMutex.withLock {
                     if (result.isSuccess) {
@@ -597,14 +612,14 @@ class UpdateCoordinator
                         observationRestartCount = 0
                         degradedCycleCount = 0
 
-                        // Читаем актуальный снимок ПОСЛЕ завершения обновления,
-                        // чтобы lastSnapshotHash соответствовал реальности.
-                        val latestSnapshot = usageStateRepository.observeSnapshot().value
-                        lastSnapshotHash = SnapshotUtils.calculateContentHash(latestSnapshot)
-                        true
+                        // Invariant: hash <= rendered state.
+                        // Discrepancy is compensated by reactive cycle, and if data changed
+                        // during forced render, suppression of the next reactive update is disabled.
+                        lastSnapshotHash = hashBefore
+                        ForcedUpdateOutcome(true, contentChangedDuringUpdate = hashAfter != hashBefore)
                     } else {
                         handleUpdateFailure()
-                        false
+                        ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
                     }
                 }
             } catch (e: CancellationException) {
@@ -614,7 +629,7 @@ class UpdateCoordinator
                 stateMutex.withLock {
                     handleUpdateFailure()
                 }
-                false
+                ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
             }
         }
 

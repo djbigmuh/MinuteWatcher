@@ -4,20 +4,20 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 
 /**
- * Состояние виджета для рендера.
- * Содержит все данные, необходимые для рендера виджета.
+ * Widget state for rendering.
+ * Contains all data necessary to render the widget.
  *
- * @property layoutMode Режим компоновки виджета.
- * @property simArrangement Расположение SIM.
- * @property backgroundColor Цвет фона.
- * @property transparency Прозрачность фона.
- * @property simUiStates Список состояний SIM-карт.
- * @property isHorizontal Горизонтальное расположение.
- * @property showSeparator Показывать разделитель.
- * @property useSystemColors Использовать системные цвета.
- * @property settingsLoadFailed Флаг ошибки загрузки настроек.
- * @property refreshFailed Флаг ошибки обновления данных.
- * @property isSnapshotEmpty Флаг пустого snapshot.
+ * @property layoutMode Widget layout mode.
+ * @property simArrangement SIM arrangement.
+ * @property backgroundColor Background color.
+ * @property transparency Background transparency.
+ * @property simUiStates List of SIM card states.
+ * @property isHorizontal Horizontal arrangement.
+ * @property showSeparator Show separator.
+ * @property useSystemColors Use system colors.
+ * @property settingsLoadFailed Settings load error flag.
+ * @property refreshFailed Data refresh error flag.
+ * @property isSnapshotEmpty Empty snapshot flag.
  */
 @Immutable
 data class WidgetUiState(
@@ -36,15 +36,15 @@ data class WidgetUiState(
 )
 
 /**
- * Строки виджета.
- * Создаются через WidgetStringsFactory.create(context).
- * Пересоздаются при изменении конфигурации (локаль).
+ * Widget strings.
+ * Created via WidgetStringsFactory.create(context).
+ * Recreated on configuration change (locale).
  *
- * @property usedText Текст "Использовано".
- * @property minutesAbbr Аббревиатура минут ("мин.").
- * @property limitText Текст "Лимит".
- * @property gbAbbr Аббревиатура гигабайт ("ГБ").
- * @property fractionFormat Формат дроби ("/%1$s").
+ * @property usedText "Used" text.
+ * @property minutesAbbr Minutes abbreviation (e.g., "min.").
+ * @property limitText "Limit" text.
+ * @property gbAbbr Gigabytes abbreviation ("GB").
+ * @property fractionFormat Fraction format ("/%1$s").
  */
 @Immutable
 data class WidgetStrings(
@@ -56,32 +56,32 @@ data class WidgetStrings(
 )
 
 /**
- * Состояние одной SIM-карты для рендера в виджете.
+ * State of a single SIM card for rendering in the widget.
  *
- * @property slot Индекс слота SIM.
- * @property operatorName Имя оператора.
- * @property operatorIconRes Ресурс иконки оператора.
- * @property showSim Показывать SIM-карту.
- * @property showIcon Показывать иконку.
- * @property showName Показывать имя.
- * @property showMinutes Показывать минуты.
- * @property minutesText Текст минут.
- * @property minutesColor Цвет минут.
- * @property showMinutesLimit Показывать лимит минут.
- * @property minutesLimitText Текст лимита минут.
- * @property showTraffic Показывать трафик.
- * @property trafficText Текст трафика.
- * @property trafficColor Цвет трафика.
- * @property showTrafficLimit Показывать лимит трафика.
- * @property trafficLimitText Текст лимита трафика.
- * @property fontMultiplier Множитель размера шрифта.
- * @property textColor Цвет текста.
- * @property secondaryTextColor Вторичный цвет текста.
- * @property minutesUsedFullText Полный текст использованных минут.
- * @property minutesLimitFullText Полный текст лимита минут.
- * @property trafficUsedFullText Полный текст использованного трафика.
- * @property trafficLimitFullText Полный текст лимита трафика.
- * @property layoutSpec Спецификация layout для SimLayoutRenderV2.
+ * @property slot SIM slot index.
+ * @property operatorName Operator name.
+ * @property operatorIconRes Operator icon resource.
+ * @property showSim Show SIM card.
+ * @property showIcon Show icon.
+ * @property showName Show name.
+ * @property showMinutes Show minutes.
+ * @property minutesText Minutes text.
+ * @property minutesColor Minutes color.
+ * @property showMinutesLimit Show minutes limit.
+ * @property minutesLimitText Minutes limit text.
+ * @property showTraffic Show traffic.
+ * @property trafficText Traffic text.
+ * @property trafficColor Traffic color.
+ * @property showTrafficLimit Show traffic limit.
+ * @property trafficLimitText Traffic limit text.
+ * @property fontMultiplier Font size multiplier.
+ * @property textColor Text color.
+ * @property secondaryTextColor Secondary text color.
+ * @property minutesUsedFullText Full text of used minutes.
+ * @property minutesLimitFullText Full text of minutes limit.
+ * @property trafficUsedFullText Full text of used traffic.
+ * @property trafficLimitFullText Full text of traffic limit.
+ * @property layoutSpec Layout specification for SimLayoutRenderV2.
  */
 @Immutable
 data class SimUiState(
@@ -115,10 +115,10 @@ data class SimUiState(
 )
 
 /**
- * Спецификация layout для SimLayoutRenderV2.
- * Содержит список строк (rows), каждая из которых содержит компоненты.
+ * Layout specification for SimLayoutRenderV2.
+ * Contains a list of rows, each containing components.
  *
- * @property rows Список строк layout.
+ * @property rows List of layout rows.
  */
 @Immutable
 data class SimLayoutSpec(
@@ -126,10 +126,10 @@ data class SimLayoutSpec(
 )
 
 /**
- * Строка layout для SimLayoutRenderV2.
- * Содержит список компонентов (components).
+ * Layout row for SimLayoutRenderV2.
+ * Contains a list of components.
  *
- * @property components Список компонентов строки.
+ * @property components List of row components.
  */
 @Immutable
 data class SimLayoutRow(
@@ -137,12 +137,12 @@ data class SimLayoutRow(
 )
 
 /**
- * Компонент layout для SimLayoutRenderV2.
- * Sealed class гарантирует исчерпывающую обработку всех вариантов.
+ * Layout component for SimLayoutRenderV2.
+ * Sealed class ensures exhaustive processing of all variants.
  *
- * Варианты:
- * - [Icon] — иконка (iconRes, sizeDp).
- * - [Text] — текст (text, color, fontSizeSp, isBold).
+ * Variants:
+ * - [Icon] — icon (iconRes, sizeDp).
+ * - [Text] — text (text, color, fontSizeSp, isBold).
  * - [Spacer] — spacer (widthDp, heightDp).
  */
 @Stable

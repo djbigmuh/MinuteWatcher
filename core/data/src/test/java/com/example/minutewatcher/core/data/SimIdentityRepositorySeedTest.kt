@@ -133,24 +133,24 @@ class SimIdentityRepositorySeedTest {
                     scope = backgroundScope,
                 )
 
-            // Ждём, пока seedFlow перейдет в Fallback естественным путем
+            // Wait until seedFlow transitions to Fallback naturally
             testScheduler.advanceUntilIdle()
 
-            // Проверяем состояние - должно вернуть идентичность (даже на fallback-сиде)
+            // Check state - should return identity (even on fallback seed)
             val initialIdentity = identityRepo.getSimIdentity(0)
             assertTrue("Should return fallback identity", initialIdentity.stableId.isNotEmpty())
 
-            // Теперь предоставляем реальный сид
+            // Now provide a real seed
             storedSeed.emit("real_seed")
-            // Ждем, пока изменение прорастет в seedFlow наблюдателя
+            // Wait for the change to propagate to the observer's seedFlow
             backgroundScope.launch {
                 identityRepo.observeActiveSims().collect { }
             }
-            // Явно ждем появления реального сида в потоке
+            // Explicitly wait for the real seed to appear in the flow
             identityRepo.getActiveIdentities().first { it.isNotEmpty() }
             testScheduler.advanceUntilIdle()
 
-            // Проверяем восстановление
+            // Check recovery
             val realIdentity = identityRepo.getSimIdentity(0)
             assertTrue(
                 "Expected identity based on real_seed, got: ${realIdentity.stableId}",

@@ -11,14 +11,14 @@ import com.example.minutewatcher.core.model.util.FontScaleProvider
 
 object WidgetUiMapper {
     /**
-     * Мапит snapshot и настройки виджета в WidgetUiState для рендера.
+     * Maps snapshot and widget settings to WidgetUiState for rendering.
      *
-     * @param strings Строки виджета.
-     * @param snapshot Snapshot данных.
-     * @param state Настройки виджета.
-     * @param operatorNames Имена операторов (ключ: индекс слота).
-     * @param refreshFailed Флаг ошибки обновления данных.
-     * @return WidgetUiState для рендера.
+     * @param strings Widget strings.
+     * @param snapshot Snapshot data.
+     * @param state Widget settings.
+     * @param operatorNames Operator names (key: slot index).
+     * @param refreshFailed Data refresh error flag.
+     * @return WidgetUiState for rendering.
      */
     fun mapFromSnapshot(
         strings: WidgetStrings,

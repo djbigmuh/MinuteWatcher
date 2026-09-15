@@ -6,19 +6,19 @@ import com.example.minutewatcher.core.resources.R
 import java.util.Locale
 
 /**
- * Централизованное форматирование строк.
+ * Centralized string formatting.
  */
 object FormatUtils {
     /**
-     * Форматирует количество трафика в ГБ с одним десятичным знаком.
+     * Formats traffic amount in GB with one decimal place.
      *
-     * **Локализация:** используется [Locale.US] для гарантирования точки как разделителя.
-     * Это необходимо для консистентного парсинга в других частях системы.
-     * Для прямого отображения пользователю (где важен локализованный разделитель)
-     * следует использовать специализированные форматтеры UI-слоя.
+     * **Localization:** uses [Locale.US] to guarantee a dot as separator.
+     * This is necessary for consistent parsing in other parts of the system.
+     * For direct user display (where localized separator matters),
+     * should use specialized UI-layer formatters.
      *
-     * @param gb Количество ГБ.
-     * @return Отформатированная строка (например, "1.5").
+     * @param gb GB amount.
+     * @return Formatted string (e.g., "1.5").
      */
     fun formatTrafficGb(gb: Float): String = "%.1f".format(Locale.US, gb)
 

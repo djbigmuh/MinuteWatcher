@@ -5,7 +5,8 @@ import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
@@ -21,6 +22,10 @@ import kotlin.time.Duration.Companion.milliseconds
 open class DataStoreRetryHelper
     @Inject
     constructor() {
+    private class Emission<T>(
+        val value: T,
+    )
+
         /**
          * Reads from DataStore with retries on failure or timeout.
          *
@@ -41,11 +46,11 @@ open class DataStoreRetryHelper
 
             for (attempt in 1..attempts) {
                 try {
-                    val result =
+                    val emission =
                         withTimeoutOrNull(Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS.milliseconds) {
-                            reader().first()
+                            reader().map { Emission(it) }.firstOrNull()
                         }
-                    result?.let { return Result.success(it) }
+                    if (emission != null) return Result.success(emission.value)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

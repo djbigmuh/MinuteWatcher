@@ -13,8 +13,9 @@ val SubscriptionInfo.mccStringCompat: String
         } else {
             // @Suppress("DEPRECATION") is required for backward compatibility with API < 29
             // where mcc/mnc fields are the only way to get these values.
+            // MCC is always 3 digits according to ITU E.212.
             @Suppress("DEPRECATION")
-            mcc.toString()
+            mcc.toString().padStart(3, '0')
         }
 
 /**

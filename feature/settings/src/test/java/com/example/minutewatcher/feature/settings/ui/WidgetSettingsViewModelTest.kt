@@ -145,17 +145,17 @@ class WidgetSettingsViewModelTest {
             runCurrent()
             assertTrue(vm.state.value.isSaving)
 
-            // Второй вызов ждет завершения первого
+            // Second call waits for the first one to complete
             val secondSave = launch { vm.saveAndNotify() }
             runCurrent()
 
-            // Настроили блокирующий Saver, так что второй вызов еще не завершился
+            // Configured blocking Saver, so the second call has not completed yet
             assertFalse(secondSave.isCompleted)
 
             gate.complete(Unit)
             advanceUntilIdle()
 
-            // Оба завершились успешно
+            // Both completed successfully
             assertEquals(SaveResult.Success, vm.state.value.saveResult)
             assertFalse(vm.state.value.isSaving)
             secondSave.join()
@@ -465,14 +465,14 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `updateSettings resets loadError`() =
         runTest {
-            // Имитировать ошибку загрузки
+            // Simulate loading error
             whenever(loader.load()).thenThrow(RuntimeException("Fail"))
             val vm =
                 WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
             assertTrue(vm.state.value.isLoadError)
 
-            // Обновить настройки
+            // Update settings
             vm.updateSettings { it.copy(fontSize = 3) }
             advanceUntilIdle()
 

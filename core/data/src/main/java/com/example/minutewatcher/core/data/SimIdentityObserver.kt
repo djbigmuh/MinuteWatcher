@@ -18,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -52,6 +53,7 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
+@Suppress("TooManyFunctions")
 internal class SimIdentityObserver
     @Inject
     constructor(
@@ -82,6 +84,7 @@ internal class SimIdentityObserver
         private val generalAttempt = AtomicLong(0)
         private val isObservationInitialized = AtomicBoolean(false)
         private val manualTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val recoveryJob = AtomicReference<Job?>(null)
 
         private val lastSeedRef = AtomicReference<SeedResult?>(null)
         private val migrationTriggered = AtomicBoolean(false)
@@ -114,6 +117,21 @@ internal class SimIdentityObserver
                 manualTrigger.emit(Unit)
             }
         }
+
+    private fun scheduleDiscoveryRecovery(reason: String) {
+        val newJob =
+            scope.launch {
+                delay(DISCOVERY_RECOVERY_COOLDOWN_MS.milliseconds)
+                generalAttempt.set(0)
+                AppLogger.d("SimIdentityObserver: auto-recovery after stop ($reason)")
+                manualTrigger.emit(Unit)
+            }
+        recoveryJob.getAndSet(newJob)?.cancel()
+    }
+
+    private fun cancelRecovery() {
+        recoveryJob.getAndSet(null)?.cancel()
+    }
 
     private fun toSeedResult(result: SeedResolutionResult): SeedResult =
         when (result) {
@@ -195,6 +213,7 @@ internal class SimIdentityObserver
                         transitionStatus(TrackingStatus.Idle)
                     }
                 }.flatMapLatest { seed ->
+                    val lastKnownGood = AtomicReference<List<ActiveSimInfo>?>(null)
                     merge(
                         discovery.observeSubscriptionChanges(),
                         manualTrigger,
@@ -208,9 +227,10 @@ internal class SimIdentityObserver
                                     try {
                                         val result = fetcher.fetchActiveSimsWithRetry(seed)
                                         if (result is SimDiscoveryResult.Available) {
+                                            lastKnownGood.set(result.sims)
                                             checkAndTriggerMigration(seed, result.sims)
                                         }
-                                        val shouldRetry = handleDiscoveryResult(result)
+                                        val shouldRetry = handleDiscoveryResult(result, lastKnownGood)
                                         shouldContinue = shouldRetry
                                     } catch (e: SecurityException) {
                                         AppLogger.w("Permission denied for SIM discovery: ${e.message}")
@@ -266,6 +286,7 @@ internal class SimIdentityObserver
                                             "SIM recovery stopped after $currentAttempt consecutive IO failures",
                                         ),
                                     )
+                                    scheduleDiscoveryRecovery("IO_FAILURE")
                                     return@retryWhen false
                                 }
 
@@ -308,10 +329,13 @@ internal class SimIdentityObserver
 
         private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
             result: SimDiscoveryResult,
+            lastKnownGood: AtomicReference<List<ActiveSimInfo>?>,
         ): Boolean {
             var shouldRetry = false
             when (result) {
                 is SimDiscoveryResult.Available -> {
+                    generalAttempt.set(0)
+                    cancelRecovery()
                     transitionStatus(TrackingStatus.Active)
                     emit(result.sims)
                 }
@@ -331,7 +355,7 @@ internal class SimIdentityObserver
                 }
 
                 is SimDiscoveryResult.Failed -> {
-                    shouldRetry = handleDiscoveryFailure(result.reason)
+                    shouldRetry = handleDiscoveryFailure(result.reason, lastKnownGood)
                 }
             }
             return shouldRetry
@@ -351,6 +375,7 @@ internal class SimIdentityObserver
 
         private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryFailure(
             reason: SimDiscoveryFailureReason,
+            lastKnownGood: AtomicReference<List<ActiveSimInfo>?>,
         ): Boolean {
             val currentAttempt = generalAttempt.incrementAndGet()
             return if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
@@ -365,6 +390,8 @@ internal class SimIdentityObserver
                         "SIM discovery stopped after $currentAttempt failures: $reason",
                     ),
                 )
+                scheduleDiscoveryRecovery("LOGICAL_FAILURE: $reason")
+                emit(emptyList())
                 false
             } else {
                 val backoff =
@@ -373,7 +400,7 @@ internal class SimIdentityObserver
                     "SimIdentityObserver: physicalActiveSims discovery logical failure " +
                         "(attempt $currentAttempt): $reason, retrying in ${backoff}ms",
                 )
-                emit(emptyList())
+                emit(lastKnownGood.get() ?: emptyList())
                 delay(backoff.milliseconds)
                 true
             }
@@ -476,5 +503,6 @@ internal class SimIdentityObserver
             private const val INITIAL_BACKOFF_MS = 1000L
             private const val MAX_GENERAL_ATTEMPTS = 5
             private const val MAX_DISCOVERY_LOOP_ATTEMPTS = 10
+            private const val DISCOVERY_RECOVERY_COOLDOWN_MS = 15 * 60_000L
         }
     }

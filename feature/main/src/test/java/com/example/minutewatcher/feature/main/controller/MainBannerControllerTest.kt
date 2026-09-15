@@ -210,7 +210,7 @@ class MainBannerControllerTest {
         }
 
     @Test
-    fun `TZ-32 regression - status returns to Active when other providers recover`() =
+    fun `regression - status returns to Active when other providers recover`() =
         runTest(mainDispatcherRule.testDispatcher) {
             val controller = createController(backgroundScope)
 

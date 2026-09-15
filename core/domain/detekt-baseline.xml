@@ -2,6 +2,5 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-      <ID>TooManyFunctions:SettingsRepository.kt:CallSessionRepository</ID>
   </CurrentIssues>
 </SmellBaseline>

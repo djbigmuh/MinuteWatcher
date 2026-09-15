@@ -55,8 +55,8 @@ open class WidgetSettingsSaver
                 }
 
             return result ?: run {
-                AppLogger.e("WidgetSettingsSaver: save timed out waiting for lock")
-                SaveResult.Failed("Save timed out waiting for lock")
+                AppLogger.e("WidgetSettingsSaver: save timed out (lock acquisition or execution exceeded budget)")
+                SaveResult.Failed("Save operation timed out")
             }
         }
 

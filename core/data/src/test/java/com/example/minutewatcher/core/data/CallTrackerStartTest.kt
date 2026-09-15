@@ -179,20 +179,20 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             val callTracker = createTracker()
             callTracker.ensureStarted()
             advanceUntilIdle()
-            // 1. Устанавливаем статус ошибки из-за отсутствия разрешения
+            // 1. Set error status due to missing permission
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             callTracker.onCallStarted(1)
             advanceUntilIdle()
 
             assertTrue(callTracker.status.value is TrackingStatus.Error)
 
-            // 2. Восстанавливаем разрешение
+            // 2. Restore permission
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-            // Инициируем вызов, который проверит разрешения
+            // Initiate call to trigger permission check
             callTracker.onCallStarted(1)
             advanceUntilIdle()
 
-            // 3. Статус больше не должен быть Error
+            // 3. Status should no longer be Error
             val status = callTracker.status.value
             assertTrue("Status should not be Error, but was $status", status !is TrackingStatus.Error)
         }

@@ -5,6 +5,8 @@ import android.telephony.TelephonyManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Data
 import androidx.work.ListenableWorker
+import androidx.work.WorkerFactory
+import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -99,6 +101,34 @@ class CallEventWorkerTest {
                 Data
                     .Builder()
                     .putString("state", "UNKNOWN_STATE")
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verifyNoInteractions(callTracker)
+        }
+
+    @Test
+    fun `doWork ignores RINGING state without warnings or tracker calls`() =
+        runTest {
+            val inputData =
+                Data
+                    .Builder()
+                    .putString("state", TelephonyManager.EXTRA_STATE_RINGING)
                     .build()
 
             val worker =

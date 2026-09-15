@@ -1,7 +1,7 @@
 package com.example.minutewatcher.core.model
 
 /**
- * Типы пакетов услуг.
+ * Service package types.
  */
 enum class PackageType {
     MINUTES,
@@ -9,7 +9,7 @@ enum class PackageType {
 }
 
 /**
- * Единицы измерения.
+ * Measurement units.
  */
 enum class MeasurementUnit {
     MINUTES,
@@ -17,7 +17,7 @@ enum class MeasurementUnit {
 }
 
 /**
- * Источники происхождения данных.
+ * Data source types.
  */
 enum class DataSourceType {
     SYSTEM,
@@ -25,7 +25,7 @@ enum class DataSourceType {
 }
 
 /**
- * Семантическая сущность пакета услуг.
+ * Semantic entity of a service package.
  */
 data class SemanticEntity(
     val id: String,
@@ -43,8 +43,8 @@ data class SemanticEntity(
 )
 
 /**
- * Описание возможностей приложения.
- * Зарезервировано для будущей расширяемости и взаимодействия с внешними потребителями данных (например, AI-агентами).
+ * Description of application capabilities.
+ * Reserved for future extensibility and interaction with external data consumers (e.g., AI agents).
  */
 data class AppCapability(
     val type: String,
@@ -53,8 +53,8 @@ data class AppCapability(
 )
 
 /**
- * Версия семантической схемы.
- * Используется для обеспечения обратной совместимости при обновлении протоколов обмена данными.
+ * Version of the semantic schema.
+ * Used to ensure backward compatibility when updating data exchange protocols.
  */
 data class SchemaVersion(
     val major: Int,
@@ -76,7 +76,7 @@ data class SimSnapshot(
 )
 
 /**
- * Глобальный снимок состояния приложения.
+ * Global snapshot of the application state.
  */
 data class GlobalSnapshot(
     val version: SchemaVersion,
@@ -85,6 +85,6 @@ data class GlobalSnapshot(
     val capabilities: List<AppCapability>,
     val isManualUpdate: Boolean = false,
     val suppressWidgetUpdate: Boolean = false,
-    /** Монотонный счётчик ассемблирования. НЕ входит в content-hash и НЕ индексируется. */
+    /** Monotonic assembly counter. NOT part of content-hash and NOT indexed. */
     val revision: Long = 0L,
 )

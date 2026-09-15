@@ -358,15 +358,15 @@ class ResetManagerTest {
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim)))
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createMockSimUsage(identity)))
 
-            // Чтобы проверить атомарность, мы полагаемся на то, что pendingResets
-            // отсечет второй вызов, даже если первый еще не завершился.
-            // В runTest вызовы d1 и d2 будут запущены последовательно в виртуальном времени,
-            // но так как d1 "зависнет" в моке (если мы добавим delay), d2 должен отработать.
+            // To check atomicity, we rely on pendingResets blocking the second call
+            // even if the first one hasn't completed yet.
+            // In runTest, d1 and d2 calls will be launched sequentially in virtual time,
+            // but since d1 "hangs" in the mock (if we added delay), d2 should return immediately.
 
             whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any())).thenAnswer {
-                // Мы не можем легко сделать suspend в Mockito thenAnswer для Robolectric без runBlocking,
-                // поэтому просто проверим, что вызовы не дублируются при обычном выполнении.
-                // Атомарность гарантируется ConcurrentHashMap.add, который я добавил в код.
+                // We cannot easily suspend in Mockito thenAnswer for Robolectric without runBlocking,
+                // so we just check that calls are not duplicated during normal execution.
+                // Atomicity is guaranteed by ConcurrentHashMap.add in the implementation.
                 true
             }
 
@@ -376,7 +376,7 @@ class ResetManagerTest {
             d1.await()
             d2.await()
 
-            // Проверяем, что репозиторий вызван 1 раз
+            // Verify the repository is called once
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), any(), any())
         }
 

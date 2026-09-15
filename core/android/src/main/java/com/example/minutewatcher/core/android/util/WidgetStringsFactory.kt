@@ -6,14 +6,14 @@ import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.resources.R
 
 /**
- * Фабрика строк виджета.
- * Создаёт WidgetStrings из контекста.
- * Пересоздаётся при изменении конфигурации (локаль).
+ * Widget strings factory.
+ * Creates WidgetStrings from context.
+ * Recreated on configuration change (locale).
  *
- * Строгое соблюдение API: на AOSP смена локали через
- * AppCompatDelegate.setApplicationLocales() вызывает пересоздание
- * конфигурации. На кастомных прошивках, где это не происходит,
- * строки обновятся при следующем пересоздании Activity —
+ * API compliance: on AOSP, locale change via
+ * AppCompatDelegate.setApplicationLocales() triggers configuration
+ * recreation. On custom firmwares where this doesn't happen,
+ * strings will update on the next Activity recreation —
  * это проблема кастомной прошивки.
  */
 object WidgetStringsFactory {

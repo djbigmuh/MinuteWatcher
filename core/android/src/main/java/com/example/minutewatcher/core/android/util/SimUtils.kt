@@ -61,8 +61,8 @@ object SimUtils {
             default
         }
 
-    // Кастомный language switcher в приложении использует AppCompatDelegate.setApplicationLocales(),
-    // что не требует android:localeConfig в манифесте. Это строгое соответствие API 33+.
+    // Custom language switcher in the app uses AppCompatDelegate.setApplicationLocales(),
+    // which does not require android:localeConfig in the manifest. This strictly complies with API 33+.
     // @Suppress("AppBundleLocaleChanges") is required because we handle locales manually
     // via AppCompatDelegate and don't need the automated App Bundle locale generation.
     @Suppress("AppBundleLocaleChanges")

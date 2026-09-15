@@ -19,6 +19,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.minutewatcher.controller.MainPermissionController
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
@@ -42,9 +44,8 @@ import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -60,6 +61,9 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var permissionStateNotifier: PermissionStateNotifier
 
     @Inject lateinit var workScheduler: WorkScheduler
+
+    @Inject
+    lateinit var permissionController: MainPermissionController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,7 +129,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @androidx.compose.runtime.Composable
+    @Composable
     private fun AppContent() {
         val themeState by viewModel.appTheme.collectAsStateWithLifecycle()
         val darkTheme = rememberIsDarkTheme(themeState)
@@ -218,7 +222,7 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch(ioDispatcher) {
                     try {
                         workScheduler.scheduleInitialSetup(force = false)
-                    } catch (e: kotlinx.coroutines.CancellationException) {
+                    } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         AppLogger.e(
@@ -242,56 +246,26 @@ class MainActivity : AppCompatActivity() {
         }
 
         fun checkPermissionsAndInit() {
-            lifecycleScope.launch {
-                // TZ-38: wait for real settings emission from DataStore
-                // to avoid stale check of wasPhonePermissionRequestedBefore
-                val settings = viewModel.appSettings.filter { it.isLoaded }.first()
-                if (permissionManager.hasPhoneStatePermission()) {
-                    // WorkManager.enqueue() performs disk I/O internally.
-                    // Injected ioDispatcher prevents potential ANR on slow storage.
-                    launch(ioDispatcher) {
-                        try {
-                            val initialSetupCompleted = viewModel.isInitialSetupCompleted.first()
-                            // Only schedule if not completed OR if it's the first time we see these
-                            // permissions in this process (KEEP policy in WorkScheduler will
-                            // handle the "already running" case). Screen rotation will not
-                            // trigger this if setup was already completed.
-                            if (!initialSetupCompleted || lastPermissionState == -1) {
-                                workScheduler.scheduleInitialSetup(force = false)
-                            }
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("MainActivity: Failed to schedule background work during init", e)
-                        }
-                    }
-
-                    if (!permissionManager.hasUsageStatsPermission()) {
-                        viewModel.setUsageAccessDialog(true)
-                    } else {
-                        checkNotifications(autoRequest = true)
-                    }
-                } else if (settings.wasPhonePermissionRequestedBefore) {
-                    // Permission not granted, but requested before.
-                    // The derived UI state will handle "Permanently Denied" vs "Denied".
-                } else {
-                    // First run: permission not yet requested.
+            permissionController.checkPermissionsAndInit(
+                scope = lifecycleScope,
+                viewModel = viewModel,
+                lastPermissionState = lastPermissionState,
+                onShowUsageAccessDialog = { viewModel.setUsageAccessDialog(it) },
+                onRequestPhonePermission = {
                     viewModel.setPhonePermissionRequested()
                     phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
-                }
-            }
+                },
+                onCheckNotifications = { checkNotifications(it) },
+            )
         }
 
         fun checkNotifications(autoRequest: Boolean) {
-            lifecycleScope.launch {
-                if (!permissionManager.hasNotificationPermission()) {
-                    // TZ-38: wait for real settings emission
-                    val settings = viewModel.appSettings.filter { it.isLoaded }.first()
-                    if (autoRequest && !settings.notificationPermissionRequested) {
-                        requestNotificationPermission()
-                    }
-                }
-            }
+            permissionController.checkNotifications(
+                scope = lifecycleScope,
+                viewModel = viewModel,
+                autoRequest = autoRequest,
+                onRequest = { requestNotificationPermission() },
+            )
         }
 
         fun requestNotificationPermission() {
@@ -310,14 +284,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openUsageAccessSettings() {
-        // Приоритет: экран «Доступ к данным об использовании» для конкретного приложения.
+        // Priority: "Usage Access" screen for the specific app.
         try {
             startActivity(NavigationIntentFactory.getUsageAccessSettingsIntent(this))
             return
         } catch (e: Exception) {
             AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
         }
-        // Fallback: общий список приложений с доступом к данным об использовании.
+        // Fallback: generic list of apps with usage access.
         try {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             return
@@ -387,7 +361,7 @@ class MainActivity : AppCompatActivity() {
         if (lastPermissionState != -1 && (currentState != lastPermissionState)) {
             permissionStateNotifier.notifyChanged()
             // If permissions changed, we might need a fresh setup run.
-            // KEEP policy will avoid duplication if it's already running.
+            // KEEP policy in WorkScheduler will avoid duplication if it's already running.
             permissionHandler.checkPermissionsAndInit()
         }
         lastPermissionState = currentState

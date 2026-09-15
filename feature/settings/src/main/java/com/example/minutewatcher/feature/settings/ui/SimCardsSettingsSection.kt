@@ -63,14 +63,9 @@ fun SimCardsSettingsSection(
     }
 }
 
-// SimSettingsSection содержит настройки одной SIM-карты.
-// Card обеспечивает визуальное оформление секции.
-// Column содержит заголовок и чекбоксы.
-// onUpdate вызывается при изменении любого чекбокса.
-//
-// enabled = enabled && sim.showSim обеспечивает корректное состояние
-// чекбоксов в зависимости от общего состояния enabled и состояния
-// показа SIM-карты.
+/**
+ * Composable for a single SIM card settings section.
+ */
 @Composable
 fun SimSettingsSection(
     slot: Int,
@@ -79,9 +74,6 @@ fun SimSettingsSection(
     enabled: Boolean,
     onUpdate: ((SimSettingsState) -> SimSettingsState) -> Unit,
 ) {
-    // Card обеспечивает визуальное оформление секции SIM-карты.
-    // modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-    // обеспечивает полную ширину и вертикальные отступы.
     Card(
         modifier =
             Modifier
@@ -89,11 +81,6 @@ fun SimSettingsSection(
                 .padding(vertical = 8.dp),
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
-            // Text используется для заголовков и меток настроек.
-            // style = MaterialTheme.typography.titleSmall для заголовков секций.
-            // style = MaterialTheme.typography.bodyMedium для меток.
-            // color = enabledContentColor(enabled) обеспечивает корректный цвет
-            // в зависимости от состояния enabled.
             Text(
                 text = "${stringResource(id = R.string.sim_card_generic, slot + 1)} ($operatorName)",
                 style = MaterialTheme.typography.titleSmall,
@@ -107,10 +94,6 @@ fun SimSettingsSection(
                 onCheckedChange = { v -> onUpdate { it.copy(showSim = v) } },
             )
 
-            // HorizontalDivider обеспечивает визуальное разделение между
-            // заголовком SIM-карты и чекбоксами.
-            // modifier = Modifier.padding(vertical = 4.dp) обеспечивает
-            // вертикальные отступы.
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             SimDetailsSettings(
@@ -122,16 +105,9 @@ fun SimSettingsSection(
     }
 }
 
-// SimDetailsSettings содержит детальные настройки SIM-карты:
-// - Показ имени
-// - Показ иконки
-// - Показ минут
-// - Показ лимита минут
-// - Показ трафика
-// - Показ лимита трафика
-//
-// enabled = enabled обеспечивает корректное состояние чекбоксов.
-// onUpdate вызывается при изменении любого чекбокса.
+/**
+ * Composable for detailed SIM card settings.
+ */
 @Composable
 private fun SimDetailsSettings(
     sim: SimSettingsState,

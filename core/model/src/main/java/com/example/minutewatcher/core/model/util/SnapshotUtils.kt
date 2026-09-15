@@ -7,19 +7,19 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
  */
 object SnapshotUtils {
     /**
-     * Вычисляет хэш содержимого снапшота для обнаружения значимых изменений данных.
+     * Calculates the content hash of a snapshot to detect significant data changes.
      *
-     * В хэш включаются только поля, влияющие на визуальное представление или логику работы виджетов:
-     * - Лимиты, использованные и оставшиеся значения (минуты/байты).
-     * - Периоды действия пакетов.
-     * - Тип источника данных (системный/ручной).
-     * - Настройки автосброса (день месяца).
+     * The hash includes only fields that affect visual presentation or widget logic:
+     * - Limits, used, and remaining values (minutes/bytes).
+     * - Package validity periods.
+     * - Data source type (system/manual).
+     * - Auto-reset settings (day of month).
      *
-     * Исключаются:
-     * - Временные метки (lastUpdateTime, timestamp) — чтобы избежать бесконечных циклов обновления.
-     * - Имя оператора — чтобы избежать лишних перерисовок виджета при обновлении метаданных,
-     *   если числовые показатели не изменились.
-     * - [GlobalSnapshot.revision] исключён намеренно, т.к. это технический счётчик для refresh().
+     * Excluded:
+     * - Timestamps (lastUpdateTime, timestamp) — to avoid infinite update loops.
+     * - Operator name — to avoid unnecessary widget redraws during metadata updates,
+     *   if numeric indicators have not changed.
+     * - [GlobalSnapshot.revision] is intentionally excluded as it's a technical counter for refresh().
      */
     fun calculateContentHash(snapshot: GlobalSnapshot): Int {
         var result = snapshot.version.hashCode()

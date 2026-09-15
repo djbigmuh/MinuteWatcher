@@ -1,36 +1,43 @@
-# Detekt 2.x Migration Guide
+# Detekt 2.x Migration Status
 
-This document outlines the steps required to migrate the MinuteWatcher project from Detekt 1.23.8 to Detekt 2.x once it reaches a stable release.
+This document tracks the migration of the MinuteWatcher project from Detekt 1.x to Detekt 2.x.
 
-## Background
+## Status
 
-Detekt 1.23.8 uses an internal Kotlin 1.9 compiler, which is incompatible with Java version strings from JDK 25 and above. This necessitated a workaround in `build.gradle.kts` to force the use of JDK 21 for all Detekt tasks.
+As of 2026-09-12, the initial phase of migration is complete. The project has moved to `detekt = 2.0.0-alpha.6`, which
+natively supports modern JDK versions.
 
-## Migration Checklist
+## Completed Tasks
 
-- [ ] **Update Version:** Update the `detekt` version in `gradle/libs.versions.toml` to the latest stable 2.x version.
-- [ ] **Remove Workaround:** In the root `build.gradle.kts`, remove the `tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach` block that forces `jdkHome` to JDK 21.
-- [ ] **Update Configuration:**
-    - Review `config/detekt/detekt.yml` for any breaking changes in rule names or properties.
-    - Check if `buildUponDefaultConfig` behavior has changed.
+- [x] **Update Version:** Updated `detekt` to `2.0.0-alpha.6` in `gradle/libs.versions.toml`.
+- [x] **Remove Workaround:** The `jdkHome = JDK21` workaround in the root `build.gradle.kts` has been removed as it is
+  no longer necessary.
+
+## Remaining Tasks
+
+- [ ] **Finalize Stable 2.0:** Update to the stable release of Detekt 2.0 once available.
+- [ ] **Full Config Revision:**
+    - Review `config/detekt/detekt.yml` for new rules or deprecated properties in 2.x.
+    - Validate `buildUponDefaultConfig` behavior.
 - [ ] **Cleanup Deprecations:**
-    - Remove the `@Suppress("UnstableApiUsage")` and specific comments related to `ReportingExtension.file` if they were addressed in the plugin itself.
-- [ ] **Validate Reports:** Ensure that Detekt reports are still correctly generated in `build/reports/detekt/`.
-- [ ] **Verify CI:** Ensure the GitHub Actions workflow still passes static analysis.
+    - Remove old `@Suppress("UnstableApiUsage")` annotations related to detekt properties if they are now stable.
 
-## Current Workaround
+## Verification
+
+Instead of CI (GitHub Actions), use the local verification script:
+
+- Run `.\VERIFY.bat` and ensure `detekt` and `detektMain` tasks pass.
+
+## Historical Context (The JDK Workaround)
+
+Prior to the 2.x alpha, a workaround was required to force Detekt to use JDK 21 due to internal Kotlin compiler
+incompatibilities with newer Java version strings. This block has been removed:
 
 ```kotlin
-// build.gradle.kts
+// REMOVED (Historical)
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-    // ...
     project.extensions.findByType<JavaToolchainService>()?.let { javaToolchains ->
-        jdkHome.set(
-            javaToolchains.launcherFor {
-                languageVersion.set(JavaLanguageVersion.of(21))
-            }.map { it.metadata.installationPath }
-        )
+        jdkHome.set(...)
     }
 }
 ```
-*Note: This block must be removed after migration.*

@@ -31,6 +31,24 @@ class PermissionManagerTest {
     }
 
     @Test
+    fun `isTelephonySupported returns true when feature present`() {
+        val pm: PackageManager = mock()
+        whenever(context.packageManager).thenReturn(pm)
+        whenever(pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)).thenReturn(true)
+
+        assertTrue(permissionManager.isTelephonySupported())
+    }
+
+    @Test
+    fun `isTelephonySupported returns false when feature missing`() {
+        val pm: PackageManager = mock()
+        whenever(context.packageManager).thenReturn(pm)
+        whenever(pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)).thenReturn(false)
+
+        assertFalse(permissionManager.isTelephonySupported())
+    }
+
+    @Test
     fun `hasPhoneStatePermission returns true when granted`() {
         mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
             mockedContextCompat

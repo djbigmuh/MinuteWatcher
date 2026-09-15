@@ -495,6 +495,12 @@ class TrafficTracker
                 return
             }
 
+            if (result is TrafficTargetResolver.TargetResult.NoDefaultData) {
+                AppLogger.d("TrafficTracker: no default data SIM, transitioning to Idle")
+                transitionStatus(TrackingStatus.Idle)
+                return
+            }
+
             if (result !is TrafficTargetResolver.TargetResult.Success) {
                 AppLogger.w("TrafficTracker: resolution failed or SIMs inactive: $result")
                 return
@@ -541,7 +547,7 @@ class TrafficTracker
                 val currentActive =
                     simIdentityRepository
                         .getActiveIdentities()
-                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                        .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
                         ?: return@withLock
 
                 if (targetIdentity !in currentActive) {
@@ -557,7 +563,7 @@ class TrafficTracker
                 val currentUsage =
                     simUsageRepository
                         .getSimUsage(targetIdentity)
-                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                        .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
                         ?: run {
                             updateStatusOnError(
                                 startElapsed,
@@ -623,7 +629,7 @@ class TrafficTracker
             lastTotalBytes: Long,
         ) {
             val writeSuccess =
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     deltaCalculator.updateTrafficBaselineAndUsage(
                         targetIdentity,
                         currentBytes,
@@ -697,7 +703,7 @@ class TrafficTracker
             if (statsResult !is StatsResult.Success) return null
             return simUsageResetRepository
                 .getLastTotalBytes(targetIdentity)
-                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
         }
 
         private companion object {

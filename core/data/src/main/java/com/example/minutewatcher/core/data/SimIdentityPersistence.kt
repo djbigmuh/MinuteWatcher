@@ -51,21 +51,16 @@ class SimIdentityPersistence
             if (validIdentities.isEmpty()) return
 
             try {
-                // 1. Предварительная миграция вне глобального мьютекса сохранения
-                // Это предотвращает блокировку сохранения других SIM-карт при долгих миграциях.
                 val preEditPrefs = fetchCurrentPrefs()
                 val toMigrate = validIdentities.filter { isMigrationRequired(it, preEditPrefs) }
                 val failedIds = performMigrations(toMigrate)
 
-                // 2. Атомарное обновление под мьютексом
                 withTimeout(SAVE_TIMEOUT_MS.milliseconds) {
                     saveMutex.withLock {
-                        // Оптимизация: проверяем необходимость обновления ДО вызова edit.
                         val anyUpdateRequired = validIdentities.any { isIdentityUpdateRequired(it, preEditPrefs) }
                         if (!anyUpdateRequired && toMigrate.isEmpty()) return@withLock
 
                         dataStore.edit { prefs ->
-                            // Фильтрация обновлений на основе АКТУАЛЬНЫХ данных внутри edit
                             val toUpdate = validIdentities.filter { isIdentityUpdateRequired(it, prefs) }
                             val updatedToUpdate = applyOptimizationAndFilterUpdates(toUpdate, prefs)
                             if (updatedToUpdate.isEmpty()) return@edit

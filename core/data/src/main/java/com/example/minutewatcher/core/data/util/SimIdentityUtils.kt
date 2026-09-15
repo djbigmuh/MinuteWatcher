@@ -1,19 +1,43 @@
 package com.example.minutewatcher.core.data.util
 
+import android.os.Build
 import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.mccStringCompat
-import com.example.minutewatcher.core.common.util.mncStringCompat
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import java.security.MessageDigest
 
 object SimIdentityUtils {
-    fun getMccMnc(info: SubscriptionInfo): String {
+    /**
+     * Returns all possible MCC/MNC string representations for the given [SubscriptionInfo].
+     *
+     * On API 29+, returns a single element list with the canonical string representation.
+     * On API < 29, returns a list of candidates (raw, padded to 2, padded to 3 digits)
+     * as the MNC length cannot be unambiguously determined from the integer value.
+     */
+    fun mccMncCandidates(info: SubscriptionInfo): List<String> {
         val mcc = info.mccStringCompat
-        val mnc = info.mncStringCompat
-        return if (mcc.isNotEmpty() && mnc.isNotEmpty()) "$mcc$mnc" else ""
+        if (mcc.isEmpty()) return emptyList()
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val mnc = info.mncString ?: ""
+            if (mnc.isNotEmpty()) listOf("$mcc$mnc") else emptyList()
+        } else {
+            @Suppress("DEPRECATION")
+            val mncRaw = info.mnc.toString()
+            listOf(
+                "$mcc$mncRaw",
+                "$mcc${mncRaw.padStart(MNC_LEN_2, '0')}",
+                "$mcc${mncRaw.padStart(MNC_LEN_3, '0')}",
+            ).distinct()
+        }
     }
+
+    private const val MNC_LEN_2 = 2
+    private const val MNC_LEN_3 = 3
+
+    fun getMccMnc(info: SubscriptionInfo): String = mccMncCandidates(info).firstOrNull() ?: ""
 
     fun createIdentityFromInfo(
         info: SubscriptionInfo,

@@ -179,7 +179,7 @@ class WidgetLimitManagerTest {
         }
 
     @Test
-    fun `TZ-37 regression - counter increments exactly once per updateAll call`() =
+    fun `regression - counter increments exactly once per updateAll call`() =
         runTest(testDispatcher) {
             // ... need WidgetUpdaterImpl for this, but I can test the logic here via
             // multiple calls to incrementUpdateCounter simulating multiple updates.

@@ -146,8 +146,8 @@ class CallTrackerRaceTest {
             whenever(timeProvider.elapsedRealtime()).thenReturn(2000L)
             whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
 
-            // handleCallStartInternal читает только getCallStartTime и getBootTime через combine().
-            // getUptime используется только в loadCallSessionData (путь endCall) и здесь не нужен.
+            // handleCallStartInternal only reads getCallStartTime and getBootTime via combine().
+            // getUptime is used only in loadCallSessionData (endCall path) and is not needed here.
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L), flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L), flowOf(2000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
@@ -167,13 +167,12 @@ class CallTrackerRaceTest {
             // to check if a session is already active. Mutex ensures they happen one by one.
             verify(callSessionRepository, times(10)).getCallStartTime(1).let { _ -> }
 
-            // Строгое соблюдение API: на AOSP DataStore.edit сериализует записи.
-            // Мьютекс callMutex в CallTracker дополнительно сериализует
-            // read-modify-write на уровне приложения. Тест верифицирует,
-            // что конкурентные вызовы не приводят к двойной записи session.
-            // Верификация: setCallStartTime вызван ровно 1 раз для subId=1,
-            // так как мьютекс сериализует доступ и только первый вызов
-            // должен записать session (остальные увидят startTime != 0).
+            // API compliance: on AOSP DataStore.edit serializes writes.
+            // callMutex in CallTracker further serializes read-modify-write at the app level.
+            // Test verifies that concurrent calls do not result in double session writes.
+            // Verification: setCallStartTime called exactly once for subId=1,
+            // as the mutex serializes access and only the first call
+            // should write the session (others will see startTime != 0).
             verify(callSessionRepository, times(1)).setCallStartTime(eq(1), argThat { this > 0L })
         }
 

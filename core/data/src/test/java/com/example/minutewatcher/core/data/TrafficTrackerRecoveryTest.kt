@@ -34,7 +34,6 @@ class TrafficTrackerRecoveryTest {
     private val deltaCalculator: TrafficDeltaCalculator = mock()
     private val simChangeHandler: TrafficSimChangeHandler = mock()
     private val targetResolver: TrafficTargetResolver = mock()
-    private val errorHandler: TrafficErrorHandler = mock()
     private val permissionChecker: TrafficPermissionChecker = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
 

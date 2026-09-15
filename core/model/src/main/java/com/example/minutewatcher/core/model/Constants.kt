@@ -1,11 +1,11 @@
 package com.example.minutewatcher.core.model
 
 /**
- * Глобальные константы приложения.
- * Содержит константы для виджета, потоков, SIM, уведомлений,
- * данных, семантики, трафика, звонков и intent extras.
+ * Global application constants.
+ * Contains constants for widgets, flows, SIM, notifications,
+ * data, semantics, traffic, calls, and intent extras.
  *
- * Все константы задокументированы с указанием стратегии и критериев надёжности.
+ * All constants are documented with their strategy and reliability criteria.
  */
 object Constants {
     /**
@@ -174,8 +174,12 @@ object Constants {
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
 
-        /** Total timeout for traffic update operation, including mutex acquisition. */
-        const val TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS = 15_000L
+        /**
+         * Total timeout for a single traffic update cycle.
+         * Includes data fetching, calculations, and persistence.
+         * Adjusted to accommodate sequential DataStore operations.
+         */
+        const val TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS = 25_000L
     }
 
     /**

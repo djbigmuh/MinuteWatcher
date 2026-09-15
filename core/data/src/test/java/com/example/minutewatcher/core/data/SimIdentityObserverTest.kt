@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -294,7 +293,7 @@ class SimIdentityObserverTest {
     @Suppress("LoopWithTooManyJumpStatements")
     fun `physicalActiveSims does NOT emit emptyList until limit is exceeded after having valid data`() =
         runTest {
-            // Тестируем логику retryWhen изолированно
+            // Test retryWhen logic in isolation
             val emissions = mutableListOf<List<String>>()
             var callCount = 0
 
@@ -304,7 +303,7 @@ class SimIdentityObserverTest {
                         callCount++
                         if (callCount == 1) {
                             emit(listOf("sim1"))
-                            break // Успех
+                            break // Success
                         } else if (callCount <= 3) {
                             throw IOException("Transient")
                         } else {
@@ -314,25 +313,25 @@ class SimIdentityObserverTest {
                 }.retryWhen { cause, attempt ->
                     if (cause !is IOException) return@retryWhen false
                     if (attempt >= 2L) {
-                        emit(emptyList()) // Финальная эмиссия
+                        emit(emptyList()) // Final emission
                         false
                     } else {
                         true
                     }
                 }
 
-            // 1. Успешный запуск
+            // 1. Successful start
             val job = launch { testFlow.collect { emissions.add(it) } }
             testScheduler.advanceUntilIdle()
             assertEquals(listOf(listOf("sim1")), emissions)
 
-            // 2. Проверим поведение при ошибке (как будто flow перезапустился во flatMapLatest)
+            // 2. Check behavior on error (as if flow restarted in flatMapLatest)
             val failingFlow =
                 flow<List<String>> {
                     throw IOException("Failing")
                 }.retryWhen { _, attempt ->
                     if (attempt < 2L) {
-                        // Имитируем логику: не эмитим ничего
+                        // Simulate logic: emit nothing
                         true
                     } else {
                         emit(emptyList())
@@ -732,11 +731,11 @@ class SimIdentityObserverTest {
 
             testScheduler.runCurrent()
 
-            // Если seedFlow в репозитории пуст изначально или бросает ошибку при подписке
-            // то наша реализация:
+            // If seedFlow in the repository is initially empty or throws an error on subscription,
+            // our implementation:
             // seedRepository.seedFlow
             //   .map { ... }
-            //   .catch { ... } // Мы не добавили catch во flatMapLatest!
+            //   .catch { ... }
 
             // В текущей реализации SimIdentityObserver.kt:
             // seedRepository.seedFlow

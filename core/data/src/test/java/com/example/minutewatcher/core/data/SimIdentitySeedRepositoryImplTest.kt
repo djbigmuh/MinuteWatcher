@@ -177,7 +177,7 @@ class SimIdentitySeedRepositoryImplTest {
         }
 
     @Test
-    fun `TZ-28 regression - no phantom persistent seed on commit failure`() =
+    fun `regression - no phantom persistent seed on commit failure`() =
         runTest {
             var updateDataCalls = 0
             val failingDataStore =
@@ -207,7 +207,7 @@ class SimIdentitySeedRepositoryImplTest {
         }
 
     @Test
-    fun `TZ-28 regression - existing seed is read without edit transaction`() =
+    fun `regression - existing seed is read without edit transaction`() =
         runTest {
             val existingSeed = "existing-persistent-seed"
             val prefs = emptyPreferences().toMutablePreferences()

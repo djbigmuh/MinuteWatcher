@@ -41,17 +41,16 @@ class TrafficTargetResolverTest {
     }
 
     @Test
-    fun `resolve returns Success when default data SIM is identified via ActiveSimInfo`() {
-        // SubscriptionManager returns -1 (e.g. transient state)
+    fun `resolve returns InconsistentFirmware when system says no default but SIM claims it`() {
+        // SubscriptionManager returns -1
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
 
+        // But SIM info from snapshot claims it's default
         val activeSims = listOf(createActiveSim(1, 2, isDefaultData = true))
 
         val result = resolver.resolve(activeSims)
 
-        assertTrue(result is TrafficTargetResolver.TargetResult.Success)
-        assertEquals(1, (result as TrafficTargetResolver.TargetResult.Success).target.slot)
-        assertEquals(2, result.target.dataSubId)
+        assertEquals(TrafficTargetResolver.TargetResult.InconsistentFirmware, result)
     }
 
     @Test
@@ -61,10 +60,10 @@ class TrafficTargetResolverTest {
     }
 
     @Test
-    fun `resolve returns InconsistentFirmware instead of fallback when no default data SIM identified`() {
+    fun `resolve returns NoDefaultData when internet is off`() {
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
 
-        // Active SIMs exist but none is marked as default data
+        // Active SIMs exist but none is marked as default data (data off)
         val activeSims =
             listOf(
                 createActiveSim(0, 1, isDefaultData = false),
@@ -73,18 +72,14 @@ class TrafficTargetResolverTest {
 
         val result = resolver.resolve(activeSims)
 
-        assertEquals(TrafficTargetResolver.TargetResult.InconsistentFirmware, result)
+        assertEquals(TrafficTargetResolver.TargetResult.NoDefaultData, result)
     }
 
     @Test
-    fun `resolve returns InconsistentFirmware when simSlotIndex is out of supported range and no fallback`() {
+    fun `resolve returns InconsistentFirmware when simSlotIndex is out of supported range`() {
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
-        val mockSubInfo = mock<SubscriptionInfo>()
-        whenever(mockSubInfo.subscriptionId).thenReturn(1)
-        whenever(mockSubInfo.simSlotIndex).thenReturn(10) // Out of range (> 9)
-        whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
-        // No SIM marked as isDefaultData=true to avoid fallback success
+        // No active SIM for this subId
         val activeSims = listOf(createActiveSim(0, 2, isDefaultData = false))
 
         val result = resolver.resolve(activeSims)

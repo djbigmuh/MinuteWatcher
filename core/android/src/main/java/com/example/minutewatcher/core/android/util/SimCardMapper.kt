@@ -20,11 +20,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object SimCardMapper {
     /**
-     * Кэш identity SIM-карт, для которых уже было залогировано предупреждение
-     * об отрицательных значениях. Предотвращает повторное логирование
-     * одного и того же identity в одном слоте.
+     * Cache of SIM identities for which a negative value warning has already been logged.
+     * Prevents repeated logging of the same identity in one slot.
      *
-     * Использует [ConcurrentHashMap] для потокобезопасности.
+     * Uses [ConcurrentHashMap] for thread safety.
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal val negativeLogged = ConcurrentHashMap<Int, String>()
@@ -64,9 +63,9 @@ object SimCardMapper {
                 usage.trafficUsedMb < 0f ||
                 usage.trafficLimitMb < 0
 
-        // Кэш negativeLogged подавляет повторное логирование отрицательных
-        // значений для одного и того же identity в слоте. При смене SIM
-        // в слоте (identity изменился) старая запись удаляется.
+        // negativeLogged cache suppresses repeated logging of negative
+        // values for the same identity in a slot. On SIM change
+        // in the slot (identity changed) the old entry is removed.
         updateNegativeLoggedState(slot, usage, hasNegativeValues)
 
         val safeMinutesUsed = ClampingUtils.clamp(usage.minutesUsed, 0, Constants.MAX_MINUTES_LIMIT)

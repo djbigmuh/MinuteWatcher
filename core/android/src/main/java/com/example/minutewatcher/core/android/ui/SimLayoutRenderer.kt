@@ -5,25 +5,24 @@ import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimLayoutSpec
 
 /**
- * Рендерит SimLayoutSpec через переданные рендереры.
- * Позволяет переиспользовать логику итерации между Compose и Glance.
+ * Renders SimLayoutSpec via provided renderers.
+ * Allows reusing iteration logic between Compose and Glance.
  *
- * Контракт превью виджета:
- * Визуальный вывод превью ДОЛЖЕН быть идентичен реальному виджету
- * при одинаковом SimLayoutSpec и настройках видимости.
- * Превью НЕ является упрощённой версией. Если пользователь видит
- * суффикс или лимит в превью, он ДОЛЖЕН видеть его и в реальном виджете.
- * Любое расхождение между превью и виджетом является багом.
+ * Widget preview contract:
+ * Preview output MUST be identical to the real widget
+ * given the same SimLayoutSpec and visibility settings.
+ * Preview is NOT a simplified version. If the user sees
+ * suffix or limit in the preview, they MUST see it in the real widget too.
+ * Any discrepancy between preview and widget is a bug.
  *
- * ВАЖНО: Порядок и сигнатура параметров ДОЛЖНЫ быть консистентны
- * для предотвращения NoSuchMethodError во время выполнения,
- * особенно при использовании между модулями.
+ * IMPORTANT: Parameter order and signature MUST be consistent
+ * to prevent NoSuchMethodError at runtime, especially when used across modules.
  *
- * @param spec Спецификация layout.
- * @param iconRenderer Рендерер иконки.
- * @param textRenderer Рендерер текста.
- * @param spacerRenderer Рендерер spacer.
- * @param rowContainer Контейнер строки.
+ * @param spec Layout specification.
+ * @param iconRenderer Icon renderer.
+ * @param textRenderer Text renderer.
+ * @param spacerRenderer Spacer renderer.
+ * @param rowContainer Row container.
  */
 @Composable
 fun SimLayoutRenderV2(

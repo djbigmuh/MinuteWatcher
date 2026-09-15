@@ -51,11 +51,13 @@ interface SimIdentityRepository {
 
     /**
      * Returns a flow of the operator name for the given identity.
+     * Note: Currently used for persistence; production UI reads directly from preferences.
      */
     fun getSimOperator(identity: String): Flow<String>
 
     /**
      * Returns a flow of the SIM code for the given identity.
+     * Note: Currently used for persistence; production code uses it for operator resolution.
      */
     fun getSimCode(identity: String): Flow<String>
 
@@ -72,6 +74,7 @@ interface SimIdentityRepository {
 
     /**
      * Returns a flow of the custom operator name for the given identity.
+     * Note: Currently used for persistence; production UI reads directly from preferences.
      */
     fun getCustomSimOperator(identity: String): Flow<String?>
 
@@ -99,14 +102,14 @@ interface SimIdentityRepository {
 }
 
 /**
- * Исключение, выбрасываемое при отсутствии активной подписки SIM в указанном слоте.
+ * Exception thrown when there is no active SIM subscription in the specified slot.
  */
 class SimNotFoundException(
     val slot: Int,
 ) : IllegalStateException("No active SIM in slot $slot")
 
 /**
- * Исключение, выбрасываемое при передаче невалидного индекса слота SIM.
+ * Exception thrown when an invalid SIM slot index is passed.
  */
 class InvalidSlotException(
     val slot: Int,

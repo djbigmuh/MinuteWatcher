@@ -87,4 +87,4 @@ Current build and test execution settings include several "stability workarounds
 - `maxParallelForks = 1` and `forkEvery = 1` for unit tests to prevent memory leaks and race conditions in
   Robolectric/Hilt tests.
   These settings are intentional for the current project state and should not be changed without a comprehensive
-  verification of CI stability.
+  verification of project stability.

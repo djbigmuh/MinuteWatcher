@@ -68,9 +68,11 @@ class WidgetErrorClassifier
             type: Class<out Throwable>,
         ): Boolean {
             var current: Throwable? = e
-            while (current != null) {
+            var depth = 0
+            while (current != null && depth < MAX_CAUSE_DEPTH) {
                 if (type.isInstance(current)) return true
                 current = current.cause
+                depth++
             }
             return false
         }
@@ -85,4 +87,8 @@ class WidgetErrorClassifier
                 AppLogger.e("CRITICAL: Widget size limit exceeded even with simplified layout!", e)
             }
         }
+
+    private companion object {
+        private const val MAX_CAUSE_DEPTH = 16
+    }
     }

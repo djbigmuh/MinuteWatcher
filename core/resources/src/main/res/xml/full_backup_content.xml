@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Включаем SharedPreferences для автоматического бэкапа (API < 31) -->
+    <!-- Enable SharedPreferences for auto backup (API < 31) -->
     <include domain="sharedpref" path="."/>
-    <!-- DataStore исключен из бэкапа для защиты приватности (идентификаторы SIM) -->
+    <!-- DataStore is excluded from backup to protect privacy (SIM IDs) -->
 </full-backup-content>

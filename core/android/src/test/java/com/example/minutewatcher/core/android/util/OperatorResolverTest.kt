@@ -97,4 +97,28 @@ class OperatorResolverTest {
         val result = OperatorResolver.resolve(context, "NULL", "25001", 0)
         assertEquals(context.getString(R.string.operator_mts), result)
     }
+
+    @Test
+    fun testResolveByCandidates_MTS_from_raw() {
+        // MTS is 25001. Raw candidate on API 28 would be 2501.
+        val candidates = listOf("2501", "25001", "250001")
+        val result = OperatorResolver.resolveByCandidates(context, "", candidates, 0)
+        assertEquals(context.getString(R.string.operator_mts), result)
+    }
+
+    @Test
+    fun testResolveByCandidates_Unknown() {
+        val candidates = listOf("9991", "99901", "999001")
+        val result = OperatorResolver.resolveByCandidates(context, "", candidates, 0)
+        // Should fallback to second candidate (99901) and format it
+        assertEquals(context.getString(R.string.operator_with_mcc, "MCC:999 MNC:01"), result)
+    }
+
+    @Test
+    fun testResolveWithMatchedCode_Success() {
+        val candidates = listOf("2501", "25001", "250001")
+        val resolution = OperatorResolver.resolveWithMatchedCode(context, "", candidates, 0)
+        assertEquals(context.getString(R.string.operator_mts), resolution.name)
+        assertEquals("25001", resolution.matchedCode)
+    }
 }

@@ -231,7 +231,7 @@ object AppLogger {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @VisibleForTesting
-    fun getQueueSizeForTest(): Int = if (logChannel.isEmpty) 0 else 1
+    fun hasPendingLogsForTest(): Boolean = !logChannel.isEmpty
 
     @VisibleForTesting
     fun initForTest(

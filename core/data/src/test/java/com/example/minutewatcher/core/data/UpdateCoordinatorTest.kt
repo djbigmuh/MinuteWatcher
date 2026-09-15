@@ -408,7 +408,7 @@ class UpdateCoordinatorTest {
     }
 
     @Test
-    fun `TZ-33 regression - recover resets all internal states and sticky Error status`() {
+    fun `regression - recover resets all internal states and sticky Error status`() {
         runTest {
             val stateFlow =
                 snapshotFlow.stateIn(
@@ -450,7 +450,7 @@ class UpdateCoordinatorTest {
             // 3. Recover
             coordinator.recover()
 
-            // 4. Verify status is immediately Idle (TZ-33 fix)
+            // 4. Verify status is immediately Idle (sticky error fix)
             assertEquals(
                 "Status should be Idle immediately after recover",
                 TrackingStatus.Idle,
@@ -1181,7 +1181,7 @@ class UpdateCoordinatorTest {
             testScheduler.advanceUntilIdle()
             verify(localWidgetUpdater, times(16)).updateAll()
 
-            // TZ-33: Test manual recovery
+            // Test manual recovery
             whenever(localWidgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
             coordinator.recover()
 
@@ -1200,7 +1200,7 @@ class UpdateCoordinatorTest {
     }
 
     @Test
-    fun `performForcedUpdate updates hash based on actual snapshot after updateAll`() =
+    fun `performForcedUpdate updates hash BEFORE updateAll and does not suppress if content changed`() =
         runTest {
             val initialState = createSnapshot(timestamp = 1000L, content = "Initial")
             val intermediateState = createSnapshot(timestamp = 2000L, content = "Intermediate")
@@ -1232,6 +1232,9 @@ class UpdateCoordinatorTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            // Start observation to have a reactive path
+            coordinator.status
+            testScheduler.runCurrent()
 
             // 1. Trigger forced update
             val forcedUpdateJob =
@@ -1243,20 +1246,71 @@ class UpdateCoordinatorTest {
 
             // 2. Change snapshot while update is running.
             // In the new implementation, performForcedUpdate will read THIS snapshot
-            // after it finishes updateAll().
+            // and compare it with the one BEFORE updateAll to decide if suppression is needed.
             snapshotFlow.value = intermediateState
 
             // 3. Finish update
             canFinishUpdate.complete(Unit)
             forcedUpdateJob.join()
 
-            // 4. Verification: хэш должен стать Intermediate.
-            // Реактивное обновление для Intermediate должно увидеть совпадение хэшей и быть пропущено.
+            // Verification 1: notifyRefresh should be called with suppressWidgetUpdate = false
+            // because content changed during update (Initial -> Intermediate)
+            verify(dataRefreshNotifier).notifyRefresh(isManual = true, suppressWidgetUpdate = false)
+
+            // 4. Reactive path should now trigger for Intermediate because hash was set to Initial
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            // Total calls should be 1: only the forced one. Reactive one is skipped.
-            assertEquals("Should have updated only once, reactive update skipped due to fresh hash", 1, callCount)
+            // Total calls should be 2: one forced, one reactive for the intermediate state
+            assertEquals(
+                "Should have updated twice: forced + reactive because content changed during forced",
+                2,
+                callCount,
+            )
+        }
+
+    @Test
+    fun `performForcedUpdate suppresses reactive update if content DID NOT change`() =
+        runTest {
+            val initialState = createSnapshot(timestamp = 1000L, content = "Stable")
+            val snapshotFlow = MutableStateFlow(initialState)
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+
+            var callCount = 0
+            val localWidgetUpdater =
+                object : WidgetUpdater {
+                    override suspend fun updateAll(): WidgetUpdateResult {
+                        callCount++
+                        return WidgetUpdateResult.Success()
+                    }
+
+                    override suspend fun recover() {
+                        // No-op for test
+                    }
+                }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    localWidgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            coordinator.status
+            testScheduler.runCurrent()
+
+            // 1. Trigger forced update
+            coordinator.notifyDataChanged(updateWidget = true, force = true)
+            testScheduler.runCurrent()
+
+            // Verification 1: notifyRefresh should be called with suppressWidgetUpdate = true
+            verify(dataRefreshNotifier).notifyRefresh(isManual = true, suppressWidgetUpdate = true)
+
+            // 2. Subsequent reactive delivery of same content should be skipped
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            assertEquals("Should have updated only once", 1, callCount)
         }
 
     @Test

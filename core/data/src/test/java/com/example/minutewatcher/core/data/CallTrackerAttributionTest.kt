@@ -236,7 +236,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `TZ-27 regression - unknown subId end closes single active session even if data SIM is different`() =
+    fun `regression - unknown subId end closes single active session even if data SIM is different`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()

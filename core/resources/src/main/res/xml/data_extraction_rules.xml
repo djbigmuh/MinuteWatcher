@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Разрешаем бэкап SharedPreferences -->
+        <!-- Allow SharedPreferences backup -->
         <include domain="sharedpref" path="."/>
-        <!-- DataStore исключен из облачного бэкапа для защиты приватности (идентификаторы SIM) -->
+        <!-- DataStore is excluded from cloud backup to protect privacy (SIM IDs) -->
     </cloud-backup>
     <device-transfer>
-        <!-- Разрешаем передачу SharedPreferences между устройствами -->
+        <!-- Allow SharedPreferences transfer between devices -->
         <include domain="sharedpref" path="."/>
         <include domain="file" path="datastore/"/>
     </device-transfer>

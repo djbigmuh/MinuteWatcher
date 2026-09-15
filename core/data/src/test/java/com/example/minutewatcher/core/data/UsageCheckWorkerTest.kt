@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -50,6 +51,7 @@ import org.robolectric.Shadows
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("LargeClass")
 class UsageCheckWorkerTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -259,10 +261,10 @@ class UsageCheckWorkerTest {
         }
 
     @Test
-    fun `doWork does not notify when usage is below progress threshold`() =
+    fun `doWork does not notify when remaining is above threshold`() =
         runTest {
-            // Setup time: Jan 15 (approx 48% through month if reset day is 1)
-            timeProvider.setTime(createUtcMillis(2026, 1, 15))
+            // Setup time: Jan 1 (0% progress)
+            timeProvider.setTime(createUtcMillis(2026, 1, 1))
             val identity = "sim_0"
 
             val snapshot =
@@ -284,8 +286,8 @@ class UsageCheckWorkerTest {
                                                 operatorName = "MTS",
                                                 packageType = PackageType.MINUTES,
                                                 limit = 100,
-                                                used = 10,
-                                                remaining = 90, // 10% used, < 48% progress
+                                                used = 5,
+                                                remaining = 95, // 95% remaining > 20% threshold
                                                 unit = MeasurementUnit.MINUTES,
                                                 periodStart = 0,
                                                 periodEnd = 0,
@@ -305,16 +307,188 @@ class UsageCheckWorkerTest {
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simUsageRepository.getSimUsage(identity))
-                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 10, minutesLimit = 100, autoResetDay = 1)))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 5, minutesLimit = 100, autoResetDay = 1)))
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
-            whenever(
-                simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity),
-            ).thenReturn(flowOf(value = false))
 
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            // Verify NO notification sent
+            // Verify NO notification sent (before fix this would have sent one because 5% usage > 0% month progress)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+        }
+
+    @Test
+    fun `doWork sends LOW notification when minutes below 20 percent`() =
+        runTest {
+            val identity = "sim_0"
+            val snapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = timeProvider.now(),
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operatorName = "MTS",
+                                entities =
+                                    mapOf(
+                                        PackageType.MINUTES to
+                                            SemanticEntity(
+                                                id = "e1",
+                                                simSlot = 0,
+                                                operatorName = "MTS",
+                                                packageType = PackageType.MINUTES,
+                                                limit = 100,
+                                                used = 81,
+                                                remaining = 19, // 19% remaining < 20%
+                                                unit = MeasurementUnit.MINUTES,
+                                                periodStart = 0,
+                                                periodEnd = 0,
+                                                lastUpdateTime = 0,
+                                                sourceType = DataSourceType.SYSTEM,
+                                            ),
+                                    ),
+                                autoResetDay = 1,
+                            ),
+                        ),
+                    capabilities = emptyList(),
+                )
+
+            whenever(usageStateRepository.refresh()).thenReturn(
+                RefreshResult
+                    .Success(snapshot),
+            )
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 81, minutesLimit = 100)))
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
+
+            worker.doWork()
+
+            val lowLabel =
+                ApplicationProvider.getApplicationContext<Context>().getString(R.string.usage_level_low)
+            verify(notificationHelper).sendUsageNotification(
+                title = any(),
+                message = argThat { contains(lowLabel) },
+                simSlot = any(),
+                type = any(),
+            )
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(eq(identity), eq(true))
+        }
+
+    @Test
+    fun `doWork sends CRITICAL notification when minutes below 10 percent`() =
+        runTest {
+            val identity = "sim_0"
+            val snapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = timeProvider.now(),
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operatorName = "MTS",
+                                entities =
+                                    mapOf(
+                                        PackageType.MINUTES to
+                                            SemanticEntity(
+                                                id = "e1",
+                                                simSlot = 0,
+                                                operatorName = "MTS",
+                                                packageType = PackageType.MINUTES,
+                                                limit = 100,
+                                                used = 91,
+                                                remaining = 9, // 9% remaining < 10%
+                                                unit = MeasurementUnit.MINUTES,
+                                                periodStart = 0,
+                                                periodEnd = 0,
+                                                lastUpdateTime = 0,
+                                                sourceType = DataSourceType.SYSTEM,
+                                            ),
+                                    ),
+                                autoResetDay = 1,
+                            ),
+                        ),
+                    capabilities = emptyList(),
+                )
+
+            whenever(usageStateRepository.refresh()).thenReturn(
+                RefreshResult
+                    .Success(snapshot),
+            )
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 91, minutesLimit = 100)))
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = false))
+
+            worker.doWork()
+
+            val criticalLabel =
+                ApplicationProvider.getApplicationContext<Context>().getString(R.string.usage_level_critical)
+            verify(notificationHelper).sendUsageNotification(
+                title = any(),
+                message = argThat { contains(criticalLabel) },
+                simSlot = any(),
+                type = any(),
+            )
+        }
+
+    @Test
+    fun `doWork resets notifiedLow flag when usage increases above threshold`() =
+        runTest {
+            val identity = "sim_0"
+            val snapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = timeProvider.now(),
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(
+                                slot = 0,
+                                identity = "sim_0",
+                                operatorName = "MTS",
+                                entities =
+                                    mapOf(
+                                        PackageType.MINUTES to
+                                            SemanticEntity(
+                                                id = "e1",
+                                                simSlot = 0,
+                                                operatorName = "MTS",
+                                                packageType = PackageType.MINUTES,
+                                                limit = 100,
+                                                used = 75,
+                                                remaining = 25, // Above 20%
+                                                unit = MeasurementUnit.MINUTES,
+                                                periodStart = 0,
+                                                periodEnd = 0,
+                                                lastUpdateTime = 0,
+                                                sourceType = DataSourceType.SYSTEM,
+                                            ),
+                                    ),
+                                autoResetDay = 1,
+                            ),
+                        ),
+                    capabilities = emptyList(),
+                )
+
+            whenever(usageStateRepository.refresh()).thenReturn(
+                RefreshResult
+                    .Success(snapshot),
+            )
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 75, minutesLimit = 100)))
+            // State: ALREADY NOTIFIED
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(value = true))
+
+            worker.doWork()
+
+            // Should reset flag
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(eq(identity), eq(false))
+            // No notification sent
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
 
@@ -523,7 +697,7 @@ class UsageCheckWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            // TZ-40: Settings load failure should NOT lead to notifications (fail-closed)
+            // Settings load failure should NOT lead to notifications (fail-closed)
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
 

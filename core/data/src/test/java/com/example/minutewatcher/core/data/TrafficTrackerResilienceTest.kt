@@ -38,7 +38,6 @@ class TrafficTrackerResilienceTest {
     private val deltaCalculator: TrafficDeltaCalculator = mock()
     private val simChangeHandler: TrafficSimChangeHandler = mock()
     private val targetResolver: TrafficTargetResolver = mock()
-    private val errorHandler: TrafficErrorHandler = mock()
     private val permissionChecker: TrafficPermissionChecker = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
     private val timeProvider = FixedTimeProvider()
@@ -164,7 +163,7 @@ class TrafficTrackerResilienceTest {
         }
 
     @Test
-    fun `TZ-29 regression - fresh timeout error is NOT suppressed`() =
+    fun `regression - fresh timeout error is NOT suppressed`() =
         runTest {
             val tracker = createTracker(this)
 
@@ -191,7 +190,7 @@ class TrafficTrackerResilienceTest {
         }
 
     @Test
-    fun `TZ-29 regression - stale timeout error IS suppressed by recent success`() =
+    fun `regression - stale timeout error IS suppressed by recent success`() =
         runTest {
             val tracker = createTracker(this)
 

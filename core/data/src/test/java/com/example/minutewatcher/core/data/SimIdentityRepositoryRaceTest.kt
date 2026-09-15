@@ -344,7 +344,7 @@ class SimIdentityRepositoryRaceTest {
                     ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
                 }
 
-            // Мокаем медленное обнаружение SIM
+            // Mock slow SIM discovery
             val mockSub0 =
                 mock<SubscriptionInfo> {
                     on { simSlotIndex } doReturn 0
@@ -381,15 +381,15 @@ class SimIdentityRepositoryRaceTest {
                     scope = backgroundScope,
                 )
 
-            // Запускаем два резолва параллельно
+            // Launch two parallel resolves
             val job0 = async { repository.getSimIdentity(0) }
             val job1 = async { repository.getSimIdentity(1) }
 
             val res0 = job0.await()
             val res1 = job1.await()
 
-            // Проверяем что оба успешно получили identity
-            // StableId генерируется как icc_<hash> если есть iccid
+            // Verify both successfully received an identity
+            // StableId is generated as icc_<hash> when ICCID is present
             assertTrue("Actual ID0: ${res0.stableId}", res0.stableId.startsWith("icc_"))
             assertTrue("Actual ID1: ${res1.stableId}", res1.stableId.startsWith("icc_"))
         }

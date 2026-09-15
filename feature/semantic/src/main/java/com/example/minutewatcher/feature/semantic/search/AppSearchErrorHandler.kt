@@ -154,14 +154,17 @@ class AppSearchErrorHandler
             targetClass: Class<out Throwable>,
         ): Boolean {
             var current: Throwable? = e
-            while (current != null) {
+            var depth = 0
+            while (current != null && depth < MAX_CAUSE_DEPTH) {
                 if (targetClass.isInstance(current)) return true
                 current = current.cause
+                depth++
             }
             return false
         }
 
         companion object {
             const val MAX_CONSECUTIVE_INDEX_FAILURES = 5
+            private const val MAX_CAUSE_DEPTH = 16
         }
     }

@@ -3,7 +3,7 @@ package com.example.minutewatcher.core.model.util
 import com.example.minutewatcher.core.model.Constants
 
 /**
- * Централизованный выбор статусов использования.
+ * Centralized selection of usage statuses.
  */
 object ColorProvider {
     fun getUsageStatus(

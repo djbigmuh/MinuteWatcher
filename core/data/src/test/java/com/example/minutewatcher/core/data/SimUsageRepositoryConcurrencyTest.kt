@@ -34,15 +34,15 @@ class SimUsageRepositoryConcurrencyTest {
     @Test
     fun `resetSimUsageIfDue handles concurrent calls by performing reset only once`() =
         runTest {
-            // 1. Генерируем уникальную директорию и имя файла.
-            // Использование отдельной директории гарантирует изоляцию от других тестов
-            // и стабильность работы файловой системы (особенно на Windows).
+            // 1. Generate unique directory and file name.
+            // Using a separate directory ensures isolation from other tests
+            // and file system stability (especially on Windows).
             val dir = tmpFolder.newFolder()
             val uniqueName = "test_concurrency_${UUID.randomUUID()}.preferences_pb"
             val file = File(dir, uniqueName)
 
-            // 2. Создаем СТРОГО ОДИН экземпляр DataStore и Repository
-            // Используем backgroundScope для корректного ожидания фоновых задач DataStore
+            // 2. Create STRICTLY ONE instance of DataStore and Repository
+            // Use backgroundScope for correct wait of DataStore background tasks
             val dataStore =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,

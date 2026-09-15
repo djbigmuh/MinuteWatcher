@@ -36,10 +36,8 @@ class PermissionManager
 
         /**
          * Returns true if the device supports telephony services (SIM cards).
-         * Since we use fail-fast in the constructor, this always returns true in a healthy environment.
          */
-        @Suppress("FunctionOnlyReturningConstant")
-        fun isTelephonySupported(): Boolean = true
+        fun isTelephonySupported(): Boolean = context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
 
         fun hasPhoneStatePermission(): Boolean {
             val granted =

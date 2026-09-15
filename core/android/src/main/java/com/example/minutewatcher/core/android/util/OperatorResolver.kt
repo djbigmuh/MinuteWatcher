@@ -15,6 +15,7 @@ import java.util.Locale
  * Logic for resolving operator name from MCC/MNC database.
  * Optimized with thread-safe cache and explicit resource mapping.
  */
+@Suppress("TooManyFunctions")
 object OperatorResolver {
     @Volatile
     private var db: Map<String, String>? = null
@@ -157,19 +158,19 @@ object OperatorResolver {
     }
 
     /**
-     * Возвращает кешированную базу MCC/MNC.
-     * Использует Double-Checked Locking для потокобезопасной инициализации.
+     * Returns the cached MCC/MNC database.
+     * Uses Double-Checked Locking for thread-safe initialization.
      */
     private fun loadDb(context: Context): Map<String, String> =
         db ?: synchronized(this) {
-            // Если loadDbInternal вернёт emptyMap (при ошибке), это значение будет закешировано
-            // в db, что предотвратит повторные попытки чтения повреждённых assets.
+            // If loadDbInternal returns emptyMap (on error), this value will be cached
+            // in db, preventing repeated attempts to read corrupted assets.
             db ?: loadDbInternal(context).also { db = it }
         }
 
     /**
-     * Загружает базу MCC/MNC из assets.
-     * При любой ошибке возвращает emptyMap, которая кешируется вызывающим методом.
+     * Loads the MCC/MNC database from assets.
+     * Returns emptyMap on any error, which is then cached by the caller.
      */
     private fun loadDbInternal(context: Context): Map<String, String> =
         try {
@@ -191,7 +192,7 @@ object OperatorResolver {
             AppLogger.e("Malformed MCC/MNC database JSON", e)
             emptyMap()
         } catch (e: Exception) {
-            // Охватывает все остальные исключения для гарантии того, что db будет установлена в emptyMap
+            // Catches all other exceptions to ensure db is set to emptyMap
             AppLogger.e("Unexpected error loading MCC/MNC database", e)
             emptyMap()
         }
@@ -201,33 +202,116 @@ object OperatorResolver {
         operatorName: String,
         networkOperator: String,
         simSlot: Int,
+    ): String = resolveByCandidates(context, operatorName, listOf(networkOperator), simSlot)
+
+    /**
+     * Resolves operator name using a list of MCC/MNC candidates.
+     * Returns the name of the first candidate that matches a key in the database.
+     * If no match is found, falls back to token matching and then generic formatting.
+     */
+    fun resolveByCandidates(
+        context: Context,
+        operatorName: String,
+        candidates: List<String>,
+        simSlot: Int,
     ): String {
         if (isValidSpecificName(operatorName)) return operatorName
 
         val database = loadDb(context)
-        val resKey = database[networkOperator]
+        var matchedCode: String? = null
+        var resKey: String? = null
+
+        for (code in candidates) {
+            if (code.isNotEmpty() && code != "00000") {
+                val key = database[code]
+                if (key != null) {
+                    matchedCode = code
+                    resKey = key
+                    break
+                }
+            }
+        }
 
         val resolved =
             if (resKey != null) {
                 resolveFromDbKey(context, resKey)
             } else {
-                if (networkOperator.isNotEmpty() && networkOperator != "00000") {
-                    AppLogger.w("Unknown MCC/MNC detected: $networkOperator. Consider adding it to mcc_mnc_db.json")
+                val primaryCode = candidates.firstOrNull() ?: ""
+                if (primaryCode.isNotEmpty() && primaryCode != "00000") {
+                    AppLogger.w(
+                        "Unknown MCC/MNC candidates detected: $candidates. " +
+                            "Consider adding it to mcc_mnc_db.json",
+                    )
                 }
                 null
             }
 
-        return resolved ?: fallbackResolution(context, networkOperator, simSlot)
+        val fallbackCode =
+            if (candidates.size >= 2) {
+                candidates[1]
+            } else {
+                candidates.firstOrNull() ?: ""
+            }
+
+        return resolved ?: fallbackResolution(context, fallbackCode, simSlot)
     }
 
     /**
-     * Проверяет, является ли имя оператора специфичным и валидным.
+     * Data structure to return both resolved name and the code that matched.
+     */
+    data class Resolution(
+        val name: String,
+        val matchedCode: String?,
+    )
+
+    /**
+     * Similar to resolveByCandidates but also returns the code that actually matched the database.
+     */
+    fun resolveWithMatchedCode(
+        context: Context,
+        operatorName: String,
+        candidates: List<String>,
+        simSlot: Int,
+    ): Resolution {
+        if (isValidSpecificName(operatorName)) return Resolution(operatorName, null)
+
+        val database = loadDb(context)
+        var matchedCode: String? = null
+        var resKey: String? = null
+
+        for (code in candidates) {
+            if (code.isNotEmpty() && code != "00000") {
+                val key = database[code]
+                if (key != null) {
+                    matchedCode = code
+                    resKey = key
+                    break
+                }
+            }
+        }
+
+        val resolved =
+            if (resKey != null) {
+                resolveFromDbKey(context, resKey)
+            } else {
+                null
+            }
+
+        return if (resolved != null) {
+            Resolution(resolved, matchedCode)
+        } else {
+            Resolution(fallbackResolution(context, candidates.firstOrNull() ?: "", simSlot), null)
+        }
+    }
+
+    /**
+     * Checks if the operator name is specific and valid.
      *
-     * **Валидность:** имя считается валидным, если оно не является неактивной SIM
-     * (пустое или "null") и не совпадает с общим паттерном "SIM N".
+     * **Validity:** a name is considered valid if it is not an inactive SIM
+     * (empty or "null") and does not match the generic "SIM N" pattern.
      *
-     * @param name Имя оператора для проверки.
-     * @return True, если имя специфично и может быть использовано как есть.
+     * @param name Operator name to check.
+     * @return True if the name is specific and can be used as is.
      */
     private fun isValidSpecificName(name: String): Boolean =
         !SimUtils.isInactiveSim(name) && !genericSimRegex.matches(name.trim())

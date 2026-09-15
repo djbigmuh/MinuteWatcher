@@ -6,9 +6,9 @@ import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
 
 /**
- * Разрешает цвета виджета.
- * Содержит методы для разрешения цвета текста, цвета статуса
- * и цвета "Нет данных".
+ * Resolves widget colors.
+ * Contains methods for resolving text color, status color,
+ * and "No data" color.
  */
 object WidgetColorResolver {
     fun resolveTextColors(backgroundLuminance: Double): Pair<Int, Int> {

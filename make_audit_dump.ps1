@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Создаёт единый дамп проекта для AI-ассистента.
 .DESCRIPTION
@@ -14,11 +14,22 @@
 5. Анализируются missing translations.
 6. Всё собирается в ОДИН файл ProjectDump_Combined.txt.
 7. Корректная UTF-8 кодировка без BOM при чтении и записи.
+8. Тесты (src/test, src/androidTest) по умолчанию ИСКЛЮЧЕНЫ из дампа целиком
+   (раньше попадали усечёнными в режиме HEAD-ONLY, что искажало анализ).
+   С флагом -IncludeTests тесты включаются только в режиме FULL.
+9. git status/log пишутся построчно (раньше массив строк схлопывался в одну строку).
+10. При отсутствии отчётов detekt/lint/ktlint/tests сводка показывает N/A
+    (раньше печатался вводящий в заблуждение 0).
+11. Флаг -Blind для «слепого» аудита: убирает git-контекст (историю коммитов и
+    status с номерами задач) и анонимизирует имена untracked-файлов
+    (UNTRACKED_NNN.ext, каталог сохраняется). Маркеры задач внутри СОДЕРЖИМОГО
+    файлов (комментарии кода, имена тестов) — часть репозитория и не удаляются.
 .NOTES
-Запуск: .\make_audit_dump.ps1 [-IncludeTests]
+Запуск: .\make_audit_dump.ps1 [-IncludeTests] [-Blind]
 #>
 param(
-    [switch]$IncludeTests
+    [switch]$IncludeTests,
+    [switch]$Blind
 )
 
 Set-StrictMode -Version Latest
@@ -33,6 +44,14 @@ $RootFull = (Get-Location).Path
 # Глобальная установка UTF-8 для всех cmdlet'ов PowerShell
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+# Флаги наличия отчётов (для честного N/A в сводке вместо вводящего в заблуждение 0)
+$script:ReportsFound = @{
+    Tests  = $false
+    Detekt = $false
+    Lint   = $false
+    Ktlint = $false
+}
 
 # Директории, которые ВСЕГДА исключаются (проверка по сегментам пути)
 $SkipSegments = @(
@@ -124,6 +143,26 @@ function Get-Rel {
     return $Path
 }
 
+function Format-ReportCount {
+    param(
+        [string]$Key,
+        [int]$Count
+    )
+    if ($script:ReportsFound[$Key]) { return "$Count" }
+    return 'N/A (report not found - run .\VERIFY.bat before dumping)'
+}
+
+function Test-IsTestRelPath {
+    param([string]$RelPath)
+    $rel = $RelPath.Replace('\', '/')
+    return ($rel -match '(^|/)src/(test|androidTest)/')
+}
+
+function Test-IsTestSource {
+    param([System.IO.FileInfo]$File)
+    return Test-IsTestRelPath (Get-Rel $File.FullName)
+}
+
 function Test-FullDumpExt {
     param([string]$Ext)
     return $FullDumpExtensions -contains $Ext.ToLower()
@@ -132,8 +171,11 @@ function Test-FullDumpExt {
 function Test-SkipSourceFile {
     param([System.IO.FileInfo]$File)
 
-    # Проверка по сегментам пути
-    $segments = $File.FullName.Split(
+    # Проверка по сегментам пути ОТ КОРНЯ РЕПОЗИТОРИЯ.
+    # Важно: сегменты родительских каталогов (вне репозитория) не должны влиять
+    # на фильтрацию — иначе проект в каталоге вроде D:\Work\tmp\... теряет все файлы.
+    $relForSegments = Get-Rel $File.FullName
+    $segments = $relForSegments.Split(
         [IO.Path]::DirectorySeparatorChar,
         [IO.Path]::AltDirectorySeparatorChar
     )
@@ -192,10 +234,11 @@ function Add-FileDump {
     param(
         [System.Text.StringBuilder]$Sb,
         [System.IO.FileInfo]$File,
-        [switch]$ForceFull
+        [switch]$ForceFull,
+        [string]$DisplayName = ''
     )
 
-    $rel = Get-Rel $File.FullName
+    $rel = if ($DisplayName) { $DisplayName } else { Get-Rel $File.FullName }
 
     # Читаем с автоопределением кодировки (UTF-8 preferred)
     $lines = @()
@@ -279,6 +322,8 @@ function Parse-TestResults {
     $testDirs = Get-ChildItem -Path $RootFull -Recurse -Directory -Filter 'test-results' -ErrorAction SilentlyContinue |
         Where-Object { $_.FullName -notmatch '\\\.artifacts\\' -and $_.FullName -notmatch '\\\.gradle' }
 
+    if (@($testDirs).Count -gt 0) { $script:ReportsFound['Tests'] = $true }
+
     foreach ($dir in $testDirs) {
         $xmlFiles = Get-ChildItem -Path $dir.FullName -Recurse -Filter 'TEST-*.xml' -ErrorAction SilentlyContinue
         foreach ($xmlFile in $xmlFiles) {
@@ -332,6 +377,7 @@ function Parse-DetektReport {
         Save-Text $detektCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
         return ,$detektRows
     }
+    $script:ReportsFound['Detekt'] = $true
 
     foreach ($file in $detektFiles) {
         try {
@@ -339,8 +385,8 @@ function Parse-DetektReport {
             if (-not $content) { continue }
 
             $pattern = '(?m)^(?<file>[^:]+):(?<line>\d+):(?<col>\d+):\s*(?<message>.+)$'
-            $matches = [regex]::Matches($content, $pattern)
-            foreach ($m in $matches) {
+            $regexMatches = [regex]::Matches($content, $pattern)
+            foreach ($m in $regexMatches) {
                 $detektRows += [PSCustomObject]@{
                     File    = $m.Groups['file'].Value
                     Line    = $m.Groups['line'].Value
@@ -376,6 +422,7 @@ function Parse-LintReport {
         Save-Text $lintCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
         return ,$lintRows
     }
+    $script:ReportsFound['Lint'] = $true
 
     foreach ($file in $lintFiles) {
         try {
@@ -383,8 +430,8 @@ function Parse-LintReport {
             if (-not $content) { continue }
 
             $pattern = '(?ms)(?<severity>Error|Warning|Information):(?<message>.+?)\s+(?<file>[^\s]+):(?<line>\d+)'
-            $matches = [regex]::Matches($content, $pattern)
-            foreach ($m in $matches) {
+            $regexMatches = [regex]::Matches($content, $pattern)
+            foreach ($m in $regexMatches) {
                 $lintRows += [PSCustomObject]@{
                     Severity = $m.Groups['severity'].Value
                     Message  = $m.Groups['message'].Value.Trim()
@@ -420,6 +467,7 @@ function Parse-KtlintReport {
         Save-Text $ktlintCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
         return ,$ktlintRows
     }
+    $script:ReportsFound['Ktlint'] = $true
 
     foreach ($file in $ktlintFiles) {
         try {
@@ -427,8 +475,8 @@ function Parse-KtlintReport {
             if (-not $content) { continue }
 
             $pattern = '(?m)^(?<file>[^:]+):(?<line>\d+):(?<col>\d+):\s*(?<message>.+)$'
-            $matches = [regex]::Matches($content, $pattern)
-            foreach ($m in $matches) {
+            $regexMatches = [regex]::Matches($content, $pattern)
+            foreach ($m in $regexMatches) {
                 $ktlintRows += [PSCustomObject]@{
                     File    = $m.Groups['file'].Value
                     Line    = $m.Groups['line'].Value
@@ -642,21 +690,55 @@ $allFiles = @()
 
 foreach ($relPath in $gitFiles) {
     $fullPath = Join-Path $RootFull $relPath
-    if (Test-Path $fullPath) {
-        $file = Get-Item $fullPath
+    if (Test-Path -LiteralPath $fullPath) {
+        $file = Get-Item -LiteralPath $fullPath -Force
         if (-not (Test-SkipSourceFile $file)) {
             $allFiles += $file
         }
     }
 }
 
-# --- Untracked (но не игнорируемые) файлы: аудит-дамп их НЕ содержит, предупреждаем явно ---
+# --- Untracked (но не игнорируемые) файлы ---
 $untracked = git ls-files --others --exclude-standard 2>&1 |
     Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) }
 $untrackedSources = @($untracked | Where-Object { $_ -match '\.(kt|kts|java|xml)$' })
 
-if ($untrackedSources.Count -gt 0) {
-    Write-Warning "Found $($untrackedSources.Count) untracked source files. They will be included in a separate section."
+# Untracked-тесты подчиняются тому же правилу -IncludeTests, что и tracked-тесты
+$untrackedMain = @($untrackedSources | Where-Object { -not (Test-IsTestRelPath $_) })
+$untrackedTest = @($untrackedSources | Where-Object { Test-IsTestRelPath $_ })
+if ($IncludeTests) {
+    $untrackedToDump = @($untrackedMain + $untrackedTest)
+} else {
+    $untrackedToDump = $untrackedMain
+}
+
+# Карта анонимизации имён untracked-файлов для -Blind.
+# Содержимое файлов не изменяется; скрываются только имена в заголовках дампа,
+# т.к. они могут содержать номера задач (TZ99RegressionTest.kt и т.п.).
+$untrackedNameMap = @{}
+if ($Blind) {
+    $anonIdx = 0
+    foreach ($relPath in $untrackedToDump) {
+        $anonIdx++
+        $norm = $relPath.Replace('\', '/')
+        $slashPos = $norm.LastIndexOf('/')
+        if ($slashPos -ge 0) {
+            $dirPart = $norm.Substring(0, $slashPos)
+        } else {
+            $dirPart = ''
+        }
+        $extPart = [System.IO.Path]::GetExtension($norm)
+        $anonName = ('UNTRACKED_{0:D3}{1}' -f $anonIdx, $extPart)
+        if ($dirPart) {
+            $untrackedNameMap[$relPath] = "$dirPart/$anonName"
+        } else {
+            $untrackedNameMap[$relPath] = $anonName
+        }
+    }
+}
+
+if ($untrackedToDump.Count -gt 0) {
+    Write-Warning "Found $($untrackedToDump.Count) untracked source files. They will be included in a separate section."
 }
 
 Write-Host "  Found $($allFiles.Count) files" -ForegroundColor Green
@@ -668,15 +750,23 @@ Write-Host "  Found $($allFiles.Count) files" -ForegroundColor Green
 Write-Host "Collecting git context..." -ForegroundColor Yellow
 
 $gitSb = New-Object System.Text.StringBuilder
-[void]$gitSb.AppendLine("git executable: $(Get-Command git -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)")
-[void]$gitSb.AppendLine("inside work tree: $(git rev-parse --is-inside-work-tree 2>&1)")
-[void]$gitSb.AppendLine("branch: $(git branch --show-current 2>&1)")
-[void]$gitSb.AppendLine('')
-[void]$gitSb.AppendLine('- git status --short -')
-[void]$gitSb.AppendLine((git status --short 2>&1))
-[void]$gitSb.AppendLine('')
-[void]$gitSb.AppendLine('- git log -20 -')
-[void]$gitSb.AppendLine((git log -20 --oneline 2>&1))
+if ($Blind) {
+    # -Blind: история коммитов и status содержат номера прошлых задач — не включаем в дамп
+    [void]$gitSb.AppendLine('(git context omitted: -Blind mode)')
+}
+else {
+    [void]$gitSb.AppendLine("git executable: $(Get-Command git -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)")
+    [void]$gitSb.AppendLine("inside work tree: $(git rev-parse --is-inside-work-tree 2>&1)")
+    [void]$gitSb.AppendLine("branch: $(git branch --show-current 2>&1)")
+    [void]$gitSb.AppendLine('')
+    [void]$gitSb.AppendLine('- git status --short -')
+    $gitStatusLines = @(git status --short 2>&1)
+    [void]$gitSb.AppendLine(($gitStatusLines -join [Environment]::NewLine))
+    [void]$gitSb.AppendLine('')
+    [void]$gitSb.AppendLine('- git log -20 -')
+    $gitLogLines = @(git log -20 --oneline 2>&1)
+    [void]$gitSb.AppendLine(($gitLogLines -join [Environment]::NewLine))
+}
 
 Save-Text (Join-Path $OutDirFull '20_git.txt') $gitSb.ToString()
 
@@ -691,12 +781,17 @@ $detektRows = Parse-DetektReport $OutDirFull
 $lintRows = Parse-LintReport $OutDirFull
 $ktlintRows = Parse-KtlintReport $OutDirFull
 $missingRows = Analyze-MissingTranslations $OutDirFull $allFiles
-$totalMatches = Find-SuspiciousMatches $OutDirFull $allFiles
+if ($IncludeTests) {
+    $suspiciousScanFiles = $allFiles
+} else {
+    $suspiciousScanFiles = @($allFiles | Where-Object { -not (Test-IsTestSource $_) })
+}
+$totalMatches = Find-SuspiciousMatches $OutDirFull $suspiciousScanFiles
 
-Write-Host "  Tests: $($testRows.Count)" -ForegroundColor Gray
-Write-Host "  Detekt: $($detektRows.Count)" -ForegroundColor Gray
-Write-Host "  Lint: $($lintRows.Count)" -ForegroundColor Gray
-Write-Host "  Ktlint: $($ktlintRows.Count)" -ForegroundColor Gray
+Write-Host "  Tests: $(Format-ReportCount 'Tests' $testRows.Count)" -ForegroundColor Gray
+Write-Host "  Detekt: $(Format-ReportCount 'Detekt' $detektRows.Count)" -ForegroundColor Gray
+Write-Host "  Lint: $(Format-ReportCount 'Lint' $lintRows.Count)" -ForegroundColor Gray
+Write-Host "  Ktlint: $(Format-ReportCount 'Ktlint' $ktlintRows.Count)" -ForegroundColor Gray
 Write-Host "  Missing translations: $($missingRows.Count)" -ForegroundColor Gray
 Write-Host "  Suspicious matches: $totalMatches" -ForegroundColor Gray
 
@@ -740,8 +835,18 @@ Write-Host "Collecting source files..." -ForegroundColor Yellow
 $sourcesSb = New-Object System.Text.StringBuilder
 $sourceFiles = @($allFiles | Where-Object { Test-FullDumpExt $_.Extension } | Sort-Object FullName)
 
-foreach ($f in $sourceFiles) {
+# Тесты — только по явному запросу -IncludeTests и только FULL-режимом:
+# усечённый тест (HEAD-ONLY) искажает анализ и создаёт ложную картину.
+$mainSources = @($sourceFiles | Where-Object { -not (Test-IsTestSource $_) })
+$testSources = @($sourceFiles | Where-Object { Test-IsTestSource $_ })
+
+foreach ($f in $mainSources) {
     Add-FileDump -Sb $sourcesSb -File $f
+}
+if ($IncludeTests) {
+    foreach ($f in $testSources) {
+        Add-FileDump -Sb $sourcesSb -File $f -ForceFull
+    }
 }
 
 Save-Text (Join-Path $OutDirFull '30_sources_full.txt') $sourcesSb.ToString()
@@ -757,14 +862,26 @@ $overview = New-Object System.Text.StringBuilder
 [void]$overview.AppendLine(('=' * 100))
 [void]$overview.AppendLine("Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
 [void]$overview.AppendLine("Include tests: $IncludeTests")
+[void]$overview.AppendLine("Blind mode: $Blind")
 [void]$overview.AppendLine("Total files collected: $($allFiles.Count)")
-[void]$overview.AppendLine("Untracked source files: $($untrackedSources.Count)")
+[void]$overview.AppendLine("  Main source files: $($mainSources.Count)")
+if ($IncludeTests) {
+    [void]$overview.AppendLine("  Test files: $($testSources.Count) (included FULL)")
+} else {
+    [void]$overview.AppendLine("  Test files: $($testSources.Count) (EXCLUDED from dump; pass -IncludeTests to include)")
+}
+[void]$overview.AppendLine("Untracked source files (dumped): $($untrackedToDump.Count)")
+if ($IncludeTests) {
+    [void]$overview.AppendLine("Untracked test files: $($untrackedTest.Count) (included)")
+} else {
+    [void]$overview.AppendLine("Untracked test files: $($untrackedTest.Count) (excluded)")
+}
 [void]$overview.AppendLine('')
 [void]$overview.AppendLine("Reports parsed:")
-[void]$overview.AppendLine("  Test results: $($testRows.Count)")
-[void]$overview.AppendLine("  Detekt issues: $($detektRows.Count)")
-[void]$overview.AppendLine("  Lint issues: $($lintRows.Count)")
-[void]$overview.AppendLine("  Ktlint issues: $($ktlintRows.Count)")
+[void]$overview.AppendLine("  Test results: $(Format-ReportCount 'Tests' $testRows.Count)")
+[void]$overview.AppendLine("  Detekt issues: $(Format-ReportCount 'Detekt' $detektRows.Count)")
+[void]$overview.AppendLine("  Lint issues: $(Format-ReportCount 'Lint' $lintRows.Count)")
+[void]$overview.AppendLine("  Ktlint issues: $(Format-ReportCount 'Ktlint' $ktlintRows.Count)")
 [void]$overview.AppendLine("  Missing translations: $($missingRows.Count)")
 [void]$overview.AppendLine("  Suspicious matches: $totalMatches")
 [void]$overview.AppendLine('')
@@ -790,9 +907,20 @@ $diag = New-Object System.Text.StringBuilder
 [void]$diag.AppendLine("JAVA_HOME: $(if ($env:JAVA_HOME) { $env:JAVA_HOME } else { '<not set>' })")
 [void]$diag.AppendLine('')
 
-if ($untrackedSources.Count -gt 0) {
+if ($untrackedToDump.Count -gt 0) {
     [void]$diag.AppendLine("WARNING: untracked source files (NOT included in main dump sections):")
-    foreach ($f in $untrackedSources) { [void]$diag.AppendLine("  $f") }
+    foreach ($f in $untrackedToDump) {
+        if ($untrackedNameMap.ContainsKey($f)) {
+            [void]$diag.AppendLine("  $($untrackedNameMap[$f])  [name anonymized: -Blind]")
+        } else {
+            [void]$diag.AppendLine("  $f")
+        }
+    }
+    [void]$diag.AppendLine('')
+}
+
+if ((-not $IncludeTests) -and ($untrackedTest.Count -gt 0)) {
+    [void]$diag.AppendLine("NOTE: $($untrackedTest.Count) untracked test file(s) excluded from dump (pass -IncludeTests to include).")
     [void]$diag.AppendLine('')
 }
 
@@ -822,11 +950,13 @@ Save-Text (Join-Path $OutDirFull '99_diagnostics.txt') $diag.ToString()
 
 # --- Untracked Sources Full Dump ---
 $untrackedSb = New-Object System.Text.StringBuilder
-if ($untrackedSources.Count -gt 0) {
-    foreach ($relPath in $untrackedSources) {
+if ($untrackedToDump.Count -gt 0) {
+    foreach ($relPath in $untrackedToDump) {
         $fullPath = Join-Path $RootFull $relPath
-        if (Test-Path $fullPath) {
-            Add-FileDump -Sb $untrackedSb -File (Get-Item $fullPath) -ForceFull
+        if (Test-Path -LiteralPath $fullPath) {
+            $dispName = ''
+            if ($untrackedNameMap.ContainsKey($relPath)) { $dispName = $untrackedNameMap[$relPath] }
+            Add-FileDump -Sb $untrackedSb -File (Get-Item -LiteralPath $fullPath -Force) -ForceFull -DisplayName $dispName
         }
     }
 }
@@ -878,3 +1008,7 @@ Write-Host "  - Parsed lint/ktlint/detekt/test reports" -ForegroundColor Gray
 Write-Host "  - Analyzed missing translations" -ForegroundColor Gray
 Write-Host "  - Proper UTF-8 encoding without BOM" -ForegroundColor Gray
 Write-Host "  - Everything in ONE file: ProjectDump_Combined.txt" -ForegroundColor Gray
+Write-Host "  - Tests excluded unless -IncludeTests (FULL mode only)" -ForegroundColor Gray
+Write-Host "  - git status/log written line-by-line" -ForegroundColor Gray
+Write-Host "  - Missing reports shown as N/A (not 0)" -ForegroundColor Gray
+Write-Host "  - -Blind mode: no git context, anonymized untracked names" -ForegroundColor Gray

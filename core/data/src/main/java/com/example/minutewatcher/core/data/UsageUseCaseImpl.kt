@@ -59,17 +59,22 @@ class UsageUseCaseImpl
                     val displayName = info.displayName?.toString() ?: ""
                     val carrierName = info.carrierName?.toString() ?: ""
 
-                    val mccMnc = SimIdentityUtils.getMccMnc(info)
+                    val candidates = SimIdentityUtils.mccMncCandidates(info)
 
-                    val opName =
-                        OperatorResolver.resolve(
+                    val resolution =
+                        OperatorResolver.resolveWithMatchedCode(
                             context,
                             displayName.ifEmpty { carrierName },
-                            mccMnc,
+                            candidates,
                             slot,
                         )
-                    simIdentityRepository.setSimOperator(identity, opName)
-                    simIdentityRepository.setSimCode(identity, mccMnc)
+                    simIdentityRepository.setSimOperator(identity, resolution.name)
+                    // Save the candidate that matched the database if any,
+                    // else the first (raw) candidate for compatibility.
+                    simIdentityRepository.setSimCode(
+                        identity,
+                        resolution.matchedCode ?: candidates.firstOrNull() ?: "",
+                    )
                 }
             }
         }

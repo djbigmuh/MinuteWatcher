@@ -8,13 +8,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 
 /**
- * Базовый класс для ViewModel с состоянием.
+ * Base class for ViewModel with state.
  *
- * **Важно:** этот класс НЕ использует SharedFlow для событий.
- * Текущий код использует StateFlow, который гарантирует доставку последнего значения.
- * Переход на SharedFlow может привести к потере событий.
+ * **Important:** this class does NOT use SharedFlow for events.
+ * Current code uses StateFlow, which guarantees delivery of the latest value.
+ * Switching to SharedFlow might lead to event loss.
  *
- * @param initialState Начальное состояние.
+ * @param initialState Initial state.
  */
 abstract class BaseViewModel<S>(
     initialState: S,
@@ -22,12 +22,12 @@ abstract class BaseViewModel<S>(
     private val _state = MutableStateFlow(initialState)
 
     /**
-     * Текущее состояние ViewModel как [StateFlow].
+     * Current ViewModel state as [StateFlow].
      */
     val state: StateFlow<S> = _state.asStateFlow()
 
     /**
-     * Обновляет состояние.
+     * Updates the state.
      */
     protected fun reduce(reducer: S.() -> S) = _state.update { it.reducer() }
 

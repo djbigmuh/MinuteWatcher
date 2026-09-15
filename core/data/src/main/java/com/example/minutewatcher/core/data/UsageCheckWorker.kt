@@ -27,9 +27,10 @@ import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @HiltWorker
-// Подавление TooManyFunctions оправдано: UsageCheckWorker инкапсулирует единый цикл фоновой проверки
-// использования лимитов по всем активным SIM-картам. Разделение на несколько воркеров увеличит нагрузку
-// на систему и усложнит координацию уведомлений.
+/**
+ * UsageCheckWorker encapsulates a single background check cycle
+ * for limit usage across all active SIM cards.
+ */
 @Suppress("TooManyFunctions")
 class UsageCheckWorker
     @AssistedInject
@@ -40,14 +41,14 @@ class UsageCheckWorker
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : CoroutineWorker(context, params) {
         /**
-         * Выполняет периодическую проверку использования.
+         * Performs periodic usage check.
          *
-         * **Строгое соблюдение API:** на AOSP refresh() завершается за миллисекунды.
-         * Таймаут 2 мин — защитный запас для компенсации деградации DataStore на кастомных прошивках.
+         * API compliance: on AOSP refresh() completes in milliseconds.
+         * 2 min timeout is a protective buffer to compensate for DataStore degradation on custom firmwares.
          *
-         * **Отклонение кастомной прошивки:** таймаут указывает на деградацию
-         * DataStore на кастомной прошивке. Это проблема прошивки.
-         * Стратегия: Result.retry() — система повторит Worker позже.
+         * Custom firmware deviation: timeout indicates DataStore degradation
+         * on custom firmware. This is a firmware problem.
+         * Strategy: Result.retry() — the system will repeat the Worker later.
          */
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
@@ -211,21 +212,18 @@ class UsageCheckWorker
                 }
 
             val now = deps.timeProvider.now()
-
-            val monthProgress = DateUtils.getMonthProgressPercentage(simUsage.autoResetDay, now)
             val daysRemaining = DateUtils.getDaysRemainingInMonth(simUsage.autoResetDay, now)
 
             simSnapshot.entities[PackageType.MINUTES]?.let {
-                checkMinutesUsage(it, monthProgress, daysRemaining, identity, appSettings)
+                checkMinutesUsage(it, daysRemaining, identity, appSettings)
             }
             simSnapshot.entities[PackageType.DATA]?.let {
-                checkTrafficUsage(it, monthProgress, daysRemaining, identity, appSettings)
+                checkTrafficUsage(it, daysRemaining, identity, appSettings)
             }
         }
 
         private suspend fun checkMinutesUsage(
             entity: SemanticEntity,
-            monthProgress: Int,
             daysRemaining: Int,
             identity: String,
             appSettings: AppSettings,
@@ -255,20 +253,20 @@ class UsageCheckWorker
                 }
                 handleLowMinutesAlert(
                     entity,
-                    usagePercentage,
                     remainingPercentage,
-                    monthProgress,
                     daysRemaining,
                     identity,
                 )
             }
         }
 
+    /**
+     * Handles the low minutes alert based on remaining percentage.
+     * Triggered when remaining is below [Constants.LOW_THRESHOLD_PERCENT_INT].
+     */
         private suspend fun handleLowMinutesAlert(
             entity: SemanticEntity,
-            usagePct: Int,
             remPct: Int,
-            monthProg: Int,
             daysRem: Int,
             identity: String,
         ) {
@@ -276,7 +274,8 @@ class UsageCheckWorker
                 deps.simNotificationFlagsRepository
                     .getNotifiedLowMinutes(identity)
                     .firstWithTimeout() ?: false
-            if ((usagePct > monthProg) && !notifiedLow) {
+
+        if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
                 val levelRes =
                     if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
                         R.string.usage_level_critical
@@ -297,7 +296,7 @@ class UsageCheckWorker
                     )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_MINUTES)
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = true)
-            } else if ((usagePct <= monthProg) && notifiedLow) {
+        } else if ((remPct >= Constants.LOW_THRESHOLD_PERCENT_INT) && notifiedLow) {
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = false)
             }
         }
@@ -330,7 +329,6 @@ class UsageCheckWorker
 
         private suspend fun checkTrafficUsage(
             entity: SemanticEntity,
-            monthProgress: Int,
             daysRemaining: Int,
             identity: String,
             appSettings: AppSettings,
@@ -364,22 +362,22 @@ class UsageCheckWorker
                 }
                 handleLowTrafficAlert(
                     entity,
-                    usagePercentage,
                     remainingPercentage,
                     remainingGb,
-                    monthProgress,
                     daysRemaining,
                     identity,
                 )
             }
         }
 
+    /**
+     * Handles the low traffic alert based on remaining percentage.
+     * Triggered when remaining is below [Constants.LOW_THRESHOLD_PERCENT_INT].
+     */
         private suspend fun handleLowTrafficAlert(
             entity: SemanticEntity,
-            usagePct: Int,
             remPct: Int,
             remGb: Float,
-            monthProg: Int,
             daysRem: Int,
             identity: String,
         ) {
@@ -387,7 +385,8 @@ class UsageCheckWorker
                 deps.simNotificationFlagsRepository
                     .getNotifiedLowTraffic(identity)
                     .firstWithTimeout() ?: false
-            if ((usagePct > monthProg) && !notifiedLow) {
+
+        if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
                 val levelRes =
                     if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
                         R.string.usage_level_critical
@@ -406,7 +405,7 @@ class UsageCheckWorker
                     )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_TRAFFIC)
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = true)
-            } else if ((usagePct <= monthProg) && notifiedLow) {
+        } else if ((remPct >= Constants.LOW_THRESHOLD_PERCENT_INT) && notifiedLow) {
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = false)
             }
         }

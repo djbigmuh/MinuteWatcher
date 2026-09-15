@@ -1,21 +1,20 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class CallStartHandlerUnitTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val timeProvider: TimeProvider = mock()
@@ -30,6 +29,7 @@ class CallStartHandlerUnitTest {
 
     @Before
     fun setup() {
+        initTestLogger()
         handler =
             CallStartHandler(
                 callSessionRepository,
@@ -64,5 +64,8 @@ class CallStartHandlerUnitTest {
             verify(callSessionRepository).setCallStartTime(1, 1000L)
             verify(callSessionRepository).setBootTime(1, 2000L)
             verify(callSessionRepository).setCallIdentity(1, null)
+
+            // Regression: Should not retry null identity, so time should be 0
+            Assert.assertEquals("Virtual time should not advance for null identity", 0, testScheduler.currentTime)
         }
 }

@@ -11,9 +11,9 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
- * Обобщенный класс для управления циклом наблюдения за потоком данных.
- * Реализует паттерн управления джобом: отмена старого, запуск нового,
- * сохранение последнего потока для восстановления.
+ * Generalized class for managing a data stream observation cycle.
+ * Implements a job management pattern: cancel old, start new,
+ * save the last flow for recovery.
  *
  * **Thread Safety:** Safe to call from any context.
  * **Semantics:** Uses `collectLatest` which ensures only the latest value is processed,

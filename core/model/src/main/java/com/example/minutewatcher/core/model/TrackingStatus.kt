@@ -20,9 +20,9 @@ sealed interface TrackingStatus {
         val message: String? = null,
         val slotIndex: Int? = null,
         /**
-         * Машиночитаемая причина. message — ТОЛЬКО для человека/логов.
-         * Ветвление логики ТОЛЬКО по type/code; message — для отображения и логов,
-         * его формат не является контрактом.
+         * Machine-readable reason. message is ONLY for human/logs.
+         * Logic branching ONLY by type/code; message is for display and logs,
+         * its format is not a contract.
          */
         val code: ErrorCode? = null,
     ) : TrackingStatus
@@ -36,13 +36,13 @@ sealed interface TrackingStatus {
     }
 
     enum class ErrorCode {
-        /** Операция не завершилась в отведённое время (DataStore/system service). */
+        /** Operation did not complete within the allotted time (DataStore/system service). */
         TIMEOUT,
 
-        /** RemoteViews/Binder size limit виджета (TransactionTooLarge). */
+        /** Widget RemoteViews/Binder size limit (TransactionTooLarge). */
         WIDGET_SIZE_LIMIT,
 
-        /** Системный сервис/возможность недоступны на устройстве. */
+        /** System service/capability unavailable on device. */
         SERVICE_UNAVAILABLE,
     }
 

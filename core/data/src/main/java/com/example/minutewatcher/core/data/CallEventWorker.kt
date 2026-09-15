@@ -28,6 +28,7 @@ class CallEventWorker
                 when (state) {
                     TelephonyManager.EXTRA_STATE_OFFHOOK -> callTracker.onCallStarted(subId, eventElapsedRealtime)
                     TelephonyManager.EXTRA_STATE_IDLE -> callTracker.onCallEnded(subId, eventElapsedRealtime)
+                    TelephonyManager.EXTRA_STATE_RINGING -> AppLogger.d("CallEventWorker: ringing state ignored")
                     else -> AppLogger.w("CallEventWorker: unknown state=$state")
                 }
 
