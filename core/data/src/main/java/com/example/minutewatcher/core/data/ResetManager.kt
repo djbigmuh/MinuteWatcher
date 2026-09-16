@@ -12,9 +12,11 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -150,10 +152,11 @@ class ResetManager
             return try {
                 checkAndPerformSingleReset(simInfo, now, resetIdentities)
             } finally {
-                @Suppress("FinallyBlockWithReturn") // TODO(TZ-AUDIT-04): устранить вместе с фиксом cancellation-safety
-                resetMutex.withLock {
-                    lastResetCheck[identity] = nowElapsed
-                    pendingResets.remove(identity)
+                withContext(NonCancellable) {
+                    resetMutex.withLock {
+                        lastResetCheck[identity] = nowElapsed
+                        pendingResets.remove(identity)
+                    }
                 }
             }
         }

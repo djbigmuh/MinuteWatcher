@@ -123,8 +123,10 @@ class TrafficTracker
                 try {
                     startInitialization()
                 } finally {
-                    initMutex.withLock {
-                        isInitializing.set(false)
+                    withContext(NonCancellable) {
+                        initMutex.withLock {
+                            isInitializing.set(false)
+                        }
                     }
                 }
             }
@@ -223,8 +225,10 @@ class TrafficTracker
                     try {
                         startInitialization()
                     } finally {
-                        initMutex.withLock {
-                            isInitializing.set(false)
+                        withContext(NonCancellable) {
+                            initMutex.withLock {
+                                isInitializing.set(false)
+                            }
                         }
                     }
                 }
@@ -309,8 +313,10 @@ class TrafficTracker
                 try {
                     performInitializeWithRetry()
                 } finally {
-                    initMutex.withLock {
-                        isInitializing.set(false)
+                    withContext(NonCancellable) {
+                        initMutex.withLock {
+                            isInitializing.set(false)
+                        }
                     }
                 }
             } else {

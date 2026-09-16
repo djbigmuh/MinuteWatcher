@@ -11,8 +11,10 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -135,9 +137,11 @@ class WidgetUpdaterImpl
                 )
                 throw e
             } finally {
-                coalescingMutex.withLock {
-                    if (activeUpdate === deferred) {
-                        activeUpdate = null
+                withContext(NonCancellable) {
+                    coalescingMutex.withLock {
+                        if (activeUpdate === deferred) {
+                            activeUpdate = null
+                        }
                     }
                 }
             }
