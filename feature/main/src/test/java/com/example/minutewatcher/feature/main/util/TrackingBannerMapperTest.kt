@@ -96,6 +96,20 @@ class TrackingBannerMapperTest {
     }
 
     @Test
+    fun `mapToBannerState shows storage degraded banner for USAGE_STATE database error`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = mapOf(TrackingKey.USAGE_STATE to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR)),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+
+        assertTrue(state.observationFailed)
+    }
+
+    @Test
     fun `mapToBannerState suppresses traffic error banner when permission is missing`() {
         // When permission is missing, we show the Usage Access banner instead
         val state =

@@ -82,10 +82,13 @@ object TrackingBannerMapper {
             statusMap.getOrDefault(TrackingKey.WIDGET_OBSERVATION, TrackingStatus.Idle) as? TrackingStatus.Error
         val settingsError =
             statusMap.getOrDefault(TrackingKey.APP_SETTINGS, TrackingStatus.Idle) as? TrackingStatus.Error
+        val usageError =
+            statusMap.getOrDefault(TrackingKey.USAGE_STATE, TrackingStatus.Idle) as? TrackingStatus.Error
 
         val isDatabaseError =
             widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
-                settingsError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
+                settingsError?.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
+                usageError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
 
         val isSizeLimitError =
             widgetError?.code == TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT ||

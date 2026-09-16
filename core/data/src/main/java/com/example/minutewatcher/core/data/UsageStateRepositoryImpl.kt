@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.RefreshResult
+import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -16,6 +17,9 @@ import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
+import com.example.minutewatcher.core.model.TrackingKey
+import com.example.minutewatcher.core.model.TrackingStatus
+import com.example.minutewatcher.core.model.TrackingStatusMachine
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.SemanticMapper
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,18 +27,18 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
@@ -92,41 +96,95 @@ class UsageStateRepositoryImpl
         @param:ApplicationContext private val context: Context,
         private val deps: UsageRepositoryDependencies,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
-    ) : UsageStateRepository {
+    ) : UsageStateRepository, TrackingStatusProvider {
+        override val key: TrackingKey = TrackingKey.USAGE_STATE
+
+        private val statusMachine = TrackingStatusMachine()
+        override val status: StateFlow<TrackingStatus> = statusMachine.status
+
+        private fun transitionStatus(
+            newStatus: TrackingStatus,
+            force: Boolean = false,
+        ) {
+            statusMachine.transition(newStatus, force)
+        }
+
         private val isDataLoadedSet = AtomicBoolean(false)
         private val assembler = SnapshotAssembler()
 
         override fun isDataLoaded(): Boolean = isDataLoadedSet.get()
 
         private val sharedSimUsagesFlow: StateFlow<List<SimUsage>> =
-            deps.simIdentityRepository
-                .observeActiveSims()
-                .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
-                .distinctUntilChanged()
-                .flatMapLatest { sims ->
-                    if (sims.isEmpty()) {
-                        flowOf(emptyList())
-                    } else {
-                        combine(
-                            sims.map { sim ->
-                                deps.simUsageRepository.getSimUsage(sim.identity.stableId).map { usage ->
-                                    usage.copy(slotIndex = sim.slotIndex)
+            flow {
+                var consecutiveErrors = 0
+                while (true) {
+                    try {
+                        deps.simIdentityRepository
+                            .observeActiveSims()
+                            .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
+                            .distinctUntilChanged()
+                            .flatMapLatest { sims ->
+                                if (sims.isEmpty()) {
+                                    flowOf(emptyList())
+                                } else {
+                                    combine(
+                                        sims.map { sim ->
+                                            deps.simUsageRepository.getSimUsage(sim.identity.stableId).map { usage ->
+                                                usage.copy(slotIndex = sim.slotIndex)
+                                            }
+                                        },
+                                    ) { it.toList() }
                                 }
-                            },
-                        ) { it.toList() }
+                            }.collect { usages ->
+                                if (consecutiveErrors > 0) {
+                                    AppLogger.d(
+                                        "UsageStateRepository: simUsagesFlow recovered " +
+                                            "after $consecutiveErrors errors",
+                                    )
+                                    consecutiveErrors = 0
+                                    transitionStatus(TrackingStatus.Active, force = true)
+                                }
+                                if (usages.isNotEmpty()) {
+                                    isDataLoadedSet.set(true)
+                                }
+                                emit(usages)
+                            }
+                        AppLogger.w("UsageStateRepository: simUsagesFlow completed normally (unexpected)")
+                        break
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        consecutiveErrors++
+                        val delayMs =
+                            (INITIAL_RETRY_DELAY_MS * (1 shl (consecutiveErrors - 1)))
+                                .coerceAtMost(MAX_RETRY_DELAY_MS)
+
+                        val isTerminalLike = consecutiveErrors >= LOG_THRESHOLD
+                        val logMessage =
+                            "UsageStateRepository: Error in simUsagesFlow (attempt $consecutiveErrors), " +
+                                "restarting in ${delayMs}ms"
+
+                        if (isTerminalLike) {
+                            if (consecutiveErrors % LOG_THRESHOLD == 0) {
+                                AppLogger.e(logMessage, e)
+                            }
+                            transitionStatus(
+                                TrackingStatus.Error(
+                                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                                    "Persistent DataStore error: usage observation degraded",
+                                ),
+                            )
+                        } else {
+                            AppLogger.w(logMessage)
+                        }
+                        delay(delayMs.milliseconds)
                     }
-                }.onEach { usages ->
-                    if (usages.isNotEmpty()) {
-                        isDataLoadedSet.set(true)
-                    }
-                }.catch { e ->
-                    AppLogger.e("UsageStateRepository: Critical error in simUsagesFlow", e)
-                    emit(emptyList())
-                }.stateIn(
-                    scope = scope,
-                    started = SharingStarted.Eagerly,
-                    initialValue = emptyList(),
-                )
+                }
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = emptyList(),
+            )
 
         /**
          * Returns a flow of all active SIM usages.
@@ -278,5 +336,11 @@ class UsageStateRepositoryImpl
                 )
                 RefreshResult.Timeout(snapshotFlow.value)
             }
+        }
+
+        private companion object {
+            private const val INITIAL_RETRY_DELAY_MS = 1000L
+            private const val MAX_RETRY_DELAY_MS = 30000L
+            private const val LOG_THRESHOLD = 5
         }
     }

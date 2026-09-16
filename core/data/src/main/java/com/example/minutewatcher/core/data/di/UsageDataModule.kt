@@ -100,4 +100,8 @@ internal interface UsageDataModule {
     @Binds
     @IntoSet
     fun bindSimIdentityObserverStatus(impl: SimIdentityObserver): TrackingStatusProvider
+
+    @Binds
+    @IntoSet
+    fun bindUsageStateStatus(impl: UsageStateRepositoryImpl): TrackingStatusProvider
 }

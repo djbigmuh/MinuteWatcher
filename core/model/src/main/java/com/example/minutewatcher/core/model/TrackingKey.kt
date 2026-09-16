@@ -14,4 +14,5 @@ enum class TrackingKey(
     BANNERS("banners"),
     APP_SETTINGS("app_settings"),
     SIM_DISCOVERY("sim_discovery"),
+    USAGE_STATE("usage_state"),
 }

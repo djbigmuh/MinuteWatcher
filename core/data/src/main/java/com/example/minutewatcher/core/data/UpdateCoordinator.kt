@@ -154,9 +154,19 @@ class UpdateCoordinator
             val newSetupJob =
                 scope.launch {
                     try {
-                        usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
-                        AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
-                        setupObservation()
+                        val success =
+                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
+                                true
+                            } ?: false
+
+                        if (success) {
+                            AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
+                            setupObservation()
+                        } else {
+                            AppLogger.w("UpdateCoordinator: Timeout waiting for initial SIMs, starting with empty")
+                            setupObservation()
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
