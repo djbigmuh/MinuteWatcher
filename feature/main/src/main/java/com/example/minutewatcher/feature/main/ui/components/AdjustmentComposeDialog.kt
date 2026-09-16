@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
 import java.util.Locale
@@ -70,7 +71,8 @@ fun AdjustmentComposeDialog(
         },
         confirmButton = {
             Button(onClick = {
-                val value = text.toFloatOrNull()
+                val normalized = NumberInputNormalizer.normalize(text)
+                val value = normalized.toFloatOrNull()
                 if (value == null) {
                     errorText = invalidNumberMsg
                 } else if (value < 0 || value > maxLimit) {
@@ -100,7 +102,10 @@ private fun AdjustmentDialogContent(
     Column {
         OutlinedTextField(
             value = text,
-            onValueChange = { onTextChange(it.replace(",", ".")) },
+            onValueChange = {
+                val normalized = NumberInputNormalizer.normalize(it)
+                onTextChange(normalized)
+            },
             label = {
                 Text(
                     stringResource(

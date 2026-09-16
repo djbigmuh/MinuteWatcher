@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.model.Constants
 
 sealed interface SimLimitValidationResult {
@@ -23,8 +24,11 @@ object SimLimitValidator {
         minutesRangeMsg: String,
         trafficRangeMsg: String,
     ): SimLimitValidationResult {
-        val min = minutesText.toIntOrNull()
-        val trafGb = trafficText.toFloatOrNull()
+        val normalizedMin = NumberInputNormalizer.normalize(minutesText)
+        val normalizedTraf = NumberInputNormalizer.normalize(trafficText)
+
+        val min = normalizedMin.toIntOrNull()
+        val trafGb = normalizedTraf.toFloatOrNull()
 
         val minErr = validateMinutes(minutesText, min, fieldRequiredMsg, invalidNumberMsg, minutesRangeMsg)
         val trafErr = validateTraffic(trafficText, trafGb, fieldRequiredMsg, invalidNumberMsg, trafficRangeMsg)

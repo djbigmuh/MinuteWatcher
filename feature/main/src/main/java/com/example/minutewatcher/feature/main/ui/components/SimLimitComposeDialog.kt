@@ -35,6 +35,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
 import java.util.Locale
@@ -130,7 +131,7 @@ private fun rememberSimLimitState(
 ): SimLimitState {
     val initialTrafficText =
         remember(initialTrafficMb) {
-            val gb = initialTrafficMb / Constants.MB_PER_GB.toFloat()
+            val gb = initialTrafficMb / Constants.MB_PER_GB
             "%.1f".format(Locale.US, gb)
         }
 
@@ -258,8 +259,8 @@ private class SimLimitState(
             }
         }
 
-        val filteredText = processed.text.filter { it.isDigit() }
-        minutesText = processed.copy(text = filteredText)
+        val normalized = NumberInputNormalizer.normalize(processed.text)
+        minutesText = processed.copy(text = normalized)
         minutesError = null
     }
 
@@ -300,9 +301,8 @@ private class SimLimitState(
             }
         }
 
-        val normalized = processed.text.replace(",", ".")
-        val filteredText = filterTrafficDigits(normalized)
-        trafficText = processed.copy(text = filteredText)
+        val normalized = NumberInputNormalizer.normalize(processed.text)
+        trafficText = processed.copy(text = normalized)
         trafficError = null
     }
 
@@ -310,11 +310,6 @@ private class SimLimitState(
         old: TextFieldValue,
         newValue: TextFieldValue,
     ): Boolean = (old.text == "0" || old.text == "0.0") && newValue.text.length > old.text.length
-
-    private fun filterTrafficDigits(text: String): String =
-        text.filterIndexed { index, c ->
-            c.isDigit() || (c == '.' && text.indexOf('.') == index)
-        }
 }
 
 @Composable
