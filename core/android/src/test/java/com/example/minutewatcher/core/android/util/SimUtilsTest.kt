@@ -1,18 +1,31 @@
 package com.example.minutewatcher.core.android.util
 
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
+import android.content.res.Configuration
+import android.content.res.Resources
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
-@RunWith(RobolectricTestRunner::class)
 class SimUtilsTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
+    private val context: Context = mock()
+    private val resources: Resources = mock()
+    private val configuration: Configuration = mock()
+
+    @Before
+    fun setup() {
+        initTestLogger(context)
+        whenever(context.resources).thenReturn(resources)
+        whenever(resources.configuration).thenReturn(configuration)
+        whenever(context.createConfigurationContext(any())).thenReturn(context)
+    }
 
     @Test
     fun `getOperatorIconResource returns correct icons for known tokens`() {

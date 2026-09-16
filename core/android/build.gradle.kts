@@ -32,6 +32,7 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            isReturnDefaultValues = true
         }
     }
 
@@ -39,7 +40,7 @@ android {
         // Phase 2: Structural acceleration.
         // Robolectric sandboxes are reused within the same JVM.
         // SingletonResetRule handles state cleanup.
-        forkEvery = 10
+        // forkEvery = 10 removed for stability
     }
 }
 
@@ -59,9 +60,11 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.mockingKotlin)
+    testImplementation(libs.json)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.androidxJunit)
+    testImplementation(testFixtures(project(":core:common")))
 
     testFixturesApi(libs.junit)
     testFixturesImplementation(project(":core:common"))

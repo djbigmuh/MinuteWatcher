@@ -2,8 +2,8 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import android.os.TransactionTooLargeException
-import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -14,15 +14,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicInteger
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class WidgetLimitManagerRegressionTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -35,7 +32,8 @@ class WidgetLimitManagerRegressionTest {
 
     @Before
     fun setup() {
-        context = ApplicationProvider.getApplicationContext()
+        initTestLogger()
+        context = mock()
     }
 
     @Test

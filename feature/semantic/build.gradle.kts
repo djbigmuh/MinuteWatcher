@@ -23,13 +23,14 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            isReturnDefaultValues = true
         }
     }
 
     tasks.withType<Test>().configureEach {
         // Phase 2: Structural acceleration.
         // Robolectric sandboxes are reused within the same JVM.
-        forkEvery = 10
+        // forkEvery = 10 removed
     }
 }
 

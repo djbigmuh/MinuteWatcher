@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
-import org.json.JSONException
-import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -170,26 +168,23 @@ object OperatorResolver {
 
     /**
      * Loads the MCC/MNC database from assets.
-     * Returns emptyMap on any error, which is then cached by the caller.
+     * Uses portable regex parsing to avoid dependency on real JSONObject in plain unit tests.
      */
     private fun loadDbInternal(context: Context): Map<String, String> =
         try {
             val inputStream = context.assets.open("mcc_mnc_db.json")
             val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
             val jsonString = reader.use { it.readText() }
-            val jsonObject = JSONObject(jsonString)
+
             val map = mutableMapOf<String, String>()
-            val keys = jsonObject.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                map[key] = jsonObject.getString(key)
+            // Simple flat JSON object parsing with regex
+            val regex = Regex("\"([^\"]+)\"\\s*:\\s*\"([^\"]+)\"")
+            regex.findAll(jsonString).forEach { match ->
+                map[match.groupValues[1]] = match.groupValues[2]
             }
             map
         } catch (e: IOException) {
             AppLogger.e("Failed to load MCC/MNC database from assets", e)
-            emptyMap()
-        } catch (e: JSONException) {
-            AppLogger.e("Malformed MCC/MNC database JSON", e)
             emptyMap()
         } catch (e: Exception) {
             // Catches all other exceptions to ensure db is set to emptyMap

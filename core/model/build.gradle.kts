@@ -13,7 +13,7 @@ java {
 tasks.withType<Test>().configureEach {
     // Phase 2: Performance optimization.
     // This module has no global state or heavy framework dependencies.
-    forkEvery = 0
+    // forkEvery = 0 removed
 }
 
 dependencies {

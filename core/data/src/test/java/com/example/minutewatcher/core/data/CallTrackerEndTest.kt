@@ -1,7 +1,11 @@
 package com.example.minutewatcher.core.data
 
+import android.telephony.TelephonyManager
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.IdentitySource
+import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -13,7 +17,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
@@ -21,9 +24,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 
-@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerEndTest : CallTrackerTestFixtures() {
     @Test
@@ -38,6 +39,26 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+            // Mock attribution resolution
+            val activeSim = ActiveSimInfo(
+                identity = SimIdentity(
+                    stableId = "id_1",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = IdentitySource.ICCID,
+                    isStable = true
+                ),
+                subscriptionId = 1,
+                slotIndex = 0,
+                iccId = "icc_1",
+                displayName = "SIM 1",
+                carrierName = "Carrier",
+                mccMnc = "25001",
+                isDefaultData = true,
+                isDefaultVoice = true
+            )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
 
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
@@ -60,6 +81,26 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+            // Mock attribution resolution
+            val activeSim = ActiveSimInfo(
+                identity = SimIdentity(
+                    stableId = "id_1",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = IdentitySource.ICCID,
+                    isStable = true
+                ),
+                subscriptionId = 1,
+                slotIndex = 0,
+                iccId = "icc_1",
+                displayName = "SIM 1",
+                carrierName = "Carrier",
+                mccMnc = "25001",
+                isDefaultData = true,
+                isDefaultVoice = true
+            )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             callTracker.onCallEnded(-1)
@@ -81,6 +122,26 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+            // Mock attribution resolution
+            val activeSim = ActiveSimInfo(
+                identity = SimIdentity(
+                    stableId = "id_1",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = IdentitySource.ICCID,
+                    isStable = true
+                ),
+                subscriptionId = 1,
+                slotIndex = 0,
+                iccId = "icc_1",
+                displayName = "SIM 1",
+                carrierName = "Carrier",
+                mccMnc = "25001",
+                isDefaultData = true,
+                isDefaultVoice = true
+            )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
             whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 2000L))
             whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 2000L))
             whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(timeProvider.uptimeMillis() - 2000L))
@@ -89,6 +150,8 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(
                 telephonyManager.callStateForSubscription,
             ).thenReturn(android.telephony.TelephonyManager.CALL_STATE_IDLE)
+            @Suppress("DEPRECATION")
+            whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_IDLE)
 
             callTracker.onCallEnded(-1)
             advanceUntilIdle()
@@ -688,6 +751,26 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+            // Mock attribution resolution
+            val activeSim = ActiveSimInfo(
+                identity = SimIdentity(
+                    stableId = "id_1",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = IdentitySource.ICCID,
+                    isStable = true
+                ),
+                subscriptionId = 1,
+                slotIndex = 0,
+                iccId = "icc_1",
+                displayName = "SIM 1",
+                carrierName = "Carrier",
+                mccMnc = "25001",
+                isDefaultData = true,
+                isDefaultVoice = true
+            )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             // Disable tracking

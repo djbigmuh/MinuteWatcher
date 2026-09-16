@@ -10,24 +10,24 @@ import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.IOException
+import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -38,27 +38,21 @@ class DataStoreResilienceTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
-    private val testScope = TestScope(mainDispatcherRule.testDispatcher)
+    private fun createAppDataStore(scope: CoroutineScope): DataStore<Preferences> {
+        val file = tmpFolder.newFile("test_app_settings_${UUID.randomUUID()}.preferences_pb")
+        return PreferenceDataStoreFactory.create(scope = scope) { file }
+    }
 
-    private lateinit var appDataStore: DataStore<Preferences>
-    private lateinit var simDataStore: DataStore<Preferences>
-
-    @Before
-    fun setup() {
-        appDataStore =
-            PreferenceDataStoreFactory.create(
-                scope = testScope,
-            ) { tmpFolder.newFile("test_app_settings.preferences_pb") }
-        simDataStore =
-            PreferenceDataStoreFactory.create(
-                scope = testScope,
-            ) { tmpFolder.newFile("test_sim_settings.preferences_pb") }
+    private fun createSimDataStore(scope: CoroutineScope): DataStore<Preferences> {
+        val file = tmpFolder.newFile("test_sim_settings_${UUID.randomUUID()}.preferences_pb")
+        return PreferenceDataStoreFactory.create(scope = scope) { file }
     }
 
     @Test
     fun `concurrent settings updates`() =
         runTest {
-            val repository = AppSettingsRepositoryImpl(appDataStore, testScope)
+            val dataStore = createAppDataStore(backgroundScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
             val updateCount = 5
             val jobs =
                 List(updateCount) {
@@ -81,7 +75,9 @@ class DataStoreResilienceTest {
     @Test
     fun `idempotent migration`() =
         runTest {
-            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val appStore = createAppDataStore(backgroundScope)
+            val simStore = createSimDataStore(backgroundScope)
+            val service = IdentityMigrationService(appStore, simStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
             val identity =
                 SimIdentity(
@@ -93,7 +89,7 @@ class DataStoreResilienceTest {
                 )
 
             // Setup legacy data
-            appDataStore.edit { it[legacyKey] = 123 }
+            appStore.edit { it[legacyKey] = 123 }
             advanceUntilIdle()
 
             // First run
@@ -108,7 +104,7 @@ class DataStoreResilienceTest {
             assertFalse("Second migration should be a no-op", outcome2.hasChanges())
             assertEquals(0, outcome2.migrated)
 
-            val prefs = appDataStore.data.first()
+            val prefs = appStore.data.first()
             assertEquals(123, prefs[intPreferencesKey("test_key_new_identity")])
             assertNull(prefs[legacyKey])
         }
@@ -116,21 +112,23 @@ class DataStoreResilienceTest {
     @Test
     fun `partial migration failure recovery`() =
         runTest {
+            val appStore = createAppDataStore(backgroundScope)
+            val simStore = createSimDataStore(backgroundScope)
             var shouldFail = true
             val testAppDataStore =
                 object : DataStore<Preferences> {
-                    override val data = appDataStore.data
+                    override val data = appStore.data
 
                     override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
                         if (shouldFail) {
                             shouldFail = false
                             throw IOException("Simulated disk failure")
                         }
-                        return appDataStore.updateData(transform)
+                        return appStore.updateData(transform)
                     }
                 }
 
-            val service = IdentityMigrationService(testAppDataStore, simDataStore)
+            val service = IdentityMigrationService(testAppDataStore, simStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
             val identity =
                 SimIdentity(
@@ -142,8 +140,8 @@ class DataStoreResilienceTest {
                 )
 
             // Setup legacy data in BOTH stores
-            appDataStore.edit { it[legacyKey] = 100 }
-            simDataStore.edit { it[legacyKey] = 200 }
+            appStore.edit { it[legacyKey] = 100 }
+            simStore.edit { it[legacyKey] = 200 }
             advanceUntilIdle()
 
             // First run - AppDataStore fails, SimDataStore succeeds
@@ -154,11 +152,11 @@ class DataStoreResilienceTest {
             assertEquals(1, outcome1.migrated) // Migrated from SimDataStore
 
             // Verify SimDataStore migrated, AppDataStore didn't
-            val simPrefs = simDataStore.data.first()
+            val simPrefs = simStore.data.first()
             assertEquals(200, simPrefs[intPreferencesKey("test_key_new_identity")])
             assertNull(simPrefs[legacyKey])
 
-            val appPrefsBefore = appDataStore.data.first()
+            val appPrefsBefore = appStore.data.first()
             assertEquals(100, appPrefsBefore[legacyKey])
             assertNull(appPrefsBefore[intPreferencesKey("test_key_new_identity")])
 
@@ -170,7 +168,7 @@ class DataStoreResilienceTest {
             assertEquals(1, outcome2.migrated) // Migrated from AppDataStore
 
             // Verify everything migrated
-            val appPrefsAfter = appDataStore.data.first()
+            val appPrefsAfter = appStore.data.first()
             assertEquals(100, appPrefsAfter[intPreferencesKey("test_key_new_identity")])
             assertNull(appPrefsAfter[legacyKey])
         }
@@ -178,7 +176,9 @@ class DataStoreResilienceTest {
     @Test
     fun `ephemeral migration idempotency`() =
         runTest {
-            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val appStore = createAppDataStore(backgroundScope)
+            val simStore = createSimDataStore(backgroundScope)
+            val service = IdentityMigrationService(appStore, simStore)
             val ephemeralSeed = "ephemeral_seed"
 
             val simInfo =
@@ -205,7 +205,7 @@ class DataStoreResilienceTest {
             val ephemeralId = SimIdentityUtils.createIdentityFromInfo(simInfo, ephemeralSeed).stableId
             val legacyKey = intPreferencesKey("test_key_$ephemeralId")
 
-            appDataStore.edit { it[legacyKey] = 555 }
+            appStore.edit { it[legacyKey] = 555 }
             advanceUntilIdle()
 
             // First run
@@ -218,7 +218,7 @@ class DataStoreResilienceTest {
             advanceUntilIdle()
             assertFalse("Second migration should be a no-op", outcome2.hasChanges())
 
-            val prefs = appDataStore.data.first()
+            val prefs = appStore.data.first()
             // Should be migrated to the identity in simInfo
             assertEquals(555, prefs[intPreferencesKey("test_key_icc_persistent_hash")])
             assertNull(prefs[legacyKey])

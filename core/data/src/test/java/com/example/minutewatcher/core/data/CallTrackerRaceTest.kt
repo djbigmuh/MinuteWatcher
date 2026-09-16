@@ -1,12 +1,10 @@
 package com.example.minutewatcher.core.data
 
-import android.Manifest
-import android.app.Application
 import android.content.Context
 import android.telephony.TelephonyManager
-import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -26,7 +24,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
@@ -34,13 +31,10 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class CallTrackerRaceTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
+    private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val callSessionRepository: CallSessionRepository = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
@@ -57,10 +51,7 @@ class CallTrackerRaceTest {
 
     @Before
     fun setup() {
-        val application = context as Application
-        Shadows
-            .shadowOf(application)
-            .grantPermissions(Manifest.permission.READ_PHONE_STATE)
+        initTestLogger(context)
 
         tracker = createTestTracker()
 

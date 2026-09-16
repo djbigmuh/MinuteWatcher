@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -90,6 +91,7 @@ abstract class MainViewModelTestFixtures {
 
     @Before
     open fun setup() {
+        initTestLogger()
         phonePermissionFlow.value = false
         usageStatsPermissionFlow.value = false
         notificationPermissionFlow.value = false

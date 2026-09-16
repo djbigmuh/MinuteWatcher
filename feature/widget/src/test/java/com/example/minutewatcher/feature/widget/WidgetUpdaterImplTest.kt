@@ -2,8 +2,8 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import android.os.TransactionTooLargeException
-import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
@@ -24,16 +24,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class WidgetUpdaterImplTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -50,7 +47,8 @@ class WidgetUpdaterImplTest {
 
     @Before
     fun setup() {
-        context = ApplicationProvider.getApplicationContext()
+        initTestLogger()
+        context = mock()
     }
 
     private fun createUpdater(

@@ -34,7 +34,7 @@ android {
     tasks.withType<Test>().configureEach {
         // Phase 2: Performance optimization.
         // Shared state is handled by AppLoggerResetRule.
-        forkEvery = 0
+        // forkEvery = 0 removed
     }
 }
 

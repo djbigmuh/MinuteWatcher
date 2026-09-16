@@ -94,9 +94,9 @@ class AppLoggerTest {
         val start = System.currentTimeMillis()
         // Wait for channel to be empty
         while (AppLogger.hasPendingLogsForTest() && System.currentTimeMillis() - start < timeoutMs) {
-            Thread.sleep(50)
+            Thread.sleep(100)
         }
-        // Give it a bit more time to finish the last write operation (which is synchronous in processLogEntry)
-        Thread.sleep(500)
+        // Give it more time to finish the last write operation (slow on Windows)
+        Thread.sleep(1000)
     }
 }

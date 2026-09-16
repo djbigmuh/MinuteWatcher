@@ -1,58 +1,93 @@
 package com.example.minutewatcher.core.android.util
 
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
+import android.content.res.AssetManager
 import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import java.io.ByteArrayInputStream
 
-@RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "ru")
 class OperatorResolverTest {
     @get:Rule
     val singletonResetRule = SingletonResetRule()
 
-    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val context: Context = mock()
+    private val assets: AssetManager = mock()
+
+    private val json = """
+        {
+            "25001": "operator_mts",
+            "25099": "operator_beeline",
+            "21407": "operator_movistar",
+            "25039": "operator_rostelecom",
+            "23201": "operator_a1",
+            "23205": "operator_three"
+        }
+    """.trimIndent()
+
+    @Before
+    fun setup() {
+        OperatorResolver.resetForTest()
+        whenever(context.assets).thenReturn(assets)
+
+        doAnswer {
+            ByteArrayInputStream(json.toByteArray(Charsets.UTF_8))
+        }.whenever(assets).open(any())
+
+        doReturn("MTS").whenever(context).getString(eq(R.string.operator_mts))
+        doReturn("Beeline").whenever(context).getString(eq(R.string.operator_beeline))
+        doReturn("Movistar").whenever(context).getString(eq(R.string.operator_movistar))
+        doReturn("Rostelecom").whenever(context).getString(eq(R.string.operator_rostelecom))
+        doReturn("A1").whenever(context).getString(eq(R.string.operator_a1))
+        doReturn("Three").whenever(context).getString(eq(R.string.operator_three))
+
+        doAnswer {
+            "Operator with mcc ${it.arguments[1]}"
+        }.whenever(context).getString(eq(R.string.operator_with_mcc), any())
+
+        doAnswer {
+            "Operator ${it.arguments[1]}"
+        }.whenever(context).getString(eq(R.string.operator_generic), any())
+    }
 
     @Test
     fun testResolve_ByDisplayName() {
-        // If display name is present and valid, it should be returned as is
         val result = OperatorResolver.resolve(context, "My Operator", "25001", 0)
         assertEquals("My Operator", result)
     }
 
     @Test
     fun testResolve_ByMccMnc_MTS() {
-        // Empty display name triggers resolution by MCC/MNC
         val result = OperatorResolver.resolve(context, "", "25001", 0)
-        assertEquals(context.getString(R.string.operator_mts), result)
+        assertEquals("MTS", result)
     }
 
     @Test
     fun testResolve_ByMccMnc_Beeline() {
-        // "null" or "SIM 1" etc also triggers resolution
         val result = OperatorResolver.resolve(context, "null", "25099", 1)
-        assertEquals(context.getString(R.string.operator_beeline), result)
+        assertEquals("Beeline", result)
     }
 
     @Test
     fun testResolve_Unknown() {
         val result = OperatorResolver.resolve(context, "", "99999", 0)
-        // New formatting: MCC:999 MNC:99
-        assertEquals(context.getString(R.string.operator_with_mcc, "MCC:999 MNC:99"), result)
+        assertEquals("Operator with mcc MCC:999 MNC:99", result)
     }
 
     @Test
     fun testResolve_Empty() {
         val result = OperatorResolver.resolve(context, "", "", 1)
-        // Should return localized "Operator 2"
-        assertEquals(context.getString(R.string.operator_generic, 2), result)
+        assertEquals("Operator 2", result)
     }
 
     @Test
@@ -76,7 +111,7 @@ class OperatorResolverTest {
     @Test
     fun testResolve_Movistar() {
         val result = OperatorResolver.resolve(context, "", "21407", 0)
-        assertEquals(context.getString(R.string.operator_movistar), result)
+        assertEquals("Movistar", result)
     }
 
     @Test
@@ -93,32 +128,29 @@ class OperatorResolverTest {
 
     @Test
     fun `isValidSpecificName rejects null string case-insensitively`() {
-        // "NULL", "Null", etc. should trigger MCC/MNC resolution
         val result = OperatorResolver.resolve(context, "NULL", "25001", 0)
-        assertEquals(context.getString(R.string.operator_mts), result)
+        assertEquals("MTS", result)
     }
 
     @Test
     fun testResolveByCandidates_MTS_from_raw() {
-        // MTS is 25001. Raw candidate on API 28 would be 2501.
         val candidates = listOf("2501", "25001", "250001")
         val result = OperatorResolver.resolveByCandidates(context, "", candidates, 0)
-        assertEquals(context.getString(R.string.operator_mts), result)
+        assertEquals("MTS", result)
     }
 
     @Test
     fun testResolveByCandidates_Unknown() {
         val candidates = listOf("9991", "99901", "999001")
         val result = OperatorResolver.resolveByCandidates(context, "", candidates, 0)
-        // Should fallback to second candidate (99901) and format it
-        assertEquals(context.getString(R.string.operator_with_mcc, "MCC:999 MNC:01"), result)
+        assertEquals("Operator with mcc MCC:999 MNC:01", result)
     }
 
     @Test
     fun testResolveWithMatchedCode_Success() {
         val candidates = listOf("2501", "25001", "250001")
         val resolution = OperatorResolver.resolveWithMatchedCode(context, "", candidates, 0)
-        assertEquals(context.getString(R.string.operator_mts), resolution.name)
+        assertEquals("MTS", resolution.name)
         assertEquals("25001", resolution.matchedCode)
     }
 }

@@ -7,11 +7,8 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
-import org.robolectric.RobolectricTestRunner
 
-@RunWith(RobolectricTestRunner::class)
 class AppSearchErrorHandlerTest {
     private val timeProvider: TimeProvider = mock()
     private val errorHandler = AppSearchErrorHandler(timeProvider)

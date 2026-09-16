@@ -100,6 +100,7 @@ androidxAppsearch = { group = "androidx.appsearch", name = "appsearch", version.
 androidxAppsearchCompiler = { group = "androidx.appsearch", name = "appsearch-compiler", version.ref = "appsearch" }
 androidxAppsearchLocalStorage = { group = "androidx.appsearch", name = "appsearch-local-storage", version.ref = "appsearch" }
 javaxInject = { group = "javax.inject", name = "javax.inject", version = "1" }
+json = { group = "org.json", name = "json", version = "20240303" }
 kotlinxCoroutinesCore = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesGuava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }

@@ -26,7 +26,7 @@ android {
     tasks.withType<Test>().configureEach {
         // Phase 2: Performance optimization.
         // Module has some Robolectric tests but no complex global state.
-        forkEvery = 0
+        // forkEvery = 0 removed
     }
 }
 

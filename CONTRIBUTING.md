@@ -85,12 +85,30 @@ As a general rule, we prefer stable releases. However, some non-stable versions 
 - **Gradle Version Catalog:** When updating `AGP` (Android Gradle Plugin) or `Kotlin` versions, you MUST update both
   `gradle/libs.versions.toml` and `gradle/build-logic.versions.toml` to keep the main project and build-logic in sync.
 
-## Build Performance
+## Build Performance & Unit Test Stability
 
-Current build and test execution settings include several "stability workarounds" that may impact performance:
+To maintain a reliable testing environment on Windows and prevent issues with native runtimes or file locking, the
+following configurations are enforced:
 
-- `org.gradle.parallel=false` and `org.gradle.configuration-cache=false` in `gradle.properties`.
-- `maxParallelForks = 1` and `forkEvery = 1` for unit tests to prevent memory leaks and race conditions in
-  Robolectric/Hilt tests.
-  These settings are intentional for the current project state and should not be changed without a comprehensive
-  verification of project stability.
+- **`maxParallelForks = 1`**: Prevents multiple JVMs from competing for system resources and native library locks.
+- **`forkEvery = 0` (or `null`)**: Unit tests are executed in a single JVM process per module. This allows **Robolectric
+  ** to reuse its sandboxes, significantly speeding up execution (Structural Acceleration).
+- **`isReturnDefaultValues = true`**: Enabled for all modules. This allows plain JUnit tests to run without Robolectric
+  for logic that doesn't strictly depend on Android constants or native behavior.
+
+### Robolectric vs. Plain JUnit
+
+- **Prefer Plain JUnit:** For utilities in `:core:common`, `:core:domain`, and `:core:model`. These tests run in a pure
+  JVM environment and are very fast.
+- **Use Robolectric:**
+    - Tests involving **DataStore** or **WorkManager**.
+    - Tests depending on **Android Constants** (e.g., `TelephonyManager.EXTRA_STATE_*`). Mocked SDKs return `null` for
+      these strings when `isReturnDefaultValues` is true, causing logic failure.
+    - Tests with **complex Android logic** or UI components (Compose Previews).
+
+### Windows-Specific Caveats
+
+- **DataStore:** When running plain JUnit tests on Windows that use DataStore, ensure each test method uses a **unique
+  filename** (e.g., using `UUID.randomUUID()`) to avoid `IOException` during file renaming due to OS-level file locking.
+- **Paths:** Avoid spaces or non-ASCII characters in the project path (e.g., `C:\Users\Павел Мухин`). This can cause
+  `NoSuchFileException` in Robolectric native runtime loading.

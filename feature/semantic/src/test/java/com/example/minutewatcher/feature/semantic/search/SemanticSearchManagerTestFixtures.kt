@@ -7,9 +7,9 @@ import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MeasurementUnit
@@ -44,7 +44,8 @@ abstract class SemanticSearchManagerTestFixtures {
 
     @Before
     open fun setup() {
-        context = ApplicationProvider.getApplicationContext()
+        initTestLogger()
+        context = mock()
         whenever(timeProvider.now()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }
         whenever(timeProvider.elapsedRealtime()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }
         whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }

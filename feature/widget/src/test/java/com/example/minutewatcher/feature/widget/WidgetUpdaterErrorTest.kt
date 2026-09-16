@@ -1,7 +1,6 @@
 package com.example.minutewatcher.feature.widget
 
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
@@ -17,13 +16,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class WidgetUpdaterErrorTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -36,7 +32,7 @@ class WidgetUpdaterErrorTest {
 
     @Before
     fun setup() {
-        context = ApplicationProvider.getApplicationContext()
+        context = mock()
         val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
         whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)

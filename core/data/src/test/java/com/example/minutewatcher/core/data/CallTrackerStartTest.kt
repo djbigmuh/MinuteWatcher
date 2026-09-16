@@ -17,7 +17,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.atLeastOnce
@@ -26,10 +25,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.milliseconds
 
-@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStartTest : CallTrackerTestFixtures() {
     private val sessionCleaner: CallSessionCleaner = mock()
@@ -210,8 +207,18 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
                     permissionManager = permissionManager,
                     scope = testScope,
                     attributionResolver = attributionResolver,
-                    startHandler = createStartHandler(attributionResolver, mutexHolder),
-                    endHandler = createEndHandler(attributionResolver, mutexHolder),
+                    startHandler = createStartHandler(
+                        attributionResolver,
+                        mutexHolder,
+                        createSessionCleaner(attributionResolver),
+                        createSettingsHandler()
+                    ),
+                    endHandler = createEndHandler(
+                        attributionResolver,
+                        mutexHolder,
+                        createSessionCleaner(attributionResolver),
+                        createSettingsHandler()
+                    ),
                     sessionCleaner = sessionCleaner,
                     permissionStateNotifier = permissionStateNotifier,
                     callMutexHolder = mutexHolder,

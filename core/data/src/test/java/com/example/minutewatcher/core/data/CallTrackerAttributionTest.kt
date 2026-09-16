@@ -10,16 +10,13 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 
-@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerAttributionTest : CallTrackerTestFixtures() {
     @Test
@@ -212,6 +209,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
     @Test
     fun `refreshStatus cleans up attributionFailures for inactive subIds`() =
         runTest(testDispatcher) {
+            setupCommonMocks()
             val tracker = createTracker()
 
             // 1. Manually add entries to attributionFailures using public API

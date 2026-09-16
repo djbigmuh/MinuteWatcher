@@ -15,10 +15,7 @@ import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.model.WidgetUiState
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
-@RunWith(RobolectricTestRunner::class)
 class WidgetLayoutTest {
     @Test
     fun `generateLayoutSpec should produce 1 row for SINGLE_LINE mode`() {

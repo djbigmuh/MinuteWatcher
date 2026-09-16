@@ -1,27 +1,25 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 import java.lang.reflect.Field
 import kotlin.time.Duration.Companion.seconds
 
-@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStopTest : CallTrackerTestFixtures() {
     @Test
@@ -78,30 +76,32 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
     fun `stop unblocks awaiters`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
 
-            // 1. Force slow initialization
-            val initStarted = CompletableDeferred<Unit>()
-            whenever(callSessionRepository.getActiveCallSubIds()).thenAnswer {
-                initStarted.complete(Unit)
-                Thread.sleep(100) // Simulate work
-                emptyList<Int>()
-            }
-
-            // 2. Trigger start and wait for it to begin
-            launch { callTracker.ensureStarted() }
-            initStarted.await()
-
-            // 3. Start a call event that will wait for init
-            val callJob =
-                launch {
-                    callTracker.onCallStarted(1)
+            val initLock = Mutex(locked = true)
+            val tracker = createTracker(
+                scope = backgroundScope,
+                repo = object : CallSessionRepository by callSessionRepository {
+                    override suspend fun getActiveCallSubIds(): List<Int>? {
+                        initLock.withLock { return emptyList() }
+                    }
                 }
+            )
+
+            // 1. Trigger start - initJob will hang at initLock
+            launch { tracker.ensureStarted() }
             runCurrent()
 
-            // 4. Act: stop the tracker while everything is waiting
-            callTracker.stop()
-            advanceUntilIdle()
+            // 2. Start a call event that will wait for init
+            val callJob = launch { tracker.onCallStarted(1) }
+            runCurrent()
+            Assert.assertFalse("callJob should be suspended", callJob.isCompleted)
+
+            // 3. Act: stop the tracker while everything is waiting
+            tracker.stop()
+
+            // 4. Release the lock to allow subsequent refreshStatus in finalize block to finish
+            if (initLock.isLocked) initLock.unlock()
+            runCurrent()
 
             // 5. Assert: callJob should be completed (not hanging)
             val result =
@@ -116,18 +116,31 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
     fun `onCallStarted rethrows CancellationException when caller is cancelled`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val tracker = createTracker(backgroundScope)
+
+            val initLock = Mutex(locked = true)
+            val tracker = createTracker(
+                scope = backgroundScope,
+                repo = object : CallSessionRepository by callSessionRepository {
+                    override suspend fun getActiveCallSubIds(): List<Int>? {
+                        initLock.withLock { return emptyList() }
+                    }
+                }
+            )
 
             val callerJob =
                 launch {
                     tracker.onCallStarted(1)
                 }
             runCurrent()
+            Assert.assertFalse("Should be suspended waiting for init", callerJob.isCompleted)
 
             callerJob.cancel()
-            advanceUntilIdle()
+            runCurrent()
 
             Assert.assertTrue("Caller job should be cancelled", callerJob.isCancelled)
+
+            if (initLock.isLocked) initLock.unlock()
+            tracker.stop()
         }
 
     @Test
@@ -144,7 +157,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
                     createAttributionResolver(),
                     startHandler,
                     mock(),
-                    mock(),
+                    createSessionCleaner(createAttributionResolver()),
                     permissionStateNotifier,
                     createMutexHolder(),
                 )

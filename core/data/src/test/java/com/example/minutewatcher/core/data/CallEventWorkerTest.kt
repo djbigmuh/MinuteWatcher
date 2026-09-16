@@ -1,13 +1,12 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
-import android.telephony.TelephonyManager
-import androidx.test.core.app.ApplicationProvider
 import androidx.work.Data
 import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.example.minutewatcher.core.common.util.initTestLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -23,11 +22,11 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallEventWorkerTest {
     private val callTracker: CallTracker = mock()
-    private lateinit var context: Context
+    private val context: Context = mock()
 
     @Before
     fun setup() {
-        context = ApplicationProvider.getApplicationContext()
+        initTestLogger(context)
     }
 
     @Test
@@ -38,7 +37,7 @@ class CallEventWorkerTest {
             val inputData =
                 Data
                     .Builder()
-                    .putString("state", TelephonyManager.EXTRA_STATE_OFFHOOK)
+                    .putString("state", "OFFHOOK")
                     .putInt("subId", subId)
                     .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, eventTime)
                     .build()
@@ -70,7 +69,7 @@ class CallEventWorkerTest {
             val inputData =
                 Data
                     .Builder()
-                    .putString("state", TelephonyManager.EXTRA_STATE_IDLE)
+                    .putString("state", "IDLE")
                     .putInt("subId", subId)
                     .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, eventTime)
                     .build()
@@ -128,7 +127,7 @@ class CallEventWorkerTest {
             val inputData =
                 Data
                     .Builder()
-                    .putString("state", TelephonyManager.EXTRA_STATE_RINGING)
+                    .putString("state", "RINGING")
                     .build()
 
             val worker =

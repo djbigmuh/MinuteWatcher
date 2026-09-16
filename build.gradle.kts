@@ -1,4 +1,3 @@
-import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
@@ -56,15 +55,28 @@ subprojects {
         jvmArgs("-Dnet.bytebuddy.experimental=true")
         // Centralized Robolectric configuration
         systemProperty("robolectric.sdk", "37")
-        // Robolectric и Mockito требуют --add-opens для JDK 17+ из-за использования internal API.
-        // Это строгое соответствие требованиям инструментов тестирования, не эвристика.
-        // При 48Гб ОЗУ и 12 ядрах увеличена квота памяти и форков для ускорения.
-        // Phase 1: Parallel execution across modules.
-        // Phase 2: Structural acceleration via sandbox reuse (forkEvery > 1).
-        // Isolation is maintained by SingletonResetRule and AppLoggerResetRule.
+        // Redirect Robolectric dependencies and home to avoid spaces/non-ASCII in path (e.g. C:\Users\Павел Мухин)
+        // This fixes java.nio.file.NoSuchFileException caused by %20 in path and native runtime loading issues.
+        val userHomeDir = rootProject.projectDir.resolve(".gradle/user-home")
+        val roboCacheDir = rootProject.projectDir.resolve(".gradle/robolectric-cache")
+        val tmpDir = rootProject.projectDir.resolve("build/tmp")
+
+        userHomeDir.mkdirs()
+        roboCacheDir.mkdirs()
+        tmpDir.mkdirs()
+
+        systemProperty("robolectric.dependency.repo.dir", roboCacheDir.absolutePath)
+        systemProperty("robolectric.dependency.repo.id", "central")
+        systemProperty("robolectric.dependency.repo.url", "https://repo1.maven.org/maven2/")
+        systemProperty("user.home", userHomeDir.absolutePath)
+        systemProperty("java.io.tmpdir", tmpDir.absolutePath)
+        systemProperty("robolectric.logging.enabled", "true")
+
+        // Policy: Reliability over speed.
+        // maxParallelForks = 1 and forkEvery = 1 prevent Robolectric native runtime issues on Windows.
         maxHeapSize = "1536m"
-        maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
-        forkEvery = 1 // Default. Optimized in subprojects.
+        maxParallelForks = 1
+        forkEvery = 1
 
         // Disable JaCoCo agent by default to speed up test execution.
         // Enable only when -Pcoverage is passed (e.g., in CI coverage jobs).

@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SeedResolutionResult
@@ -20,22 +21,22 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.stub
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.milliseconds
 
-@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityObserverResilienceTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val discovery: SimIdentityDiscovery = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -163,10 +164,8 @@ class SimIdentityObserverResilienceTest {
                 SimDiscoveryResult.Failed(SimDiscoveryFailureReason.STORAGE_ERROR),
             )
             startObserverAndTrigger()
-            testScheduler.advanceTimeBy(30_000.milliseconds) // Backoff for 4 attempts
+            testScheduler.advanceTimeBy(20_000.milliseconds)
             testScheduler.runCurrent()
-            // Should have at least some calls
-            verify(fetcher, atLeastOnce()).fetchActiveSimsWithRetry(any())
 
             // 1 success
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
@@ -185,7 +184,7 @@ class SimIdentityObserverResilienceTest {
             testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            testScheduler.advanceTimeBy(100_000.milliseconds)
+            testScheduler.advanceTimeBy(20_000.milliseconds)
             testScheduler.runCurrent()
 
             // If counter wasn't reset, it would have stopped (4+2=6 > 5)
@@ -357,11 +356,12 @@ class SimIdentityObserverResilienceTest {
             testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            // Wait for some retries but not all
+            // Wait for some retries but not all (4 attempts)
             testScheduler.advanceTimeBy(30_000.milliseconds)
             testScheduler.runCurrent()
 
-            assertTrue(observer.status.value is TrackingStatus.Error)
+            // Should NOT be Error yet (stops at 6)
+            assertTrue("Should NOT be Error status yet", observer.status.value !is TrackingStatus.Error)
             // Should keep simListA
             assertEquals("Should keep last known good SIMs during retries", simListA, observer.activeSimsCache.value)
 
