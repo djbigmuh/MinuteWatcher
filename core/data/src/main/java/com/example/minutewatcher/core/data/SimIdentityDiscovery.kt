@@ -40,6 +40,12 @@ open class SimIdentityDiscovery
          */
         open fun observeSubscriptionChanges(): Flow<Unit> =
             callbackFlow {
+                val manager = subscriptionManager ?: run {
+                    trySend(Unit)
+                    close()
+                    return@callbackFlow
+                }
+
                 val listener =
                     object : SubscriptionManager.OnSubscriptionsChangedListener() {
                         override fun onSubscriptionsChanged() {
@@ -55,13 +61,13 @@ open class SimIdentityDiscovery
                         isListenerRegistered =
                             try {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    subscriptionManager.addOnSubscriptionsChangedListener(
+                                    manager.addOnSubscriptionsChangedListener(
                                         context.mainExecutor,
                                         listener,
                                     )
                                 } else {
                                     @Suppress("DEPRECATION")
-                                    subscriptionManager.addOnSubscriptionsChangedListener(listener)
+                                    manager.addOnSubscriptionsChangedListener(listener)
                                 }
                                 true
                             } catch (e: SecurityException) {
@@ -70,7 +76,7 @@ open class SimIdentityDiscovery
                             }
                     } else if (!hasPermission && isListenerRegistered) {
                         try {
-                            subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                            manager.removeOnSubscriptionsChangedListener(listener)
                         } catch (e: Exception) {
                             AppLogger.w("Failed to unregister SubscriptionsChangedListener", e)
                         }
@@ -91,7 +97,7 @@ open class SimIdentityDiscovery
 
                 awaitClose {
                     runCatching {
-                        subscriptionManager.removeOnSubscriptionsChangedListener(listener)
+                        manager.removeOnSubscriptionsChangedListener(listener)
                     }.onFailure { e ->
                         if (e !is CancellationException) {
                             AppLogger.w("Failed to unregister SubscriptionsChangedListener in awaitClose", e)
@@ -119,6 +125,9 @@ open class SimIdentityDiscovery
             seed: String,
             isStable: Boolean = true,
         ): SimDiscoveryResult {
+            if (subscriptionManager == null) {
+                return SimDiscoveryResult.Unsupported
+            }
             if (!permissionManager.hasPhoneStatePermission()) {
                 return SimDiscoveryResult.PermissionMissing
             }

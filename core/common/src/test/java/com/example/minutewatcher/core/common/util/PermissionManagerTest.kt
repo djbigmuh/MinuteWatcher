@@ -27,7 +27,7 @@ class PermissionManagerTest {
         initTestLogger(context)
         whenever(context.packageName).thenReturn("com.example.minutewatcher")
         whenever(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)).thenReturn(subscriptionManager)
-        permissionManager = PermissionManager(context)
+        permissionManager = PermissionManager(context, subscriptionManager)
     }
 
     @Test

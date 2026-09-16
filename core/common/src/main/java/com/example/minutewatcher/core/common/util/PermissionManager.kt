@@ -24,20 +24,14 @@ class PermissionManager
     @Inject
     constructor(
         @param:ApplicationContext private val context: Context,
+        private val subscriptionManager: SubscriptionManager?,
     ) {
-        /**
-         * [SubscriptionManager] is a core dependency.
-         * We use [checkNotNull] to fail fast if it's unavailable, consistent with IdentityDataModule.
-         */
-        private val subscriptionManager =
-            checkNotNull(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager) {
-                "TELEPHONY_SUBSCRIPTION_SERVICE unavailable"
-            }
-
         /**
          * Returns true if the device supports telephony services (SIM cards).
          */
-        fun isTelephonySupported(): Boolean = context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
+        fun isTelephonySupported(): Boolean =
+            subscriptionManager != null &&
+                context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
 
         fun hasPhoneStatePermission(): Boolean {
             val granted =
@@ -58,13 +52,14 @@ class PermissionManager
          */
         @Suppress("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> {
+            val manager = subscriptionManager ?: return emptyList()
             if (ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_PHONE_STATE,
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
                 return try {
-                    subscriptionManager.activeSubscriptionInfoList ?: emptyList()
+                    manager.activeSubscriptionInfoList.orEmpty()
                 } catch (e: SecurityException) {
                     AppLogger.e("PermissionManager: SecurityException in getActiveSubscriptions", e)
                     emptyList()
@@ -78,6 +73,7 @@ class PermissionManager
          * Caller must ensure permission is granted before invoking this method.
          */
         fun getDefaultVoiceSubscriptionId(): Int {
+            if (subscriptionManager == null) return -1
             if (ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_PHONE_STATE,
@@ -98,6 +94,7 @@ class PermissionManager
          * Caller must ensure permission is granted before invoking this method.
          */
         fun getDefaultDataSubscriptionId(): Int {
+            if (subscriptionManager == null) return -1
             if (ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_PHONE_STATE,

@@ -17,7 +17,7 @@ class SimDiscoveryDependencies
     @Inject
     constructor(
         @ApplicationContext val context: Context,
-        val subscriptionManager: SubscriptionManager,
+        val subscriptionManager: SubscriptionManager?,
         val permissionManager: PermissionManager,
         val permissionStateNotifier: PermissionStateNotifier,
     )

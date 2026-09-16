@@ -31,33 +31,22 @@ abstract class IdentityDataModule {
     companion object {
         /**
          * Provides [TelephonyManager] for SIM card and signal information.
-         *
-         * **Fail-fast Policy:** We use [checkNotNull] because [Context.TELEPHONY_SERVICE]
-         * is a core requirement for the app's primary functionality. Its absence indicates
-         * a severe device incompatibility or a broken Android environment.
+         * Returns null if the service is unavailable on the device.
          */
         @Provides
         @Singleton
         fun provideTelephonyManager(
             @ApplicationContext context: Context,
-        ): TelephonyManager =
-            checkNotNull(context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager) {
-                "TELEPHONY_SERVICE unavailable"
-            }
+        ): TelephonyManager? = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
 
         /**
          * Provides [SubscriptionManager] for multi-SIM support.
-         *
-         * **Fail-fast Policy:** We use [checkNotNull] because [Context.TELEPHONY_SUBSCRIPTION_SERVICE]
-         * is required for all identity resolution and tracking logic.
+         * Returns null if the service is unavailable on the device.
          */
         @Provides
         @Singleton
         fun provideSubscriptionManager(
             @ApplicationContext context: Context,
-        ): SubscriptionManager =
-            checkNotNull(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager) {
-                "TELEPHONY_SUBSCRIPTION_SERVICE unavailable"
-            }
+        ): SubscriptionManager? = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager
     }
 }

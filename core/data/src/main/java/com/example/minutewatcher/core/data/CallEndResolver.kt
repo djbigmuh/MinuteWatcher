@@ -26,7 +26,7 @@ internal class CallEndResolver
         @ApplicationContext private val context: Context,
         private val callSessionRepository: CallSessionRepository,
         private val permissionManager: PermissionManager,
-        private val telephonyManager: TelephonyManager,
+        private val telephonyManager: TelephonyManager?,
     ) {
         sealed interface ResolveResult {
             data class SubIds(
@@ -95,6 +95,8 @@ internal class CallEndResolver
 
         @Suppress("MissingPermission")
         private fun isDeviceIdle(activeSubIds: List<Int>): Boolean {
+            val manager = telephonyManager ?: return true // Conservative: assume idle if no telephony
+
             if (ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_PHONE_STATE,
@@ -106,12 +108,12 @@ internal class CallEndResolver
 
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 activeSubIds.all { id ->
-                    telephonyManager.createForSubscriptionId(id).callStateForSubscription ==
+                    manager.createForSubscriptionId(id).callStateForSubscription ==
                         TelephonyManager.CALL_STATE_IDLE
                 }
             } else {
                 @Suppress("DEPRECATION")
-                telephonyManager.callState == TelephonyManager.CALL_STATE_IDLE
+                manager.callState == TelephonyManager.CALL_STATE_IDLE
             }
         }
 
@@ -123,6 +125,8 @@ internal class CallEndResolver
 
         @Suppress("MissingPermission")
         private fun findTargetSubId(activeSubIds: List<Int>): Int? {
+            val manager = telephonyManager ?: return null
+
             if (ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_PHONE_STATE,
@@ -136,7 +140,7 @@ internal class CallEndResolver
                 activeSubIds.size == 1 -> activeSubIds.first()
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                     activeSubIds.singleOrNull { id ->
-                        telephonyManager.createForSubscriptionId(id).callStateForSubscription ==
+                        manager.createForSubscriptionId(id).callStateForSubscription ==
                             TelephonyManager.CALL_STATE_IDLE
                     }
                 }
