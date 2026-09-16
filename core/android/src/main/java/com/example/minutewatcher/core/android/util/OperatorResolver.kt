@@ -231,7 +231,7 @@ object OperatorResolver {
             if (resKey != null) {
                 resolveFromDbKey(context, resKey)
             } else {
-                val primaryCode = candidates.firstOrNull() ?: ""
+                val primaryCode = candidates.firstOrNull().orEmpty()
                 if (primaryCode.isNotEmpty() && primaryCode != "00000") {
                     AppLogger.w(
                         "Unknown MCC/MNC candidates detected: $candidates. " +
@@ -245,7 +245,7 @@ object OperatorResolver {
             if (candidates.size >= 2) {
                 candidates[1]
             } else {
-                candidates.firstOrNull() ?: ""
+                candidates.firstOrNull().orEmpty()
             }
 
         return resolved ?: fallbackResolution(context, fallbackCode, simSlot)
@@ -295,7 +295,7 @@ object OperatorResolver {
         return if (resolved != null) {
             Resolution(resolved, matchedCode)
         } else {
-            Resolution(fallbackResolution(context, candidates.firstOrNull() ?: "", simSlot), null)
+            Resolution(fallbackResolution(context, candidates.firstOrNull().orEmpty(), simSlot), null)
         }
     }
 

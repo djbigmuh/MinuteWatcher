@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -129,8 +130,8 @@ private fun rememberSimLimitState(
 ): SimLimitState {
     val initialTrafficText =
         remember(initialTrafficMb) {
-            val gb = initialTrafficMb / Constants.MB_PER_GB
-            "%.1f".format(gb).replace(",", ".")
+            val gb = initialTrafficMb / Constants.MB_PER_GB.toFloat()
+            "%.1f".format(Locale.US, gb)
         }
 
     return key(slot) {

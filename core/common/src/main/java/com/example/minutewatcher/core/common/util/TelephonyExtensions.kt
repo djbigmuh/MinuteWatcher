@@ -9,7 +9,7 @@ import android.telephony.SubscriptionInfo
 val SubscriptionInfo.mccStringCompat: String
     get() =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            mccString ?: ""
+            mccString.orEmpty()
         } else {
             // @Suppress("DEPRECATION") is required for backward compatibility with API < 29
             // where mcc/mnc fields are the only way to get these values.
@@ -24,7 +24,7 @@ val SubscriptionInfo.mccStringCompat: String
 val SubscriptionInfo.mncStringCompat: String
     get() =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            mncString ?: ""
+            mncString.orEmpty()
         } else {
             // @Suppress("DEPRECATION") is required for backward compatibility with API < 29
             // where mcc/mnc fields are the only way to get these values.

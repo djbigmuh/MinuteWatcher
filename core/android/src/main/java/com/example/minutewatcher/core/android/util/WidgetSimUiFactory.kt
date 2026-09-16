@@ -105,7 +105,7 @@ object WidgetSimUiFactory {
             suffix = strings.minutesAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = if (showLimit) strings.fractionFormat.format(limit) else "",
+            limitText = if (showLimit) "/$limit" else "",
             usedFull = "${strings.usedText}: ${formatWithSuffix(used.toString(), strings.minutesAbbr)}",
             limitFull = "${strings.limitText}: ${formatWithSuffix(limit.toString(), strings.minutesAbbr)}",
         )
@@ -132,7 +132,7 @@ object WidgetSimUiFactory {
             suffix = strings.gbAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = if (showLimit) strings.fractionFormat.format(FormatUtils.formatTrafficGb(limitGb)) else "",
+            limitText = if (showLimit) "/${FormatUtils.formatTrafficGb(limitGb)}" else "",
             usedFull = "${strings.usedText}: ${
                 formatWithSuffix(
                     FormatUtils.formatTrafficGb(usedGb),

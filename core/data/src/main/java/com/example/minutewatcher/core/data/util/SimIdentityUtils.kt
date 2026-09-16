@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import java.security.MessageDigest
+import java.util.Locale
 
 object SimIdentityUtils {
     /**
@@ -21,7 +22,7 @@ object SimIdentityUtils {
         if (mcc.isEmpty()) return emptyList()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val mnc = info.mncString ?: ""
+            val mnc = info.mncString.orEmpty()
             if (mnc.isNotEmpty()) listOf("$mcc$mnc") else emptyList()
         } else {
             @Suppress("DEPRECATION")
@@ -37,7 +38,7 @@ object SimIdentityUtils {
     private const val MNC_LEN_2 = 2
     private const val MNC_LEN_3 = 3
 
-    fun getMccMnc(info: SubscriptionInfo): String = mccMncCandidates(info).firstOrNull() ?: ""
+    fun getMccMnc(info: SubscriptionInfo): String = mccMncCandidates(info).firstOrNull().orEmpty()
 
     fun createIdentityFromInfo(
         info: SubscriptionInfo,
@@ -82,6 +83,6 @@ object SimIdentityUtils {
     ): String {
         val md = MessageDigest.getInstance("SHA-256")
         val bytes = md.digest((input + seed).toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
+        return bytes.joinToString("") { "%02x".format(Locale.US, it) }
     }
 }

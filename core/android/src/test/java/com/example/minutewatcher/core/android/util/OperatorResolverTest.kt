@@ -24,7 +24,8 @@ class OperatorResolverTest {
     private val context: Context = mock()
     private val assets: AssetManager = mock()
 
-    private val json = """
+    private val json =
+        """
         {
             "25001": "operator_mts",
             "25099": "operator_beeline",
@@ -33,7 +34,7 @@ class OperatorResolverTest {
             "23201": "operator_a1",
             "23205": "operator_three"
         }
-    """.trimIndent()
+        """.trimIndent()
 
     @Before
     fun setup() {

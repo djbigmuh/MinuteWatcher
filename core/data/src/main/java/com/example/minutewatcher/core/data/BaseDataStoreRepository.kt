@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
  * This class ensures AOSP DataStore compliance for child repositories.
  * Safe to call from any coroutine context.
  */
-abstract class BaseDataStoreRepository(
+open class BaseDataStoreRepository(
     protected val dataStore: DataStore<Preferences>,
 ) {
     /**

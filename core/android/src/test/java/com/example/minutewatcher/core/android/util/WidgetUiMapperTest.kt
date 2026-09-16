@@ -27,8 +27,8 @@ class WidgetUiMapperTest {
     @get:Rule
     val singletonResetRule = SingletonResetRule()
 
-    private val COLOR_BLACK = Color.BLACK
-    private val COLOR_WHITE = Color.WHITE
+    private val colorBlack = Color.BLACK
+    private val colorWhite = Color.WHITE
 
     private val widgetStrings =
         WidgetStrings(
@@ -81,7 +81,7 @@ class WidgetUiMapperTest {
                 simArrangement = 0,
                 fontSize = 2,
                 transparency = 50,
-                backgroundColor = COLOR_BLACK,
+                backgroundColor = colorBlack,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
                 simStates =
@@ -116,7 +116,7 @@ class WidgetUiMapperTest {
         assertEquals("min.", sim0.minutesSuffix)
         assertEquals("/200", sim0.minutesLimitText)
         assertTrue(sim0.showMinutesLimit)
-        assertEquals(COLOR_WHITE, sim0.textColor)
+        assertEquals(colorWhite, sim0.textColor)
 
         // Verify limit is in layout spec for TWO_LINES mode
         val limitComponent =
@@ -133,7 +133,7 @@ class WidgetUiMapperTest {
     @Test
     fun testSnapshotToUiState_EmptySnapshot() {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
-        val settings = WidgetSettingsState(1, 0, 50, 2, COLOR_BLACK, true, true, emptyMap())
+        val settings = WidgetSettingsState(1, 0, 50, 2, colorBlack, true, true, emptyMap())
 
         val uiState =
             WidgetUiMapper.mapFromSnapshot(
@@ -187,7 +187,7 @@ class WidgetUiMapperTest {
                 simArrangement = 0,
                 transparency = 50,
                 fontSize = 2,
-                backgroundColor = COLOR_BLACK,
+                backgroundColor = colorBlack,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
                 simStates = mapOf(0 to SimSettingsState(true, true, true, true, false, false, false)),
@@ -223,7 +223,7 @@ class WidgetUiMapperTest {
                 simArrangement = 0,
                 fontSize = 2,
                 transparency = 50,
-                backgroundColor = COLOR_WHITE,
+                backgroundColor = colorWhite,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
                 simStates = emptyMap(),
@@ -238,7 +238,7 @@ class WidgetUiMapperTest {
             )
         val sim0 = uiState.simUiStates[0]
 
-        assertEquals(COLOR_BLACK, sim0.textColor)
+        assertEquals(colorBlack, sim0.textColor)
     }
 
     @Test
@@ -283,7 +283,7 @@ class WidgetUiMapperTest {
                 simArrangement = 0,
                 fontSize = 2,
                 transparency = 50,
-                backgroundColor = COLOR_BLACK,
+                backgroundColor = colorBlack,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
                 simStates =
@@ -334,7 +334,7 @@ class WidgetUiMapperTest {
                 simArrangement = 0,
                 fontSize = 2,
                 transparency = 81,
-                backgroundColor = COLOR_BLACK,
+                backgroundColor = colorBlack,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
                 simStates = emptyMap(),

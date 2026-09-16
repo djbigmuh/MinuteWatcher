@@ -78,14 +78,16 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
             setupCommonMocks()
 
             val initLock = Mutex(locked = true)
-            val tracker = createTracker(
-                scope = backgroundScope,
-                repo = object : CallSessionRepository by callSessionRepository {
-                    override suspend fun getActiveCallSubIds(): List<Int>? {
-                        initLock.withLock { return emptyList() }
-                    }
-                }
-            )
+            val tracker =
+                createTracker(
+                    scope = backgroundScope,
+                    repo =
+                        object : CallSessionRepository by callSessionRepository {
+                            override suspend fun getActiveCallSubIds(): List<Int>? {
+                                initLock.withLock { return emptyList() }
+                            }
+                        },
+                )
 
             // 1. Trigger start - initJob will hang at initLock
             launch { tracker.ensureStarted() }
@@ -118,14 +120,16 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
             setupCommonMocks()
 
             val initLock = Mutex(locked = true)
-            val tracker = createTracker(
-                scope = backgroundScope,
-                repo = object : CallSessionRepository by callSessionRepository {
-                    override suspend fun getActiveCallSubIds(): List<Int>? {
-                        initLock.withLock { return emptyList() }
-                    }
-                }
-            )
+            val tracker =
+                createTracker(
+                    scope = backgroundScope,
+                    repo =
+                        object : CallSessionRepository by callSessionRepository {
+                            override suspend fun getActiveCallSubIds(): List<Int>? {
+                                initLock.withLock { return emptyList() }
+                            }
+                        },
+                )
 
             val callerJob =
                 launch {

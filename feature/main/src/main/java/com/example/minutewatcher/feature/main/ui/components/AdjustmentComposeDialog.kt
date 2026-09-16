@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
+import java.util.Locale
 
 @Composable
 fun AdjustmentComposeDialog(
@@ -32,7 +33,7 @@ fun AdjustmentComposeDialog(
             if (isMinutes) {
                 initialValue.toInt().toString()
             } else {
-                "%.1f".format(initialValue).replace(",", ".")
+                "%.1f".format(Locale.US, initialValue)
             },
         )
     }

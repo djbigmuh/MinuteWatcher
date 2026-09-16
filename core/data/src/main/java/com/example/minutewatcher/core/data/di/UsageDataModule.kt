@@ -36,68 +36,68 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 // @Suppress("unused") is required because Hilt discovers bindings via reflection.
 @Suppress("unused")
-internal abstract class UsageDataModule {
+internal interface UsageDataModule {
     @Binds
     @Singleton
-    abstract fun bindSimUsageRepository(impl: SimUsageRepositoryImpl): SimUsageRepository
+    fun bindSimUsageRepository(impl: SimUsageRepositoryImpl): SimUsageRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimUsageResetRepository(impl: SimUsageRepositoryImpl): SimUsageResetRepository
+    fun bindSimUsageResetRepository(impl: SimUsageRepositoryImpl): SimUsageResetRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimUsageAdjustmentRepository(impl: SimUsageRepositoryImpl): SimUsageAdjustmentRepository
+    fun bindSimUsageAdjustmentRepository(impl: SimUsageRepositoryImpl): SimUsageAdjustmentRepository
 
     @Binds
     @Singleton
-    abstract fun bindSimLimitsRepository(impl: SimLimitsRepositoryImpl): SimLimitsRepository
+    fun bindSimLimitsRepository(impl: SimLimitsRepositoryImpl): SimLimitsRepository
 
     @Binds
     @Singleton
-    abstract fun bindUsageStateRepository(impl: UsageStateRepositoryImpl): UsageStateRepository
+    fun bindUsageStateRepository(impl: UsageStateRepositoryImpl): UsageStateRepository
 
     @Binds
     @Singleton
-    abstract fun bindTrackingStatusRepository(impl: TrackingStatusRepositoryImpl): TrackingStatusRepository
+    fun bindTrackingStatusRepository(impl: TrackingStatusRepositoryImpl): TrackingStatusRepository
 
     @Binds
     @Singleton
-    abstract fun bindAutoResetUseCase(impl: ResetManager): AutoResetUseCase
+    fun bindAutoResetUseCase(impl: ResetManager): AutoResetUseCase
 
     @Binds
     @Singleton
-    abstract fun bindUsageUseCase(impl: UsageUseCaseImpl): UsageUseCase
+    fun bindUsageUseCase(impl: UsageUseCaseImpl): UsageUseCase
 
     @Binds
     @Singleton
-    abstract fun bindDataRefreshNotifier(impl: DataRefreshNotifierImpl): DataRefreshNotifier
+    fun bindDataRefreshNotifier(impl: DataRefreshNotifierImpl): DataRefreshNotifier
 
     @Binds
     @Singleton
-    abstract fun bindDataChangeNotifier(impl: UpdateCoordinator): DataChangeNotifier
+    fun bindDataChangeNotifier(impl: UpdateCoordinator): DataChangeNotifier
 
     @Binds
     @Singleton
-    abstract fun bindWidgetUpdateCoordinator(impl: UpdateCoordinator): WidgetUpdateCoordinator
+    fun bindWidgetUpdateCoordinator(impl: UpdateCoordinator): WidgetUpdateCoordinator
 
     @Binds
     @Singleton
-    abstract fun bindNetworkStatsProvider(impl: RealNetworkStatsProvider): NetworkStatsProvider
+    fun bindNetworkStatsProvider(impl: RealNetworkStatsProvider): NetworkStatsProvider
 
     @Binds
     @IntoSet
-    abstract fun bindCallTrackerStatus(impl: CallTracker): TrackingStatusProvider
+    fun bindCallTrackerStatus(impl: CallTracker): TrackingStatusProvider
 
     @Binds
     @IntoSet
-    abstract fun bindTrafficTrackerStatus(impl: TrafficTracker): TrackingStatusProvider
+    fun bindTrafficTrackerStatus(impl: TrafficTracker): TrackingStatusProvider
 
     @Binds
     @IntoSet
-    abstract fun bindUpdateCoordinatorStatus(impl: UpdateCoordinator): TrackingStatusProvider
+    fun bindUpdateCoordinatorStatus(impl: UpdateCoordinator): TrackingStatusProvider
 
     @Binds
     @IntoSet
-    abstract fun bindSimIdentityObserverStatus(impl: SimIdentityObserver): TrackingStatusProvider
+    fun bindSimIdentityObserverStatus(impl: SimIdentityObserver): TrackingStatusProvider
 }

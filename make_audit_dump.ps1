@@ -1,28 +1,60 @@
-﻿<#
+<#
 .SYNOPSIS
-Создаёт единый дамп проекта для AI-ассистента с исправленным измерительным контуром.
+Создаёт единый дамп проекта для AI-ассистента (исходники + ТЕСТЫ + отчёты статического анализа).
+
 .DESCRIPTION
 Гарантии:
-1. Используются ТОЛЬКО файлы под версионным контролем (git ls-files).
-2. Исключаются: .artifacts/, .gradle_home/, .gradle/, build/, .idea/,
-   .kotlin/, .cxx/, intermediates/, generated/, captures/, screenshots/,
-   reports/, audit_dump/, .git/, node_modules/.
-3. Исключаются файлы: local.properties, benchmark-config.txt,
-   detekt_output.txt, diag_result.txt, deps_ksp.txt, ktlint_output.txt,
-   verify_output.txt, verify_status.txt, *.log, *.apk, *.aab, *.jks.
-4. Рекурсивно парсятся XML отчёты: ktlint (Checkstyle), detekt, lint-results-debug.xml.
-5. Проверяется свежесть (staleness) отчётов относительно исходников и последнего коммита.
-6. Всё собирается в ОДИН файл ProjectDump_Combined.txt.
-7. Корректная UTF-8 кодировка без BOM при чтении и записи.
+1. Используются файлы под версионным контролем (git ls-files). Опционально (-IncludeUntracked)
+   добавляются неотслеживаемые файлы рабочего дерева (новые тесты/исходники ещё не в коммите).
+2. ТЕСТОВЫЕ исходники (src/test, src/androidTest, src/testFixtures) включаются В ДАМП ПО УМОЛЧАНИЮ
+   и выносятся в отдельную секцию "32 TEST SOURCES FULL", чтобы их можно было аудировать наравне
+   с основным кодом. Для облегчённого дампа без тестов используйте -ExcludeTests.
+3. Исключаются каталоги: .artifacts/, .gradle_home/, .gradle/, build/, .idea/, .kotlin/, .cxx/,
+   intermediates/, generated/, tmp/, captures/, screenshots/, reports/, audit_dump/, .git/, node_modules/.
+4. Исключаются файлы: local.properties, benchmark-config.txt, detekt_output.txt, diag_result.txt,
+   deps_ksp.txt, ktlint_output.txt, verify_output.txt, verify_status.txt, *.log, *.apk, *.aab, *.jks,
+   а также сам инструментарий аудита (make_audit_dump.ps1, VERIFY.bat и пр.).
+5. Рекурсивно парсятся XML отчёты: ktlint (Checkstyle), detekt, lint-results-debug.xml, unit-test результаты.
+6. Проверяется свежесть (staleness) отчётов относительно последнего коммита.
+7. Всё собирается в ОДИН файл ProjectDump_Combined.txt.
+8. Корректная UTF-8 (без BOM) кодировка при чтении и записи.
+9. Устойчивость к не-ASCII путям: git вызывается с core.quotepath=false; сопоставление путей
+   не зависит от разделителя (\ или /).
+
+.PARAMETER ExcludeTests
+Не включать тестовые исходники в дамп (секция 32 будет помечена как пропущенная).
+
+.PARAMETER IncludeTests
+Устаревший флаг обратной совместимости. Тесты теперь включены ПО УМОЛЧАНИЮ, поэтому флаг
+принимается, но игнорируется (о чём выводится сообщение).
+
+.PARAMETER IncludeUntracked
+Дополнительно включать НЕотслеживаемые git файлы рабочего дерева (секция 34). Полезно для аудита
+свеженаписанных, ещё не закоммиченных тестов/исходников. По умолчанию выключено (дамп = tracked-only).
+
+.PARAMETER Blind
+Не включать git-контекст (branch/status/log) в дамп.
+
 .NOTES
-Запуск: .\make_audit_dump.ps1 [-IncludeTests] [-Blind]
+Запуск: .\make_audit_dump.ps1 [-ExcludeTests] [-IncludeUntracked] [-Blind]
+Совместимость: Windows PowerShell 5.1+ и PowerShell 7+ (синтаксис ограничен 5.1).
 #>
 param(
+    [switch]$ExcludeTests,
     [switch]$IncludeTests,
+    [switch]$IncludeUntracked,
     [switch]$Blind
 )
 
 $ErrorActionPreference = "Continue"
+
+# -IncludeTests устарел: тесты теперь по умолчанию включены.
+if ($IncludeTests) {
+    Write-Host "NOTE: -IncludeTests is now the default and is ignored. Use -ExcludeTests to omit test sources." -ForegroundColor Yellow
+}
+
+# Включать ли тестовые исходники в дамп.
+$IncludeTestSources = -not $ExcludeTests
 
 # ============================================================================
 # Constants & Configuration
@@ -75,10 +107,17 @@ $FullDumpExtensions = @(
 # Helper Functions
 # ============================================================================
 
+# Нормализует разделители пути к '/' для платформо-независимого сопоставления.
+function Normalize-Slashes {
+    param([string]$Path)
+    if ([string]::IsNullOrEmpty($Path)) { return "" }
+    return $Path.Replace('\', '/')
+}
+
 function Save-Text {
     param([string]$Path, [string]$Text)
     $dir = Split-Path $Path -Parent
-    if ($dir -and -not (Test-Path $dir)) {
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
     [System.IO.File]::WriteAllText($Path, $Text, $Utf8NoBom)
@@ -98,10 +137,12 @@ function Save-Csv {
 function Get-Rel {
     param([string]$Path)
     if ([string]::IsNullOrEmpty($Path)) { return "" }
-    if ($Path.StartsWith($RootFull, [StringComparison]::OrdinalIgnoreCase)) {
-        return $Path.Substring($RootFull.Length).TrimStart('\', '/')
+    $normPath = Normalize-Slashes $Path
+    $normRoot = Normalize-Slashes $RootFull
+    if ($normPath.StartsWith($normRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        return $normPath.Substring($normRoot.Length).TrimStart('/')
     }
-    return $Path
+    return $normPath
 }
 
 function Format-ReportCount {
@@ -112,14 +153,14 @@ function Format-ReportCount {
 
 function Test-IsTestRelPath {
     param([string]$RelPath)
-    $rel = $RelPath.Replace('\', '/')
-    return ($rel -match '(^|/)src/(test|androidTest|testFixtures)/')
+    $rel = Normalize-Slashes $RelPath
+    return ($rel -match '(^|/)src/(test|androidTest|testFixtures|testDebug|testRelease|unitTest)/')
 }
 
 function Test-SkipSourceFile {
     param([System.IO.FileInfo]$File)
     $relForSegments = Get-Rel $File.FullName
-    $segments = $relForSegments.Split([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    $segments = (Normalize-Slashes $relForSegments).Split('/')
     foreach ($segment in $segments) {
         if ($SkipSegments -contains $segment) { return $true }
     }
@@ -129,11 +170,13 @@ function Test-SkipSourceFile {
     return $false
 }
 
+# Определяет, является ли файл "дампируемым содержимым" (тип/размер/res-правила).
+# НЕ фильтрует тесты — разделение на исходники/тесты делает вызывающий код.
 function Test-IncludeForFullDump {
     param([System.IO.FileInfo]$File)
     $ext = $File.Extension.ToLower()
     $rel = Get-Rel $File.FullName
-    $relSlash = $rel.Replace('\', '/')
+    $relSlash = Normalize-Slashes $rel
     if ($FullDumpExtensions -notcontains $ext) { return $false }
     if ($File.Length -gt 2MB) { return $false }
     if ($File.Name -like '*.svg') { return $false }
@@ -142,9 +185,6 @@ function Test-IncludeForFullDump {
         if ($relSlash -notmatch '/res/(values|values-[^/]+|layout|layout-[^/]+|navigation|menu|xml)/') { return $false }
     }
     if ($relSlash -match '/docs/' -and $File.Length -gt 200KB) { return $false }
-    if (-not $IncludeTests) {
-        if (Test-IsTestRelPath $rel) { return $false }
-    }
     return $true
 }
 
@@ -203,14 +243,25 @@ function Append-FileSection {
 # ============================================================================
 
 $script:ProcessedReports = @()
+$script:LastCommitTime = $null
+$script:LastCommitResolved = $false
+
+function Resolve-LastCommitTime {
+    if ($script:LastCommitResolved) { return $script:LastCommitTime }
+    $script:LastCommitResolved = $true
+    $lastCommitEpoch = git log -1 --format=%ct 2>&1
+    if ($lastCommitEpoch -match '^\d+$') {
+        $script:LastCommitTime = [DateTimeOffset]::FromUnixTimeSeconds([long]$lastCommitEpoch).LocalDateTime
+    }
+    return $script:LastCommitTime
+}
 
 function Get-StaleWarning {
     param([DateTime]$ReportTime)
-    $lastCommitEpoch = git log -1 --format=%ct 2>&1
-    if ($lastCommitEpoch -match '^\d+$') {
-        $lastCommitTime = [DateTimeOffset]::FromUnixTimeSeconds($lastCommitEpoch).LocalDateTime
+    $lastCommitTime = Resolve-LastCommitTime
+    if ($null -ne $lastCommitTime) {
         if ($ReportTime -lt $lastCommitTime) {
-            return " [STALE: report is older than last commit ($($lastCommitTime.ToString('HH:mm:ss')))]"
+            return " [STALE: report is older than last commit ($($lastCommitTime.ToString('yyyy-MM-dd HH:mm:ss')))]"
         }
     }
     return ""
@@ -227,7 +278,7 @@ function Parse-TestResults {
     $rows = @()
     $failSb = New-Object System.Text.StringBuilder
     $testDirs = Get-ChildItem -Path $RootFull -Recurse -Directory -Filter 'test-results' -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -notmatch '\\\.artifacts\\' -and $_.FullName -notmatch '\\\.gradle' }
+        Where-Object { (Normalize-Slashes $_.FullName) -notmatch '/\.artifacts/' -and (Normalize-Slashes $_.FullName) -notmatch '/\.gradle' }
     if (@($testDirs).Count -gt 0) { $script:ReportsFound['Tests'] = $true }
     foreach ($dir in $testDirs) {
         $variant = "unknown"
@@ -235,7 +286,7 @@ function Parse-TestResults {
         $xmlFiles = Get-ChildItem -Path $dir.FullName -Recurse -Filter 'TEST-*.xml' -ErrorAction SilentlyContinue
         foreach ($xmlFile in $xmlFiles) {
             try {
-                $content = Get-Content $xmlFile.FullName -Raw -Encoding UTF8
+                $content = Get-Content -LiteralPath $xmlFile.FullName -Raw -Encoding UTF8
                 if ([string]::IsNullOrWhiteSpace($content)) { continue }
                 [xml]$xml = $content
                 $script:ProcessedReports += @{ File = Get-Rel $xmlFile.FullName; Time = $xmlFile.LastWriteTime }
@@ -277,10 +328,10 @@ function Parse-CheckstyleXml {
     param([string[]]$FilePaths, [string]$SourceType)
     $rows = @()
     foreach ($path in $FilePaths) {
-        if (-not (Test-Path $path)) { continue }
+        if (-not (Test-Path -LiteralPath $path)) { continue }
         try {
-            $fileInfo = Get-Item $path
-            $content = Get-Content $path -Raw -Encoding UTF8
+            $fileInfo = Get-Item -LiteralPath $path
+            $content = Get-Content -LiteralPath $path -Raw -Encoding UTF8
             if ([string]::IsNullOrWhiteSpace($content)) { continue }
             [xml]$xml = $content
             $script:ProcessedReports += @{ File = Get-Rel $path; Time = $fileInfo.LastWriteTime }
@@ -314,9 +365,8 @@ function Parse-CheckstyleXml {
 function Parse-DetektReport {
     param([string]$OutDir)
     $detektCsv = Join-Path $OutDir '42_detekt_summary.csv'
-    # Use *.xml for detekt, but exclude baseline
-    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*.xml' |
-        Where-Object { $_.FullName -match '\\build\\reports\\detekt\\' -and $_.Name -notmatch 'baseline' }
+    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*.xml' -ErrorAction SilentlyContinue |
+        Where-Object { (Normalize-Slashes $_.FullName) -match '/build/reports/detekt/' -and $_.Name -notmatch 'baseline' }
     if (-not $xmlFiles) {
         Save-Text $detektCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
         return @()
@@ -330,9 +380,8 @@ function Parse-DetektReport {
 function Parse-KtlintReport {
     param([string]$OutDir)
     $ktlintCsv = Join-Path $OutDir '44_ktlint_summary.csv'
-    # Use *.xml for ktlint, but ONLY *Check.xml files
-    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*Check.xml' |
-        Where-Object { $_.FullName -match '\\build\\reports\\ktlint\\' }
+    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter '*Check.xml' -ErrorAction SilentlyContinue |
+        Where-Object { (Normalize-Slashes $_.FullName) -match '/build/reports/ktlint/' }
     if (-not $xmlFiles) {
         Save-Text $ktlintCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
         return @()
@@ -346,7 +395,8 @@ function Parse-KtlintReport {
 function Parse-LintReport {
     param([string]$OutDir)
     $lintCsv = Join-Path $OutDir '43_lint_summary.csv'
-    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter 'lint-results-debug.xml' | Where-Object { $_.FullName -match '\\build\\reports\\' }
+    $xmlFiles = Get-ChildItem -Path $RootFull -Recurse -Filter 'lint-results-debug.xml' -ErrorAction SilentlyContinue |
+        Where-Object { (Normalize-Slashes $_.FullName) -match '/build/reports/' }
     if (-not $xmlFiles) {
         Save-Text $lintCsv "# REPORT NOT FOUND: run .\VERIFY.bat before dumping"
         return @()
@@ -355,8 +405,8 @@ function Parse-LintReport {
     $rows = @()
     foreach ($path in $xmlFiles.FullName) {
         try {
-            $fileInfo = Get-Item $path
-            $content = Get-Content $path -Raw -Encoding UTF8
+            $fileInfo = Get-Item -LiteralPath $path
+            $content = Get-Content -LiteralPath $path -Raw -Encoding UTF8
             if ([string]::IsNullOrWhiteSpace($content)) { continue }
             [xml]$xml = $content
             $script:ProcessedReports += @{ File = Get-Rel $path; Time = $fileInfo.LastWriteTime }
@@ -392,7 +442,7 @@ function Analyze-MissingTranslations {
     param([string]$OutDir, [array]$allFiles)
     $missingCsv = Join-Path $OutDir '50_missing_translations.csv'
     $missingRows = @()
-    $resFiles = @($allFiles | Where-Object { $_.FullName -match '\\src\\main\\res\\values' -and $_.Extension -eq '.xml' })
+    $resFiles = @($allFiles | Where-Object { (Normalize-Slashes $_.FullName) -match '/src/main/res/values' -and $_.Extension -eq '.xml' })
     $defaultResources = @{}; $nonTranslatable = @{}; $localeResources = @{}
     foreach ($file in $resFiles) {
         try {
@@ -401,14 +451,15 @@ function Analyze-MissingTranslations {
             [xml]$xml = $content
         } catch { continue }
         if ($null -eq $xml.resources) { continue }
-        $dirName = Split-Path -Parent $file.FullName | Split-Path -Leaf
+        $dirName = Split-Path -Parent $file.FullName
+        $dirName = Split-Path -Leaf $dirName
         $allNames = @()
         if ($xml.resources.ChildNodes) {
             foreach ($node in $xml.resources.ChildNodes) {
                 if ($node -isnot [System.Xml.XmlElement]) { continue }
                 $attrName = $node.GetAttribute('name')
                 if ([string]::IsNullOrEmpty($attrName)) { continue }
-                switch ($node.localName) {
+                switch ($node.LocalName) {
                     'string' { $allNames += [PSCustomObject]@{ Name = $attrName; Type = 'string' } }
                     'plurals' { $allNames += [PSCustomObject]@{ Name = $attrName; Type = 'plurals' } }
                     'string-array' { $allNames += [PSCustomObject]@{ Name = $attrName; Type = 'array' } }
@@ -476,21 +527,39 @@ Write-Host "Creating audit dump..." -ForegroundColor Cyan
 if (-not (Test-Path ".git")) { Write-Error "Must run from git root."; exit 1 }
 
 $OutDir = Join-Path $RootFull 'audit_dump'
-if (Test-Path -LiteralPath $OutDir) { try { Remove-Item -LiteralPath $OutDir -Recurse -Force } catch { $OutDir = Join-Path $RootFull ("audit_dump_" + (Get-Date -Format 'yyyyMMdd_HH-mm-ss')) } }
+if (Test-Path -LiteralPath $OutDir) {
+    try { Remove-Item -LiteralPath $OutDir -Recurse -Force } catch { $OutDir = Join-Path $RootFull ("audit_dump_" + (Get-Date -Format 'yyyyMMdd_HH-mm-ss')) }
+}
 New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
-$OutDirFull = (Resolve-Path -LiteralPath $OutDir).Path.TrimEnd('\')
+$OutDirFull = (Resolve-Path -LiteralPath $OutDir).Path.TrimEnd('\', '/')
 
+# --- Collect TRACKED files (core.quotepath=false надёжно обрабатывает не-ASCII пути) ---
 Write-Host "Collecting files..." -ForegroundColor Yellow
-$gitFiles = git ls-files 2>&1 | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) }
+$gitFiles = git -c core.quotepath=false ls-files 2>&1 | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) }
 $allFiles = @()
 foreach ($rel in $gitFiles) {
     $full = Join-Path $RootFull $rel
-    if (Test-Path -LiteralPath $full) { $f = Get-Item -LiteralPath $full -Force; if (-not (Test-SkipSourceFile $f)) { $allFiles += $f } }
+    if (Test-Path -LiteralPath $full) {
+        $f = Get-Item -LiteralPath $full -Force
+        if (-not (Test-SkipSourceFile $f)) { $allFiles += $f }
+    }
 }
 
-$untracked = git ls-files --others --exclude-standard 2>&1 | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) }
-$untrackedSources = @($untracked | Where-Object { $_ -match '\.(kt|kts|java|xml)$' })
-$untrackedToDump = if ($IncludeTests) { $untrackedSources } else { @($untrackedSources | Where-Object { -not (Test-IsTestRelPath $_) }) }
+# --- Collect UNTRACKED working-tree source/test files (only with -IncludeUntracked) ---
+$untrackedFiles = @()
+if ($IncludeUntracked) {
+    $untracked = git -c core.quotepath=false ls-files --others --exclude-standard 2>&1 | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) }
+    foreach ($rel in $untracked) {
+        if ($rel -notmatch '\.(kt|kts|java|xml)$') { continue }
+        $full = Join-Path $RootFull $rel
+        if (-not (Test-Path -LiteralPath $full)) { continue }
+        $f = Get-Item -LiteralPath $full -Force
+        if (Test-SkipSourceFile $f) { continue }
+        if (-not (Test-IncludeForFullDump $f)) { continue }
+        if ((Test-IsTestRelPath $rel) -and (-not $IncludeTestSources)) { continue }
+        $untrackedFiles += $f
+    }
+}
 
 Write-Host "Parsing reports..." -ForegroundColor Yellow
 $testRows = Parse-TestResults $OutDirFull
@@ -498,56 +567,138 @@ $detektRows = Parse-DetektReport $OutDirFull
 $lintRows = Parse-LintReport $OutDirFull
 $ktlintRows = Parse-KtlintReport $OutDirFull
 $missingRows = Analyze-MissingTranslations $OutDirFull $allFiles
-$suspiciousScanFiles = if ($IncludeTests) { $allFiles } else { @($allFiles | Where-Object { -not (Test-IsTestRelPath (Get-Rel $_.FullName)) }) }
+
+# Suspicious scan: учитываем тесты согласно флагу (тесты — тоже аудитируемый код).
+$suspiciousScanFiles = @($allFiles | Where-Object {
+    if ($IncludeTestSources) { $true } else { -not (Test-IsTestRelPath (Get-Rel $_.FullName)) }
+})
+if ($IncludeUntracked) {
+    $suspiciousScanFiles += @($untrackedFiles | Where-Object {
+        if ($IncludeTestSources) { $true } else { -not (Test-IsTestRelPath (Get-Rel $_.FullName)) }
+    })
+}
 $totalMatches = Find-SuspiciousMatches $OutDirFull $suspiciousScanFiles
 
-# Final Overview & Diagnostics
+# ============================================================================
+# Overview & Diagnostics
+# ============================================================================
 $overview = New-Object System.Text.StringBuilder
 [void]$overview.AppendLine("PROJECT OVERVIEW`n" + ('=' * 100))
 [void]$overview.AppendLine("Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
+[void]$overview.AppendLine("Test sources included: $(if ($IncludeTestSources) { 'YES' } else { 'NO (-ExcludeTests)' })")
+[void]$overview.AppendLine("Untracked files included: $(if ($IncludeUntracked) { 'YES' } else { 'NO' })")
 
 # verify_status check
 $verifyStatusFile = Join-Path $RootFull "verify_status.txt"
-if (Test-Path $verifyStatusFile) {
-    $vStatus = Get-Content $verifyStatusFile -Raw
+if (Test-Path -LiteralPath $verifyStatusFile) {
+    $vStatus = Get-Content -LiteralPath $verifyStatusFile -Raw
     [void]$overview.AppendLine("Last VERIFY status: $vStatus")
 } else {
     [void]$overview.AppendLine("WARNING: verify_status.txt not found. Dump may be STALE.")
 }
 
 [void]$overview.AppendLine("`nReports parsed:")
-[void]$overview.AppendLine("  Tests: $(Format-ReportCount 'Tests' (@($testRows).Count))")
+[void]$overview.AppendLine("  Test result files: $(Format-ReportCount 'Tests' (@($testRows).Count))")
 [void]$overview.AppendLine("  Detekt: $(Format-ReportCount 'Detekt' (@($detektRows).Count))")
 [void]$overview.AppendLine("  Lint: $(Format-ReportCount 'Lint' (@($lintRows).Count))")
 [void]$overview.AppendLine("  Ktlint: $(Format-ReportCount 'Ktlint' (@($ktlintRows).Count))")
 
 [void]$overview.AppendLine("`nProcessed Report Files:")
-foreach ($rep in $script:ProcessedReports | Sort-Object File) {
+foreach ($rep in ($script:ProcessedReports | Sort-Object { $_.File })) {
     $stale = Get-StaleWarning $rep.Time
     [void]$overview.AppendLine("  $($rep.File) ($($rep.Time.ToString('yyyy-MM-dd HH:mm:ss')))$stale")
 }
 Save-Text (Join-Path $OutDirFull '00_overview.txt') $overview.ToString()
 
-# Build sections and combine
+# ============================================================================
+# Sections
+# ============================================================================
 $gitSb = New-Object System.Text.StringBuilder
-if ($Blind) { [void]$gitSb.AppendLine('(git context omitted)') } else {
+if ($Blind) {
+    [void]$gitSb.AppendLine('(git context omitted)')
+} else {
     [void]$gitSb.AppendLine("branch: $(git branch --show-current 2>&1)`n`n- git status --short -`n$((git status --short 2>&1) -join [Environment]::NewLine)`n`n- git log -20 -`n$((git log -20 --oneline 2>&1) -join [Environment]::NewLine)")
 }
 Save-Text (Join-Path $OutDirFull '20_git.txt') $gitSb.ToString()
 
+# --- KEY FILES (всегда FULL) ---
 $keyPatterns = @('build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'libs.versions.toml', 'AndroidManifest.xml', 'detekt.yml', '.editorconfig', '.gitignore')
 $keyFilesSb = New-Object System.Text.StringBuilder
-foreach ($f in ($allFiles | Where-Object { $name = $_.Name; $keyPatterns | Where-Object { $name -like "*$_*" } } | Sort-Object FullName)) { Add-FileDump $keyFilesSb $f -ForceFull }
+$keyFileObjs = @($allFiles | Where-Object { $name = $_.Name; ($keyPatterns | Where-Object { $name -like "*$_*" }) } | Sort-Object FullName)
+foreach ($f in $keyFileObjs) { Add-FileDump $keyFilesSb $f -ForceFull }
 Save-Text (Join-Path $OutDirFull '20_key_files.txt') $keyFilesSb.ToString()
 
+# --- Разделение tracked-файлов на ОСНОВНЫЕ исходники и ТЕСТЫ ---
+$dumpable = @($allFiles | Where-Object { Test-IncludeForFullDump $_ })
+$mainFiles = @($dumpable | Where-Object { -not (Test-IsTestRelPath (Get-Rel $_.FullName)) } | Sort-Object FullName)
+$testFiles = @($dumpable | Where-Object { (Test-IsTestRelPath (Get-Rel $_.FullName)) } | Sort-Object FullName)
+
+# --- 30 SOURCES FULL (основные исходники, БЕЗ тестов) ---
 $sourcesSb = New-Object System.Text.StringBuilder
-foreach ($f in ($allFiles | Where-Object { Test-IncludeForFullDump $_ } | Sort-Object FullName)) { Add-FileDump $sourcesSb $f }
+foreach ($f in $mainFiles) { Add-FileDump $sourcesSb $f }
 Save-Text (Join-Path $OutDirFull '30_sources_full.txt') $sourcesSb.ToString()
 
+# --- 32 TEST SOURCES FULL (тесты) ---
+$testSourcesSb = New-Object System.Text.StringBuilder
+if ($IncludeTestSources) {
+    foreach ($f in $testFiles) { Add-FileDump $testSourcesSb $f }
+    if ($testFiles.Count -eq 0) {
+        [void]$testSourcesSb.AppendLine('(no test source files matched the dump filters)')
+    }
+} else {
+    [void]$testSourcesSb.AppendLine('(test sources EXCLUDED via -ExcludeTests)')
+}
+Save-Text (Join-Path $OutDirFull '32_test_sources_full.txt') $testSourcesSb.ToString()
+
+# --- 34 UNTRACKED FILES (опционально) ---
+if ($IncludeUntracked) {
+    $untrackedSb = New-Object System.Text.StringBuilder
+    foreach ($f in ($untrackedFiles | Sort-Object FullName)) {
+        Add-FileDump $untrackedSb $f -DisplayName ("$((Get-Rel $f.FullName))  [UNTRACKED]")
+    }
+    if ($untrackedFiles.Count -eq 0) {
+        [void]$untrackedSb.AppendLine('(no untracked source/test files)')
+    }
+    Save-Text (Join-Path $OutDirFull '34_untracked_files.txt') $untrackedSb.ToString()
+}
+
+# ============================================================================
+# Combine
+# ============================================================================
 $combined = Join-Path $OutDirFull 'ProjectDump_Combined.txt'
 $combinedSb = New-Object System.Text.StringBuilder
-@('00_overview.txt', '20_git.txt', '20_key_files.txt', '30_sources_full.txt', '40_tests_summary.csv', '41_failing_tests.txt', '42_detekt_summary.csv', '43_lint_summary.csv', '44_ktlint_summary.csv', '50_missing_translations.csv', '61_suspicious_matches.txt') | ForEach-Object {
-    Append-FileSection $combinedSb (Join-Path $OutDirFull $_) $_.Replace('_', ' ').Replace('.txt', '').Replace('.csv', ' CSV').ToUpper()
+
+$sections = New-Object System.Collections.ArrayList
+[void]$sections.Add(@{ File = '00_overview.txt';             Title = '00 OVERVIEW' })
+[void]$sections.Add(@{ File = '20_git.txt';                  Title = '20 GIT' })
+[void]$sections.Add(@{ File = '20_key_files.txt';            Title = '20 KEY FILES' })
+[void]$sections.Add(@{ File = '30_sources_full.txt';         Title = '30 SOURCES FULL' })
+[void]$sections.Add(@{ File = '32_test_sources_full.txt';    Title = '32 TEST SOURCES FULL' })
+if ($IncludeUntracked) {
+    [void]$sections.Add(@{ File = '34_untracked_files.txt';  Title = '34 UNTRACKED FILES' })
+}
+[void]$sections.Add(@{ File = '40_tests_summary.csv';        Title = '40 TESTS SUMMARY CSV' })
+[void]$sections.Add(@{ File = '41_failing_tests.txt';        Title = '41 FAILING TESTS' })
+[void]$sections.Add(@{ File = '42_detekt_summary.csv';       Title = '42 DETEKT SUMMARY CSV' })
+[void]$sections.Add(@{ File = '43_lint_summary.csv';         Title = '43 LINT SUMMARY CSV' })
+[void]$sections.Add(@{ File = '44_ktlint_summary.csv';       Title = '44 KTLINT SUMMARY CSV' })
+[void]$sections.Add(@{ File = '50_missing_translations.csv'; Title = '50 MISSING TRANSLATIONS CSV' })
+[void]$sections.Add(@{ File = '61_suspicious_matches.txt';   Title = '61 SUSPICIOUS MATCHES' })
+
+foreach ($sec in $sections) {
+    Append-FileSection $combinedSb (Join-Path $OutDirFull $sec.File) $sec.Title
 }
 Save-Text $combined $combinedSb.ToString()
-Write-Host "`nDump completed: $combined ($([math]::Round((Get-Item $combined).Length / 1MB, 2)) MB)" -ForegroundColor Green
+
+# --- Краткая сводка в консоль ---
+Write-Host ""
+Write-Host "Dump completed: $combined ($([math]::Round((Get-Item -LiteralPath $combined).Length / 1MB, 2)) MB)" -ForegroundColor Green
+Write-Host ("  Main sources : {0} file(s)" -f $mainFiles.Count)
+if ($IncludeTestSources) {
+    Write-Host ("  Test sources : {0} file(s)" -f $testFiles.Count) -ForegroundColor Cyan
+} else {
+    Write-Host "  Test sources : EXCLUDED (-ExcludeTests)" -ForegroundColor Yellow
+}
+if ($IncludeUntracked) {
+    Write-Host ("  Untracked    : {0} file(s)" -f $untrackedFiles.Count)
+}

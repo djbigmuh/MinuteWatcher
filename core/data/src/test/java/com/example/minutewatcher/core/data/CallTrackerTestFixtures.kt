@@ -83,7 +83,7 @@ abstract class CallTrackerTestFixtures {
 
     internal fun createTracker(
         scope: CoroutineScope = testScope,
-        repo: CallSessionRepository = callSessionRepository
+        repo: CallSessionRepository = callSessionRepository,
     ): CallTracker {
         val attributionResolver = createAttributionResolver()
         val sessionCleaner = createSessionCleaner(attributionResolver, repo)
@@ -96,7 +96,7 @@ abstract class CallTrackerTestFixtures {
                 mutexHolder,
                 sessionCleaner,
                 settingsHandler,
-                repo
+                repo,
             )
 
         val endHandler =
@@ -105,7 +105,7 @@ abstract class CallTrackerTestFixtures {
                 mutexHolder,
                 sessionCleaner,
                 settingsHandler,
-                repo
+                repo,
             )
 
         return CallTracker(
@@ -130,7 +130,7 @@ abstract class CallTrackerTestFixtures {
 
     internal fun createSessionCleaner(
         attributionResolver: CallAttributionResolver,
-        repo: CallSessionRepository = callSessionRepository
+        repo: CallSessionRepository = callSessionRepository,
     ) = CallSessionCleaner(repo, attributionResolver)
 
     internal fun createSettingsHandler() =
@@ -146,7 +146,7 @@ abstract class CallTrackerTestFixtures {
         mutexHolder: CallMutexHolder,
         sessionCleaner: CallSessionCleaner,
         settingsHandler: CallTrackingSettingsHandler,
-        repo: CallSessionRepository = callSessionRepository
+        repo: CallSessionRepository = callSessionRepository,
     ) = CallStartHandler(
         repo,
         timeProvider,
@@ -162,7 +162,7 @@ abstract class CallTrackerTestFixtures {
         mutexHolder: CallMutexHolder,
         sessionCleaner: CallSessionCleaner,
         settingsHandler: CallTrackingSettingsHandler,
-        repo: CallSessionRepository = callSessionRepository
+        repo: CallSessionRepository = callSessionRepository,
     ) = CallEndHandler(
         repo,
         timeProvider,

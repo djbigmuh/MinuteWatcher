@@ -87,8 +87,8 @@ class NotificationHelper
                 AppLogger.w("Notification permission denied: ${e.message}")
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to send notification", e)
+            } catch (e: RuntimeException) {
+                AppLogger.e("Failed to send notification (runtime error)", e)
             }
         }
 

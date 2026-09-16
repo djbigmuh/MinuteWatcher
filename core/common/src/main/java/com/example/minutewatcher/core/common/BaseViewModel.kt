@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.updateAndGet
  *
  * @param initialState Initial state.
  */
-abstract class BaseViewModel<S>(
+open class BaseViewModel<S>(
     initialState: S,
 ) : ViewModel() {
     private val _state = MutableStateFlow(initialState)

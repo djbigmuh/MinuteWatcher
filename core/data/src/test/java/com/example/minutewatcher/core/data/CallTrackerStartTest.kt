@@ -207,18 +207,20 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
                     permissionManager = permissionManager,
                     scope = testScope,
                     attributionResolver = attributionResolver,
-                    startHandler = createStartHandler(
-                        attributionResolver,
-                        mutexHolder,
-                        createSessionCleaner(attributionResolver),
-                        createSettingsHandler()
-                    ),
-                    endHandler = createEndHandler(
-                        attributionResolver,
-                        mutexHolder,
-                        createSessionCleaner(attributionResolver),
-                        createSettingsHandler()
-                    ),
+                    startHandler =
+                        createStartHandler(
+                            attributionResolver,
+                            mutexHolder,
+                            createSessionCleaner(attributionResolver),
+                            createSettingsHandler(),
+                        ),
+                    endHandler =
+                        createEndHandler(
+                            attributionResolver,
+                            mutexHolder,
+                            createSessionCleaner(attributionResolver),
+                            createSettingsHandler(),
+                        ),
                     sessionCleaner = sessionCleaner,
                     permissionStateNotifier = permissionStateNotifier,
                     callMutexHolder = mutexHolder,

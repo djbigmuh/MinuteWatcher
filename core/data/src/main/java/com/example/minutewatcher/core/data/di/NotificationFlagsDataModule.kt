@@ -10,10 +10,8 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class NotificationFlagsDataModule {
+interface NotificationFlagsDataModule {
     @Binds
     @Singleton
-    abstract fun bindSimNotificationFlagsRepository(
-        impl: SimNotificationFlagsRepositoryImpl,
-    ): SimNotificationFlagsRepository
+    fun bindSimNotificationFlagsRepository(impl: SimNotificationFlagsRepositoryImpl): SimNotificationFlagsRepository
 }

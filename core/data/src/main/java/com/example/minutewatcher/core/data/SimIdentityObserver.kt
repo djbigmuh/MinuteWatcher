@@ -160,7 +160,7 @@ internal class SimIdentityObserver
                             }
 
                         when {
-                            initialSeed == null || initialSeed.isEmpty() -> {
+                            initialSeed.isNullOrEmpty() -> {
                                 // First attempt to generate a real seed before falling back
                                 val generationResult = generateSeedWithRetry()
                                 emit(toSeedResult(generationResult))
@@ -190,7 +190,7 @@ internal class SimIdentityObserver
                                 inner: Exception,
                             ) {
                                 SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
-                            } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+                            }
                         emit(toSeedResult(fallbackSeedResult))
                     }
                 }.distinctUntilChanged()
@@ -495,8 +495,8 @@ internal class SimIdentityObserver
                     inner: Exception,
                 ) {
                     SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
-                } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
-            } ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+                }
+            }
 
         companion object {
             private const val MAX_BACKOFF_EXPONENT = 4

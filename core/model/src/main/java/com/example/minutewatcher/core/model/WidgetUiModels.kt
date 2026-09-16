@@ -146,12 +146,12 @@ data class SimLayoutRow(
  * - [Spacer] — spacer (widthDp, heightDp).
  */
 @Stable
-sealed class SimLayoutComponent {
+sealed interface SimLayoutComponent {
     @Immutable
     data class Icon(
         val iconRes: Int,
         val sizeDp: Int,
-    ) : SimLayoutComponent()
+    ) : SimLayoutComponent
 
     @Immutable
     data class Text(
@@ -159,11 +159,11 @@ sealed class SimLayoutComponent {
         val color: Int,
         val fontSizeSp: Float,
         val isBold: Boolean = false,
-    ) : SimLayoutComponent()
+    ) : SimLayoutComponent
 
     @Immutable
     data class Spacer(
         val widthDp: Int = 0,
         val heightDp: Int = 0,
-    ) : SimLayoutComponent()
+    ) : SimLayoutComponent
 }

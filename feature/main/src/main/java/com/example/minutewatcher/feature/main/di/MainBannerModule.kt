@@ -13,9 +13,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 // @Suppress("unused") is required because Hilt discovers bindings via reflection.
 @Suppress("unused")
-abstract class MainBannerModule {
+interface MainBannerModule {
     @Binds
     @Singleton
     @IntoSet
-    abstract fun bindMainBannerControllerStatus(impl: MainBannerController): TrackingStatusProvider
+    fun bindMainBannerControllerStatus(impl: MainBannerController): TrackingStatusProvider
 }

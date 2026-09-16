@@ -110,7 +110,6 @@ class UsageCheckWorkerModuleTest {
                                 val deps =
                                     UsageWorkerDependencies(
                                         simUsageRepository = simUsageRepository,
-                                        simIdentityRepository = simIdentityRepository,
                                         simNotificationFlagsRepository = simNotificationFlagsRepository,
                                         appSettingsRepository = appSettingsRepository,
                                         autoResetUseCase = autoResetUseCase,
@@ -119,7 +118,6 @@ class UsageCheckWorkerModuleTest {
                                         dataChangeNotifier = dataChangeNotifier,
                                         usageStateRepository = usageStateRepository,
                                         usageUseCase = usageUseCase,
-                                        simWidgetVisibilityRepository = simWidgetVisibilityRepository,
                                         timeProvider = timeProvider,
                                     )
                                 return UsageCheckWorker(

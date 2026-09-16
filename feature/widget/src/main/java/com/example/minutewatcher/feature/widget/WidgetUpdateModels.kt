@@ -3,31 +3,31 @@ package com.example.minutewatcher.feature.widget
 /**
  * Result of a low-level widget update attempt.
  */
-sealed class UpdateResult {
+sealed interface UpdateResult {
     data class Success(
         val wasFull: Boolean,
-    ) : UpdateResult()
+    ) : UpdateResult
 
     data class LimitExceeded(
         val wasFull: Boolean,
-    ) : UpdateResult()
+    ) : UpdateResult
 
     data class GenericFailure(
         val isRetryable: Boolean,
-    ) : UpdateResult()
+    ) : UpdateResult
 }
 
 /**
  * High-level outcome of a widget update attempt, guiding the retry loop.
  */
-sealed class UpdateOutcome {
-    data object Success : UpdateOutcome()
+sealed interface UpdateOutcome {
+    data object Success : UpdateOutcome
 
-    data object Retry : UpdateOutcome()
+    data object Retry : UpdateOutcome
 
-    data object Stop : UpdateOutcome()
+    data object Stop : UpdateOutcome
 
     data class LimitExceeded(
         val wasFull: Boolean,
-    ) : UpdateOutcome()
+    ) : UpdateOutcome
 }

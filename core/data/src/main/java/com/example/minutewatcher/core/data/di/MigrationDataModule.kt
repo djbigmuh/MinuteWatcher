@@ -12,12 +12,12 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class MigrationDataModule {
+interface MigrationDataModule {
     @Binds
     @Singleton
-    abstract fun bindCallSessionRepository(impl: CallSessionRepositoryImpl): CallSessionRepository
+    fun bindCallSessionRepository(impl: CallSessionRepositoryImpl): CallSessionRepository
 
     @Binds
     @Singleton
-    abstract fun bindMigrationFlagsRepository(impl: MigrationFlagsRepositoryImpl): MigrationFlagsRepository
+    fun bindMigrationFlagsRepository(impl: MigrationFlagsRepositoryImpl): MigrationFlagsRepository
 }

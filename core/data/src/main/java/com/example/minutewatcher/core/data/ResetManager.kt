@@ -150,6 +150,7 @@ class ResetManager
             return try {
                 checkAndPerformSingleReset(simInfo, now, resetIdentities)
             } finally {
+                @Suppress("FinallyBlockWithReturn") // TODO(TZ-AUDIT-04): устранить вместе с фиксом cancellation-safety
                 resetMutex.withLock {
                     lastResetCheck[identity] = nowElapsed
                     pendingResets.remove(identity)

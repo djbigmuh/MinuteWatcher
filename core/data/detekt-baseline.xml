@@ -2,9 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-      <ID>CyclomaticComplexMethod:AppSettingsRepositoryImpl.kt:AppSettingsRepositoryImpl$private fun
-          Preferences.toAppSettings: AppSettings
-      </ID>
       <ID>ReturnCount:CallEventWorker.kt:CallEventWorker$override suspend fun doWork: Result</ID>
       <ID>ReturnCount:IdentityMigrationService.kt:IdentityMigrationService$private fun Preferences.Key&lt;*&gt;.isLegacyKey:
           Boolean

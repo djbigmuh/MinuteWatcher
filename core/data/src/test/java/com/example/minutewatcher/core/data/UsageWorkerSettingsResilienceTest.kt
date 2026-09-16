@@ -131,7 +131,6 @@ class UsageWorkerSettingsResilienceTest {
                                 val deps =
                                     UsageWorkerDependencies(
                                         simUsageRepository,
-                                        simIdentityRepository,
                                         simNotificationFlagsRepository,
                                         appSettingsRepository,
                                         autoResetUseCase,
@@ -140,7 +139,6 @@ class UsageWorkerSettingsResilienceTest {
                                         dataChangeNotifier,
                                         usageStateRepository,
                                         usageUseCase,
-                                        simWidgetVisibilityRepository,
                                         timeProvider,
                                     )
                                 return UsageCheckWorker(

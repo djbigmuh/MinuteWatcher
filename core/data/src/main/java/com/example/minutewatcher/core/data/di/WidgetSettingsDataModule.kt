@@ -12,14 +12,12 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class WidgetSettingsDataModule {
+interface WidgetSettingsDataModule {
     @Binds
     @Singleton
-    abstract fun bindSimWidgetVisibilityRepository(
-        impl: SimWidgetVisibilityRepositoryImpl,
-    ): SimWidgetVisibilityRepository
+    fun bindSimWidgetVisibilityRepository(impl: SimWidgetVisibilityRepositoryImpl): SimWidgetVisibilityRepository
 
     @Binds
     @Singleton
-    abstract fun bindWidgetSettingsLoader(impl: WidgetSettingsRepository): WidgetSettingsLoader
+    fun bindWidgetSettingsLoader(impl: WidgetSettingsRepository): WidgetSettingsLoader
 }

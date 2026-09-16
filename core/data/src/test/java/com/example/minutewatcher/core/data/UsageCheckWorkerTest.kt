@@ -107,7 +107,6 @@ class UsageCheckWorkerTest {
                             val deps =
                                 UsageWorkerDependencies(
                                     simUsageRepository = simUsageRepository,
-                                    simIdentityRepository = simIdentityRepository,
                                     simNotificationFlagsRepository = simNotificationFlagsRepository,
                                     appSettingsRepository = appSettingsRepository,
                                     autoResetUseCase = autoResetUseCase,
@@ -116,7 +115,6 @@ class UsageCheckWorkerTest {
                                     dataChangeNotifier = dataChangeNotifier,
                                     usageStateRepository = usageStateRepository,
                                     usageUseCase = usageUseCase,
-                                    simWidgetVisibilityRepository = simWidgetVisibilityRepository,
                                     timeProvider = timeProvider,
                                 )
                             return UsageCheckWorker(
@@ -321,44 +319,9 @@ class UsageCheckWorkerTest {
     fun `doWork sends LOW notification when minutes below 20 percent`() =
         runTest {
             val identity = "sim_0"
-            val snapshot =
-                GlobalSnapshot(
-                    version = SchemaVersion(1, 0, 0),
-                    timestamp = timeProvider.now(),
-                    simSnapshots =
-                        listOf(
-                            SimSnapshot(
-                                slot = 0,
-                                identity = "sim_0",
-                                operatorName = "MTS",
-                                entities =
-                                    mapOf(
-                                        PackageType.MINUTES to
-                                            SemanticEntity(
-                                                id = "e1",
-                                                simSlot = 0,
-                                                operatorName = "MTS",
-                                                packageType = PackageType.MINUTES,
-                                                limit = 100,
-                                                used = 81,
-                                                remaining = 19, // 19% remaining < 20%
-                                                unit = MeasurementUnit.MINUTES,
-                                                periodStart = 0,
-                                                periodEnd = 0,
-                                                lastUpdateTime = 0,
-                                                sourceType = DataSourceType.SYSTEM,
-                                            ),
-                                    ),
-                                autoResetDay = 1,
-                            ),
-                        ),
-                    capabilities = emptyList(),
-                )
+            val snapshot = createUsageSnapshot(minutesUsed = 81, minutesLimit = 100)
 
-            whenever(usageStateRepository.refresh()).thenReturn(
-                RefreshResult
-                    .Success(snapshot),
-            )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 81, minutesLimit = 100)))
@@ -381,44 +344,9 @@ class UsageCheckWorkerTest {
     fun `doWork sends CRITICAL notification when minutes below 10 percent`() =
         runTest {
             val identity = "sim_0"
-            val snapshot =
-                GlobalSnapshot(
-                    version = SchemaVersion(1, 0, 0),
-                    timestamp = timeProvider.now(),
-                    simSnapshots =
-                        listOf(
-                            SimSnapshot(
-                                slot = 0,
-                                identity = "sim_0",
-                                operatorName = "MTS",
-                                entities =
-                                    mapOf(
-                                        PackageType.MINUTES to
-                                            SemanticEntity(
-                                                id = "e1",
-                                                simSlot = 0,
-                                                operatorName = "MTS",
-                                                packageType = PackageType.MINUTES,
-                                                limit = 100,
-                                                used = 91,
-                                                remaining = 9, // 9% remaining < 10%
-                                                unit = MeasurementUnit.MINUTES,
-                                                periodStart = 0,
-                                                periodEnd = 0,
-                                                lastUpdateTime = 0,
-                                                sourceType = DataSourceType.SYSTEM,
-                                            ),
-                                    ),
-                                autoResetDay = 1,
-                            ),
-                        ),
-                    capabilities = emptyList(),
-                )
+            val snapshot = createUsageSnapshot(minutesUsed = 91, minutesLimit = 100)
 
-            whenever(usageStateRepository.refresh()).thenReturn(
-                RefreshResult
-                    .Success(snapshot),
-            )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 91, minutesLimit = 100)))
@@ -436,48 +364,50 @@ class UsageCheckWorkerTest {
             )
         }
 
+    private fun createUsageSnapshot(
+        minutesUsed: Long,
+        minutesLimit: Long,
+    ): GlobalSnapshot =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = timeProvider.now(),
+            simSnapshots =
+                listOf(
+                    SimSnapshot(
+                        slot = 0,
+                        identity = "sim_0",
+                        operatorName = "MTS",
+                        entities =
+                            mapOf(
+                                PackageType.MINUTES to
+                                    SemanticEntity(
+                                        id = "e1",
+                                        simSlot = 0,
+                                        operatorName = "MTS",
+                                        packageType = PackageType.MINUTES,
+                                        limit = minutesLimit,
+                                        used = minutesUsed,
+                                        remaining = minutesLimit - minutesUsed,
+                                        unit = MeasurementUnit.MINUTES,
+                                        periodStart = 0,
+                                        periodEnd = 0,
+                                        lastUpdateTime = 0,
+                                        sourceType = DataSourceType.SYSTEM,
+                                    ),
+                            ),
+                        autoResetDay = 1,
+                    ),
+                ),
+            capabilities = emptyList(),
+        )
+
     @Test
     fun `doWork resets notifiedLow flag when usage increases above threshold`() =
         runTest {
             val identity = "sim_0"
-            val snapshot =
-                GlobalSnapshot(
-                    version = SchemaVersion(1, 0, 0),
-                    timestamp = timeProvider.now(),
-                    simSnapshots =
-                        listOf(
-                            SimSnapshot(
-                                slot = 0,
-                                identity = "sim_0",
-                                operatorName = "MTS",
-                                entities =
-                                    mapOf(
-                                        PackageType.MINUTES to
-                                            SemanticEntity(
-                                                id = "e1",
-                                                simSlot = 0,
-                                                operatorName = "MTS",
-                                                packageType = PackageType.MINUTES,
-                                                limit = 100,
-                                                used = 75,
-                                                remaining = 25, // Above 20%
-                                                unit = MeasurementUnit.MINUTES,
-                                                periodStart = 0,
-                                                periodEnd = 0,
-                                                lastUpdateTime = 0,
-                                                sourceType = DataSourceType.SYSTEM,
-                                            ),
-                                    ),
-                                autoResetDay = 1,
-                            ),
-                        ),
-                    capabilities = emptyList(),
-                )
+            val snapshot = createUsageSnapshot(minutesUsed = 75, minutesLimit = 100)
 
-            whenever(usageStateRepository.refresh()).thenReturn(
-                RefreshResult
-                    .Success(snapshot),
-            )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
             whenever(simUsageRepository.getSimUsage(identity))
                 .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 75, minutesLimit = 100)))
