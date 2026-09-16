@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -32,6 +33,7 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
@@ -204,7 +206,7 @@ class UpdateCoordinator
                 stateMutex.withLock {
                     val newJob =
                         observationScope.observe(flow, handler) { snapshot ->
-                            processSnapshotSafe(snapshot)
+                            processSnapshotSafe(snapshot, currentCoroutineContext().job)
                         }
                     currentObservationJob.set(newJob)
                     monitoringJob.getAndSet(launchMonitoringJob(newJob))?.cancel()
@@ -265,11 +267,23 @@ class UpdateCoordinator
         }
 
         @Suppress("SwallowedException")
-        private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
+        private suspend fun processSnapshotSafe(
+            snapshot: GlobalSnapshot,
+            observationJob: Job,
+        ) {
             try {
                 processSnapshot(snapshot)
             } catch (e: CancellationException) {
-                throw e
+                // Distinguish between takeover (forced update) and genuine cancellation or terminal failure.
+                // In takeover, performForcedUpdate already cleared currentUpdateJob.
+                val isTakeoverDetected = currentUpdateJob.get() == null && observationJob.isActive
+
+                if (isTakeoverDetected) {
+                    AppLogger.d("UpdateCoordinator: reactive update superseded by forced update, finishing iteration")
+                    // Do not rethrow to keep observation cycle alive.
+                } else {
+                    throw e
+                }
             } catch (
                 @Suppress("SwallowedException")
                 e: Exception,
@@ -592,7 +606,16 @@ class UpdateCoordinator
             }
 
             // Cancel current reactive update if it's in progress.
-            currentUpdateJob.getAndSet(null)?.cancel()
+            val oldJob = currentUpdateJob.getAndSet(null)
+            if (oldJob != null) {
+                oldJob.cancel()
+                // Wait for the cancelled job to finish to avoid coalescing in WidgetUpdater
+                withContext(NonCancellable) {
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        oldJob.join()
+                    }
+                }
+            }
 
             // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)
             widgetUpdater.recover()
