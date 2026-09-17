@@ -116,7 +116,7 @@ class AppSettingsRepositoryImpl
                 }
             }.stateIn(
                 scope,
-                SharingStarted.Eagerly,
+                SharingStarted.Eagerly, // Starts collection immediately to minimize time with default values.
                 AppSettings(),
             )
 

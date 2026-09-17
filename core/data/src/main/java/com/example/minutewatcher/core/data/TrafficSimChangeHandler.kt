@@ -17,7 +17,7 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * attributes traffic to.
+ * Handles SIM-change transitions for the data SIM that [TrafficTracker] attributes traffic to.
  *
  * **Invariant:** Delta updates are only allowed when the previous data subscription ID
  * is reliably known. If it's unknown (e.g., due to storage timeout during initialization),

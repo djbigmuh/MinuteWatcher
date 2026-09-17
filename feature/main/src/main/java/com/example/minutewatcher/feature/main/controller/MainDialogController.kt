@@ -13,7 +13,7 @@ import javax.inject.Inject
  * MainDialogController manages the state of dialogs on the main screen.
  *
  * **Thread Safety:** Safe to call from any coroutine context.
- * **AOSP DataStore:** Persists dialog state via [SavedStateHandle].
+ * **SavedStateHandle:** Persists dialog state via [SavedStateHandle] (survives configuration changes and process death).
  *
  * @property savedStateHandle SavedStateHandle for preserving dialog state across process death.
  */
@@ -34,7 +34,7 @@ class MainDialogController
          * @param data Dialog data or null to dismiss.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **AOSP DataStore:** Persists state via [SavedStateHandle].
+         * **SavedStateHandle:** Persists state via [SavedStateHandle].
          */
         fun setLimitDialog(data: LimitDialogData?) {
             savedStateHandle[KEY_LIMIT_DIALOG] = data
@@ -46,7 +46,7 @@ class MainDialogController
          * @param data Dialog data or null to dismiss.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **AOSP DataStore:** Persists state via [SavedStateHandle].
+         * **SavedStateHandle:** Persists state via [SavedStateHandle].
          */
         fun setDayDialog(data: DayDialogData?) {
             savedStateHandle[KEY_DAY_DIALOG] = data
@@ -58,7 +58,7 @@ class MainDialogController
          * @param data Dialog data or null to dismiss.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **AOSP DataStore:** Persists state via [SavedStateHandle].
+         * **SavedStateHandle:** Persists state via [SavedStateHandle].
          */
         fun setAdjustDialog(data: AdjustDialogData?) {
             savedStateHandle[KEY_ADJUST_DIALOG] = data
@@ -70,7 +70,7 @@ class MainDialogController
          * @param show True to show, false to hide.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **AOSP DataStore:** Persists state via [SavedStateHandle].
+         * **SavedStateHandle:** Persists state via [SavedStateHandle].
          */
         fun setTrafficLimitationDialog(show: Boolean) {
             savedStateHandle[KEY_TRAFFIC_LIMITATION_DIALOG] = show
@@ -82,7 +82,7 @@ class MainDialogController
          * @param show True to show, false to hide.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * **AOSP DataStore:** Persists state via [SavedStateHandle].
+         * **SavedStateHandle:** Persists state via [SavedStateHandle].
          */
         fun setUsageAccessDialog(show: Boolean) {
             savedStateHandle[KEY_USAGE_ACCESS_DIALOG] = show

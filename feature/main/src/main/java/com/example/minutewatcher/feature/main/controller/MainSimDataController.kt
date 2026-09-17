@@ -204,7 +204,6 @@ class MainSimDataController
 
         /**
          * Updates limits for the SIM in the specified slot.
-         * ...
          */
         fun updateLimits(
             slot: Int,
@@ -224,7 +223,6 @@ class MainSimDataController
 
         /**
          * Resets usage statistics for the SIM in the specified slot.
-         * ...
          */
         fun resetUsage(slot: Int) {
             scope.launch(ioDispatcher) {
@@ -238,7 +236,6 @@ class MainSimDataController
 
         /**
          * Toggles automatic limit reset for the SIM in the specified slot.
-         * ...
          */
         fun toggleAutoReset(
             slot: Int,
@@ -257,7 +254,6 @@ class MainSimDataController
 
         /**
          * Updates the day of the month for automatic limit reset.
-         * ...
          */
         fun updateAutoResetDay(
             slot: Int,
@@ -276,7 +272,6 @@ class MainSimDataController
 
         /**
          * Adjusts remaining minutes for the SIM in the specified slot.
-         * ...
          */
         fun adjustRemainingMinutes(
             slot: Int,
@@ -293,7 +288,6 @@ class MainSimDataController
 
         /**
          * Adjusts remaining traffic for the SIM in the specified slot.
-         * ...
          */
         fun adjustRemainingTraffic(
             slot: Int,

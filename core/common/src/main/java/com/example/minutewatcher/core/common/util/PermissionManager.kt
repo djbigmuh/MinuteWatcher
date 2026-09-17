@@ -128,7 +128,7 @@ class PermissionManager
             val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
             val mode =
                 try {
-                    // API 37: checkOpNoThrow is preferred for local UID checks.
+                    // API 31+: checkOpNoThrow remains the standard for local UID checks.
                     // Fail-closed fallback: custom ROMs or unexpected failures default to denied.
                     appOps.checkOpNoThrow(
                         AppOpsManager.OPSTR_GET_USAGE_STATS,
