@@ -69,7 +69,10 @@ internal class CallEndHandler
                 // Force refresh before rethrowing so status is consistent
                 try {
                     context.refreshStatus(true)
-                } catch (_: Exception) {
+                } catch (e2: CancellationException) {
+                    throw e2
+                } catch (e2: Exception) {
+                    AppLogger.w("CallEndHandler: refreshStatus failed after database error", e2)
                 }
                 context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message))
                 throw e
@@ -79,7 +82,10 @@ internal class CallEndHandler
                 // Force refresh before rethrowing so status is consistent
                 try {
                     context.refreshStatus(true)
-                } catch (_: Exception) {
+                } catch (e2: CancellationException) {
+                    throw e2
+                } catch (e2: Exception) {
+                    AppLogger.w("CallEndHandler: refreshStatus failed after security error", e2)
                 }
                 context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
                 throw e

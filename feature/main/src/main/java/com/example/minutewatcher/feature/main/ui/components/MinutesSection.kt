@@ -45,7 +45,7 @@ fun MinutesSection(
                         stringResource(R.string.used_text),
                         stringResource(
                             R.string.value_unit_format,
-                            FormatUtils.formatMinutes(model.minutesUsed),
+                            model.minutesUsed.toString(),
                             stringResource(R.string.minutes_abbr),
                         ),
                     ),
@@ -59,7 +59,7 @@ fun MinutesSection(
                             stringResource(R.string.limit_text),
                             stringResource(
                                 R.string.value_unit_format,
-                                FormatUtils.formatMinutes(model.effectiveMinutesLimit),
+                                model.effectiveMinutesLimit.toString(),
                                 stringResource(R.string.minutes_abbr),
                             ),
                         ),

@@ -97,6 +97,8 @@ internal class SimIdentityObserver
                         AppLogger.d("SimIdentityObserver: Initial seed empty, triggering generation")
                         generateSeedWithRetry()
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("SimIdentityObserver: Failed to check/generate initial seed", e)
                 }

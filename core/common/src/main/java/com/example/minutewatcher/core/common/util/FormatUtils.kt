@@ -93,6 +93,4 @@ object FormatUtils {
         context: Context,
         days: Int,
     ): String = context.resources.getQuantityString(R.plurals.days_plurals, days, days)
-
-    fun formatMinutes(min: Int): String = min.toString()
 }

@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main.util
 
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -66,7 +67,9 @@ object TrackingBannerMapper {
             appSearchBannerDismissed = appSearchBannerDismissed,
             showShortcutsErrorBanner = isShortcutsError(shortcuts),
             showWidgetErrorBanner = settings.widgetLimitExceeded,
-            showInaccurateCallsBanner = settings.inaccurateCallAttributionsCount >= 3,
+            showInaccurateCallsBanner =
+                settings.inaccurateCallAttributionsCount >=
+                    Constants.Calls.INACCURATE_ATTRIBUTION_BANNER_THRESHOLD,
             notificationPermissionState = notificationPermissionState,
             notificationsGrantedActual = notificationsGranted,
             observationFailed = observationFailed,

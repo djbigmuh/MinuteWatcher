@@ -194,6 +194,13 @@ object Constants {
     object Calls {
         const val MAX_CALL_DURATION_MS =
             12 * Time.SECONDS_IN_MINUTE.toLong() * Time.SECONDS_IN_MINUTE.toLong() * Time.MILLIS_IN_SECOND
+
+        /**
+         * Threshold for showing inaccurate attribution banner.
+         * Why 3: three consecutive unassigned events indicate a systemic issue
+         * rather than a transient race condition.
+         */
+        const val INACCURATE_ATTRIBUTION_BANNER_THRESHOLD = 3
     }
 
     /**

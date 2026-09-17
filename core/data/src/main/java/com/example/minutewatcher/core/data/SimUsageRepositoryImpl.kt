@@ -75,7 +75,7 @@ class SimUsageRepositoryImpl
             identity: String,
             value: Int,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setMinutesUsed called with invalid identity: $identity")
                 return
             }
@@ -92,7 +92,7 @@ class SimUsageRepositoryImpl
             identity: String,
             delta: Int,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("incrementMinutesUsed called with invalid identity: $identity")
                 return
             }
@@ -112,7 +112,7 @@ class SimUsageRepositoryImpl
             identity: String,
             valueMb: Float,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setTrafficUsed called with invalid identity: $identity")
                 return
             }
@@ -129,7 +129,7 @@ class SimUsageRepositoryImpl
             identity: String,
             deltaMb: Float,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("incrementTrafficUsed called with invalid identity: $identity")
                 return
             }
@@ -151,7 +151,7 @@ class SimUsageRepositoryImpl
             identity: String,
             value: Int,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setManualAdjustment called with invalid identity: $identity")
                 return
             }
@@ -168,7 +168,7 @@ class SimUsageRepositoryImpl
             identity: String,
             valueGb: Float,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setTrafficAdjustment called with invalid identity: $identity")
                 return
             }
@@ -187,7 +187,7 @@ class SimUsageRepositoryImpl
             trafficUsedMb: Float,
             manualAdjustment: Int,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("updateSimStats called with invalid identity: $identity")
                 return
             }
@@ -207,7 +207,7 @@ class SimUsageRepositoryImpl
          * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
          */
         override suspend fun resetSimUsage(identity: String) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("resetSimUsage called with invalid identity: $identity")
                 return
             }
@@ -227,7 +227,7 @@ class SimUsageRepositoryImpl
          * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
          */
         override suspend fun resetSimUsageManual(identity: String) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("resetSimUsageManual called with invalid identity: $identity")
                 return
             }
@@ -260,7 +260,7 @@ class SimUsageRepositoryImpl
             autoResetDay: Int,
             nowMillis: Long,
         ): Boolean {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("resetSimUsageIfDue called with invalid identity: $identity")
                 return false
             }
@@ -282,7 +282,7 @@ class SimUsageRepositoryImpl
         }
 
         override fun getLastResetDate(identity: String): Flow<Long> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getLastResetDate called with invalid identity: $identity")
                 return flowOf(0L)
             }
@@ -293,7 +293,7 @@ class SimUsageRepositoryImpl
             identity: String,
             value: Long,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setLastResetDate called with invalid identity: $identity")
                 return
             }
@@ -301,7 +301,7 @@ class SimUsageRepositoryImpl
         }
 
         override fun getLastTotalBytes(identity: String): Flow<Long> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getLastTotalBytes called with invalid identity: $identity")
                 return flowOf(-1L)
             }
@@ -312,7 +312,7 @@ class SimUsageRepositoryImpl
             identity: String,
             bytes: Long,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setLastTotalBytes called with invalid identity: $identity")
                 return
             }
@@ -324,7 +324,7 @@ class SimUsageRepositoryImpl
             deltaMb: Float,
             totalBytes: Long,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("incrementTrafficAndSetBaseline called with invalid identity: $identity")
                 return
             }
@@ -341,7 +341,7 @@ class SimUsageRepositoryImpl
         }
 
         override suspend fun ensureTrackingWindowInitialized(identity: String): Boolean {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) return false
+            if (SimConstants.isInvalid(identity)) return false
 
             return resetMutex.withLock {
                 var initialized = false
