@@ -99,7 +99,10 @@ class TrackingBannerMapperTest {
     fun `mapToBannerState shows storage degraded banner for USAGE_STATE database error`() {
         val state =
             TrackingBannerMapper.mapToBannerState(
-                statusMap = mapOf(TrackingKey.USAGE_STATE to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR)),
+                statusMap =
+                    mapOf(
+                        TrackingKey.USAGE_STATE to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
+                    ),
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,

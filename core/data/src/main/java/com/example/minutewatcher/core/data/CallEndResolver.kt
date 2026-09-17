@@ -95,25 +95,31 @@ internal class CallEndResolver
 
         @Suppress("MissingPermission")
         private fun isDeviceIdle(activeSubIds: List<Int>): Boolean {
-            val manager = telephonyManager ?: return true // Conservative: assume idle if no telephony
-
-            if (ContextCompat.checkSelfPermission(
+            val manager = telephonyManager
+            val hasPermission =
+                ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_PHONE_STATE,
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                AppLogger.w("Permission not granted, skipping API call for isDeviceIdle")
-                return false
-            }
+                ) == PackageManager.PERMISSION_GRANTED
 
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                activeSubIds.all { id ->
-                    manager.createForSubscriptionId(id).callStateForSubscription ==
-                        TelephonyManager.CALL_STATE_IDLE
+            return when {
+                manager == null -> true
+                !hasPermission -> {
+                    AppLogger.w("Permission not granted, skipping API call for isDeviceIdle")
+                    false
                 }
-            } else {
-                @Suppress("DEPRECATION")
-                manager.callState == TelephonyManager.CALL_STATE_IDLE
+
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                    activeSubIds.all { id ->
+                        manager.createForSubscriptionId(id).callStateForSubscription ==
+                            TelephonyManager.CALL_STATE_IDLE
+                    }
+                }
+
+                else -> {
+                    @Suppress("DEPRECATION")
+                    manager.callState == TelephonyManager.CALL_STATE_IDLE
+                }
             }
         }
 
@@ -125,18 +131,19 @@ internal class CallEndResolver
 
         @Suppress("MissingPermission")
         private fun findTargetSubId(activeSubIds: List<Int>): Int? {
-            val manager = telephonyManager ?: return null
-
-            if (ContextCompat.checkSelfPermission(
+            val manager = telephonyManager
+            val hasPermission =
+                ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_PHONE_STATE,
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                AppLogger.w("Permission not granted, skipping API call for findTargetSubId")
-                return null
-            }
+                ) == PackageManager.PERMISSION_GRANTED
 
             return when {
+                manager == null -> null
+                !hasPermission -> {
+                    AppLogger.w("Permission not granted, skipping API call for findTargetSubId")
+                    null
+                }
                 activeSubIds.size == 1 -> activeSubIds.first()
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                     activeSubIds.singleOrNull { id ->
@@ -144,7 +151,6 @@ internal class CallEndResolver
                             TelephonyManager.CALL_STATE_IDLE
                     }
                 }
-
                 else -> null
             }
         }

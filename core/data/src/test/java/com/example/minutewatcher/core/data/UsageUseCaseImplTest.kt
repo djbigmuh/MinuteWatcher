@@ -11,6 +11,8 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -134,6 +136,30 @@ class UsageUseCaseImplTest {
             }
 
             usageUseCase.refreshOperatorInfo()
+        }
+
+    @Test(expected = IOException::class)
+    fun `adjustMinutes fails on limit read timeout`() =
+        runTest {
+            val identity = "sim_0"
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            // Mock timeout: flow that never emits
+            whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flow { awaitCancellation() })
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity)))
+
+            usageUseCase.adjustMinutes(0, 450)
+        }
+
+    @Test(expected = IOException::class)
+    fun `adjustTraffic fails on usage read timeout`() =
+        runTest {
+            val identity = "sim_0"
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
+            whenever(simLimitsRepository.getTrafficLimit(identity)).thenReturn(flowOf(10240))
+            // Mock timeout: flow that never emits
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flow { awaitCancellation() })
+
+            usageUseCase.adjustTraffic(0, 5f)
         }
 
     private fun createSimUsage(

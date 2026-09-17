@@ -12,12 +12,13 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -28,6 +29,8 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
@@ -35,10 +38,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainSimDataControllerTest {
     @get:Rule
-    val mainDispatcherRule =
-        MainDispatcherRule(
-            UnconfinedTestDispatcher(),
-        )
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val usageStateRepository: UsageStateRepository = mock()
     private val trackingRecoveryController: TrackingRecoveryController = mock()
@@ -73,6 +73,50 @@ class MainSimDataControllerTest {
             val error = controller.lastOperationError.value
             assertEquals(R.string.error_operation_failed_retry, error?.messageRes)
             assertEquals(slot, error?.slot)
+        }
+
+    @Test
+    fun `toggleAutoReset failure on day read timeout sets lastOperationError`() =
+        runTest {
+            controller = createController()
+            val slot = 0
+            val identity = "sim_0"
+            whenever(simIdentityRepository.getIdentity(slot)).thenReturn(identity)
+            // Mock timeout: flow that never emits
+            whenever(simLimitsRepository.getAutoResetDay(identity)).thenReturn(flow { awaitCancellation() })
+
+            controller.toggleAutoReset(slot, true)
+
+            // Advance time past timeouts: 5s (first) + 0.5s (delay) + 5s (second) = 10.5s
+            testScheduler.advanceTimeBy(15000.milliseconds)
+            testScheduler.runCurrent()
+
+            val error = controller.lastOperationError.value
+            assertEquals(R.string.error_operation_failed_retry, error?.messageRes)
+            assertEquals(slot, error?.slot)
+            verify(simLimitsRepository, never()).setAutoReset(any(), any(), any())
+        }
+
+    @Test
+    fun `updateAutoResetDay failure on status read timeout sets lastOperationError`() =
+        runTest {
+            controller = createController()
+            val slot = 0
+            val identity = "sim_0"
+            whenever(simIdentityRepository.getIdentity(slot)).thenReturn(identity)
+            // Mock timeout: flow that never emits
+            whenever(simLimitsRepository.getAutoReset(identity)).thenReturn(flow { awaitCancellation() })
+
+            controller.updateAutoResetDay(slot, 15)
+
+            // Advance time past timeouts: 5s (first) + 0.5s (delay) + 5s (second) = 10.5s
+            testScheduler.advanceTimeBy(15000.milliseconds)
+            testScheduler.runCurrent()
+
+            val error = controller.lastOperationError.value
+            assertEquals(R.string.error_operation_failed_retry, error?.messageRes)
+            assertEquals(slot, error?.slot)
+            verify(simLimitsRepository, never()).setAutoReset(any(), any(), any())
         }
 
     private fun TestScope.createController(): MainSimDataController =

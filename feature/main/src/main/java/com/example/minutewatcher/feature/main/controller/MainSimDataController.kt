@@ -245,7 +245,9 @@ class MainSimDataController
                 val error =
                     executeSimOperation(slot, "toggleAutoReset") {
                         val identity = simIdentityRepository.getIdentity(slot)
-                        val currentDay = simLimitsRepository.getAutoResetDay(identity).firstWithTimeout() ?: 1
+                        val currentDay =
+                            simLimitsRepository.getAutoResetDay(identity).firstWithTimeout()
+                                ?: throw IOException("Timeout reading auto-reset day for $identity")
                         simLimitsRepository.setAutoReset(identity, currentDay, enabled)
                     }
                 _lastOperationError.value = error
@@ -263,7 +265,9 @@ class MainSimDataController
                 val error =
                     executeSimOperation(slot, "updateAutoResetDay") {
                         val identity = simIdentityRepository.getIdentity(slot)
-                        val enabled = simLimitsRepository.getAutoReset(identity).firstWithTimeout() ?: false
+                        val enabled =
+                            simLimitsRepository.getAutoReset(identity).firstWithTimeout()
+                                ?: throw IOException("Timeout reading auto-reset status for $identity")
                         simLimitsRepository.setAutoReset(identity, day, enabled)
                     }
                 _lastOperationError.value = error

@@ -9,7 +9,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class PermissionManagerNoTelephonyTest {
-
     @Test
     fun `isTelephonySupported returns false when service missing`() {
         val context: Context = mock()

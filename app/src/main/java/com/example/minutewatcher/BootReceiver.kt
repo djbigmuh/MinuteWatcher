@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.WorkScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.guava.await
 import javax.inject.Inject
 
@@ -23,11 +24,11 @@ open class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
 
         val pendingResult = acquirePendingResult()
-        goAsyncWithScope(context, pendingResult) { _ ->
+        goAsyncWithScope(context, pendingResult, dispatcher = asyncDispatcher()) { _ ->
             try {
                 // Force REPLACE on boot to ensure fresh initialization after restart.
                 // We await the enqueue operation to ensure it persists before finish().
-                workScheduler.scheduleInitialSetup(force = true).result.await()
+                provideWorkScheduler().scheduleInitialSetup(force = true).result.await()
                 AppLogger.d("BootReceiver: InitialSetup scheduled successfully")
             } catch (e: CancellationException) {
                 throw e
@@ -39,4 +40,10 @@ open class BootReceiver : BroadcastReceiver() {
 
     @VisibleForTesting
     protected open fun acquirePendingResult(): BroadcastReceiver.PendingResult = goAsync()
+
+    @VisibleForTesting
+    protected open fun provideWorkScheduler(): WorkScheduler = workScheduler
+
+    @VisibleForTesting
+    protected open fun asyncDispatcher(): CoroutineDispatcher? = null
 }

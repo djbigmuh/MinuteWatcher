@@ -11,7 +11,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class SemanticCapabilitiesTest {
-
     private val context: Context = mock()
     private val packageManager: PackageManager = mock()
     private val permissionManager: PermissionManager = mock()

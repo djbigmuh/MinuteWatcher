@@ -17,7 +17,6 @@ object NumberInputNormalizer {
         if (raw.isEmpty()) return ""
 
         val sb = StringBuilder()
-        var dotSeen = false
 
         for (c in raw) {
             when {
@@ -29,10 +28,7 @@ object NumberInputNormalizer {
 
                 // 2. Normalize decimal separators
                 c == '.' || c == ',' || c == '\u066B' -> {
-                    if (!dotSeen) {
-                        sb.append('.')
-                        dotSeen = true
-                    }
+                    sb.append('.')
                 }
 
                 // 3. Ignore thousands separators and other noise

@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class NumberInputNormalizerTest {
-
     @Test
     fun `test normalize ar digits`() {
         // Arabic-Indic digits: ١٥٫٥ (15.5)

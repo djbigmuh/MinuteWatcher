@@ -47,6 +47,7 @@ abstract class IdentityDataModule {
         @Singleton
         fun provideSubscriptionManager(
             @ApplicationContext context: Context,
-        ): SubscriptionManager? = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager
+        ): SubscriptionManager? =
+            context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager
     }
 }

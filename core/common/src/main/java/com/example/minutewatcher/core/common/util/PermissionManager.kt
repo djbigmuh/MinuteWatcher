@@ -52,20 +52,19 @@ class PermissionManager
          */
         @Suppress("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> {
-            val manager = subscriptionManager ?: return emptyList()
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_PHONE_STATE,
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                return try {
+            val manager = subscriptionManager
+            val hasPermission = hasPhoneStatePermission()
+
+            return if (manager != null && hasPermission) {
+                try {
                     manager.activeSubscriptionInfoList.orEmpty()
                 } catch (e: SecurityException) {
                     AppLogger.e("PermissionManager: SecurityException in getActiveSubscriptions", e)
                     emptyList()
                 }
+            } else {
+                emptyList()
             }
-            return emptyList()
         }
 
         /**
@@ -73,20 +72,19 @@ class PermissionManager
          * Caller must ensure permission is granted before invoking this method.
          */
         fun getDefaultVoiceSubscriptionId(): Int {
-            if (subscriptionManager == null) return -1
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_PHONE_STATE,
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                return try {
+            val manager = subscriptionManager
+            val hasPermission = hasPhoneStatePermission()
+
+            return if (manager != null && hasPermission) {
+                try {
                     SubscriptionManager.getDefaultVoiceSubscriptionId()
                 } catch (e: SecurityException) {
                     AppLogger.e("PermissionManager: SecurityException in getDefaultVoiceSubscriptionId", e)
                     -1
                 }
+            } else {
+                -1
             }
-            return -1
         }
 
         /**
@@ -94,20 +92,19 @@ class PermissionManager
          * Caller must ensure permission is granted before invoking this method.
          */
         fun getDefaultDataSubscriptionId(): Int {
-            if (subscriptionManager == null) return -1
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_PHONE_STATE,
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                return try {
+            val manager = subscriptionManager
+            val hasPermission = hasPhoneStatePermission()
+
+            return if (manager != null && hasPermission) {
+                try {
                     SubscriptionManager.getDefaultDataSubscriptionId()
                 } catch (e: SecurityException) {
                     AppLogger.e("PermissionManager: SecurityException in getDefaultDataSubscriptionId", e)
                     -1
                 }
+            } else {
+                -1
             }
-            return -1
         }
 
         fun hasNotificationPermission(): Boolean {

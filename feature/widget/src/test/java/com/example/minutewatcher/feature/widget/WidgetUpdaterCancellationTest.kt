@@ -22,7 +22,6 @@ import java.lang.reflect.Field
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterCancellationTest {
-
     private val context: Context = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val renderer: WidgetRenderer = mock()
@@ -40,45 +39,48 @@ class WidgetUpdaterCancellationTest {
         whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
 
         val limitManager = WidgetLimitManager(appSettingsRepository, testScope)
-        updater = WidgetUpdaterImpl(
-            context,
-            appSettingsRepository,
-            renderer,
-            retryManager,
-            limitManager,
-            errorClassifier
-        )
+        updater =
+            WidgetUpdaterImpl(
+                context,
+                appSettingsRepository,
+                renderer,
+                retryManager,
+                limitManager,
+                errorClassifier,
+            )
     }
 
     @Test
-    fun `test cancellation during updateAll finally causes activeUpdate leak`() = runTest(testDispatcher) {
-        // 1. Get the mutex via reflection
-        val mutexField: Field = WidgetUpdaterImpl::class.java.getDeclaredField("coalescingMutex")
-        mutexField.isAccessible = true
-        val coalescingMutex = mutexField.get(updater) as Mutex
+    fun `test cancellation during updateAll finally causes activeUpdate leak`() =
+        runTest(testDispatcher) {
+            // 1. Get the mutex via reflection
+            val mutexField: Field = WidgetUpdaterImpl::class.java.getDeclaredField("coalescingMutex")
+            mutexField.isAccessible = true
+            val coalescingMutex = mutexField.get(updater) as Mutex
 
-        val activeUpdateField: Field = WidgetUpdaterImpl::class.java.getDeclaredField("activeUpdate")
-        activeUpdateField.isAccessible = true
+            val activeUpdateField: Field = WidgetUpdaterImpl::class.java.getDeclaredField("activeUpdate")
+            activeUpdateField.isAccessible = true
 
-        val reachedUpdate = CompletableDeferred<Unit>()
-        whenever(renderer.renderAll(any(), any())).thenAnswer {
-            reachedUpdate.complete(Unit)
-            mock()
+            val reachedUpdate = CompletableDeferred<Unit>()
+            whenever(renderer.renderAll(any(), any())).thenAnswer {
+                reachedUpdate.complete(Unit)
+                mock()
+            }
+
+            val job =
+                launch {
+                    updater.updateAll()
+                }
+
+            reachedUpdate.await()
+            coalescingMutex.lock() // Block the finally block
+
+            job.cancelAndJoin() // Cancel while it's waiting for mutex in finally
+
+            coalescingMutex.unlock()
+
+            // 2. Check if activeUpdate leaked.
+            val activeUpdate = activeUpdateField.get(updater)
+            assert(activeUpdate == null) { "activeUpdate should have been cleared to null" }
         }
-
-        val job = launch {
-            updater.updateAll()
-        }
-
-        reachedUpdate.await()
-        coalescingMutex.lock() // Block the finally block
-
-        job.cancelAndJoin() // Cancel while it's waiting for mutex in finally
-
-        coalescingMutex.unlock()
-
-        // 2. Check if activeUpdate leaked.
-        val activeUpdate = activeUpdateField.get(updater)
-        assert(activeUpdate == null) { "activeUpdate should have been cleared to null" }
-    }
 }

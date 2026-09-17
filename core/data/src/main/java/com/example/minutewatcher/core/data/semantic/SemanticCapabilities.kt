@@ -1,7 +1,6 @@
 package com.example.minutewatcher.core.data.semantic
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.model.AppCapability
@@ -37,14 +36,13 @@ class SemanticCapabilities
          * On older versions (26+), we rely on bundled LocalStorage which is available on all
          * supported API levels.
          */
-        private fun isAppSearchSupported(): Boolean {
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        private fun isAppSearchSupported(): Boolean =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 context.getSystemService(APP_SEARCH_SERVICE) != null
             } else {
                 // LocalStorage fallback for older versions (26+)
                 true
             }
-        }
 
         private companion object {
             private const val FEATURE_TELEPHONY_MULTISIM = "android.hardware.telephony.multisim"

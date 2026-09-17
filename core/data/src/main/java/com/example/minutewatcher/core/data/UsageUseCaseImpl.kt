@@ -18,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -85,7 +86,7 @@ class UsageUseCaseImpl
          * @param slot SIM slot index.
          * @param remainingMinutes User-specified remaining minutes.
          * Safe to call from any coroutine context.
-         * @throws java.io.IOException if DataStore operations fail.
+         * @throws java.io.IOException if DataStore operations fail or read times out.
          * @throws InvalidSlotException if slot is invalid.
          * @throws CancellationException if cancelled.
          */
@@ -95,9 +96,13 @@ class UsageUseCaseImpl
         ) {
             val identity = simIdentityRepository.getIdentity(slot)
             adjustmentMutex.withLock {
-                val limit = simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout() ?: 0
-                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                val used = usage?.minutesUsed ?: 0
+                val limit =
+                    simLimitsRepository.getMonthlyLimit(identity).firstWithTimeout()
+                        ?: throw IOException("Timeout reading monthly limit for $identity")
+                val usage =
+                    simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                        ?: throw IOException("Timeout reading current usage for $identity")
+                val used = usage.minutesUsed
 
                 val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
                 val adj = (safeRemaining - limit).toLong() + used.toLong()
@@ -117,7 +122,7 @@ class UsageUseCaseImpl
          * @param slot SIM slot index.
          * @param remainingGb User-specified remaining traffic in GB.
          * Safe to call from any coroutine context.
-         * @throws java.io.IOException if DataStore operations fail.
+         * @throws IOException if DataStore operations fail or read times out.
          * @throws com.example.minutewatcher.core.domain.InvalidSlotException if slot is invalid.
          * @throws CancellationException if cancelled.
          */
@@ -127,9 +132,13 @@ class UsageUseCaseImpl
         ) {
             val identity = simIdentityRepository.getIdentity(slot)
             adjustmentMutex.withLock {
-                val limitMb = simLimitsRepository.getTrafficLimit(identity).firstWithTimeout() ?: 0
-                val usage = simUsageRepository.getSimUsage(identity).firstWithTimeout()
-                val usedMb = usage?.trafficUsedMb ?: 0f
+                val limitMb =
+                    simLimitsRepository.getTrafficLimit(identity).firstWithTimeout()
+                        ?: throw IOException("Timeout reading traffic limit for $identity")
+                val usage =
+                    simUsageRepository.getSimUsage(identity).firstWithTimeout()
+                        ?: throw IOException("Timeout reading current traffic usage for $identity")
+                val usedMb = usage.trafficUsedMb
 
                 val safeRemainingGb =
                     remainingGb.toDouble().coerceIn(0.0, Constants.MAX_TRAFFIC_LIMIT_GB.toDouble())

@@ -40,11 +40,12 @@ open class SimIdentityDiscovery
          */
         open fun observeSubscriptionChanges(): Flow<Unit> =
             callbackFlow {
-                val manager = subscriptionManager ?: run {
-                    trySend(Unit)
-                    close()
-                    return@callbackFlow
-                }
+                val manager =
+                    subscriptionManager ?: run {
+                        trySend(Unit)
+                        close()
+                        return@callbackFlow
+                    }
 
                 val listener =
                     object : SubscriptionManager.OnSubscriptionsChangedListener() {
@@ -125,40 +126,42 @@ open class SimIdentityDiscovery
             seed: String,
             isStable: Boolean = true,
         ): SimDiscoveryResult {
-            if (subscriptionManager == null) {
-                return SimDiscoveryResult.Unsupported
-            }
-            if (!permissionManager.hasPhoneStatePermission()) {
-                return SimDiscoveryResult.PermissionMissing
-            }
+            val manager = subscriptionManager
+            val hasPermission = permissionManager.hasPhoneStatePermission()
 
-            return try {
-                val subscriptions = getActiveSubscriptions()
-                val defaultDataSubId = getDefaultDataSubscriptionId()
-                val defaultVoiceSubId = getDefaultVoiceSubscriptionId()
+            return when {
+                manager == null -> SimDiscoveryResult.Unsupported
+                !hasPermission -> SimDiscoveryResult.PermissionMissing
+                else -> {
+                    try {
+                        val subscriptions = getActiveSubscriptions()
+                        val defaultDataSubId = getDefaultDataSubscriptionId()
+                        val defaultVoiceSubId = getDefaultVoiceSubscriptionId()
 
-                val discoveredSims =
-                    subscriptions.map { info ->
-                        val identity = SimIdentityUtils.createIdentityFromInfo(info, seed, isStable)
-                        ActiveSimInfo(
-                            identity = identity,
-                            slotIndex = info.simSlotIndex,
-                            subscriptionId = info.subscriptionId,
-                            iccId = info.iccId,
-                            displayName = info.displayName?.toString(),
-                            carrierName = info.carrierName?.toString(),
-                            mccMnc = SimIdentityUtils.getMccMnc(info),
-                            isDefaultData = info.subscriptionId == defaultDataSubId,
-                            isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
-                        )
+                        val discoveredSims =
+                            subscriptions.map { info ->
+                                val identity = SimIdentityUtils.createIdentityFromInfo(info, seed, isStable)
+                                ActiveSimInfo(
+                                    identity = identity,
+                                    slotIndex = info.simSlotIndex,
+                                    subscriptionId = info.subscriptionId,
+                                    iccId = info.iccId,
+                                    displayName = info.displayName?.toString(),
+                                    carrierName = info.carrierName?.toString(),
+                                    mccMnc = SimIdentityUtils.getMccMnc(info),
+                                    isDefaultData = info.subscriptionId == defaultDataSubId,
+                                    isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
+                                )
+                            }
+                        SimDiscoveryResult.Available(discoveredSims)
+                    } catch (e: SecurityException) {
+                        AppLogger.w("Sim discovery failed: security restriction", e)
+                        SimDiscoveryResult.PermissionMissing
+                    } catch (e: Exception) {
+                        AppLogger.e("Sim discovery failed", e)
+                        SimDiscoveryResult.Failed(SimDiscoveryFailureReason.UNKNOWN)
                     }
-                SimDiscoveryResult.Available(discoveredSims)
-            } catch (e: SecurityException) {
-                AppLogger.w("Sim discovery failed: security restriction", e)
-                SimDiscoveryResult.PermissionMissing
-            } catch (e: Exception) {
-                AppLogger.e("Sim discovery failed", e)
-                SimDiscoveryResult.Failed(SimDiscoveryFailureReason.UNKNOWN)
+                }
             }
         }
 

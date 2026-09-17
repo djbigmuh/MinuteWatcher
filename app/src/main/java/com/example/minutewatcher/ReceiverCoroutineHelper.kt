@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
  * **Строгое соблюдение API:** BroadcastReceiver с goAsync() должен вызвать
  * PendingResult.finish() до завершения. SupervisorJob гарантирует, что
  * отмена одной корутины не повлияет на другие. finish() вызывается в
- * finally, поэтому даже при отмене корутины он будет вызван.
+ * finally, поэтому even if the coroutine is cancelled, it will be called.
  *
  * На AOSP BroadcastReceiver с goAsync() живёт до вызова finish().
  * Если кастомная прошивка убивает процесс до вызова finish() —

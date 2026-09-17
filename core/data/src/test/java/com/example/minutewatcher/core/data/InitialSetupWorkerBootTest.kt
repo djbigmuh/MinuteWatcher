@@ -61,52 +61,79 @@ class InitialSetupWorkerBootTest {
         runTest {
             whenever(usageStateRepository.refresh()).thenReturn(
                 RefreshResult.Success(
-                    GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
-                )
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList()),
+                ),
             )
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
         }
 
-        deps = InitialSetupWorkerDependencies(
-            callTracker = callTracker,
-            trafficTracker = trafficTracker,
-            simIdentityRepository = simIdentityRepository,
-            migrationFlagsRepository = migrationFlagsRepository,
-            usageStateRepository = usageStateRepository,
-            autoResetUseCase = autoResetUseCase,
-            usageUseCase = usageUseCase,
-            migrationService = migrationService,
-            dataChangeNotifier = dataChangeNotifier,
-            workScheduler = workScheduler,
-            permissionManager = permissionManager
-        )
+        deps =
+            InitialSetupWorkerDependencies(
+                callTracker = callTracker,
+                trafficTracker = trafficTracker,
+                simIdentityRepository = simIdentityRepository,
+                migrationFlagsRepository = migrationFlagsRepository,
+                usageStateRepository = usageStateRepository,
+                autoResetUseCase = autoResetUseCase,
+                usageUseCase = usageUseCase,
+                migrationService = migrationService,
+                dataChangeNotifier = dataChangeNotifier,
+                workScheduler = workScheduler,
+                permissionManager = permissionManager,
+            )
     }
 
     @Test
-    fun `doWork waits for onBootAwaited to complete`() = runTest {
-        val worker = TestListenableWorkerBuilder<InitialSetupWorker>(context)
-            .setWorkerFactory(object : WorkerFactory() {
-                override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters) =
-                    InitialSetupWorker(appContext, workerParameters, deps)
-            }).build()
+    fun `doWork waits for onBootAwaited to complete`() =
+        runTest {
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ) = InitialSetupWorker(appContext, workerParameters, deps)
+                        },
+                    ).build()
 
-        val result = worker.doWork()
+            val result = worker.doWork()
 
-        assertTrue("onBootAwaited should have completed", callTracker.bootCompleted.get())
-        assertEquals(ListenableWorker.Result.success(), result)
-    }
+            assertTrue("onBootAwaited should have completed", callTracker.bootCompleted.get())
+            assertEquals(ListenableWorker.Result.success(), result)
+        }
 
-    private open class FakeCallTracker : CallTracker(
-        mock(), mock(), mock(), mock(), mock(), mock(), mock(), mock(), mock()
-    ) {
+    private open class FakeCallTracker :
+        CallTracker(
+            mock(),
+            mock(),
+            mock(),
+            mock(),
+            mock(),
+            mock(),
+            mock(),
+            mock(),
+            mock(),
+        ) {
         val bootCompleted = AtomicBoolean(false)
+
         override suspend fun onBootAwaited() {
             delay(1000)
             bootCompleted.set(true)
         }
-        override fun onBoot() {}
-        override fun ensureStarted() {}
-        override suspend fun recover() {}
+
+        override fun onBoot() {
+            // no-op
+        }
+
+        override fun ensureStarted() {
+            // no-op
+        }
+
+        override suspend fun recover() {
+            // no-op
+        }
     }
 }

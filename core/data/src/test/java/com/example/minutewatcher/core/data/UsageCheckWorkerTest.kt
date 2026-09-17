@@ -5,6 +5,8 @@ import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
+import androidx.work.WorkerFactory
+import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
@@ -19,6 +21,7 @@ import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.MeasurementUnit
@@ -29,8 +32,10 @@ import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -48,6 +53,9 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
+import java.io.IOException
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -98,11 +106,11 @@ class UsageCheckWorkerTest {
         worker =
             TestListenableWorkerBuilder<UsageCheckWorker>(application)
                 .setWorkerFactory(
-                    object : androidx.work.WorkerFactory() {
+                    object : WorkerFactory() {
                         override fun createWorker(
                             appContext: Context,
                             workerClassName: String,
-                            workerParameters: androidx.work.WorkerParameters,
+                            workerParameters: WorkerParameters,
                         ): ListenableWorker {
                             val deps =
                                 UsageWorkerDependencies(
@@ -167,7 +175,7 @@ class UsageCheckWorkerTest {
                 )
 
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
@@ -188,7 +196,7 @@ class UsageCheckWorkerTest {
     @Test
     fun `doWork retries on IOException`() =
         runTest {
-            whenever(usageUseCase.refreshOperatorInfo()).thenAnswer { throw java.io.IOException("Disk full") }
+            whenever(usageUseCase.refreshOperatorInfo()).thenAnswer { throw IOException("Disk full") }
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.retry(), result)
         }
@@ -223,7 +231,7 @@ class UsageCheckWorkerTest {
                                                 simSlot = 0,
                                                 operatorName = "MTS",
                                                 packageType = PackageType.DATA,
-                                                limit = com.example.minutewatcher.core.model.Constants.BYTES_PER_GB,
+                                                limit = Constants.BYTES_PER_GB,
                                                 used = 900 * 1024 * 1024,
                                                 remaining = 124 * 1024 * 1024,
                                                 unit = MeasurementUnit.BYTES,
@@ -240,7 +248,7 @@ class UsageCheckWorkerTest {
                 )
 
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
@@ -300,7 +308,7 @@ class UsageCheckWorkerTest {
                 )
 
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
@@ -464,7 +472,7 @@ class UsageCheckWorkerTest {
                 )
 
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
@@ -521,7 +529,7 @@ class UsageCheckWorkerTest {
                 )
 
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Success(snapshot),
             )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowTraffic = true)))
@@ -557,7 +565,7 @@ class UsageCheckWorkerTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
             whenever(usageStateRepository.refresh())
                 .thenReturn(
-                    com.example.minutewatcher.core.domain.RefreshResult
+                    RefreshResult
                         .Success(createEmptySnapshot()),
                 )
 
@@ -610,7 +618,7 @@ class UsageCheckWorkerTest {
                 )
 
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Success(snapshot),
             )
 
@@ -672,7 +680,7 @@ class UsageCheckWorkerTest {
 
             // Mock timeout with a valid (stale) snapshot
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Timeout(snapshot),
             )
 
@@ -696,7 +704,7 @@ class UsageCheckWorkerTest {
         runTest {
             // Mock timeout with empty snapshot (timestamp = 0)
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Timeout(createEmptySnapshot()),
             )
 
@@ -706,14 +714,38 @@ class UsageCheckWorkerTest {
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
 
+    @Test
+    fun `doWork skips notification and flag update on notification flag read timeout`() =
+        runTest {
+            val identity = "sim_0"
+            val snapshot = createUsageSnapshot(minutesUsed = 95, minutesLimit = 100)
+
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(notifyLowMinutes = true)))
+            whenever(simUsageRepository.getSimUsage(identity))
+                .thenReturn(flowOf(createSimUsage(identity, minutesUsed = 95, minutesLimit = 100)))
+
+            // Mock timeout for notification flag: flow that never emits
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity))
+                .thenReturn(flow { awaitCancellation() })
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            // Should NOT send notification
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+            // Should NOT update flag
+            verify(simNotificationFlagsRepository, never()).setNotifiedExhaustedMinutes(any(), any())
+        }
+
     private fun createUtcMillis(
         year: Int,
         month: Int,
         day: Int,
     ): Long =
-        java.time.LocalDateTime
+        LocalDateTime
             .of(year, month, day, 12, 0)
-            .toInstant(java.time.ZoneOffset.UTC)
+            .toInstant(ZoneOffset.UTC)
             .toEpochMilli()
 
     private fun createEmptySnapshot() =

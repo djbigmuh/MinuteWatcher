@@ -213,11 +213,12 @@ class UpdateCoordinator
                             if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
                         }
 
+                val newJob =
+                    observationScope.observe(flow, handler) { snapshot ->
+                        processSnapshotSafe(snapshot, currentCoroutineContext().job)
+                    }
+
                 stateMutex.withLock {
-                    val newJob =
-                        observationScope.observe(flow, handler) { snapshot ->
-                            processSnapshotSafe(snapshot, currentCoroutineContext().job)
-                        }
                     currentObservationJob.set(newJob)
                     monitoringJob.getAndSet(launchMonitoringJob(newJob))?.cancel()
                     transitionStatus(TrackingStatus.Active)

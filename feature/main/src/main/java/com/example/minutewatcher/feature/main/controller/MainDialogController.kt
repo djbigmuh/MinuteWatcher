@@ -13,7 +13,8 @@ import javax.inject.Inject
  * MainDialogController manages the state of dialogs on the main screen.
  *
  * **Thread Safety:** Safe to call from any coroutine context.
- * **SavedStateHandle:** Persists dialog state via [SavedStateHandle] (survives configuration changes and process death).
+ * **SavedStateHandle:** Persists dialog state via [SavedStateHandle]
+ * (survives configuration changes and process death).
  *
  * @property savedStateHandle SavedStateHandle for preserving dialog state across process death.
  */

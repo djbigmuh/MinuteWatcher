@@ -96,7 +96,8 @@ class UsageStateRepositoryImpl
         @param:ApplicationContext private val context: Context,
         private val deps: UsageRepositoryDependencies,
         @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
-    ) : UsageStateRepository, TrackingStatusProvider {
+    ) : UsageStateRepository,
+    TrackingStatusProvider {
         override val key: TrackingKey = TrackingKey.USAGE_STATE
 
         private val statusMachine = TrackingStatusMachine()

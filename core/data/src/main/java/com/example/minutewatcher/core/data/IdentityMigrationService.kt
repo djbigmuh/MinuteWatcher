@@ -295,7 +295,7 @@ open class IdentityMigrationService
                 }
             }
 
-                    // 3. Historical Mapping Migration:
+            // 3. Historical Mapping Migration:
             // If the current SIM is identified by Subscription ID (usually on older Android APIs),
             // it might have legacy data under a previously generated ICCID identity
             // (e.g. if the user upgraded from a newer Android version to an older one,
@@ -335,67 +335,15 @@ open class IdentityMigrationService
 
             try {
                 dataStore.edit { prefs ->
-                    // 0. One-time hygiene: remove orphaned conflict metadata keys
-                    val conflictMetadataKeys =
-                        prefs
-                            .asMap()
-                            .keys
-                            .filter {
-                                it.name.startsWith(
-                                    "${DataStoreKeys.CONFLICT_PREFIX}${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}",
-                                )
-                            }
-                    conflictMetadataKeys.forEach { prefs.remove(it) }
+                    performHygieneCleanup(prefs)
 
-                    // 1. Migrate keys based on suffixes
-                    for ((legacySuffix, newSuffix) in mappings) {
-                        // EXCLUDE metadata keys (subscription_id_*) from suffix migration.
-                        // They are handled by the cleanup block (step 2) or re-written by persistence.
-                        val keysToMigrate =
-                            prefs
-                                .asMap()
-                                .keys
-                                .filter {
-                                    it.name.endsWith(legacySuffix) &&
-                                        !it.name.startsWith(DataStoreKeys.SUBSCRIPTION_ID_PREFIX)
-                                }
+                    val (migrated, conflicts, failures) = migrateSuffixes(prefs, mappings, storeName)
+                    migratedCount = migrated
+                    conflictCount = conflicts
+                    failureCount = failures
 
-                        for (oldKey in keysToMigrate) {
-                            val baseName = oldKey.name.removeSuffix(legacySuffix)
-                            val newKeyName = baseName + newSuffix
-
-                            when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
-                                MigrationResult.SUCCESS -> {
-                                    migratedCount++
-                                    prefs.remove(oldKey)
-                                }
-
-                                MigrationResult.CONFLICT -> {
-                                    conflictCount++
-                                    // Conflict resolved by keeping modern value and backing up legacy to
-                                    // conflict_<key>. Old legacy key must be removed to prevent infinite
-                                    // migration loops.
-                                    prefs.remove(oldKey)
-                                }
-
-                                MigrationResult.FAILURE -> {
-                                    failureCount++
-                                }
-                            }
-                        }
-                    }
-
-                    // 2. Perform cleanup if requested (usually for simDataStore)
                     if (subIdForCleanup != null) {
-                        val keysToRemove =
-                            prefs
-                                .asMap()
-                                .keys
-                                .asSequence()
-                                .filter { it.name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_") }
-                                .filter { prefs[it] == subIdForCleanup }
-                                .toList()
-                        keysToRemove.forEach { prefs.remove(it) }
+                        performSimCleanup(prefs, subIdForCleanup)
                     }
                 }
             } catch (e: CancellationException) {
@@ -411,6 +359,83 @@ open class IdentityMigrationService
                 failures = failureCount,
                 partialFailure = failureCount > 0,
             )
+        }
+
+    private fun performHygieneCleanup(prefs: MutablePreferences) {
+        // 0. One-time hygiene: remove orphaned conflict metadata keys
+        val conflictMetadataKeys =
+            prefs
+                .asMap()
+                .keys
+                .filter {
+                    it.name.startsWith(
+                        "${DataStoreKeys.CONFLICT_PREFIX}${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}",
+                    )
+                }
+        conflictMetadataKeys.forEach { prefs.remove(it) }
+    }
+
+    private fun migrateSuffixes(
+        prefs: MutablePreferences,
+        mappings: List<Pair<String, String>>,
+        storeName: String,
+    ): Triple<Int, Int, Int> {
+        var migratedCount = 0
+        var conflictCount = 0
+        var failureCount = 0
+
+        for ((legacySuffix, newSuffix) in mappings) {
+            // EXCLUDE metadata keys (subscription_id_*) from suffix migration.
+            // They are handled by the cleanup block (step 2) or re-written by persistence.
+            val keysToMigrate =
+                prefs
+                    .asMap()
+                    .keys
+                    .filter {
+                        it.name.endsWith(legacySuffix) &&
+                            !it.name.startsWith(DataStoreKeys.SUBSCRIPTION_ID_PREFIX)
+                    }
+
+            for (oldKey in keysToMigrate) {
+                val baseName = oldKey.name.removeSuffix(legacySuffix)
+                val newKeyName = baseName + newSuffix
+
+                when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
+                    MigrationResult.SUCCESS -> {
+                        migratedCount++
+                        prefs.remove(oldKey)
+                    }
+
+                    MigrationResult.CONFLICT -> {
+                        conflictCount++
+                        // Conflict resolved by keeping modern value and backing up legacy to
+                        // conflict_<key>. Old legacy key must be removed to prevent infinite
+                        // migration loops.
+                        prefs.remove(oldKey)
+                    }
+
+                    MigrationResult.FAILURE -> {
+                        failureCount++
+                    }
+                }
+            }
+        }
+        return Triple(migratedCount, conflictCount, failureCount)
+    }
+
+    private fun performSimCleanup(
+        prefs: MutablePreferences,
+        subIdForCleanup: Int,
+    ) {
+        val keysToRemove =
+            prefs
+                .asMap()
+                .keys
+                .asSequence()
+                .filter { it.name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_") }
+                .filter { prefs[it] == subIdForCleanup }
+                .toList()
+        keysToRemove.forEach { prefs.remove(it) }
         }
 
         private enum class MigrationResult {

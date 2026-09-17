@@ -236,7 +236,10 @@ class UsageCheckWorker
             val notifiedExhausted =
                 deps.simNotificationFlagsRepository
                     .getNotifiedExhaustedMinutes(identity)
-                    .firstWithTimeout() ?: false
+                    .firstWithTimeout() ?: run {
+                    AppLogger.w("UsageCheckWorker: timeout reading exhausted minutes flag for $identity, skipping")
+                    return
+                }
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     sendNotificationWithBodyRes(
@@ -273,7 +276,10 @@ class UsageCheckWorker
             val notifiedLow =
                 deps.simNotificationFlagsRepository
                     .getNotifiedLowMinutes(identity)
-                    .firstWithTimeout() ?: false
+                    .firstWithTimeout() ?: run {
+                    AppLogger.w("UsageCheckWorker: timeout reading low minutes flag for $identity, skipping")
+                    return
+                }
 
             if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
                 val levelRes =
@@ -342,7 +348,10 @@ class UsageCheckWorker
             val notifiedExhausted =
                 deps.simNotificationFlagsRepository
                     .getNotifiedExhaustedTraffic(identity)
-                    .firstWithTimeout() ?: false
+                    .firstWithTimeout() ?: run {
+                    AppLogger.w("UsageCheckWorker: timeout reading exhausted traffic flag for $identity, skipping")
+                    return
+                }
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     sendNotificationWithBodyRes(
@@ -384,7 +393,10 @@ class UsageCheckWorker
             val notifiedLow =
                 deps.simNotificationFlagsRepository
                     .getNotifiedLowTraffic(identity)
-                    .firstWithTimeout() ?: false
+                    .firstWithTimeout() ?: run {
+                    AppLogger.w("UsageCheckWorker: timeout reading low traffic flag for $identity, skipping")
+                    return
+                }
 
             if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
                 val levelRes =

@@ -9,19 +9,19 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class SimIdentityDiscoveryNoTelephonyTest {
-
     @Test
     fun `discoverSims returns Unsupported when subscriptionManager is null`() {
         val permissionManager: PermissionManager = mock()
         val notifier: PermissionStateNotifier = mock()
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
 
-        val deps = SimDiscoveryDependencies(
-            context = mock(),
-            subscriptionManager = null,
-            permissionManager = permissionManager,
-            permissionStateNotifier = notifier
-        )
+        val deps =
+            SimDiscoveryDependencies(
+                context = mock(),
+                subscriptionManager = null,
+                permissionManager = permissionManager,
+                permissionStateNotifier = notifier,
+            )
 
         val discovery = SimIdentityDiscovery(deps)
         val result = discovery.discoverSims("seed")
