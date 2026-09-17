@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.model.IdentitySource
+import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -83,6 +85,63 @@ class IdentityMigrationServiceTest {
             val prefs = appDataStore.data.first()
             assertEquals(123, prefs[newKey])
             assertEquals(null, prefs[legacyKey])
+        }
+
+    @Test
+    fun `metadata keys are excluded from suffix migration and cleaned up`() =
+        runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val legacyDataKey = intPreferencesKey("minutes_used_icc_OLD")
+            val legacyMarkerKey = intPreferencesKey("subscription_id_icc_OLD")
+            val activeIdentity =
+                SimIdentity(
+                    stableId = "sub_7",
+                    subscriptionId = 7,
+                    slotIndex = 0,
+                    source = IdentitySource.SUBSCRIPTION_ID,
+                    isStable = true,
+                )
+            val newDataKey = intPreferencesKey("minutes_used_sub_7")
+            val markerKeyInNew = intPreferencesKey("subscription_id_sub_7")
+
+            simDataStore.edit {
+                it[legacyDataKey] = 100
+                it[legacyMarkerKey] = 7 // Matches subId 7
+            }
+            advanceUntilIdle()
+
+            val outcome = service.migrateLegacyData(activeIdentity)
+            advanceUntilIdle()
+
+            assertEquals(1, outcome.migrated) // Only minutes_used_icc_OLD migrated
+            val prefs = simDataStore.data.first()
+            assertEquals(100, prefs[newDataKey])
+            assertNull(prefs[legacyMarkerKey]) // Cleaned up in step 2
+            assertNull(prefs[markerKeyInNew]) // Not migrated from suffix
+        }
+
+    @Test
+    fun `conflict metadata keys are cleaned up`() =
+        runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val conflictKey = intPreferencesKey("conflict_subscription_id_icc_OLD")
+            simDataStore.edit { it[conflictKey] = 5 }
+            advanceUntilIdle()
+
+            val activeIdentity =
+                SimIdentity(
+                    stableId = "sub_7",
+                    subscriptionId = 7,
+                    slotIndex = 0,
+                    source = IdentitySource.SUBSCRIPTION_ID,
+                    isStable = true,
+                )
+
+            service.migrateLegacyData(activeIdentity)
+            advanceUntilIdle()
+
+            val prefs = simDataStore.data.first()
+            assertNull(prefs[conflictKey])
         }
 
     @Test

@@ -116,14 +116,14 @@ open class IdentityMigrationService
         @Suppress("ReturnCount")
         private fun Preferences.Key<*>.isLegacyKey(activeIdentities: Set<String>): Boolean {
             val name = this.name
-            if (name.startsWith("conflict_")) return false
+            if (name.startsWith(DataStoreKeys.CONFLICT_PREFIX)) return false
 
             // Modern keys belonging to known active identities are not legacy.
             if (activeIdentities.any { name.endsWith("_$it") }) return false
 
             // Unambiguous legacy markers.
             if (SimConstants.SUPPORTED_SLOT_INDICES.any { name.endsWith("_sim_$it") } ||
-                name.startsWith("subscription_id_icc_")
+                name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_")
             ) {
                 return true
             }
@@ -295,7 +295,7 @@ open class IdentityMigrationService
                 }
             }
 
-            // 3. Historical Mapping Migration:
+                    // 3. Historical Mapping Migration:
             // If the current SIM is identified by Subscription ID (usually on older Android APIs),
             // it might have legacy data under a previously generated ICCID identity
             // (e.g. if the user upgraded from a newer Android version to an older one,
@@ -311,9 +311,9 @@ open class IdentityMigrationService
                             .asMap()
                             .keys
                             .asSequence()
-                            .filter { it.name.startsWith("subscription_id_icc_") }
+                            .filter { it.name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_") }
                             .filter { simPrefs[it] == subId }
-                            .map { it.name.removePrefix("subscription_id_") }
+                            .map { it.name.removePrefix(DataStoreKeys.SUBSCRIPTION_ID_PREFIX) }
                             .toList()
 
                     iccIdentities.forEach { suffixes.add("_$it") }
@@ -335,9 +335,30 @@ open class IdentityMigrationService
 
             try {
                 dataStore.edit { prefs ->
+                    // 0. One-time hygiene: remove orphaned conflict metadata keys
+                    val conflictMetadataKeys =
+                        prefs
+                            .asMap()
+                            .keys
+                            .filter {
+                                it.name.startsWith(
+                                    "${DataStoreKeys.CONFLICT_PREFIX}${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}",
+                                )
+                            }
+                    conflictMetadataKeys.forEach { prefs.remove(it) }
+
                     // 1. Migrate keys based on suffixes
                     for ((legacySuffix, newSuffix) in mappings) {
-                        val keysToMigrate = prefs.asMap().keys.filter { it.name.endsWith(legacySuffix) }
+                        // EXCLUDE metadata keys (subscription_id_*) from suffix migration.
+                        // They are handled by the cleanup block (step 2) or re-written by persistence.
+                        val keysToMigrate =
+                            prefs
+                                .asMap()
+                                .keys
+                                .filter {
+                                    it.name.endsWith(legacySuffix) &&
+                                        !it.name.startsWith(DataStoreKeys.SUBSCRIPTION_ID_PREFIX)
+                                }
 
                         for (oldKey in keysToMigrate) {
                             val baseName = oldKey.name.removeSuffix(legacySuffix)
@@ -371,7 +392,7 @@ open class IdentityMigrationService
                                 .asMap()
                                 .keys
                                 .asSequence()
-                                .filter { it.name.startsWith("subscription_id_icc_") }
+                                .filter { it.name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_") }
                                 .filter { prefs[it] == subIdForCleanup }
                                 .toList()
                         keysToRemove.forEach { prefs.remove(it) }

@@ -133,7 +133,10 @@ internal object DataStoreKeys {
 
     @JvmStatic fun slotIndexKey(identity: String) = intPreferencesKey("slot_index_$identity")
 
-    @JvmStatic fun subscriptionIdKey(identity: String) = intPreferencesKey("subscription_id_$identity")
+    const val SUBSCRIPTION_ID_PREFIX = "subscription_id_"
+    const val CONFLICT_PREFIX = "conflict_"
+
+    @JvmStatic fun subscriptionIdKey(identity: String) = intPreferencesKey("$SUBSCRIPTION_ID_PREFIX$identity")
 
     @JvmStatic fun rolloverEnabledKey(identity: String) = booleanPreferencesKey("rollover_enabled_$identity")
 
