@@ -12,7 +12,9 @@ import com.example.minutewatcher.core.model.MigrationSkipReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltWorker
 class InitialSetupWorker
@@ -29,7 +31,9 @@ class InitialSetupWorker
 
                 // Always clear stale call sessions first.
                 // This does not require phone permission and must not be blocked by migration.
-                deps.callTracker.onBoot()
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    deps.callTracker.onBootAwaited()
+                } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
 
                 checkAndPerformMigrations()?.let { return it }
 

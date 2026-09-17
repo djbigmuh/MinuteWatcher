@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.WorkScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.guava.await
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -25,7 +26,8 @@ open class BootReceiver : BroadcastReceiver() {
         goAsyncWithScope(context, pendingResult) { _ ->
             try {
                 // Force REPLACE on boot to ensure fresh initialization after restart.
-                workScheduler.scheduleInitialSetup(force = true)
+                // We await the enqueue operation to ensure it persists before finish().
+                workScheduler.scheduleInitialSetup(force = true).result.await()
                 AppLogger.d("BootReceiver: InitialSetup scheduled successfully")
             } catch (e: CancellationException) {
                 throw e

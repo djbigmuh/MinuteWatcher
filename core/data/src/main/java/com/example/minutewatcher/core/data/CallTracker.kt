@@ -104,7 +104,7 @@ open class CallTracker
          * Ensures the tracker is started.
          * This method is idempotent and thread-safe.
          */
-        fun ensureStarted() {
+        open fun ensureStarted() {
             if (trackerState.compareAndSet(State.IDLE, State.INITIALIZING) ||
                 trackerState.compareAndSet(State.FAILED, State.INITIALIZING)
             ) {
@@ -377,21 +377,33 @@ open class CallTracker
             }
         }
 
-        fun onBoot() {
+        open fun onBoot() {
             ensureStarted()
             scope.launch {
-                try {
-                    // Clear sessions under mutex protection.
-                    // This doesn't wait for full initialization to avoid deadlock/hangs,
-                    // but uses the same mutex to ensure sequential access to tracking state.
-                    initMutex.withLock {
-                        clearSessionsAndRefresh("boot cleanup")
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("CallTracker: boot cleanup failed", e)
+                onBootAwaited()
+            }
+        }
+
+        /**
+         * Clears stale call sessions after boot.
+         *
+         * Safe to call from any coroutine context.
+         * **Contract:** This method must be called early in the boot chain to ensure
+         * data consistency.
+         */
+        open suspend fun onBootAwaited() {
+            ensureStarted()
+            try {
+                // Clear sessions under mutex protection.
+                // This doesn't wait for full initialization to avoid deadlock/hangs,
+                // but uses the same mutex to ensure sequential access to tracking state.
+                initMutex.withLock {
+                    clearSessionsAndRefresh("boot cleanup")
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("CallTracker: boot cleanup failed", e)
             }
         }
 

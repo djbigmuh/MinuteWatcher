@@ -6,6 +6,7 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Operation
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,9 +30,10 @@ class WorkScheduler
          *
          * @param force If true, uses [ExistingWorkPolicy.REPLACE] to ensure fresh initialization.
          *              Otherwise, uses [ExistingWorkPolicy.KEEP].
+         * @return [Operation] that can be used to track the progress of the enqueuing operation.
          * Safe to call from any coroutine context.
          */
-        fun scheduleInitialSetup(force: Boolean = false) {
+        fun scheduleInitialSetup(force: Boolean = false): Operation {
             val workRequest =
                 OneTimeWorkRequestBuilder<InitialSetupWorker>()
                     .setBackoffCriteria(
@@ -44,7 +46,7 @@ class WorkScheduler
 
             // By default, we use KEEP to avoid cancelling and restarting migrations/setup
             // on every activity recreation (e.g., screen rotation).
-            WorkManager.getInstance(context).enqueueUniqueWork(
+            return WorkManager.getInstance(context).enqueueUniqueWork(
                 INITIAL_SETUP_WORK_NAME,
                 policy,
                 workRequest,
@@ -55,9 +57,10 @@ class WorkScheduler
          * Schedules periodic usage check work (hourly).
          *
          * Requires non-low battery constraint.
+         * @return [Operation] that can be used to track the progress of the enqueuing operation.
          * Safe to call from any coroutine context.
          */
-        fun schedulePeriodicUsageCheck() {
+        fun schedulePeriodicUsageCheck(): Operation {
             val constraints =
                 Constraints
                     .Builder()
@@ -73,7 +76,7 @@ class WorkScheduler
                         TimeUnit.SECONDS,
                     ).build()
 
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            return WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 USAGE_CHECK_WORK_NAME,
                 ExistingPeriodicWorkPolicy.KEEP,
                 workRequest,
