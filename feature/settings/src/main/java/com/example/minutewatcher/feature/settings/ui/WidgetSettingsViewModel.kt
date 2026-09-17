@@ -158,6 +158,30 @@ class WidgetSettingsViewModel
          * Обновляет текущее состояние настроек виджета.
          */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
+            applySettingsUpdate("settings", transform)
+        }
+
+        /**
+         * Обновляет настройки конкретной SIM-карты.
+         */
+        fun updateSimSettings(
+            slot: Int,
+            transform: (SimSettingsState) -> SimSettingsState,
+        ) {
+            val simTransform: (WidgetSettingsState) -> WidgetSettingsState = { settings ->
+                val updatedSimStates = settings.simStates.toMutableMap()
+                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
+                updatedSimStates[slot] = transform(currentSimState)
+                settings.copy(simStates = updatedSimStates)
+            }
+
+            applySettingsUpdate("SIM", simTransform)
+        }
+
+        private fun applySettingsUpdate(
+            tag: String,
+            transform: (WidgetSettingsState) -> WidgetSettingsState,
+        ) {
             var appliedImmediately = false
             synchronized(pendingUpdatesLock) {
                 val currentSettings = state.value.settings
@@ -184,56 +208,7 @@ class WidgetSettingsViewModel
                     } else {
                         pendingUpdates.add(transform)
                     }
-                    AppLogger.d("WidgetSettingsViewModel: update queued (total: ${pendingUpdates.size})")
-                }
-            }
-
-            if (appliedImmediately) {
-                autoSaveTrigger.tryEmit(Unit)
-            }
-        }
-
-        /**
-         * Обновляет настройки конкретной SIM-карты.
-         */
-        fun updateSimSettings(
-            slot: Int,
-            transform: (SimSettingsState) -> SimSettingsState,
-        ) {
-            val simTransform: (WidgetSettingsState) -> WidgetSettingsState = { settings ->
-                val updatedSimStates = settings.simStates.toMutableMap()
-                val currentSimState = updatedSimStates[slot] ?: SimSettingsState()
-                updatedSimStates[slot] = transform(currentSimState)
-                settings.copy(simStates = updatedSimStates)
-            }
-
-            var appliedImmediately = false
-            synchronized(pendingUpdatesLock) {
-                val currentSettings = state.value.settings
-                if (currentSettings != null) {
-                    val transformed = simTransform(currentSettings)
-                    val validated = WidgetSettingsState.validate(transformed)
-                    if (validated != currentSettings) {
-                        reduce {
-                            copy(
-                                isLoadError = false,
-                                settings = validated,
-                            )
-                        }
-                        appliedImmediately = true
-                    }
-                } else {
-                    if (pendingUpdates.size >= MAX_PENDING_UPDATES) {
-                        AppLogger.w("WidgetSettingsViewModel: pendingUpdates limit reached, merging queue")
-                        val existing = pendingUpdates.toList()
-                        pendingUpdates.clear()
-                        pendingUpdates.add { base ->
-                            existing.fold(base) { acc, t -> t(acc) }.let { simTransform(it) }
-                        }
-                    } else {
-                        pendingUpdates.add(simTransform)
-                    }
-                    AppLogger.d("WidgetSettingsViewModel: SIM update queued (total: ${pendingUpdates.size})")
+                    AppLogger.d("WidgetSettingsViewModel: $tag update queued (total: ${pendingUpdates.size})")
                 }
             }
 
