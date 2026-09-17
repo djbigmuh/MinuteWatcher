@@ -59,7 +59,7 @@ abstract class SemanticSearchManagerTestFixtures {
     }
 
     protected fun createManager(scope: CoroutineScope) =
-        SemanticSearchManager(
+        SemanticSearchManager.createForTest(
             context = context,
             scope = scope,
             appSearchWrapper = fakeWrapper,

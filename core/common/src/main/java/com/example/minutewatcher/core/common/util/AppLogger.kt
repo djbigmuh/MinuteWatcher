@@ -219,7 +219,7 @@ object AppLogger {
     fun resetForTest() {
         synchronized(this) {
             isShutdown = false
-            isFileLoggingEnabled = true
+            isFileLoggingEnabled = BuildConfig.DEBUG
             logDir = null
             workerJob?.cancel()
             workerJob = null

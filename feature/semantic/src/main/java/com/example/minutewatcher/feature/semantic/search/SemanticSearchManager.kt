@@ -98,33 +98,6 @@ open class SemanticSearchManager
         private val indexMutex = Mutex()
         private val consecutiveMutexTimeouts = AtomicInteger(0)
 
-        @VisibleForTesting
-        constructor(
-            context: Context,
-            scope: CoroutineScope,
-            appSearchWrapper: AppSearchWrapper,
-            ioDispatcher: CoroutineDispatcher,
-            dataStore: DataStore<Preferences>,
-            timeProvider: TimeProvider,
-        ) : this(
-            sessionManager =
-                AppSearchSessionManager(
-                    context = context,
-                    appSearchWrapper = appSearchWrapper,
-                    errorHandler = AppSearchErrorHandler(timeProvider),
-                ),
-            indexer =
-                SnapshotIndexer(
-                    appSearchWrapper = appSearchWrapper,
-                    errorHandler = AppSearchErrorHandler(timeProvider),
-                    dataStore = dataStore,
-                ),
-            errorHandler = AppSearchErrorHandler(timeProvider),
-            scope = scope,
-            ioDispatcher = ioDispatcher,
-            timeProvider = timeProvider,
-        )
-
         override suspend fun recover() {
             initMutex.withLock {
                 errorHandler.resetFailures()
@@ -483,7 +456,30 @@ open class SemanticSearchManager
          */
         suspend fun indexInitialSnapshot(snapshot: GlobalSnapshot): IndexResult = indexSnapshot(snapshot)
 
-        private companion object {
+        companion object {
+            /**
+             * Creates a test instance of [SemanticSearchManager] with unified error handling.
+             */
+            @VisibleForTesting
+            fun createForTest(
+                context: Context,
+                scope: CoroutineScope,
+                appSearchWrapper: AppSearchWrapper,
+                ioDispatcher: CoroutineDispatcher,
+                dataStore: DataStore<Preferences>,
+                timeProvider: TimeProvider,
+            ): SemanticSearchManager {
+                val errorHandler = AppSearchErrorHandler(timeProvider)
+                return SemanticSearchManager(
+                    sessionManager = AppSearchSessionManager(context, appSearchWrapper, errorHandler),
+                    indexer = SnapshotIndexer(appSearchWrapper, errorHandler, dataStore),
+                    errorHandler = errorHandler,
+                    scope = scope,
+                    ioDispatcher = ioDispatcher,
+                    timeProvider = timeProvider,
+                )
+            }
+
             private const val SNIPPETS_PER_DOCUMENT = 2
 
             /**

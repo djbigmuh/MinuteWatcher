@@ -35,7 +35,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val indexMutex = getPrivateField(manager, "indexMutex") as Mutex
             indexMutex.lock()
             try {
-                val snapshot2 = createTestSnapshot(101)
+                val snapshot2 = createTestSnapshot(101L)
                 val result = manager.indexSnapshot(snapshot2)
                 assertEquals(SemanticSearchManager.IndexResult.MutexTimeout, result)
 
@@ -85,12 +85,12 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     fun `putDocuments failure sets error status and does not update hash`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            val snapshot = createTestSnapshot(100)
+            val snapshot = createTestSnapshot(100L)
 
             manager.indexSnapshot(snapshot)
             fakeWrapper.failAllPutDocuments = true
 
-            val updatedSnapshot = createTestSnapshot(101)
+            val updatedSnapshot = createTestSnapshot(101L)
             manager.indexSnapshot(updatedSnapshot)
 
             assertTrue(
@@ -134,7 +134,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             fakeWrapper.lastSession!!.putDocumentsResultCode = AppSearchResult.RESULT_UNKNOWN_ERROR
 
             // 2. Trigger indexing
-            manager.indexSnapshot(createTestSnapshot(101))
+            manager.indexSnapshot(createTestSnapshot(101L))
 
             // 3. Verify status is Error and message contains the error
             val status = manager.status.value as TrackingStatus.Error
@@ -163,7 +163,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                             operatorName = "B",
                             entities =
                                 mapOf(
-                                    PackageType.DATA to createEntity(1, PackageType.DATA, 50),
+                                    PackageType.DATA to createEntity(1, PackageType.DATA, 50L),
                                 ),
                             autoResetDay = 1,
                         ),
@@ -179,7 +179,6 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             )
 
             // Assert: status is Error and contains ONLY put message
-            // Note: throwIfErrors throws putEx directly if it is an AppSearchException and removeEx is null
             val status = manager.status.value
             assertTrue(status is TrackingStatus.Error)
             val errorMessage = (status as TrackingStatus.Error).message ?: ""
@@ -222,7 +221,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             manager.recover()
             testScheduler.advanceUntilIdle()
 
-            manager.indexSnapshot(createTestSnapshot(200))
+            manager.indexSnapshot(createTestSnapshot(200L))
             testScheduler.advanceUntilIdle()
 
             assertTrue(
