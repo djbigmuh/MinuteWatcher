@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.update
 /**
  * Единая машина переходов TrackingStatus.
  * Приоритет: PERMISSION_MISSING > DATABASE_ERROR > TRANSIENT(UNKNOWN/NOT_SUPPORTED/
- * INACCURATE_ATTRIBUTION) > HEALTHY(Active/Idle/Ready) > INDEXING.
+ * INACCURATE_ATTRIBUTION) > HEALTHY(Active/Idle/Ready).
  *
  * Правила:
  * 1. force — безусловная установка.
@@ -42,8 +42,6 @@ class TrackingStatusMachine(
 
                 is TrackingStatus.Active, is TrackingStatus.Idle, is TrackingStatus.Ready ->
                     TrackingStatus.PRIORITY_HEALTHY
-
-                TrackingStatus.Indexing -> TrackingStatus.PRIORITY_INDEXING
             }
 
         fun merge(

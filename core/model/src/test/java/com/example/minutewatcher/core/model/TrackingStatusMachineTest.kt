@@ -57,15 +57,6 @@ class TrackingStatusMachineTest {
     }
 
     @Test
-    fun `indexing has lower priority than healthy`() {
-        val healthy = TrackingStatus.Active
-        val indexing = TrackingStatus.Indexing
-
-        assertEquals(healthy, TrackingStatusMachine.merge(healthy, indexing, force = false))
-        assertEquals(healthy, TrackingStatusMachine.merge(indexing, healthy, force = false))
-    }
-
-    @Test
     fun `transition updates status correctly`() =
         runTest {
             val machine = TrackingStatusMachine(TrackingStatus.Idle)

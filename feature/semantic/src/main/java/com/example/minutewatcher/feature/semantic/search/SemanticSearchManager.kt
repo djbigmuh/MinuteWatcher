@@ -233,7 +233,7 @@ open class SemanticSearchManager
         private suspend fun processSnapshotInternal(snapshot: GlobalSnapshot) {
             currentCoroutineContext().ensureActive()
             try {
-                transitionStatus(TrackingStatus.Indexing)
+                // Initializing/Indexing status removed per TZ-AUDIT-14 as it was dead and unused.
                 val result =
                     try {
                         indexSnapshot(snapshot)
