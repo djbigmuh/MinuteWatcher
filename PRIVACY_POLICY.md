@@ -27,7 +27,9 @@ The App requests the following permissions to function:
 *   **Boot Completed (`RECEIVE_BOOT_COMPLETED`):** Used to ensure tracking resumes automatically after you restart your device.
 
 ## 4. Data Backup
-If you have enabled "Android Auto Backup" in your device settings, your local App data (including SIM identifiers, usage statistics, and configuration) may be backed up to your personal Google Drive account by the Android system. This data is encrypted by Google and is not accessible to us.
+MinuteWatcher does **not** perform cloud backups of your usage data, configuration, or SIM identifiers to protect your privacy. Usage statistics and limits remain solely on your device.
+
+When you explicitly perform a "Device-to-Device Transfer" (e.g., when setting up a new Android phone from an old one via cable or direct Wi-Fi), your local data is transferred by the Android system to ensure continuity of your tracking.
 
 ## 5. Changes to This Policy
 We may update our Privacy Policy from time to time. Any changes will be reflected in the updated text within the App's repository.

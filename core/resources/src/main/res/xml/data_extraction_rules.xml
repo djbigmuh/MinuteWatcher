@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Allow SharedPreferences backup -->
-        <include domain="sharedpref" path="."/>
-        <!-- DataStore is excluded from cloud backup to protect privacy (SIM IDs) -->
+        <!-- DataStore and SharedPreferences are excluded from cloud backup to protect privacy (SIM IDs, usage statistics) -->
     </cloud-backup>
     <device-transfer>
-        <!-- Allow SharedPreferences transfer between devices -->
+        <!-- Allow data transfer between devices during explicit setup -->
         <include domain="sharedpref" path="."/>
         <include domain="file" path="datastore/"/>
     </device-transfer>

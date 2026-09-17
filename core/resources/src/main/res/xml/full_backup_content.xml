@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Enable SharedPreferences for auto backup (API < 31) -->
-    <include domain="sharedpref" path="."/>
-    <!-- DataStore is excluded from backup to protect privacy (SIM IDs) -->
+    <!-- DataStore and SharedPreferences are excluded from cloud backup to protect privacy (SIM IDs, usage statistics) -->
+    <!-- Only device-to-device transfer is allowed for these files (configured in data_extraction_rules.xml) -->
 </full-backup-content>
