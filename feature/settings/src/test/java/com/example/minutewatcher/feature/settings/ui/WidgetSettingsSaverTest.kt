@@ -118,7 +118,7 @@ class WidgetSettingsSaverTest {
             // Act: Save with skipSimSettings = true
             val result = saver.save(state, skipSimSettings = true)
 
-            // Then: Result should be Success, not PartialSuccess (per Instruction 18)
+            // Then: Result should be Success, not PartialSuccess
             assertEquals(SaveResult.Success, result)
         }
 }

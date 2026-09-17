@@ -367,8 +367,6 @@ object OperatorResolver {
      * только если сам токен его содержит (например, "t-mobile").
      */
     private fun String.hasToken(targetToken: String): Boolean {
-        // REDACTED-метка аудиторского сканера — ложное срабатывание.
-        // Здесь нет секретов; слово "token" относится к токену оператора (MTS, Beeline и т.д.).
         val normalized = lowercase(Locale.ROOT)
         val target = targetToken.lowercase(Locale.ROOT)
 
