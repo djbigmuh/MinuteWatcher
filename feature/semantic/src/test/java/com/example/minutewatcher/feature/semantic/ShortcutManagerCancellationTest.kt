@@ -24,7 +24,7 @@ import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class TZ35RegressionTest {
+class ShortcutManagerCancellationTest {
     private val context: Context = mock()
     private val navigationProvider: NavigationProvider = mock()
     private val shortcutApplier: ShortcutApplier = mock()

@@ -31,7 +31,7 @@ import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class TZ35RegressionTest {
+class TrackerCancellationRegressionTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simUsageResetRepository: SimUsageResetRepository = mock()
