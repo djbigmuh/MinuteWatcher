@@ -14,16 +14,20 @@ import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.CallEventWorker
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Assert
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.whenever
@@ -66,11 +70,18 @@ class UsageMonitorReceiverTest {
                             appContext: Context,
                             workerClassName: String,
                             workerParameters: WorkerParameters,
-                        ): ListenableWorker? = null
+                        ): ListenableWorker = TestListenableWorker(appContext, workerParameters)
                     },
                 ).build()
         WorkManagerTestInitHelper.initializeTestWorkManager(context, config)
         workManager = WorkManager.getInstance(context)
+    }
+
+    private class TestListenableWorker(
+        context: Context,
+        workerParams: WorkerParameters,
+    ) : ListenableWorker(context, workerParams) {
+        override fun startWork(): ListenableFuture<Result> = SettableFuture.create()
     }
 
     @After
@@ -101,11 +112,11 @@ class UsageMonitorReceiverTest {
 
             val workInfos =
                 workManager
-                    .getWorkInfosForUniqueWork("CALL_EVENT_1")
+                    .getWorkInfosForUniqueWork("CALL_EVENT_CHAIN")
                     .get()
 
-            assertTrue("Work CALL_EVENT_1 should be enqueued", workInfos.isNotEmpty())
-            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
+            assertTrue("Work CALL_EVENT_CHAIN should be enqueued", workInfos.isNotEmpty())
+            verify(mockPendingResult, Mockito.times(1)).finish()
         }
 
     @Test
@@ -130,11 +141,85 @@ class UsageMonitorReceiverTest {
 
             val workInfos =
                 workManager
-                    .getWorkInfosForUniqueWork("CALL_EVENT_UNKNOWN")
+                    .getWorkInfosForUniqueWork("CALL_EVENT_CHAIN")
                     .get()
 
-            assertTrue("Work CALL_EVENT_UNKNOWN should be enqueued", workInfos.isNotEmpty())
-            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
+            assertTrue("Work CALL_EVENT_CHAIN should be enqueued", workInfos.isNotEmpty())
+            verify(mockPendingResult, Mockito.times(1)).finish()
+        }
+
+    @Test
+    fun testOnReceiveRingingStateDoesNotEnqueueWork() =
+        runTest {
+            val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
+            val receiver =
+                object : UsageMonitorReceiver() {
+                    override fun acquirePendingResult() = mockPendingResult
+                }
+
+            val intent =
+                Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
+                    .apply {
+                        putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_RINGING)
+                    }
+
+            receiver.onReceive(context, intent)
+
+            advanceUntilIdle()
+            ShadowLooper.idleMainLooper()
+
+            val workInfos =
+                workManager
+                    .getWorkInfosByTag(CallEventWorker::class.java.name)
+                    .get()
+
+            assertTrue("No work should be enqueued when state is RINGING", workInfos.isEmpty())
+            verify(mockPendingResult, Mockito.times(1)).finish()
+        }
+
+    @Test
+    fun testOnReceiveMaintainsGlobalOrder() =
+        runTest {
+            val mockPendingResult1 = mock(BroadcastReceiver.PendingResult::class.java)
+            val mockPendingResult2 = mock(BroadcastReceiver.PendingResult::class.java)
+
+            val receiver =
+                object : UsageMonitorReceiver() {
+                    private var callCount = 0
+
+                    override fun acquirePendingResult(): PendingResult {
+                        callCount++
+                        return if (callCount == 1) mockPendingResult1 else mockPendingResult2
+                    }
+                }
+
+            val intentOffhook =
+                Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
+                    .apply {
+                        putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_OFFHOOK)
+                        putExtra("subscription", 1)
+                    }
+
+            val intentIdle =
+                Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
+                    .apply {
+                        putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_IDLE)
+                    }
+
+            receiver.onReceive(context, intentOffhook)
+            receiver.onReceive(context, intentIdle)
+
+            advanceUntilIdle()
+            ShadowLooper.idleMainLooper()
+
+            val workInfos =
+                workManager
+                    .getWorkInfosForUniqueWork("CALL_EVENT_CHAIN")
+                    .get()
+
+            Assert.assertEquals("Should have exactly 2 workers enqueued in the unique chain", 2, workInfos.size)
+            verify(mockPendingResult1, Mockito.times(1)).finish()
+            verify(mockPendingResult2, Mockito.times(1)).finish()
         }
 
     @Test
@@ -162,7 +247,7 @@ class UsageMonitorReceiverTest {
                     .get()
 
             assertTrue("No work should be enqueued when state is null", workInfos.isEmpty())
-            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
+            verify(mockPendingResult, Mockito.times(1)).finish()
         }
 
     @Test
@@ -185,7 +270,7 @@ class UsageMonitorReceiverTest {
             advanceUntilIdle()
             ShadowLooper.idleMainLooper()
 
-            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
+            verify(mockPendingResult, Mockito.times(1)).finish()
         }
 
     @Test
@@ -213,6 +298,6 @@ class UsageMonitorReceiverTest {
             advanceUntilIdle()
             ShadowLooper.idleMainLooper()
 
-            verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
+            verify(mockPendingResult, Mockito.times(1)).finish()
         }
 }

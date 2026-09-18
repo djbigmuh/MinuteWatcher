@@ -45,14 +45,10 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
     /**
      * Processes the phone state change and enqueues a [CallEventWorker] to handle it.
      *
-     * We use [ExistingWorkPolicy.APPEND_OR_REPLACE] to ensure that:
-     * 1. Events for the same subId are processed in the order they were received.
-     * 2. If a previous worker in the chain fails (e.g., due to a [SecurityException]
-     *    or unexpected error), the chain is not "poisoned". Subsequent events will
-     *    still be enqueued and executed as a new chain, rather than being
-     *    automatically failed as they would with [ExistingWorkPolicy.APPEND].
-     *
-     * @see <a href="https://developer.android.com/reference/androidx/work/ExistingWorkPolicy#APPEND">APPEND</a>
+     * We use a single global chain [UNIQUE_WORK_NAME] with [ExistingWorkPolicy.APPEND_OR_REPLACE]
+     * to guarantee that all call events across all subscriptions are processed in the strict order
+     * they were received. If a previous worker in the chain fails, subsequent events will still
+     * be enqueued and executed, preventing the chain from being permanently blocked.
      */
     private suspend fun processPhoneStateChange(
         appContext: Context,
@@ -62,6 +58,11 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
 
         if (state == null) {
             AppLogger.w("UsageMonitorReceiver: EXTRA_STATE is null, skipping")
+            return
+        }
+
+        if (state == TelephonyManager.EXTRA_STATE_RINGING) {
+            AppLogger.d("UsageMonitorReceiver: EXTRA_STATE_RINGING ignored, skipping")
             return
         }
 
@@ -91,21 +92,18 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
 
-        val uniqueWorkName =
-            if (subId != -1) {
-                "CALL_EVENT_$subId"
-            } else {
-                "CALL_EVENT_UNKNOWN"
-            }
-
         WorkManager
             .getInstance(appContext)
             .enqueueUniqueWork(
-                uniqueWorkName,
+                UNIQUE_WORK_NAME,
                 ExistingWorkPolicy.APPEND_OR_REPLACE,
                 workRequest,
             ).result
             .await() // Ensure enqueuing completes before finish()
         AppLogger.d("UsageMonitorReceiver: CallEventWorker enqueued for state=$state, subId=$subId")
+    }
+
+    companion object {
+        private const val UNIQUE_WORK_NAME = "CALL_EVENT_CHAIN"
     }
 }
