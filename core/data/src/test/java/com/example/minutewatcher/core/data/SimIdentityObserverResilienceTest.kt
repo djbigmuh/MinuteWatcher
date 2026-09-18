@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -30,6 +32,7 @@ import org.mockito.kotlin.stub
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -470,6 +473,36 @@ class SimIdentityObserverResilienceTest {
                 "Cache should be empty for NEW seed cycle during failure",
                 observer.activeSimsCache.value.isEmpty(),
             )
+
+            job.cancel()
+        }
+
+    @Test
+    fun `observer uses single ephemeral seed when storage errors occur`() =
+        runTest {
+            val ephemeralSeed = "consistent-ephemeral-seed"
+            whenever(seedRepository.getOrCreateEphemeralSeed(any())).thenReturn(ephemeralSeed)
+
+            // Case 1: getOrCreateSeedOrEphemeralFallback returns null (e.g. timeout in observer)
+            whenever(seedRepository.getOrCreateSeedOrEphemeralFallback(any())).thenReturn(null)
+
+            // Simulate storage failure in seedFlow to hit the catch block
+            val failingSeedFlow = flow<String> { throw IOException("DataStore failed") }
+            whenever(seedRepository.seedFlow).thenReturn(failingSeedFlow)
+
+            observer = createObserver(backgroundScope)
+            val results = mutableListOf<SeedResult>()
+            val job = launch { observer.seedFlow.toList(results) }
+
+            testScheduler.runCurrent()
+
+            assertTrue("Should have fallback result", results.isNotEmpty())
+            val lastResult = results.last()
+            assertTrue("Result should be Fallback", lastResult is SeedResult.Fallback)
+            assertEquals(ephemeralSeed, (lastResult as SeedResult.Fallback).seed)
+
+            // Verify that observer called the repository for ephemeral seed directly
+            verify(seedRepository, times(1)).getOrCreateEphemeralSeed(any())
 
             job.cancel()
         }

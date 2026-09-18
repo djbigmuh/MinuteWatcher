@@ -43,4 +43,12 @@ interface SimIdentitySeedRepository {
      * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult
+
+    /**
+     * Returns the existing ephemeral seed or creates a new one using the provided generator.
+     *
+     * @param generator Function to generate a new seed if needed.
+     * @return The ephemeral seed string.
+     */
+    suspend fun getOrCreateEphemeralSeed(generator: () -> String): String
 }

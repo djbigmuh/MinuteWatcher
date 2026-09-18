@@ -47,6 +47,7 @@ internal class SimIdentitySeedRepositoryImpl
                 dataStore.edit { preferences ->
                     preferences[DataStoreKeys.SIM_IDENTITY_SEED] = seed
                 }
+                clearEphemeralStateOnPersistentRestored()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -55,20 +56,22 @@ internal class SimIdentitySeedRepositoryImpl
             }
         }
 
+        override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String =
+            seedMutex.withLock {
+                _isEphemeralSeedActive.value = true
+                cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
+            }
+
         override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
             val result = tryGetPersistentSeed(generator)
             if (result != null) return result
 
-            // Fallback to ephemeral seed under mutex (cache management only)
-            return seedMutex.withLock {
-                AppLogger.e(
-                    "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
-                        "All SIM identities will change. Previous statistics will be orphaned.",
-                )
-                _isEphemeralSeedActive.value = true
-                val seed = cachedEphemeralSeed ?: generator().also { cachedEphemeralSeed = it }
-                SeedResolutionResult.Ephemeral(seed)
-            }
+            AppLogger.e(
+                "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
+                    "All SIM identities will change. Previous statistics will be orphaned.",
+            )
+            val seed = getOrCreateEphemeralSeed(generator)
+            return SeedResolutionResult.Ephemeral(seed)
         }
 
         /**
@@ -152,11 +155,9 @@ internal class SimIdentitySeedRepositoryImpl
 
         private suspend fun clearEphemeralStateOnPersistentRestored() {
             seedMutex.withLock {
-                if (_isEphemeralSeedActive.value) {
-                    AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
-                    _isEphemeralSeedActive.value = false
-                    cachedEphemeralSeed = null
-                }
+                AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
+                _isEphemeralSeedActive.value = false
+                cachedEphemeralSeed = null
             }
         }
 

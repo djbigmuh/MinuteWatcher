@@ -70,6 +70,7 @@ class SimIdentityObserverTest {
         whenever(seedRepository.seedFlow).thenReturn(MutableStateFlow("test_seed"))
         seedRepository.stub {
             on { getOrCreateSeedOrEphemeralFallback(any()) } doReturn SeedResolutionResult.Persistent("test_seed")
+            on { getOrCreateEphemeralSeed(any()) }.thenAnswer { (it.arguments[0] as () -> String).invoke() }
         }
         fetcher.stub {
             on { fetchActiveSimsWithRetry(any()) } doReturn SimDiscoveryResult.Available(emptyList())
@@ -157,6 +158,8 @@ class SimIdentityObserverTest {
                         delay(60_000.milliseconds)
                         return SeedResolutionResult.Ephemeral("ephemeral")
                     }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val physicalSims =
@@ -362,6 +365,8 @@ class SimIdentityObserverTest {
                         delay(20_000.milliseconds)
                         return SeedResolutionResult.Ephemeral("ephemeral")
                     }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             observer =

@@ -178,7 +178,13 @@ internal class SimIdentityObserver
                                 AppLogger.e("SimIdentityObserver: fallback seed resolution failed", inner)
                                 null
                             }
-                        emit(toSeedResult(fallback ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())))
+                        val resolvedFallback =
+                            fallback ?: SeedResolutionResult.Ephemeral(
+                                seedRepository.getOrCreateEphemeralSeed {
+                                    UUID.randomUUID().toString()
+                                },
+                            )
+                        emit(toSeedResult(resolvedFallback))
                     }
                 }.distinctUntilChanged()
                 .shareIn(
@@ -485,7 +491,11 @@ internal class SimIdentityObserver
                 }
             }
             AppLogger.e("SimIdentityObserver: seed resolution failed, using ephemeral seed")
-            return SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+            val ephemeralSeed =
+                seedRepository.getOrCreateEphemeralSeed {
+                    UUID.randomUUID().toString()
+                }
+            return SeedResolutionResult.Ephemeral(ephemeralSeed)
         }
 
         companion object {

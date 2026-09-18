@@ -268,4 +268,46 @@ class SimIdentitySeedRepositoryImplTest {
             assertTrue("Result should be Ephemeral due to DataStore hang", result is SeedResolutionResult.Ephemeral)
             assertEquals("ephemeral-fallback-seed", result?.seed)
         }
+
+    @Test
+    fun `getOrCreateEphemeralSeed returns same seed and cache is cleared on setSeed or persistent restored`() =
+        runTest {
+            val seed1 = repository.getOrCreateEphemeralSeed { "eph-1" }
+            val seed2 = repository.getOrCreateEphemeralSeed { "eph-2" }
+            assertEquals(seed1, seed2)
+            assertEquals("eph-1", seed1)
+
+            repository.setSeed("persistent-seed")
+            val seed3 = repository.getOrCreateEphemeralSeed { "eph-3" }
+            assertEquals("eph-3", seed3)
+
+            var shouldFail = true
+            val toggleDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> =
+                        flow {
+                            if (shouldFail) {
+                                throw IOException("Storage unavailable")
+                            }
+                            dataStore.data.collect { emit(it) }
+                        }
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        if (shouldFail) {
+                            throw IOException("Storage unavailable")
+                        }
+                        return dataStore.updateData(transform)
+                    }
+                }
+
+            val repo = SimIdentitySeedRepositoryImpl(toggleDataStore)
+            val s1 = repo.getOrCreateEphemeralSeed { "eph-a" }
+            assertEquals("eph-a", s1)
+
+            shouldFail = false
+            repo.getOrCreateSeedOrEphemeralFallback { "persist-seed" }
+
+            val s2 = repo.getOrCreateEphemeralSeed { "eph-b" }
+            assertEquals("eph-b", s2)
+        }
 }
