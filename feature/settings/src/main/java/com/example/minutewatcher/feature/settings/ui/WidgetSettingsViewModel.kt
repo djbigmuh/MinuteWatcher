@@ -69,7 +69,7 @@ class WidgetSettingsViewModel
     constructor(
         private val loader: WidgetSettingsLoader,
         private val saver: WidgetSettingsSaver,
-        private val appSettingsRepository: AppSettingsRepository,
+        appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val appScope: CoroutineScope,
         usageStateRepository: UsageStateRepository,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
@@ -375,10 +375,10 @@ class WidgetSettingsViewModel
             super.onCleared()
         }
 
-    @VisibleForTesting
-    internal fun onClearedForTest() {
-        onCleared()
-    }
+        @VisibleForTesting
+        internal fun onClearedForTest() {
+            onCleared()
+        }
 
         companion object {
             private val LOAD_TIMEOUT: Duration = 15.seconds

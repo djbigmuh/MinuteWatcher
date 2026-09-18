@@ -47,7 +47,6 @@ import kotlin.time.Duration.Companion.milliseconds
  * Handles [UnsupportedOperationException] for devices not supporting shortcuts.
  *
  * @property context Application context.
- * @property scope Application-wide coroutine scope for async operations.
  * @property navigationProvider Provider for main activity class name.
  * @property ioDispatcher Dispatcher for I/O bound operations.
  */
@@ -57,7 +56,7 @@ class ShortcutManager
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
-        @ApplicationScope private val scope: CoroutineScope,
+        @ApplicationScope scope: CoroutineScope,
         private val navigationProvider: NavigationProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         private val shortcutApplier: ShortcutApplier,
@@ -69,11 +68,11 @@ class ShortcutManager
 
         private val initMutex = Mutex()
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
-    private val observationHandle = ObservationHandle(scope, "ShortcutManager")
+        private val observationHandle = ObservationHandle(scope, "ShortcutManager")
 
-    /** Current observation job, if any. */
-    @VisibleForTesting
-    internal val job: Job? get() = observationHandle.currentJob
+        /** Current observation job, if any. */
+        @VisibleForTesting
+        internal val job: Job? get() = observationHandle.currentJob
 
         /**
          * Updates the tracker status using canonical prioritized rules.

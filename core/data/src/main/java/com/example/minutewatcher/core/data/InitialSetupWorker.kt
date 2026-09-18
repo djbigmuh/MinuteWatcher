@@ -26,25 +26,25 @@ class InitialSetupWorker
         @Assisted workerParams: WorkerParameters,
         private val deps: InitialSetupWorkerDependencies,
     ) : CoroutineWorker(appContext, workerParams) {
-    /**
-     * Orchestrates initial setup and migrations after boot or app update.
-     *
-     * **Reliability criteria:**
-     * The worker always completes within [WORKER_TIMEOUT_MS] to avoid blocking
-     * the unique setup work chain. Exceeding this budget is treated as temporary
-     * storage degradation and triggers [Result.retry].
-     *
-     * @throws CancellationException if the work is cancelled by WorkManager.
-     */
-    override suspend fun doWork(): Result =
-        withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {
-            executeWork()
-        } ?: run {
-            AppLogger.e("InitialSetupWorker: timed out after ${WORKER_TIMEOUT_MS}ms")
-            Result.retry()
-        }
+        /**
+         * Orchestrates initial setup and migrations after boot or app update.
+         *
+         * **Reliability criteria:**
+         * The worker always completes within [WORKER_TIMEOUT_MS] to avoid blocking
+         * the unique setup work chain. Exceeding this budget is treated as temporary
+         * storage degradation and triggers [Result.retry].
+         *
+         * @throws CancellationException if the work is cancelled by WorkManager.
+         */
+        override suspend fun doWork(): Result =
+            withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {
+                executeWork()
+            } ?: run {
+                AppLogger.e("InitialSetupWorker: timed out after ${WORKER_TIMEOUT_MS}ms")
+                Result.retry()
+            }
 
-    private suspend fun executeWork(): Result =
+        private suspend fun executeWork(): Result =
             try {
                 performSetupSteps()
                 Result.success()
@@ -58,42 +58,42 @@ class InitialSetupWorker
                 Result.failure()
             }
 
-    private suspend fun performSetupSteps() {
-        deps.usageUseCase.refreshOperatorInfo()
+        private suspend fun performSetupSteps() {
+            deps.usageUseCase.refreshOperatorInfo()
 
-        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-            deps.callTracker.onBootAwaited()
-        } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
+            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                deps.callTracker.onBootAwaited()
+            } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
 
-        val result = checkAndPerformMigrations()
-        if (result != null && result != Result.success()) {
-            val isRetry = result == Result.retry()
-            throw if (isRetry) IOException("Migration retry") else IllegalStateException("Migration failed")
-        }
+            val result = checkAndPerformMigrations()
+            if (result != null && result != Result.success()) {
+                val isRetry = result == Result.retry()
+                throw if (isRetry) IOException("Migration retry") else IllegalStateException("Migration failed")
+            }
 
-        performCleanupSafe {
-            if (!deps.autoResetUseCase.performAutoReset(shouldNotify = false)) {
-                AppLogger.w("InitialSetupWorker: Auto-reset partially failed")
+            performCleanupSafe {
+                if (!deps.autoResetUseCase.performAutoReset(shouldNotify = false)) {
+                    AppLogger.w("InitialSetupWorker: Auto-reset partially failed")
                 }
+            }
+            performCleanupSafe { deps.trafficTracker.updateTrafficUsage() }
+
+            deps.usageStateRepository.refresh()
+            deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+
+            if (deps.permissionManager.hasPhoneStatePermission()) {
+                deps.workScheduler.schedulePeriodicUsageCheck()
+            }
+            deps.migrationFlagsRepository.setInitialSetupCompleted(true)
         }
-        performCleanupSafe { deps.trafficTracker.updateTrafficUsage() }
 
-        deps.usageStateRepository.refresh()
-        deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-
-        if (deps.permissionManager.hasPhoneStatePermission()) {
-            deps.workScheduler.schedulePeriodicUsageCheck()
-        }
-        deps.migrationFlagsRepository.setInitialSetupCompleted(true)
-    }
-
-    private suspend fun performCleanupSafe(block: suspend () -> Unit) {
-        try {
-            block()
+        private suspend fun performCleanupSafe(block: suspend () -> Unit) {
+            try {
+                block()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-            AppLogger.w("InitialSetupWorker: cleanup step failed", e)
+                AppLogger.w("InitialSetupWorker: cleanup step failed", e)
             }
         }
 
@@ -111,10 +111,10 @@ class InitialSetupWorker
             }
         }
 
-    private suspend fun fetchFlag(
-        name: String,
-        provider: () -> Flow<Boolean>,
-    ): Boolean =
+        private suspend fun fetchFlag(
+            name: String,
+            provider: () -> Flow<Boolean>,
+        ): Boolean =
             try {
                 provider().firstWithTimeout()
             } catch (e: IOException) {

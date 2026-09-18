@@ -289,7 +289,7 @@ internal fun getWidgetModifier(
             .background(ColorProvider(day = bgColor, night = bgColor))
             .appWidgetBackground()
 
-    val className = navigationProvider?.mainActivityClassName ?: ""
+    val className = navigationProvider?.mainActivityClassName.orEmpty()
     if (className.isNotEmpty()) {
         try {
             val launchIntent =

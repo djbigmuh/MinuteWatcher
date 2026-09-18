@@ -201,8 +201,8 @@ private class SimLimitState(
                         it.minutesText.text,
                         it.trafficText.text,
                         it.rolloverEnabled,
-                        it.minutesError ?: "",
-                        it.trafficError ?: "",
+                        it.minutesError.orEmpty(),
+                        it.trafficError.orEmpty(),
                     )
                 },
                 restore = {

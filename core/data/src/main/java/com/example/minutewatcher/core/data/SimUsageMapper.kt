@@ -24,9 +24,10 @@ class SimUsageMapper
                 slotIndex = prefs[DataStoreKeys.slotIndexKey(identity)] ?: -1,
                 subscriptionId = prefs[DataStoreKeys.subscriptionIdKey(identity)],
                 operator =
-                    prefs[DataStoreKeys.customSimOperatorKey(identity)]
-                        ?: prefs[DataStoreKeys.simOperatorKey(identity)]
-                        ?: "",
+                    (
+                        prefs[DataStoreKeys.customSimOperatorKey(identity)]
+                            ?: prefs[DataStoreKeys.simOperatorKey(identity)]
+                    ).orEmpty(),
                 minutesUsed = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0,
                 minutesLimit = prefs[DataStoreKeys.monthlyLimitKey(identity)] ?: 0,
                 trafficUsedMb = prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f,

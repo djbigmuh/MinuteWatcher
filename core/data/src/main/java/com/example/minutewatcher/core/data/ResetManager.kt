@@ -118,14 +118,14 @@ class ResetManager
             return allProcessed && handleAutoResetResult(ioException, skippedCount, successCount, activeSims.size)
         }
 
-    /**
-     * Processes a single SIM reset with atomic single-flight gating and cooldown protection.
-     *
-     * **Reliability criteria:**
-     * - Single-flight is ensured by atomic `pendingResets.add`.
-     * - Cooldown is enforced via `lastResetCheck`.
-     * - Cleanup is non-blocking to prevent stalling during cancellation.
-     */
+        /**
+         * Processes a single SIM reset with atomic single-flight gating and cooldown protection.
+         *
+         * **Reliability criteria:**
+         * - Single-flight is ensured by atomic `pendingResets.add`.
+         * - Cooldown is enforced via `lastResetCheck`.
+         * - Cleanup is non-blocking to prevent stalling during cancellation.
+         */
         private suspend fun processSingleSimReset(
             simInfo: ActiveSimInfo,
             now: Long,
@@ -134,20 +134,20 @@ class ResetManager
         ): Boolean {
             val identity = simInfo.identity.stableId
 
-        val lastCheck = lastResetCheck[identity]
-        val isCoolingDown = (lastCheck != null) && ((nowElapsed - lastCheck) < CHECK_INTERVAL_MS)
-        if (isCoolingDown || !pendingResets.add(identity)) {
-            return true // Skip or already pending is not a failure of the coordinator
-        }
+            val lastCheck = lastResetCheck[identity]
+            val isCoolingDown = (lastCheck != null) && ((nowElapsed - lastCheck) < CHECK_INTERVAL_MS)
+            if (isCoolingDown || !pendingResets.add(identity)) {
+                return true // Skip or already pending is not a failure of the coordinator
+            }
 
-        val result =
+            val result: Boolean
             try {
-                checkAndPerformSingleReset(simInfo, now, resetIdentities)
+                result = checkAndPerformSingleReset(simInfo, now, resetIdentities)
             } finally {
                 lastResetCheck[identity] = nowElapsed
                 pendingResets.remove(identity)
             }
-        return result
+            return result
         }
 
         private suspend fun checkAndPerformSingleReset(
@@ -173,9 +173,9 @@ class ResetManager
             return true
         }
 
-    private fun cleanupStaleCheckTimestamps(activeSims: List<ActiveSimInfo>) {
-        val activeIdentitySet = activeSims.asSequence().map { it.identity.stableId }.toSet()
-        lastResetCheck.keys.removeAll { it !in activeIdentitySet }
+        private fun cleanupStaleCheckTimestamps(activeSims: List<ActiveSimInfo>) {
+            val activeIdentitySet = activeSims.asSequence().map { it.identity.stableId }.toSet()
+            lastResetCheck.keys.removeAll { it !in activeIdentitySet }
         }
 
         private fun handleAutoResetResult(

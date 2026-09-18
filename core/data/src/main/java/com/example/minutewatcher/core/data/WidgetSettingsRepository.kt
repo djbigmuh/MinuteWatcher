@@ -233,14 +233,14 @@ class WidgetSettingsRepository
             return failedSlots
         }
 
-    /**
-     * Maps a slot index to its settings using the SIM identity.
-     *
-     * **Attribution logic:**
-     * Widget settings are attributed by SIM identity. Slot-scoped keys are avoided
-     * to prevent legacy data migration from incorrectly transferring settings
-     * between different SIM cards in the same slot.
-     */
+        /**
+         * Maps a slot index to its settings using the SIM identity.
+         *
+         * **Attribution logic:**
+         * Widget settings are attributed by SIM identity. Slot-scoped keys are avoided
+         * to prevent legacy data migration from incorrectly transferring settings
+         * between different SIM cards in the same slot.
+         */
         private suspend fun mapSlotToSettings(
             slot: Int,
             simSettings: SimSettingsState,

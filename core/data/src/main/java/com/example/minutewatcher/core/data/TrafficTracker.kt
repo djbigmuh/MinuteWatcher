@@ -105,17 +105,17 @@ class TrafficTracker
         @VisibleForTesting
         internal val lastSuccessElapsed = AtomicLong(0L)
 
-    @VisibleForTesting
-    internal val initJob = AtomicReference<Job?>(null)
+        @VisibleForTesting
+        internal val initJob = AtomicReference<Job?>(null)
         private var permissionObserverJob: Job? = null
         private var simObserverJob: Job? = null
         private var lastObservedDataSubId: Int? = null
 
-    private fun tryClaimInitialization(): Boolean = isInitializing.compareAndSet(false, true)
+        private fun tryClaimInitialization(): Boolean = isInitializing.compareAndSet(false, true)
 
-    private fun releaseInitialization() {
-        isInitializing.set(false)
-    }
+        private fun releaseInitialization() {
+            isInitializing.set(false)
+        }
 
         init {
             if (tryClaimInitialization()) {
@@ -130,8 +130,8 @@ class TrafficTracker
             startAutomaticRecoveryObservers()
         }
 
-    @VisibleForTesting
-    internal suspend fun startInitialization() {
+        @VisibleForTesting
+        internal suspend fun startInitialization() {
             val oldJob = initJob.getAndSet(currentCoroutineContext().job)
             oldJob?.cancel()
             try {
@@ -207,7 +207,7 @@ class TrafficTracker
             }
         }
 
-    private fun checkAndScheduleAutoRecovery(reason: String) {
+        private fun checkAndScheduleAutoRecovery(reason: String) {
             val shouldStart =
                 if (initializationFailed.get() && tryClaimInitialization()) {
                     true

@@ -46,7 +46,7 @@ class WidgetUpdaterImpl
         private val errorClassifier: WidgetErrorClassifier,
     ) : WidgetUpdater {
         private val coalescingMutex = Mutex()
-    private val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+        private val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
 
         /**
          * Tracks whether a LimitExceeded error has been handled within the CURRENT update call.

@@ -39,7 +39,7 @@ fun SimCardsSettingsSection(
         return
     }
 
-    val activeSims = uiState?.simUiStates ?: emptyList()
+    val activeSims = uiState?.simUiStates.orEmpty()
     if (activeSims.isEmpty()) {
         Text(
             text = stringResource(id = R.string.no_sim_found),

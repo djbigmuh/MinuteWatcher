@@ -57,11 +57,11 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class SimIdentityObserver
     @Inject
     constructor(
-        private val discovery: SimIdentityDiscovery,
+        discovery: SimIdentityDiscovery,
         private val seedRepository: SimIdentitySeedRepository,
         private val appSettingsRepository: AppSettingsRepository,
-        private val mockSimProvider: MockSimProvider,
-        private val fetcher: ActiveSimsFetcher,
+        mockSimProvider: MockSimProvider,
+        fetcher: ActiveSimsFetcher,
         private val migrationService: IdentityMigrationService,
         @ApplicationScope private val scope: CoroutineScope,
         private val cache: SimIdentityCache,
@@ -387,7 +387,7 @@ internal class SimIdentityObserver
                     "SimIdentityObserver: physicalActiveSims discovery logical failure " +
                         "(attempt $currentAttempt): $reason, retrying in ${backoff}ms",
                 )
-                emit(lastKnownGood.get() ?: emptyList())
+                emit(lastKnownGood.get().orEmpty())
                 delay(backoff.milliseconds)
                 true
             }
@@ -466,27 +466,27 @@ internal class SimIdentityObserver
             }
         }
 
-    /**
-     * Generates seed identity with bounded timeout attempts and deterministic fallback.
-     * Total execution time is bounded by approximately 2 * SEED_GENERATION_TIMEOUT_MS.
-     */
-    private suspend fun generateSeedWithRetry(): SeedResolutionResult {
-        repeat(2) {
-            try {
-                val result =
-                    withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                        seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
-                    }
-                if (result != null) return result
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("SimIdentityObserver: seed resolution attempt failed", e)
+        /**
+         * Generates seed identity with bounded timeout attempts and deterministic fallback.
+         * Total execution time is bounded by approximately 2 * SEED_GENERATION_TIMEOUT_MS.
+         */
+        private suspend fun generateSeedWithRetry(): SeedResolutionResult {
+            repeat(2) {
+                try {
+                    val result =
+                        withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                            seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
+                        }
+                    if (result != null) return result
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("SimIdentityObserver: seed resolution attempt failed", e)
                 }
             }
-        AppLogger.e("SimIdentityObserver: seed resolution failed, using ephemeral seed")
-        return SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
-    }
+            AppLogger.e("SimIdentityObserver: seed resolution failed, using ephemeral seed")
+            return SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+        }
 
         companion object {
             private const val MAX_BACKOFF_EXPONENT = 4

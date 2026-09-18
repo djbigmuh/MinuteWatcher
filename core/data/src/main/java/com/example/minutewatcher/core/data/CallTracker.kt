@@ -87,8 +87,8 @@ open class CallTracker
         }
 
         private val trackerState = AtomicReference(State.IDLE)
-    private val permissionObserverJob = AtomicReference<Job?>(null)
-    private val initJob = AtomicReference<Job?>(null)
+        private val permissionObserverJob = AtomicReference<Job?>(null)
+        private val initJob = AtomicReference<Job?>(null)
 
         @Volatile
         private var initDeferred = CompletableDeferred<Unit>()

@@ -21,7 +21,7 @@ import javax.inject.Singleton
 class PermissionRepositoryImpl
     @Inject
     constructor(
-        private val permissionManager: PermissionManager,
+        permissionManager: PermissionManager,
         notifier: PermissionStateNotifier,
         @ApplicationScope scope: CoroutineScope,
     ) : PermissionRepository {

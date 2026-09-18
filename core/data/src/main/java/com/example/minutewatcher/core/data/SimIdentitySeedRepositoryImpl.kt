@@ -104,59 +104,59 @@ internal class SimIdentitySeedRepositoryImpl
             return null
         }
 
-    private suspend fun readPersistentSeed(): String? {
-        val readOutcome: Result<String?>? =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                Result.success(dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED])
-            }
-        return (readOutcome ?: throw IOException("DataStore read timeout")).getOrThrow()
-    }
-
-    private suspend fun generateAndWritePersistentSeed(generator: () -> String): SeedResolutionResult.Persistent? {
-        val newSeed = generator()
-        val editOutcome: Result<Preferences>? =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                Result.success(
-                    dataStore.edit { preferences ->
-                        if (preferences[DataStoreKeys.SIM_IDENTITY_SEED].isNullOrEmpty()) {
-                            preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
-                        }
-                    },
-                )
-            }
-
-        val updated = (editOutcome ?: throw IOException("DataStore write timeout")).getOrThrow()
-        val storedSeed = updated[DataStoreKeys.SIM_IDENTITY_SEED]
-        return if (!storedSeed.isNullOrEmpty()) {
-            AppLogger.d("SimIdentitySeedRepositoryImpl: New seed stored.")
-            SeedResolutionResult.Persistent(storedSeed)
-        } else {
-            null
+        private suspend fun readPersistentSeed(): String? {
+            val readOutcome: Result<String?>? =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    Result.success(dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED])
+                }
+            return (readOutcome ?: throw IOException("DataStore read timeout")).getOrThrow()
         }
-    }
 
-    private suspend fun handlePersistentSeedError(
-        attempt: Int,
-        e: IOException,
-    ): Nothing? {
-        if (attempt == MAX_RETRIES - 1) {
-            AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
-            return null
-        } else {
-            val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
-            AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying in ${delayMs}ms...")
-            delay(delayMs.milliseconds)
-            return null
-        }
-    }
+        private suspend fun generateAndWritePersistentSeed(generator: () -> String): SeedResolutionResult.Persistent? {
+            val newSeed = generator()
+            val editOutcome: Result<Preferences>? =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    Result.success(
+                        dataStore.edit { preferences ->
+                            if (preferences[DataStoreKeys.SIM_IDENTITY_SEED].isNullOrEmpty()) {
+                                preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
+                            }
+                        },
+                    )
+                }
 
-    private suspend fun clearEphemeralStateOnPersistentRestored() {
-        seedMutex.withLock {
-            if (_isEphemeralSeedActive.value) {
-                AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
-                _isEphemeralSeedActive.value = false
-                cachedEphemeralSeed = null
+            val updated = (editOutcome ?: throw IOException("DataStore write timeout")).getOrThrow()
+            val storedSeed = updated[DataStoreKeys.SIM_IDENTITY_SEED]
+            return if (!storedSeed.isNullOrEmpty()) {
+                AppLogger.d("SimIdentitySeedRepositoryImpl: New seed stored.")
+                SeedResolutionResult.Persistent(storedSeed)
+            } else {
+                null
             }
+        }
+
+        private suspend fun handlePersistentSeedError(
+            attempt: Int,
+            e: IOException,
+        ): Nothing? {
+            if (attempt == MAX_RETRIES - 1) {
+                AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
+                return null
+            } else {
+                val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
+                AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying in ${delayMs}ms...")
+                delay(delayMs.milliseconds)
+                return null
+            }
+        }
+
+        private suspend fun clearEphemeralStateOnPersistentRestored() {
+            seedMutex.withLock {
+                if (_isEphemeralSeedActive.value) {
+                    AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
+                    _isEphemeralSeedActive.value = false
+                    cachedEphemeralSeed = null
+                }
             }
         }
 

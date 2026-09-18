@@ -76,8 +76,8 @@ class SemanticSearchManager
             statusMachine.transition(newStatus, force)
         }
 
-    @VisibleForTesting
-    internal var lastSnapshotHash: Int? = null
+        @VisibleForTesting
+        internal var lastSnapshotHash: Int? = null
         private var lastSnapshotVersion: SchemaVersion? = null
 
         /** Result of an indexing attempt. */
@@ -91,21 +91,21 @@ class SemanticSearchManager
             data object MutexTimeout : IndexResult
         }
 
-    private val observationHandle = ObservationHandle(scope, "SemanticSearchManager")
+        private val observationHandle = ObservationHandle(scope, "SemanticSearchManager")
 
-    /** Current observation job, if any. */
-    @VisibleForTesting
-    internal val job: Job? get() = observationHandle.currentJob
+        /** Current observation job, if any. */
+        @VisibleForTesting
+        internal val job: Job? get() = observationHandle.currentJob
 
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
         private val initMutex = Mutex()
 
-    @VisibleForTesting
-    internal val indexMutex = Mutex()
+        @VisibleForTesting
+        internal val indexMutex = Mutex()
 
-    @VisibleForTesting
-    internal val consecutiveMutexTimeouts = AtomicInteger(0)
+        @VisibleForTesting
+        internal val consecutiveMutexTimeouts = AtomicInteger(0)
 
         override suspend fun recover() {
             initMutex.withLock {

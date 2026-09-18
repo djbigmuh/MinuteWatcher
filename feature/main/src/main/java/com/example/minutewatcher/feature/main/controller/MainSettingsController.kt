@@ -28,7 +28,7 @@ class MainSettingsController
     @Inject
     constructor(
         private val appSettingsRepository: AppSettingsRepository,
-        private val migrationFlagsRepository: MigrationFlagsRepository,
+        migrationFlagsRepository: MigrationFlagsRepository,
         private val settingsUseCase: SettingsUseCase,
         @ApplicationScope private val scope: CoroutineScope,
     ) {

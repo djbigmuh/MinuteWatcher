@@ -361,81 +361,81 @@ open class IdentityMigrationService
             )
         }
 
-    private fun performHygieneCleanup(prefs: MutablePreferences) {
-        // 0. One-time hygiene: remove orphaned conflict metadata keys
-        val conflictMetadataKeys =
-            prefs
-                .asMap()
-                .keys
-                .filter {
-                    it.name.startsWith(
-                        "${DataStoreKeys.CONFLICT_PREFIX}${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}",
-                    )
-                }
-        conflictMetadataKeys.forEach { prefs.remove(it) }
-    }
-
-    private fun migrateSuffixes(
-        prefs: MutablePreferences,
-        mappings: List<Pair<String, String>>,
-        storeName: String,
-    ): Triple<Int, Int, Int> {
-        var migratedCount = 0
-        var conflictCount = 0
-        var failureCount = 0
-
-        for ((legacySuffix, newSuffix) in mappings) {
-            // EXCLUDE metadata keys (subscription_id_*) from suffix migration.
-            // They are handled by the cleanup block (step 2) or re-written by persistence.
-            val keysToMigrate =
+        private fun performHygieneCleanup(prefs: MutablePreferences) {
+            // 0. One-time hygiene: remove orphaned conflict metadata keys
+            val conflictMetadataKeys =
                 prefs
                     .asMap()
                     .keys
                     .filter {
-                        it.name.endsWith(legacySuffix) &&
-                            !it.name.startsWith(DataStoreKeys.SUBSCRIPTION_ID_PREFIX)
+                        it.name.startsWith(
+                            "${DataStoreKeys.CONFLICT_PREFIX}${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}",
+                        )
                     }
+            conflictMetadataKeys.forEach { prefs.remove(it) }
+        }
 
-            for (oldKey in keysToMigrate) {
-                val baseName = oldKey.name.removeSuffix(legacySuffix)
-                val newKeyName = baseName + newSuffix
+        private fun migrateSuffixes(
+            prefs: MutablePreferences,
+            mappings: List<Pair<String, String>>,
+            storeName: String,
+        ): Triple<Int, Int, Int> {
+            var migratedCount = 0
+            var conflictCount = 0
+            var failureCount = 0
 
-                when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
-                    MigrationResult.SUCCESS -> {
-                        migratedCount++
-                        prefs.remove(oldKey)
-                    }
+            for ((legacySuffix, newSuffix) in mappings) {
+                // EXCLUDE metadata keys (subscription_id_*) from suffix migration.
+                // They are handled by the cleanup block (step 2) or re-written by persistence.
+                val keysToMigrate =
+                    prefs
+                        .asMap()
+                        .keys
+                        .filter {
+                            it.name.endsWith(legacySuffix) &&
+                                !it.name.startsWith(DataStoreKeys.SUBSCRIPTION_ID_PREFIX)
+                        }
 
-                    MigrationResult.CONFLICT -> {
-                        conflictCount++
-                        // Conflict resolved by keeping modern value and backing up legacy to
-                        // conflict_<key>. Old legacy key must be removed to prevent infinite
-                        // migration loops.
-                        prefs.remove(oldKey)
-                    }
+                for (oldKey in keysToMigrate) {
+                    val baseName = oldKey.name.removeSuffix(legacySuffix)
+                    val newKeyName = baseName + newSuffix
 
-                    MigrationResult.FAILURE -> {
-                        failureCount++
+                    when (prefs.migrateTypedKey(oldKey, newKeyName, storeName)) {
+                        MigrationResult.SUCCESS -> {
+                            migratedCount++
+                            prefs.remove(oldKey)
+                        }
+
+                        MigrationResult.CONFLICT -> {
+                            conflictCount++
+                            // Conflict resolved by keeping modern value and backing up legacy to
+                            // conflict_<key>. Old legacy key must be removed to prevent infinite
+                            // migration loops.
+                            prefs.remove(oldKey)
+                        }
+
+                        MigrationResult.FAILURE -> {
+                            failureCount++
+                        }
                     }
                 }
             }
+            return Triple(migratedCount, conflictCount, failureCount)
         }
-        return Triple(migratedCount, conflictCount, failureCount)
-    }
 
-    private fun performSimCleanup(
-        prefs: MutablePreferences,
-        subIdForCleanup: Int,
-    ) {
-        val keysToRemove =
-            prefs
-                .asMap()
-                .keys
-                .asSequence()
-                .filter { it.name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_") }
-                .filter { prefs[it] == subIdForCleanup }
-                .toList()
-        keysToRemove.forEach { prefs.remove(it) }
+        private fun performSimCleanup(
+            prefs: MutablePreferences,
+            subIdForCleanup: Int,
+        ) {
+            val keysToRemove =
+                prefs
+                    .asMap()
+                    .keys
+                    .asSequence()
+                    .filter { it.name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_") }
+                    .filter { prefs[it] == subIdForCleanup }
+                    .toList()
+            keysToRemove.forEach { prefs.remove(it) }
         }
 
         private enum class MigrationResult {

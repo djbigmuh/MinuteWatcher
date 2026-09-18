@@ -38,7 +38,7 @@ internal class CallAttributionResolver
             var isFallbackUsed = false
 
             if (targetIdentity == null) {
-                val activeSims = simIdentityRepository.observeActiveSims().firstOrNull() ?: emptyList()
+                val activeSims = simIdentityRepository.observeActiveSims().firstOrNull().orEmpty()
                 val matched = activeSims.find { it.subscriptionId == subId }
                 if (matched != null) {
                     targetIdentity = matched.identity.stableId

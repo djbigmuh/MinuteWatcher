@@ -69,7 +69,7 @@ private fun LayoutModeSetting(
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
         ) {
-            Text(text = layoutModes.getOrNull(state.layoutMode) ?: "")
+            Text(text = layoutModes.getOrNull(state.layoutMode).orEmpty())
         }
         DropdownMenu(expanded = layoutExpanded && enabled, onDismissRequest = { layoutExpanded = false }) {
             layoutModes.forEachIndexed { index, name ->
@@ -103,7 +103,7 @@ private fun SimArrangementSetting(
         enabled = enabled,
     ) {
         Text(
-            text = arrangements.getOrNull(state.simArrangement) ?: "",
+            text = arrangements.getOrNull(state.simArrangement).orEmpty(),
             style = MaterialTheme.typography.bodyMedium,
         )
     }
