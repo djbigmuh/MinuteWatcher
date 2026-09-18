@@ -44,11 +44,11 @@ class MainResumeController
                 resumeRefreshJob?.cancelAndJoin()
                 resumeRefreshJob =
                     launch {
-                        val lastRefreshElapsed = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
-
                         if (initController.initializationState.value is InitializationState.Failed) {
+                            val lastRefreshElapsedBefore =
+                                savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
                             AppLogger.d("onActivityResume: initialization failed previously, retrying...")
-                            initController.initializeApp(scope, lastRefreshElapsed, onUpdateLastRefreshAt)
+                            initController.initializeApp(scope, lastRefreshElapsedBefore, onUpdateLastRefreshAt)
                         }
 
                         // Если инициализация ещё в процессе (включая только что запущенную из Failed),
@@ -66,10 +66,14 @@ class MainResumeController
                             return@launch
                         }
 
+                        // Read refresh time and current time AFTER initialization is confirmed complete
+                        val lastRefreshElapsed = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
+                        val currentTime = timeProvider.elapsedRealtime()
+
                         val isStale =
                             (lastRefreshElapsed == 0L) ||
-                                (lastRefreshElapsed > now) ||
-                                (now - lastRefreshElapsed > RESUME_REFRESH_THRESHOLD_MS)
+                                (lastRefreshElapsed > currentTime) ||
+                                (currentTime - lastRefreshElapsed > RESUME_REFRESH_THRESHOLD_MS)
 
                         if (isStale) {
                             if (onRefreshNeeded()) {
