@@ -10,9 +10,6 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.TrafficTracker
-import com.example.minutewatcher.core.domain.UsageStateRepository
-import com.example.minutewatcher.feature.semantic.ShortcutManager
-import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import com.example.minutewatcher.service.worker.SemanticInitializerWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -25,15 +22,16 @@ class MinuteWatcherApp :
     Configuration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
-    @Inject lateinit var searchManager: SemanticSearchManager
-
-    @Inject lateinit var shortcutManager: ShortcutManager
-
-    @Inject lateinit var usageStateRepository: UsageStateRepository
-
+    /**
+     * Injected to eagerly start call tracking in [onCreate].
+     */
     @Inject
     lateinit var callTracker: CallTracker
 
+    /**
+     * Injected to eagerly start traffic tracking. Construction of [TrafficTracker]
+     * triggers its initialization logic in the init block.
+     */
     @Inject
     lateinit var trafficTracker: TrafficTracker
 
