@@ -170,48 +170,9 @@ class WidgetUiMapperTest {
 
     @Test
     fun testSnapshotToUiState_ManualAdjustment() {
-        val snapshot =
-            GlobalSnapshot(
-                version = SchemaVersion(1, 0, 0),
-                timestamp = System.currentTimeMillis(),
-                simSnapshots =
-                    listOf(
-                        SimSnapshot(
-                            slot = 0,
-                            identity = "sim_0",
-                            operatorName = "MTS",
-                            entities =
-                                mapOf(
-                                    PackageType.MINUTES to
-                                        SemanticEntity(
-                                            id = "sim_0_minutes",
-                                            simSlot = 0,
-                                            operatorName = "MTS",
-                                            packageType = PackageType.MINUTES,
-                                            limit = 200,
-                                            used = 100,
-                                            remaining = 150, // 200 - 100 + 50 adj
-                                            unit = MeasurementUnit.MINUTES,
-                                            periodStart = 0,
-                                            periodEnd = 0,
-                                            lastUpdateTime = 0,
-                                            sourceType = DataSourceType.MANUAL,
-                                        ),
-                                ),
-                            autoResetDay = 1,
-                        ),
-                    ),
-                capabilities = emptyList(),
-            )
+        val snapshot = buildManualAdjustmentSnapshot()
         val settings =
-            WidgetSettingsState(
-                layoutMode = 1,
-                simArrangement = 0,
-                transparency = 50,
-                fontSize = 2,
-                backgroundColor = colorBlack,
-                notifyLowMinutes = true,
-                notifyLowTraffic = true,
+            buildBasicSettings().copy(
                 simStates =
                     mapOf(
                         0 to
@@ -237,6 +198,40 @@ class WidgetUiMapperTest {
         assertEquals("150", uiState.simUiStates[0].minutesText)
         assertEquals("min.", uiState.simUiStates[0].minutesSuffix)
     }
+
+    private fun buildManualAdjustmentSnapshot() =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = System.currentTimeMillis(),
+            simSnapshots =
+                listOf(
+                    SimSnapshot(
+                        slot = 0,
+                        identity = "sim_0",
+                        operatorName = "MTS",
+                        entities =
+                            mapOf(
+                                PackageType.MINUTES to
+                                    SemanticEntity(
+                                        id = "sim_0_minutes",
+                                        simSlot = 0,
+                                        operatorName = "MTS",
+                                        packageType = PackageType.MINUTES,
+                                        limit = 200,
+                                        used = 100,
+                                        remaining = 150, // 200 - 100 + 50 adj
+                                        unit = MeasurementUnit.MINUTES,
+                                        periodStart = 0,
+                                        periodEnd = 0,
+                                        lastUpdateTime = 0,
+                                        sourceType = DataSourceType.MANUAL,
+                                    ),
+                            ),
+                        autoResetDay = 1,
+                    ),
+                ),
+            capabilities = emptyList(),
+        )
 
     @Test
     fun testSnapshotToUiState_LightBackground() {
