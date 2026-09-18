@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
@@ -11,14 +12,16 @@ import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
@@ -30,6 +33,9 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class UpdateCoordinatorResilienceTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()
     private val usageStateRepository: UsageStateRepository = mock()
@@ -113,5 +119,35 @@ class UpdateCoordinatorResilienceTest {
             assertTrue("Status should be Error after max retries, but was $status", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
             assertEquals(3, callCount)
+        }
+
+    @Test
+    fun `regression - recover resets state and starts new observation`() =
+        runTest {
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+            val snapshotFlow = MutableStateFlow(snapshot)
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+
+            // Wait for initial Active status
+            testScheduler.advanceTimeBy(10.seconds)
+            runCurrent()
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+
+            coordinator.recover()
+
+            // Wait for recovery startup
+            testScheduler.advanceTimeBy(10.seconds)
+            runCurrent()
+
+            assertEquals("Should be Active after recovery", TrackingStatus.Active, coordinator.status.value)
         }
 }

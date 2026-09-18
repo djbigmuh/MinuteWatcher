@@ -95,26 +95,27 @@ class UpdateCoordinator
         override suspend fun recover() {
             AppLogger.d("UpdateCoordinator: recover() called, resetting all counters")
 
-            // 1. Cancel and join any pending setup (initial SIM wait)
-            setupJob.get()?.let { job ->
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    job.cancelAndJoin()
-                } ?: job.cancel()
-            }
-
-            // 2. Cancel and join current observation and monitoring
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                observationScope.currentJob?.cancelAndJoin()
-            }
-            observationScope.shutdown()
-
+            // 1. Cancel and join monitoring job first to prevent it from interfering with recovery
             monitoringJob.get()?.let { job ->
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     job.cancelAndJoin()
                 } ?: job.cancel()
             }
 
-            // 3. Reset state under mutex
+            // 2. Cancel and join current observation
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                observationScope.currentJob?.cancelAndJoin()
+            }
+            observationScope.shutdown()
+
+            // 3. Cancel and join any pending setup (initial SIM wait)
+            setupJob.get()?.let { job ->
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job.cancelAndJoin()
+                } ?: job.cancel()
+            }
+
+            // 4. Reset state under mutex
             val stateResetSuccess =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     stateMutex.withLock {
@@ -319,10 +320,13 @@ class UpdateCoordinator
             return scope.launch {
                 newJob.join()
 
+                currentCoroutineContext().ensureActive()
+
                 // Atomically check if this job is still the current one under mutex
                 val isCurrent =
                     stateMutex.withLock {
-                        currentObservationJob.get() === newJob
+                        monitoringJob.get() === currentCoroutineContext()[Job] &&
+                            currentObservationJob.get() === newJob
                     }
                 if (!isCurrent) return@launch
 
