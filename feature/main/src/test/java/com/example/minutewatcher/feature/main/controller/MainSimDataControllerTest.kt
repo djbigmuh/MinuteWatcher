@@ -262,4 +262,47 @@ class MainSimDataControllerTest {
             val error = controller.lastOperationError.value
             assertNull("Operation should be successful even if widget update fails", error)
         }
+
+    @Test
+    fun `regression - operation with hanging block completes with error after total timeout`() =
+        runTest {
+            val hangingLimitsRepository =
+                object : SimLimitsRepository by mock() {
+                    override suspend fun updateSimLimits(
+                        identity: String,
+                        minutesLimit: Int,
+                        trafficLimitMb: Int,
+                        rolloverEnabled: Boolean,
+                    ) {
+                        awaitCancellation()
+                    }
+                }
+
+            controller =
+                MainSimDataController(
+                    usageStateRepository,
+                    trackingRecoveryController,
+                    simIdentityRepository,
+                    hangingLimitsRepository,
+                    usageUseCase,
+                    dataChangeNotifier,
+                    mainDispatcherRule.testDispatcher,
+                    backgroundScope,
+                )
+
+            val slot = 0
+            val identity = "sim_0"
+            whenever(simIdentityRepository.getIdentity(slot)).thenReturn(identity)
+
+            controller.updateLimits(slot, 100, 1024)
+            testScheduler.runCurrent()
+
+            // Advance past LONG_TIMEOUT_MS (10s) + RETRY_BASE_DELAY_MS (0.5s) + SHORT_TIMEOUT_MS (5s)
+            testScheduler.advanceTimeBy(16000.milliseconds)
+            testScheduler.runCurrent()
+
+            val error = controller.lastOperationError.value
+            assertEquals(R.string.error_operation_failed_retry, error?.messageRes)
+            assertEquals(slot, error?.slot)
+        }
 }

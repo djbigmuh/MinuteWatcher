@@ -358,12 +358,23 @@ class MainSimDataController
             operationName: String,
             block: suspend () -> Unit,
         ) {
-            try {
-                block()
-            } catch (e: IOException) {
+            val firstTryException =
+                try {
+                    val success =
+                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                            block()
+                            true
+                        }
+                    if (success == null) IOException("Initial attempt timed out") else null
+                } catch (e: Exception) {
+                    if (e is CancellationException || e !is IOException) throw e
+                    e
+                }
+
+            if (firstTryException != null) {
                 AppLogger.w(
                     "IOException during $operationName for slot $slot, retrying once after ${RETRY_BASE_DELAY_MS}ms...",
-                    e,
+                    firstTryException,
                 )
                 delay(RETRY_BASE_DELAY_MS.milliseconds)
                 val success =
@@ -371,7 +382,9 @@ class MainSimDataController
                         block()
                         true
                     } ?: false
-                if (!success) throw IOException("Operation timed out after retry. Please check storage availability.")
+                if (!success) {
+                    throw IOException("Operation timed out after retry. Please check storage availability.")
+                }
             }
         }
 

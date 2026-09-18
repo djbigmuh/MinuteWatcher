@@ -3,16 +3,21 @@ package com.example.minutewatcher.controller
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.WorkScheduler
+import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.main.MainViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Controller for handling permission checks and related initialization.
@@ -50,12 +55,20 @@ class MainPermissionController
             checkJob?.cancel()
             checkJob =
                 scope.launch {
-                    val settings = viewModel.appSettings.filter { it.isLoaded }.first()
+                    val settings: AppSettings? =
+                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                            viewModel.appSettings.filter { it.isLoaded }.firstOrNull()
+                        }
                     if (permissionManager.hasPhoneStatePermission()) {
                         launch(ioDispatcher) {
                             try {
-                                val initialSetupCompleted = viewModel.isInitialSetupCompleted.first()
-                                if (!initialSetupCompleted || lastPermissionState == -1) {
+                                val initialSetupCompleted =
+                                    viewModel.isInitialSetupCompleted.firstWithTimeout(
+                                        Constants.Flow.LONG_TIMEOUT_MS,
+                                    )
+                                if (initialSetupCompleted != true ||
+                                    lastPermissionState == -1
+                                ) {
                                     workScheduler.scheduleInitialSetup(force = false)
                                 }
                             } catch (e: CancellationException) {
@@ -70,7 +83,7 @@ class MainPermissionController
                         } else {
                             onCheckNotifications(true)
                         }
-                    } else if (!settings.wasPhonePermissionRequestedBefore) {
+                    } else if (settings != null && !settings.wasPhonePermissionRequestedBefore) {
                         onRequestPhonePermission()
                     }
                 }
@@ -89,8 +102,11 @@ class MainPermissionController
             notificationJob =
                 scope.launch {
                     if (!permissionManager.hasNotificationPermission()) {
-                        val settings = viewModel.appSettings.filter { it.isLoaded }.first()
-                        if (autoRequest && !settings.notificationPermissionRequested) {
+                        val settings =
+                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                viewModel.appSettings.filter { it.isLoaded }.firstOrNull()
+                            }
+                        if (autoRequest && settings != null && !settings.notificationPermissionRequested) {
                             onRequest()
                         }
                     }

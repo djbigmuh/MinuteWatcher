@@ -162,6 +162,8 @@ class SimIdentityRepositoryHangTest {
                         delay(1000.seconds)
                         return SeedResolutionResult.Persistent("seed")
                     }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val identityRepo =
@@ -214,6 +216,8 @@ class SimIdentityRepositoryHangTest {
                         delay(1000.seconds)
                         return SeedResolutionResult.Persistent("seed")
                     }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val identityRepo =
@@ -251,6 +255,9 @@ class SimIdentityRepositoryHangTest {
                 }
             whenever(mockSeedRepo.getOrCreateSeedOrEphemeralFallback(any())).thenAnswer {
                 SeedResolutionResult.Ephemeral("fallback_seed")
+            }
+            whenever(mockSeedRepo.getOrCreateEphemeralSeed(any())).thenAnswer {
+                (it.arguments[0] as () -> String).invoke()
             }
 
             val identityRepo =
@@ -416,6 +423,8 @@ class SimIdentityRepositoryHangTest {
                     override suspend fun getOrCreateSeedOrEphemeralFallback(
                         generator: () -> String,
                     ): SeedResolutionResult = SeedResolutionResult.Persistent("generated_seed")
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val identityRepo =
@@ -478,6 +487,8 @@ class SimIdentityRepositoryHangTest {
                         delay(1000.seconds)
                         return SeedResolutionResult.Ephemeral("never_reached")
                     }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val identityRepo =
