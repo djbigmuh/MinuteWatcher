@@ -33,7 +33,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of call tracking logic that monitors call events and records duration.
- * Uses a Mutex to prevent race conditions during concurrent call events.
+ * Uses a Mutex (via [CallMutexHolder]) to prevent race conditions during concurrent call events.
  *
  * NOTE: Suppressing TooManyFunctions as this class acts as a central coordinator for call tracking,
  * delegating most logic to handlers but maintaining public API and status management.

@@ -47,8 +47,8 @@ Certain modules require 100% coverage of their public API:
 
 ## Static Analysis
 We enforce strict static analysis. Every developer MUST run verification before committing.
-- **`.\VERIFY.bat --Quick`**: Rapid check (ktlint + detekt). Use before minor commits.
-- **`.\VERIFY.bat`**: Full verification (ktlint + detekt + lint + tests + build). Use before completing any task.
+- **`.\VERIFY.bat --Quick`** (Windows) or **`.\verify.ps1 -Quick`** (PowerShell): Rapid check (ktlint + detekt). Use before minor commits.
+- **`.\VERIFY.bat`** or **`.\verify.ps1`**: Full verification (ktlint + detekt + lint + tests + build). Use before completing any task.
 
 Your code must pass:
 - **Detekt (2.0.0-alpha.6):** No new issues should be introduced. Baseline files are for legacy issues only and should be reduced over time.

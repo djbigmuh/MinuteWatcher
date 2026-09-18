@@ -6,23 +6,23 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 
 ### 1. Robolectric (Beta)
 - **Version**: `4.17-beta-2`
-- **Reason**: Required for Android SDK 37 (Android 15) support in unit tests. Standard stable versions do not yet fully support the latest platform APIs.
-- **Plan**: Upgrade to the stable `4.17.0` release as soon as it is available. Monitor Robolectric release notes weekly.
+- **Reason**: Required for Android SDK 37 support in unit tests. Standard stable versions do not yet fully support the latest platform APIs.
+- **Plan**: Upgrade to the stable `4.17.x` release when available.
 
 ### 2. AndroidX Baseline Profile (RC)
 - **Version**: `1.5.0-rc01`
 - **Reason**: Contains critical fixes for baseline profile generation and is required for compatibility with Gradle 9.x.
-- **Plan**: Transition to the stable `1.5.0` version within 2 months after its stable release.
+- **Plan**: Transition to the stable `1.5.0` version once released and verified.
 
-### 3. Android Gradle Plugin (Preview)
-- **Version**: `9.3.1`
+### 3. Android Gradle Plugin (Alpha/Beta)
+- **Version**: `9.4.0`
 - **Reason**: The project requires the latest build system features to support SDK 37 and experimental Gradle 9.x integrations.
 - **Plan**: Continue using the latest preview versions until a stable branch for the 9.x series is established.
 
 ### 4. Kotlin (Future/Preview)
-- **Version**: `2.3.10`
+- **Version**: `2.4.10`
 - **Reason**: Required for compatibility with the advanced AGP and Compose features targeted by this project.
-- **Plan**: Monitor Kotlin release cycles and align with stable 2.3.x or 2.4.x releases once they reach general availability.
+- **Plan**: Monitor Kotlin release cycles and align with stable 2.4.x releases once they reach general availability.
 
 ---
 
