@@ -16,7 +16,9 @@ class BenchmarkMockSimProvider
             return (0 until safeCount).map { i ->
                 val identity =
                     SimIdentity(
-                        stableId = "sim_$i",
+                        // Prefix "mock_" is used to avoid collision with legacy DataStore migration keys
+                        // that often use "_sim_<slot>" suffixes.
+                        stableId = "mock_$i",
                         subscriptionId = MOCK_SUB_ID_BASE + i,
                         slotIndex = i,
                         source = IdentitySource.MOCK,
