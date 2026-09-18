@@ -23,7 +23,7 @@ object SnapshotUtils {
      */
     fun calculateContentHash(snapshot: GlobalSnapshot): Int {
         var result = snapshot.version.hashCode()
-        result = 31 * result + snapshot.capabilities.hashCode()
+        result = HASH_MULTIPLIER * result + snapshot.capabilities.hashCode()
 
         val content =
             snapshot.simSnapshots
@@ -51,7 +51,12 @@ object SnapshotUtils {
                     )
                 }
 
-        result = 31 * result + content.hashCode()
+        result = HASH_MULTIPLIER * result + content.hashCode()
         return result
     }
+
+    /**
+     * Standard prime multiplier used for hashing algorithms.
+     */
+    private const val HASH_MULTIPLIER = 31
 }

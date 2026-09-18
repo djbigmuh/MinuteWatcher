@@ -2,9 +2,5 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-      <ID>
-          ThrowsCount:SemanticSearchManagerTestFixtures.kt:SemanticSearchManagerTestFixtures.FakeAppSearchSessionWrapper$override
-          suspend fun setSchema
-      </ID>
   </CurrentIssues>
 </SmellBaseline>

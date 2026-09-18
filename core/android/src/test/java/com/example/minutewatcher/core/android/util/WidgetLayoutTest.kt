@@ -195,6 +195,23 @@ class WidgetLayoutTest {
         showMinutesLimit: Boolean = false,
         showTrafficLimit: Boolean = false,
     ): WidgetUiState {
+        val entities = buildEntities(hasMinutes, hasTraffic)
+        val snapshot = buildSnapshot(entities)
+        val state = buildSettings(mode, showMinutesLimit, showTrafficLimit)
+        val widgetStrings = buildStrings()
+
+        return WidgetUiMapper.mapFromSnapshot(
+            strings = widgetStrings,
+            snapshot = snapshot,
+            state = state,
+            operatorNames = mapOf(0 to "MTS"),
+        )
+    }
+
+    private fun buildEntities(
+        hasMinutes: Boolean,
+        hasTraffic: Boolean,
+    ): MutableMap<PackageType, SemanticEntity> {
         val entities = mutableMapOf<PackageType, SemanticEntity>()
         if (hasMinutes) {
             entities[PackageType.MINUTES] =
@@ -220,9 +237,9 @@ class WidgetLayoutTest {
                     simSlot = 0,
                     operatorName = "MTS",
                     packageType = PackageType.DATA,
-                    limit = 1024L * 1024 * 1024 * 2, // 2 GB
-                    used = 1024L * 1024 * 512, // 512 MB
-                    remaining = 1024L * 1024 * 1024 * 1 + 1024L * 1024 * 512, // 1.5 GB
+                    limit = 1024L * 1024 * 1024 * 2,
+                    used = 1024L * 1024 * 512,
+                    remaining = 1024L * 1024 * 1024 * 1 + 1024L * 1024 * 512,
                     unit = MeasurementUnit.BYTES,
                     periodStart = 0,
                     periodEnd = 0,
@@ -230,16 +247,22 @@ class WidgetLayoutTest {
                     sourceType = DataSourceType.SYSTEM,
                 )
         }
+        return entities
+    }
 
-        val simSnapshot = SimSnapshot(0, "MTS", "MTS", entities, autoResetDay = 1)
-        val snapshot =
-            GlobalSnapshot(
-                version = SchemaVersion(1, 0, 0),
-                timestamp = System.currentTimeMillis(),
-                simSnapshots = listOf(simSnapshot),
-                capabilities = emptyList(),
-            )
+    private fun buildSnapshot(entities: Map<PackageType, SemanticEntity>) =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = System.currentTimeMillis(),
+            simSnapshots = listOf(SimSnapshot(0, "MTS", "MTS", entities, autoResetDay = 1)),
+            capabilities = emptyList(),
+        )
 
+    private fun buildSettings(
+        mode: WidgetLayoutMode,
+        showMinutesLimit: Boolean,
+        showTrafficLimit: Boolean,
+    ): WidgetSettingsState {
         val simSettings =
             SimSettingsState(
                 showSim = true,
@@ -250,32 +273,24 @@ class WidgetLayoutTest {
                 showTraffic = true,
                 showTrafficLimit = showTrafficLimit,
             )
-
-        val state =
-            WidgetSettingsState(
-                layoutMode = mode.value,
-                simArrangement = 0,
-                transparency = 0,
-                fontSize = 2,
-                backgroundColor = 0,
-                notifyLowMinutes = true,
-                notifyLowTraffic = true,
-                simStates = mapOf(0 to simSettings),
-            )
-
-        val widgetStrings =
-            WidgetStrings(
-                usedText = "Used",
-                minutesAbbr = "min.",
-                limitText = "Limit",
-                gbAbbr = "GB",
-                fractionFormat = "/%1\$s",
-            )
-        return WidgetUiMapper.mapFromSnapshot(
-            strings = widgetStrings,
-            snapshot = snapshot,
-            state = state,
-            operatorNames = mapOf(0 to "MTS"),
+        return WidgetSettingsState(
+            layoutMode = mode.value,
+            simArrangement = 0,
+            transparency = 0,
+            fontSize = 2,
+            backgroundColor = 0,
+            notifyLowMinutes = true,
+            notifyLowTraffic = true,
+            simStates = mapOf(0 to simSettings),
         )
     }
+
+    private fun buildStrings() =
+        WidgetStrings(
+            usedText = "Used",
+            minutesAbbr = "min.",
+            limitText = "Limit",
+            gbAbbr = "GB",
+            fractionFormat = "/%1\$s",
+        )
 }

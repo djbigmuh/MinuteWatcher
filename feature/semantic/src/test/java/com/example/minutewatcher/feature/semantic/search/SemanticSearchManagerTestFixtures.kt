@@ -184,12 +184,21 @@ abstract class SemanticSearchManagerTestFixtures {
 
         @Suppress("ThrowsCount")
         override suspend fun setSchema(request: SetSchemaRequest) {
-            if (wrapper.failNextWithInvalidSchema && !request.isForceOverride) {
-                throw AppSearchException(AppSearchResult.RESULT_INVALID_SCHEMA)
+            val exceptionCode =
+                when {
+                    wrapper.failNextWithInvalidSchema && !request.isForceOverride ->
+                        AppSearchResult.RESULT_INVALID_SCHEMA
+
+                    wrapper.failNextWithFatalError ->
+                        AppSearchResult.RESULT_INTERNAL_ERROR
+
+                    else -> null
+                }
+
+            if (exceptionCode != null) {
+                throw AppSearchException(exceptionCode)
             }
-            if (wrapper.failNextWithFatalError) {
-                throw AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR)
-            }
+
             if (wrapper.failNextWithGenericError) {
                 @Suppress("TooGenericExceptionThrown")
                 throw RuntimeException("Generic error")

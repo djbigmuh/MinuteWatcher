@@ -12,14 +12,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  * **Architectural Note:** Multiple helper functions are used here to ensure
  * type-safe access to dynamic preference keys (e.g., identity-based keys).
  * This centralized approach prevents key collisions and serves as the single source
- * of truth for the DataStore schema within the module.
- *
- * **Strict API compliance:** Keys are implementation details of DataStore.
- * Public repository APIs must not expose them. This object is internal to core:data.
- *
- * **Migration safety:** When renaming keys, update both the key name and
- * add a migration step in IdentityMigrationService to preserve user data.
+ * of truth for the DataStore schema within the module. Decomposition is counterproductive
+ * as it would fragment the schema definition.
  */
+@Suppress("TooManyFunctions")
 internal object DataStoreKeys {
     // App settings (SettingsKeys)
     @JvmStatic val APP_THEME = intPreferencesKey("app_theme")

@@ -204,7 +204,7 @@ class UsageCheckWorkerTest {
     @Test
     fun `doWork fails on unexpected Exception`() =
         runTest {
-            whenever(usageUseCase.refreshOperatorInfo()).thenAnswer { throw RuntimeException("Fatal") }
+            whenever(usageUseCase.refreshOperatorInfo()).thenAnswer { throw IllegalStateException("Fatal") }
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.failure(), result)
         }

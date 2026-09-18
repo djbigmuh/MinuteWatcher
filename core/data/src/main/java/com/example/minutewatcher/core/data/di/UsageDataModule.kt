@@ -34,8 +34,12 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-// @Suppress("unused") is required because Hilt discovers bindings via reflection.
-@Suppress("unused")
+/**
+ * Centralized Hilt module for binding data layer implementations to their domain interfaces.
+ * Decomposition is counterproductive as it would fragment the dependency graph definition
+ * for the core:data module.
+ */
+@Suppress("unused", "TooManyFunctions")
 internal interface UsageDataModule {
     @Binds
     @Singleton

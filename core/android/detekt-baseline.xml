@@ -2,8 +2,5 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-      <ID>LongMethod:WidgetLayoutTest.kt:WidgetLayoutTest$private fun createWidgetUiState: WidgetUiState</ID>
-      <ID>LongMethod:WidgetUiMapperTest.kt:WidgetUiMapperTest$@Test fun testSnapshotToUiState_Basic</ID>
-      <ID>LongMethod:WidgetUiMapperTest.kt:WidgetUiMapperTest$@Test fun testSnapshotToUiState_HidesEmptyTraffic</ID>
   </CurrentIssues>
 </SmellBaseline>

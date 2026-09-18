@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetStrings
+import com.example.minutewatcher.core.model.WidgetUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -41,63 +42,8 @@ class WidgetUiMapperTest {
 
     @Test
     fun testSnapshotToUiState_Basic() {
-        val snapshot =
-            GlobalSnapshot(
-                version = SchemaVersion(1, 0, 0),
-                timestamp = System.currentTimeMillis(),
-                simSnapshots =
-                    listOf(
-                        SimSnapshot(
-                            slot = 0,
-                            identity = "sim_0",
-                            operatorName = "MTS",
-                            entities =
-                                mapOf(
-                                    PackageType.MINUTES to
-                                        SemanticEntity(
-                                            id = "sim_0_minutes",
-                                            simSlot = 0,
-                                            operatorName = "MTS",
-                                            packageType = PackageType.MINUTES,
-                                            limit = 200,
-                                            used = 100,
-                                            remaining = 100,
-                                            unit = MeasurementUnit.MINUTES,
-                                            periodStart = 0,
-                                            periodEnd = 0,
-                                            lastUpdateTime = 0,
-                                            sourceType = DataSourceType.SYSTEM,
-                                        ),
-                                ),
-                            autoResetDay = 1,
-                        ),
-                    ),
-                capabilities = emptyList(),
-            )
-
-        val settings =
-            WidgetSettingsState(
-                layoutMode = 1,
-                simArrangement = 0,
-                fontSize = 2,
-                transparency = 50,
-                backgroundColor = colorBlack,
-                notifyLowMinutes = true,
-                notifyLowTraffic = true,
-                simStates =
-                    mapOf(
-                        0 to
-                            SimSettingsState(
-                                showSim = true,
-                                showIcon = true,
-                                showName = true,
-                                showMinutes = true,
-                                showMinutesLimit = true,
-                                showTraffic = false,
-                                showTrafficLimit = false,
-                            ),
-                    ),
-            )
+        val snapshot = buildBasicSnapshot()
+        val settings = buildBasicSettings()
 
         val uiState =
             WidgetUiMapper.mapFromSnapshot(
@@ -107,6 +53,68 @@ class WidgetUiMapperTest {
                 operatorNames = mapOf(0 to "MTS"),
             )
 
+        verifyBasicUiState(uiState)
+    }
+
+    private fun buildBasicSnapshot() =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = System.currentTimeMillis(),
+            simSnapshots =
+                listOf(
+                    SimSnapshot(
+                        slot = 0,
+                        identity = "sim_0",
+                        operatorName = "MTS",
+                        entities =
+                            mapOf(
+                                PackageType.MINUTES to
+                                    SemanticEntity(
+                                        id = "sim_0_minutes",
+                                        simSlot = 0,
+                                        operatorName = "MTS",
+                                        packageType = PackageType.MINUTES,
+                                        limit = 200,
+                                        used = 100,
+                                        remaining = 100,
+                                        unit = MeasurementUnit.MINUTES,
+                                        periodStart = 0,
+                                        periodEnd = 0,
+                                        lastUpdateTime = 0,
+                                        sourceType = DataSourceType.SYSTEM,
+                                    ),
+                            ),
+                        autoResetDay = 1,
+                    ),
+                ),
+            capabilities = emptyList(),
+        )
+
+    private fun buildBasicSettings() =
+        WidgetSettingsState(
+            layoutMode = 1,
+            simArrangement = 0,
+            fontSize = 2,
+            transparency = 50,
+            backgroundColor = colorBlack,
+            notifyLowMinutes = true,
+            notifyLowTraffic = true,
+            simStates =
+                mapOf(
+                    0 to
+                        SimSettingsState(
+                            showSim = true,
+                            showIcon = true,
+                            showName = true,
+                            showMinutes = true,
+                            showMinutesLimit = true,
+                            showTraffic = false,
+                            showTrafficLimit = false,
+                        ),
+                ),
+        )
+
+    private fun verifyBasicUiState(uiState: WidgetUiState) {
         assertEquals(1, uiState.layoutMode)
         assertEquals(1, uiState.simUiStates.size)
 
@@ -118,22 +126,36 @@ class WidgetUiMapperTest {
         assertTrue(sim0.showMinutesLimit)
         assertEquals(colorWhite, sim0.textColor)
 
-        // Verify limit is in layout spec for TWO_LINES mode
         val limitComponent =
             sim0.layoutSpec.rows
                 .flatMap { it.components }
                 .find { it is SimLayoutComponent.Text && it.text == "/200" }
         assertTrue("Limit should be present in layout spec", limitComponent != null)
 
-        // Verify full text fields
         assertTrue(sim0.minutesUsedFullText.contains("100"))
         assertTrue(sim0.minutesLimitFullText.contains("200"))
     }
 
     @Test
     fun testSnapshotToUiState_EmptySnapshot() {
-        val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
-        val settings = WidgetSettingsState(1, 0, 50, 2, colorBlack, true, true, emptyMap())
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 0L,
+                simSnapshots = emptyList(),
+                capabilities = emptyList(),
+            )
+        val settings =
+            WidgetSettingsState(
+                layoutMode = 1,
+                simArrangement = 0,
+                transparency = 50,
+                fontSize = 2,
+                backgroundColor = colorBlack,
+                notifyLowMinutes = true,
+                notifyLowTraffic = true,
+                simStates = emptyMap(),
+            )
 
         val uiState =
             WidgetUiMapper.mapFromSnapshot(
@@ -190,7 +212,19 @@ class WidgetUiMapperTest {
                 backgroundColor = colorBlack,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
-                simStates = mapOf(0 to SimSettingsState(true, true, true, true, false, false, false)),
+                simStates =
+                    mapOf(
+                        0 to
+                            SimSettingsState(
+                                showSim = true,
+                                showIcon = true,
+                                showName = true,
+                                showMinutes = true,
+                                showMinutesLimit = false,
+                                showTraffic = false,
+                                showTrafficLimit = false,
+                            ),
+                    ),
             )
 
         val uiState =
@@ -243,63 +277,8 @@ class WidgetUiMapperTest {
 
     @Test
     fun testSnapshotToUiState_HidesEmptyTraffic() {
-        val snapshot =
-            GlobalSnapshot(
-                version = SchemaVersion(1, 0, 0),
-                timestamp = System.currentTimeMillis(),
-                simSnapshots =
-                    listOf(
-                        SimSnapshot(
-                            slot = 0,
-                            identity = "sim_0",
-                            operatorName = "MTS",
-                            entities =
-                                mapOf(
-                                    PackageType.DATA to
-                                        SemanticEntity(
-                                            id = "sim_0_data",
-                                            simSlot = 0,
-                                            operatorName = "MTS",
-                                            packageType = PackageType.DATA,
-                                            limit = 0, // No limit
-                                            used = 0, // No usage
-                                            remaining = 0,
-                                            unit = MeasurementUnit.BYTES,
-                                            periodStart = 0,
-                                            periodEnd = 0,
-                                            lastUpdateTime = 0,
-                                            sourceType = DataSourceType.SYSTEM,
-                                        ),
-                                ),
-                            autoResetDay = 1,
-                        ),
-                    ),
-                capabilities = emptyList(),
-            )
-
-        val settings =
-            WidgetSettingsState(
-                layoutMode = 3, // SIX_LINES
-                simArrangement = 0,
-                fontSize = 2,
-                transparency = 50,
-                backgroundColor = colorBlack,
-                notifyLowMinutes = true,
-                notifyLowTraffic = true,
-                simStates =
-                    mapOf(
-                        0 to
-                            SimSettingsState(
-                                showSim = true,
-                                showIcon = true,
-                                showName = true,
-                                showMinutes = true,
-                                showMinutesLimit = true,
-                                showTraffic = true, // Enabled in settings but data is empty
-                                showTrafficLimit = true,
-                            ),
-                    ),
-            )
+        val snapshot = buildEmptyTrafficSnapshot()
+        val settings = buildSixLinesSettings()
 
         val uiState =
             WidgetUiMapper.mapFromSnapshot(
@@ -324,6 +303,64 @@ class WidgetUiMapperTest {
             }
         assertTrue(trafficRows.isEmpty())
     }
+
+    private fun buildEmptyTrafficSnapshot() =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = System.currentTimeMillis(),
+            simSnapshots =
+                listOf(
+                    SimSnapshot(
+                        slot = 0,
+                        identity = "sim_0",
+                        operatorName = "MTS",
+                        entities =
+                            mapOf(
+                                PackageType.DATA to
+                                    SemanticEntity(
+                                        id = "sim_0_data",
+                                        simSlot = 0,
+                                        operatorName = "MTS",
+                                        packageType = PackageType.DATA,
+                                        limit = 0,
+                                        used = 0,
+                                        remaining = 0,
+                                        unit = MeasurementUnit.BYTES,
+                                        periodStart = 0,
+                                        periodEnd = 0,
+                                        lastUpdateTime = 0,
+                                        sourceType = DataSourceType.SYSTEM,
+                                    ),
+                            ),
+                        autoResetDay = 1,
+                    ),
+                ),
+            capabilities = emptyList(),
+        )
+
+    private fun buildSixLinesSettings() =
+        WidgetSettingsState(
+            layoutMode = 3, // SIX_LINES
+            simArrangement = 0,
+            fontSize = 2,
+            transparency = 50,
+            backgroundColor = colorBlack,
+            notifyLowMinutes = true,
+            notifyLowTraffic = true,
+            simStates =
+                mapOf(
+                    0 to
+                        SimSettingsState(
+                            showSim = true,
+                            showIcon = true,
+                            showName = true,
+                            showMinutes = true,
+                            showMinutesLimit = true,
+                            showTraffic = true,
+                            showTrafficLimit = true,
+                        ),
+                ),
+        )
 
     @Test
     fun testTransparencyMapping() {

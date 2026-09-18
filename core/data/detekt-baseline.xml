@@ -9,8 +9,5 @@
       <ID>ReturnCount:InitialSetupWorker.kt:InitialSetupWorker$override suspend fun doWork: Result</ID>
       <ID>ThrowsCount:InitialSetupWorker.kt:InitialSetupWorker$override suspend fun doWork: Result</ID>
       <ID>TooGenericExceptionCaught:NotificationHelper.kt:NotificationHelper$e: RuntimeException</ID>
-      <ID>TooGenericExceptionThrown:UsageCheckWorkerTest.kt:UsageCheckWorkerTest$throw RuntimeException("Fatal")</ID>
-      <ID>TooManyFunctions:DataStoreKeys.kt:DataStoreKeys</ID>
-      <ID>TooManyFunctions:UsageDataModule.kt:UsageDataModule</ID>
   </CurrentIssues>
 </SmellBaseline>
