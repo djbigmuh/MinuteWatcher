@@ -113,20 +113,19 @@ internal class CallStartHandler
             if (data.startTimeResult.isFailure) {
                 handleStartTimeFailure(targetSubId, data.startTimeResult.exceptionOrNull(), context)
                 return false
-            } else {
-                val startTime = data.startTimeResult.getOrThrow()
-                if (startTime != 0L) {
-                    val savedBootTime = data.bootTimeResult.getOrElse { 0L }
-                    val isStale = validateSessionStaleness(targetSubId, savedBootTime, data.bootTime, context)
-                    if (!isStale) {
-                        handleActiveSession(targetSubId, data)
-                        return true
-                    }
-                }
-
-                recordCallStart(targetSubId, data)
-                return true
             }
+            val startTime = data.startTimeResult.getOrThrow()
+            if (startTime != 0L) {
+                val savedBootTime = data.bootTimeResult.getOrElse { 0L }
+                val isStale = validateSessionStaleness(targetSubId, savedBootTime, data.bootTime, context)
+                if (!isStale) {
+                    handleActiveSession(targetSubId, data)
+                    return true
+                }
+            }
+
+            recordCallStart(targetSubId, data)
+            return true
         }
 
         private fun handleActiveSession(

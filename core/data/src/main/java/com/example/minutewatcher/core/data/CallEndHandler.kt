@@ -66,36 +66,32 @@ internal class CallEndHandler
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                shouldRefreshStatus = false
-                // Force refresh before rethrowing so status is consistent
-                try {
-                    context.refreshStatus(true)
-                } catch (e2: CancellationException) {
-                    throw e2
-                } catch (e2: Exception) {
-                    AppLogger.w("CallEndHandler: refreshStatus failed after database error", e2)
-                }
-                context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message))
-                throw e
+                handlePerformCallEndFatalError(e, TrackingStatus.ErrorType.DATABASE_ERROR, context)
             } catch (e: SecurityException) {
-                shouldRefreshStatus = false
-                AppLogger.e("SecurityException in onCallEnded", e)
-                // Force refresh before rethrowing so status is consistent
-                try {
-                    context.refreshStatus(true)
-                } catch (e2: CancellationException) {
-                    throw e2
-                } catch (e2: Exception) {
-                    AppLogger.w("CallEndHandler: refreshStatus failed after security error", e2)
-                }
-                context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
-                throw e
+                handlePerformCallEndFatalError(e, TrackingStatus.ErrorType.PERMISSION_MISSING, context)
             } catch (e: Exception) {
                 shouldRefreshStatus = false // Не обновляем статус при неизвестной ошибке
                 handlePerformCallEndError(subId, e, context)
             } finally {
                 finalizeCallEnd(shouldRefreshStatus, context)
             }
+        }
+
+        private suspend fun handlePerformCallEndFatalError(
+            e: Exception,
+            errorType: TrackingStatus.ErrorType,
+            context: CallTrackingContext,
+        ) {
+            // Force refresh before rethrowing so status is consistent
+            try {
+                context.refreshStatus(true)
+            } catch (e2: CancellationException) {
+                throw e2
+            } catch (e2: Exception) {
+                AppLogger.w("CallEndHandler: refreshStatus failed after fatal error", e2)
+            }
+            context.updateStatus(TrackingStatus.Error(errorType, e.message))
+            throw e
         }
 
         private suspend fun executeCallEndLogic(
@@ -251,32 +247,31 @@ internal class CallEndHandler
             if (data.startTimeResult.isFailure) {
                 handleReadStartTimeFailure(subId, data.startTimeResult.exceptionOrNull(), context)
                 return false
-            } else {
-                val startTime = data.startTimeResult.getOrThrow()
-                if (startTime == 0L) {
-                    AppLogger.d("CallTracker: received IDLE for subId $subId but no session was active")
-                    return true
-                } else if (validateCallDuration(subId, data, context)) {
-                    val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
-                    val durationSeconds =
-                        ((data.currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
+            }
+            val startTime = data.startTimeResult.getOrThrow()
+            if (startTime == 0L) {
+                AppLogger.d("CallTracker: received IDLE for subId $subId but no session was active")
+                return true
+            }
+            if (!validateCallDuration(subId, data, context)) {
+                return false
+            }
+            val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
+            val durationSeconds =
+                ((data.currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
 
-                    return if (processCallDurationLocked(
-                            subId = subId,
-                            durationSeconds = durationSeconds,
-                            data = data,
-                            notify = notify,
-                            context = context,
-                        )
-                    ) {
-                        sessionCleaner.cleanupCounters(subId, context)
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    return false
-                }
+            return if (processCallDurationLocked(
+                    subId = subId,
+                    durationSeconds = durationSeconds,
+                    data = data,
+                    notify = notify,
+                    context = context,
+                )
+            ) {
+                sessionCleaner.cleanupCounters(subId, context)
+                true
+            } else {
+                false
             }
         }
 

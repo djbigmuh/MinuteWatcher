@@ -1,16 +1,11 @@
 package com.example.minutewatcher.core.data
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.telephony.TelephonyManager
-import androidx.core.content.ContextCompat
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.TrackingStatus
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,7 +18,6 @@ import javax.inject.Singleton
 internal class CallEndResolver
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
         private val callSessionRepository: CallSessionRepository,
         private val permissionManager: PermissionManager,
         private val telephonyManager: TelephonyManager?,
@@ -96,11 +90,7 @@ internal class CallEndResolver
         @Suppress("MissingPermission")
         private fun isDeviceIdle(activeSubIds: List<Int>): Boolean {
             val manager = telephonyManager
-            val hasPermission =
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_PHONE_STATE,
-                ) == PackageManager.PERMISSION_GRANTED
+            val hasPermission = permissionManager.hasPhoneStatePermission()
 
             return when {
                 manager == null -> true
@@ -132,11 +122,7 @@ internal class CallEndResolver
         @Suppress("MissingPermission")
         private fun findTargetSubId(activeSubIds: List<Int>): Int? {
             val manager = telephonyManager
-            val hasPermission =
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_PHONE_STATE,
-                ) == PackageManager.PERMISSION_GRANTED
+            val hasPermission = permissionManager.hasPhoneStatePermission()
 
             return when {
                 manager == null -> null

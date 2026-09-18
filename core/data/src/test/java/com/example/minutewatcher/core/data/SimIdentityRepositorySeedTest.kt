@@ -119,6 +119,8 @@ class SimIdentityRepositorySeedTest {
                         val seed = current.ifEmpty { generator() }
                         return SeedResolutionResult.Ephemeral(seed)
                     }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val identityRepo =
@@ -181,6 +183,8 @@ class SimIdentityRepositorySeedTest {
                         delay(1.seconds)
                         return SeedResolutionResult.Ephemeral("generated")
                     }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val identityRepo =
@@ -250,6 +254,8 @@ class SimIdentityRepositorySeedTest {
                         delay(1.seconds)
                         return SeedResolutionResult.Ephemeral("generated")
                     }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val identityRepo =

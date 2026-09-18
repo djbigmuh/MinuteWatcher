@@ -172,7 +172,6 @@ abstract class CallTrackerTestFixtures {
         sessionCleaner,
         settingsHandler,
         CallEndResolver(
-            context,
             repo,
             permissionManager,
             telephonyManager,

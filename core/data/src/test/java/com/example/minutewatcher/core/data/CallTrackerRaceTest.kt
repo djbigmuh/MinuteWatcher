@@ -89,7 +89,6 @@ class CallTrackerRaceTest {
             )
         val endResolver =
             CallEndResolver(
-                context = context,
                 callSessionRepository = callSessionRepository,
                 permissionManager = permissionManager,
                 telephonyManager = telephonyManager,

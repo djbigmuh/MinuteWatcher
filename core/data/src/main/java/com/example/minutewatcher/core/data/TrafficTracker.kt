@@ -110,8 +110,6 @@ class TrafficTracker
 
         @VisibleForTesting
         internal val initJob = AtomicReference<Job?>(null)
-        private var permissionObserverJob: Job? = null
-        private var simObserverJob: Job? = null
         private var lastObservedDataSubId: Int? = null
 
         private fun tryClaimInitialization(): Boolean = isInitializing.compareAndSet(false, true)
@@ -143,7 +141,7 @@ class TrafficTracker
                 // job уже завершён или отменён
             }
             currentCoroutineContext().ensureActive()
-            initializeWithRetry()
+            performInitializeWithRetry()
         }
 
         private fun startAutomaticRecoveryObservers() {
@@ -152,38 +150,36 @@ class TrafficTracker
         }
 
         private fun startPermissionRecoveryObserver() {
-            permissionObserverJob =
-                scope.launch {
-                    try {
-                        permissionStateNotifier.changes.collect {
-                            if (permissionManager.hasPhoneStatePermission() &&
-                                permissionManager.hasUsageStatsPermission()
-                            ) {
-                                checkAndScheduleAutoRecovery("permission change")
-                            }
+            scope.launch {
+                try {
+                    permissionStateNotifier.changes.collect {
+                        if (permissionManager.hasPhoneStatePermission() &&
+                            permissionManager.hasUsageStatsPermission()
+                        ) {
+                            checkAndScheduleAutoRecovery("permission change")
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("TrafficTracker: Permission observer failed", e)
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("TrafficTracker: Permission observer failed", e)
                 }
+            }
         }
 
         private fun startSimRecoveryObserver() {
-            simObserverJob =
-                scope.launch {
-                    try {
-                        simIdentityRepository.observeActiveSims().collect { sims ->
-                            checkAndScheduleAutoRecovery("SIM change")
-                            handleDefaultDataChange(sims)
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("TrafficTracker: SIM observer failed", e)
+            scope.launch {
+                try {
+                    simIdentityRepository.observeActiveSims().collect { sims ->
+                        checkAndScheduleAutoRecovery("SIM change")
+                        handleDefaultDataChange(sims)
                     }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("TrafficTracker: SIM observer failed", e)
                 }
+            }
         }
 
         @Suppress("ReturnCount")
@@ -227,10 +223,6 @@ class TrafficTracker
                     }
                 }
             }
-        }
-
-        private suspend fun initializeWithRetry() {
-            performInitializeWithRetry()
         }
 
         private suspend fun performInitializeWithRetry() {

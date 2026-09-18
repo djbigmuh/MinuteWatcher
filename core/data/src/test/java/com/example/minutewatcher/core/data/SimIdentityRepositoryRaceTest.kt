@@ -166,6 +166,8 @@ class SimIdentityRepositoryRaceTest {
 
                 override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult =
                     SeedResolutionResult.Ephemeral("gen")
+
+                override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
             }
 
         return SimIdentityRepositoryTestHelper.createRepository(
@@ -205,6 +207,8 @@ class SimIdentityRepositoryRaceTest {
                     override suspend fun getOrCreateSeedOrEphemeralFallback(
                         generator: () -> String,
                     ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val mockSubInfo = mock<SubscriptionInfo>()
@@ -271,6 +275,8 @@ class SimIdentityRepositoryRaceTest {
                     override suspend fun getOrCreateSeedOrEphemeralFallback(
                         generator: () -> String,
                     ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             val mockSubInfo = mock<SubscriptionInfo>()
@@ -334,6 +340,8 @@ class SimIdentityRepositoryRaceTest {
                     override suspend fun getOrCreateSeedOrEphemeralFallback(
                         generator: () -> String,
                     ): SeedResolutionResult = SeedResolutionResult.Persistent(storedSeed.value)
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
                 }
 
             // Mock slow SIM discovery

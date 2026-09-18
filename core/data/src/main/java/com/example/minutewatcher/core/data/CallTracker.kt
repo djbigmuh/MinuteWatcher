@@ -72,13 +72,6 @@ open class CallTracker
             statusMachine.transition(status, force)
         }
 
-        private fun transitionStatus(
-            newStatus: TrackingStatus,
-            force: Boolean = false,
-        ) {
-            updateStatus(newStatus, force)
-        }
-
         private enum class State {
             IDLE,
             INITIALIZING,
@@ -141,14 +134,17 @@ open class CallTracker
                 } catch (e: Exception) {
                     AppLogger.e("CallTracker: Failed to start initialization", e)
                     trackerState.set(State.FAILED)
-                    transitionStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
+                    updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
                     initDeferred.completeExceptionally(e)
                 }
             }
         }
 
         @VisibleForTesting
-        fun isStarted(): Boolean = trackerState.get() == State.INITIALIZED || trackerState.get() == State.INITIALIZING
+        fun isStarted(): Boolean {
+            val current = trackerState.get()
+            return current == State.INITIALIZED || current == State.INITIALIZING
+        }
 
         private fun startPermissionObserver() {
             val changesFlow = permissionStateNotifier.changes
@@ -174,7 +170,7 @@ open class CallTracker
                             }
                         }.catch { e ->
                             AppLogger.e("CallTracker: Permission observer died permanently", e)
-                            transitionStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
+                            updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
                         }.collect {
                             try {
                                 initMutex.withLock {
@@ -207,21 +203,7 @@ open class CallTracker
             eventElapsedRealtime: Long = -1L,
         ) {
             ensureStarted()
-            try {
-                initDeferred.await()
-            } catch (
-                @Suppress("SwallowedException")
-                e: CallTrackerStoppedException,
-            ) {
-                AppLogger.w("CallTracker: stopped while waiting for init, proceeding anyway")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (
-                @Suppress("SwallowedException")
-                e: Exception,
-            ) {
-                AppLogger.w("CallTracker: init failed, proceeding anyway", e)
-            }
+            awaitInitialization()
             startHandler.executeCallStart(
                 subId = subId,
                 eventElapsedRealtime = eventElapsedRealtime,
@@ -246,6 +228,15 @@ open class CallTracker
             eventElapsedRealtime: Long = -1L,
         ) {
             ensureStarted()
+            awaitInitialization()
+            endHandler.performCallEnd(
+                subId = subId,
+                eventElapsedRealtime = eventElapsedRealtime,
+                context = this,
+            )
+        }
+
+        private suspend fun awaitInitialization() {
             try {
                 initDeferred.await()
             } catch (
@@ -261,11 +252,6 @@ open class CallTracker
             ) {
                 AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
-            endHandler.performCallEnd(
-                subId = subId,
-                eventElapsedRealtime = eventElapsedRealtime,
-                context = this,
-            )
         }
 
         /**
@@ -317,7 +303,7 @@ open class CallTracker
                 AppLogger.d("CallTracker: refreshStatus found ${activeCalls.size} active calls")
                 // We use force = true here because we have successfully re-evaluated the state
                 // and want this result to override any previous error.
-                transitionStatus(
+                updateStatus(
                     if (activeCalls.isNotEmpty()) TrackingStatus.Active else TrackingStatus.Idle,
                     force = true,
                 )
@@ -329,27 +315,27 @@ open class CallTracker
                 throw e
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException refreshing status", e)
-                transitionStatus(
+                updateStatus(
                     TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message),
                     force = force,
                 )
             } catch (e: Exception) {
                 AppLogger.e("Error refreshing status", e)
-                transitionStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message), force = force)
+                updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message), force = force)
             }
         }
 
         override fun checkPermissions(): Boolean =
             try {
                 if (!permissionManager.hasPhoneStatePermission()) {
-                    transitionStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING))
+                    updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING))
                     false
                 } else {
                     true
                 }
             } catch (e: SecurityException) {
                 AppLogger.e("Permission revoked in checkPermissions", e)
-                transitionStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
+                updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
                 false
             }
 
@@ -441,7 +427,7 @@ open class CallTracker
                 // Prepare fresh deferred for potential future re-start
                 initDeferred = CompletableDeferred()
             }
-            transitionStatus(TrackingStatus.Idle, force = true)
+            updateStatus(TrackingStatus.Idle, force = true)
         }
 
         companion object {
