@@ -10,7 +10,7 @@ import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.ObservationHandle
+import com.example.minutewatcher.core.common.util.FlowObservationScope
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -68,11 +68,11 @@ class ShortcutManager
 
         private val initMutex = Mutex()
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
-        private val observationHandle = ObservationHandle(scope, "ShortcutManager")
+        private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "ShortcutManager")
 
         /** Current observation job, if any. */
         @VisibleForTesting
-        internal val job: Job? get() = observationHandle.currentJob
+        internal val job: Job? get() = observationScope.currentJob
 
         /**
          * Updates the tracker status using canonical prioritized rules.
@@ -102,7 +102,7 @@ class ShortcutManager
         internal suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
                 lastSnapshotFlow = snapshotFlow
-                observationHandle.start(
+                observationScope.observe(
                     snapshotFlow.debounce { snapshot ->
                         if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
                     },

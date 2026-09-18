@@ -251,7 +251,7 @@ class MainBannerController
          */
         override suspend fun recover() {
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                observationScope.getJob()?.cancelAndJoin()
+                observationScope.currentJob?.cancelAndJoin()
             }
             observationScope.shutdown()
             isObservationStarted.set(false)

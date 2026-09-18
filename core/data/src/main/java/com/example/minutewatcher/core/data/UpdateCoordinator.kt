@@ -104,7 +104,7 @@ class UpdateCoordinator
 
             // 2. Cancel and join current observation and monitoring
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                observationScope.getJob()?.cancelAndJoin()
+                observationScope.currentJob?.cancelAndJoin()
             }
             observationScope.shutdown()
 
@@ -144,7 +144,7 @@ class UpdateCoordinator
 
         private fun ensureObservationStarted() {
             // Check if already active
-            val currentJob = observationScope.getJob()
+            val currentJob = observationScope.currentJob
             if (currentJob != null && currentJob.isActive) return
 
             // Setup already in progress?

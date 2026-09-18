@@ -2,4 +2,6 @@
 <full-backup-content>
     <!-- DataStore and SharedPreferences are excluded from cloud backup to protect privacy (SIM IDs, usage statistics) -->
     <!-- Only device-to-device transfer is allowed for these files (configured in data_extraction_rules.xml) -->
+    <exclude domain="file" path="datastore/" />
+    <exclude domain="sharedpref" path="." />
 </full-backup-content>

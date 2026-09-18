@@ -11,7 +11,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.ObservationHandle
+import com.example.minutewatcher.core.common.util.FlowObservationScope
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -91,11 +91,11 @@ class SemanticSearchManager
             data object MutexTimeout : IndexResult
         }
 
-        private val observationHandle = ObservationHandle(scope, "SemanticSearchManager")
+        private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "SemanticSearchManager")
 
         /** Current observation job, if any. */
         @VisibleForTesting
-        internal val job: Job? get() = observationHandle.currentJob
+        internal val job: Job? get() = observationScope.currentJob
 
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
@@ -173,11 +173,11 @@ class SemanticSearchManager
         }
 
         @OptIn(FlowPreview::class)
-        private fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
+        private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             if (isCurrentObservationActive(snapshotFlow)) return
 
             lastSnapshotFlow = snapshotFlow
-            observationHandle.start(
+            observationScope.observe(
                 snapshotFlow.debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS },
             ) { snapshot ->
                 processSnapshotInternal(snapshot)
