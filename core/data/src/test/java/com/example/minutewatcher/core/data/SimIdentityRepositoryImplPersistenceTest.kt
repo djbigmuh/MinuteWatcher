@@ -313,4 +313,33 @@ class SimIdentityRepositoryImplPersistenceTest {
             saveJob.join()
             secondSaveJob.join()
         }
+
+    @Test
+    fun `saveSimIdentitiesInfo updates slotIndex in DataStore when it changes`() =
+        runTest {
+            val realDataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                ) {
+                    tmpFolder.newFile("test_ds_update_slot.preferences_pb")
+                }
+            val persistence = SimIdentityPersistence(realDataStore, migrationService)
+
+            val initialIdentity = SimIdentity("stable_id", 101, 0, IdentitySource.ICCID, isStable = true)
+            persistence.saveSimIdentitiesInfo(listOf(initialIdentity))
+            advanceUntilIdle()
+
+            // Verify initial slot
+            val prefs1 = realDataStore.data.first()
+            assertEquals(0, prefs1[DataStoreKeys.slotIndexKey("stable_id")])
+
+            // Update slot
+            val updatedIdentity = SimIdentity("stable_id", 101, 1, IdentitySource.ICCID, isStable = true)
+            persistence.saveSimIdentitiesInfo(listOf(updatedIdentity))
+            advanceUntilIdle()
+
+            // Verify updated slot
+            val prefs2 = realDataStore.data.first()
+            assertEquals(1, prefs2[DataStoreKeys.slotIndexKey("stable_id")])
+        }
 }

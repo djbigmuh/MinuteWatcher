@@ -23,12 +23,20 @@ class SimIdentityCache
         /**
          * Returns a canonical instance of the given identity.
          * Ensures referential equality for identical SIMs across the module.
+         * If an instance with the same [SimIdentity.stableId] exists in the cache and is structurally equal,
+         * the cached instance is returned. Otherwise, the new instance is stored and returned.
          */
         fun getOrCreateCanonical(identity: SimIdentity): SimIdentity {
             if (!identity.isStable) {
                 evictUnstableIfNeeded()
             }
-            return canonicalIdentities.putIfAbsent(identity.stableId, identity) ?: identity
+            return canonicalIdentities.compute(identity.stableId) { _, existing ->
+                if (existing != null && existing == identity) {
+                    existing
+                } else {
+                    identity
+                }
+            }!!
         }
 
         private fun evictUnstableIfNeeded() {
