@@ -58,6 +58,9 @@ internal class TrafficUpdateTimeoutException(
  * Single-flight initialization is enforced via an atomic flag, ensuring cleanup upon cancellation
  * is completely non-blocking.
  *
+ * **Lifecycle:** Initialization starts immediately upon construction in the `init` block.
+ * Eager injection in the Application class ensures tracking is active early in the process lifecycle.
+ *
  * NOTE: Suppressing TooManyFunctions as this class is the central orchestrator for traffic tracking,
  * delegating to specialized components while maintaining the primary tracking lifecycle.
  */
@@ -350,24 +353,25 @@ class TrafficTracker
          * during the entire update process to ensure data consistency.
          */
         suspend fun updateTrafficUsage() {
+            val startElapsed = timeProvider.elapsedRealtime()
             try {
                 updateTrafficUsageLogic()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SecurityException) {
                 updateStatusOnError(
-                    0L,
+                    startElapsed,
                     e.message ?: "Permission missing",
                     TrackingStatus.ErrorType.PERMISSION_MISSING,
                 )
             } catch (e: TrafficUpdateTimeoutException) {
                 updateStatusOnError(
-                    e.startElapsed,
+                    if (e.startElapsed != 0L) e.startElapsed else startElapsed,
                     TrafficUpdateTimeoutException.MESSAGE,
                     code = TrackingStatus.ErrorCode.TIMEOUT,
                 )
             } catch (e: Exception) {
-                updateStatusOnError(0L, e.message ?: "Unknown error")
+                updateStatusOnError(startElapsed, e.message ?: "Unknown error")
             }
         }
 

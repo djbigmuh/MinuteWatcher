@@ -502,19 +502,20 @@ class TrafficTrackerTest {
             // Advance timeProvider so startElapsed for next update is larger
             timeProvider.advance(1000)
 
-            // Simulate timeout in fetchActiveSims
+            // Simulate timeout in fetchActiveSims (which is inside updateTrafficUsageLogic)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
 
             val updateJob = launch { tracker.updateTrafficUsage() }
             runCurrent()
 
             // 1. Advance time slightly (but before timeout) to simulate a successful update occurring during the wait
+            // In this test, we simulate it by manually updating lastSuccessElapsed
             testScheduler.advanceTimeBy(1000.milliseconds)
             timeProvider.advance(1000)
             tracker.lastSuccessElapsed.set(timeProvider.elapsedRealtime())
 
             // 2. Advance time further to trigger timeout in updateJob
-            val timeout = Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds + 100.milliseconds
+            val timeout = Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds + 1000.milliseconds
             testScheduler.advanceTimeBy(timeout)
             timeProvider.advance(timeout.inWholeMilliseconds)
 
@@ -523,6 +524,47 @@ class TrafficTrackerTest {
 
             // Verification: Status should remain Active and NOT be overwritten by the timeout error
             assertEquals(TrackingStatus.Active, tracker.status.value)
+        }
+
+    @Test
+    fun `updateStatusOnError suppresses error if a success happened after it started`() =
+        runTest {
+            val tracker = createTracker(backgroundScope)
+            tracker.lastSuccessElapsed.set(1000L)
+
+            // Error started at 500L, which is before 1000L
+            tracker.statusMachine.transition(TrackingStatus.Active)
+
+            // This should be a no-op due to suppression
+            val updateStatusOnError =
+                tracker::class.java
+                    .getDeclaredMethod(
+                        "updateStatusOnError",
+                        Long::class.java,
+                        String::class.java,
+                        TrackingStatus.ErrorType::class.java,
+                        TrackingStatus.ErrorCode::class.java,
+                    ).apply { isAccessible = true }
+
+            updateStatusOnError.invoke(
+                tracker,
+                500L,
+                "Stale Error",
+                TrackingStatus.ErrorType.UNKNOWN,
+                null,
+            )
+
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+
+            // Error started at 1500L, which is after 1000L
+            updateStatusOnError.invoke(
+                tracker,
+                1500L,
+                "Fresh Error",
+                TrackingStatus.ErrorType.UNKNOWN,
+                null,
+            )
+            assertTrue(tracker.status.value is TrackingStatus.Error)
         }
 
     @Test
