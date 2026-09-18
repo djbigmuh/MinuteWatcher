@@ -9,13 +9,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.atomic.AtomicInteger
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
@@ -29,11 +27,10 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             manager.indexSnapshot(snapshot1)
 
             val hash1 = SnapshotUtils.calculateContentHash(snapshot1)
-            assertEquals(hash1, getPrivateField(manager, "lastSnapshotHash"))
+            assertEquals(hash1, manager.lastSnapshotHash)
 
             // 2. Lock mutex and try to index another snapshot
-            val indexMutex = getPrivateField(manager, "indexMutex") as Mutex
-            indexMutex.lock()
+            manager.indexMutex.lock()
             try {
                 val snapshot2 = createTestSnapshot(101L)
                 val result = manager.indexSnapshot(snapshot2)
@@ -43,10 +40,10 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                 assertEquals(
                     "Hash should remain unchanged on mutex timeout",
                     hash1,
-                    getPrivateField(manager, "lastSnapshotHash"),
+                    manager.lastSnapshotHash,
                 )
             } finally {
-                indexMutex.unlock()
+                manager.indexMutex.unlock()
             }
         }
 
@@ -54,9 +51,8 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     fun `recover finishes within timeout even if indexMutex is stuck`() =
         runTest(testDispatcher) {
             val manager = createManager(backgroundScope)
-            val indexMutex = getPrivateField(manager, "indexMutex") as Mutex
 
-            indexMutex.lock()
+            manager.indexMutex.lock()
             try {
                 // recover() should not hang forever
                 manager.recover()
@@ -68,18 +64,9 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                 val status = manager.status.value as TrackingStatus.Error
                 assertTrue(status.message?.contains("Recovery blocked") == true)
             } finally {
-                indexMutex.unlock()
+                manager.indexMutex.unlock()
             }
         }
-
-    private fun getPrivateField(
-        obj: Any,
-        fieldName: String,
-    ): Any? {
-        val field = obj.javaClass.getDeclaredField(fieldName)
-        field.isAccessible = true
-        return field.get(obj)
-    }
 
     @Test
     fun `putDocuments failure sets error status and does not update hash`() =
@@ -279,11 +266,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val errorHandler = getErrorHandler(manager)
 
             // 1. Manually lock the indexMutex to cause timeout
-            val indexMutexField = SemanticSearchManager::class.java.getDeclaredField("indexMutex")
-            indexMutexField.isAccessible = true
-            val indexMutex = indexMutexField.get(manager) as Mutex
-
-            indexMutex.lock()
+            manager.indexMutex.lock()
             try {
                 // 2. Attempt indexing - should timeout based on SHORT_TIMEOUT_MS
                 val result = manager.indexSnapshot(createSnapshotWithOneSim())
@@ -303,7 +286,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                     manager.status.value !is TrackingStatus.Error,
                 )
             } finally {
-                indexMutex.unlock()
+                manager.indexMutex.unlock()
             }
         }
 
@@ -313,33 +296,25 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val manager = createManager(backgroundScope)
 
             // 1. Manually lock the indexMutex to cause timeout
-            val indexMutexField = SemanticSearchManager::class.java.getDeclaredField("indexMutex")
-            indexMutexField.isAccessible = true
-            val indexMutex = indexMutexField.get(manager) as Mutex
-
-            val timeoutsField = SemanticSearchManager::class.java.getDeclaredField("consecutiveMutexTimeouts")
-            timeoutsField.isAccessible = true
-            val timeouts = timeoutsField.get(manager) as AtomicInteger
-
-            indexMutex.lock()
+            manager.indexMutex.lock()
             try {
                 // First timeout
                 manager.indexSnapshot(createSnapshotWithOneSim())
-                assertEquals(1, timeouts.get())
+                assertEquals(1, manager.consecutiveMutexTimeouts.get())
 
                 // Second timeout -> should set Error status
                 manager.indexSnapshot(createSnapshotWithOneSim())
-                assertEquals(2, timeouts.get())
+                assertEquals(2, manager.consecutiveMutexTimeouts.get())
                 assertTrue(manager.status.value is TrackingStatus.Error)
             } finally {
-                indexMutex.unlock()
+                manager.indexMutex.unlock()
             }
 
             // 2. Now call indexSnapshot successfully
             manager.indexSnapshot(createSnapshotWithOneSim())
 
             // 3. Verify counter is reset to 0
-            assertEquals(0, timeouts.get())
+            assertEquals(0, manager.consecutiveMutexTimeouts.get())
         }
 
     @Test
@@ -348,15 +323,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             val manager = createManager(backgroundScope)
 
             // 1. Manually lock the indexMutex to cause timeout
-            val indexMutexField = SemanticSearchManager::class.java.getDeclaredField("indexMutex")
-            indexMutexField.isAccessible = true
-            val indexMutex = indexMutexField.get(manager) as Mutex
-
-            val timeoutsField = SemanticSearchManager::class.java.getDeclaredField("consecutiveMutexTimeouts")
-            timeoutsField.isAccessible = true
-            val timeouts = timeoutsField.get(manager) as AtomicInteger
-
-            indexMutex.lock()
+            manager.indexMutex.lock()
             try {
                 // 2. Attempt indexing - should timeout based on SHORT_TIMEOUT_MS
                 val result = manager.indexSnapshot(createSnapshotWithOneSim())
@@ -368,9 +335,9 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                 )
 
                 // 3. Verify counter is incremented
-                assertEquals(1, timeouts.get())
+                assertEquals(1, manager.consecutiveMutexTimeouts.get())
             } finally {
-                indexMutex.unlock()
+                manager.indexMutex.unlock()
             }
         }
 }

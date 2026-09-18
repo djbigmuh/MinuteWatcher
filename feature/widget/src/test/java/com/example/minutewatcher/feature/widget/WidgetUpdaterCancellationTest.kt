@@ -3,22 +3,20 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import java.lang.reflect.Field
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterCancellationTest {
@@ -51,36 +49,53 @@ class WidgetUpdaterCancellationTest {
     }
 
     @Test
-    fun `test cancellation during updateAll finally causes activeUpdate leak`() =
+    fun `updateAll cancellation clears activeUpdate and allows subsequent updates`() =
         runTest(testDispatcher) {
-            // 1. Get the mutex via reflection
-            val mutexField: Field = WidgetUpdaterImpl::class.java.getDeclaredField("coalescingMutex")
-            mutexField.isAccessible = true
-            val coalescingMutex = mutexField.get(updater) as Mutex
-
-            val activeUpdateField: Field = WidgetUpdaterImpl::class.java.getDeclaredField("activeUpdate")
-            activeUpdateField.isAccessible = true
-
             val reachedUpdate = CompletableDeferred<Unit>()
-            whenever(renderer.renderAll(any(), any())).thenAnswer {
-                reachedUpdate.complete(Unit)
-                mock()
-            }
+            val finishUpdate = CompletableDeferred<Unit>()
 
+            val fakeRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        reachedUpdate.complete(Unit)
+                        finishUpdate.await()
+                    }
+                }
+
+            val limitManager = WidgetLimitManager(appSettingsRepository, backgroundScope)
+            val testUpdater =
+                WidgetUpdaterImpl(
+                    context,
+                    appSettingsRepository,
+                    fakeRenderer,
+                    retryManager,
+                    limitManager,
+                    errorClassifier,
+                )
+
+            // 1. Start first update
             val job =
                 launch {
-                    updater.updateAll()
+                    testUpdater.updateAll()
                 }
 
             reachedUpdate.await()
-            coalescingMutex.lock() // Block the finally block
 
-            job.cancelAndJoin() // Cancel while it's waiting for mutex in finally
+            // 2. Cancel it while it's "rendering" (suspended in finishUpdate.await())
+            job.cancelAndJoin()
 
-            coalescingMutex.unlock()
+            // 3. Immediately call updateAll again.
+            // If activeUpdate was cleared, this should be a NEW update (not coalesced).
+            val result = testUpdater.updateAll()
 
-            // 2. Check if activeUpdate leaked.
-            val activeUpdate = activeUpdateField.get(updater)
-            assert(activeUpdate == null) { "activeUpdate should have been cleared to null" }
+            val wasCoalesced =
+                when (result) {
+                    is WidgetUpdateResult.Success -> result.wasCoalesced
+                    is WidgetUpdateResult.Failure -> result.wasCoalesced
+                }
+            assert(!wasCoalesced) { "Subsequent update should not be coalesced with cancelled one" }
         }
 }

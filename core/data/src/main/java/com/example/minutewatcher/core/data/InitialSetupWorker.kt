@@ -6,12 +6,14 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.data.InitialSetupWorker.Companion.WORKER_TIMEOUT_MS
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
@@ -24,101 +26,101 @@ class InitialSetupWorker
         @Assisted workerParams: WorkerParameters,
         private val deps: InitialSetupWorkerDependencies,
     ) : CoroutineWorker(appContext, workerParams) {
-        override suspend fun doWork(): Result {
+    /**
+     * Orchestrates initial setup and migrations after boot or app update.
+     *
+     * **Reliability criteria:**
+     * The worker always completes within [WORKER_TIMEOUT_MS] to avoid blocking
+     * the unique setup work chain. Exceeding this budget is treated as temporary
+     * storage degradation and triggers [Result.retry].
+     *
+     * @throws CancellationException if the work is cancelled by WorkManager.
+     */
+    override suspend fun doWork(): Result =
+        withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {
+            executeWork()
+        } ?: run {
+            AppLogger.e("InitialSetupWorker: timed out after ${WORKER_TIMEOUT_MS}ms")
+            Result.retry()
+        }
+
+    private suspend fun executeWork(): Result =
             try {
-                // Refresh operator metadata first to ensure it's available for migration and UI.
-                deps.usageUseCase.refreshOperatorInfo()
-
-                // Always clear stale call sessions first.
-                // This does not require phone permission and must not be blocked by migration.
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    deps.callTracker.onBootAwaited()
-                } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
-
-                checkAndPerformMigrations()?.let { return it }
-
-                // Perform auto-reset immediately after boot/migration. Skip internal notify as we do it at the end.
-                try {
-                    val allReset = deps.autoResetUseCase.performAutoReset(shouldNotify = false)
-                    if (!allReset) {
-                        AppLogger.w("InitialSetupWorker: Auto-reset partially failed, but continuing.")
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("InitialSetupWorker: Auto-reset failed with error, continuing.", e)
-                }
-
-                // Update traffic usage after reboot to capture any traffic since last update.
-                // updateTrafficUsage() correctly handles baseline alignment and SIM changes.
-                try {
-                    deps.trafficTracker.updateTrafficUsage()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("InitialSetupWorker: Traffic update failed, continuing.", e)
-                }
-
-                // Final refresh after all changes to capture results of auto-reset
-                deps.usageStateRepository.refresh()
-
-                // Refresh widgets and snapshot
-                deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-
-                // Schedule periodic monitoring if permissions are granted
-                if (deps.permissionManager.hasPhoneStatePermission()) {
-                    deps.workScheduler.schedulePeriodicUsageCheck()
-                }
-
-                deps.migrationFlagsRepository.setInitialSetupCompleted(true)
-
-                return Result.success()
+                performSetupSteps()
+                Result.success()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
                 AppLogger.w("InitialSetupWorker: Network or storage error, retrying. ${e.message}")
-                return Result.retry()
-            } catch (e: SecurityException) {
-                AppLogger.e("InitialSetupWorker: Permission error (unexpected)", e)
-                return Result.failure()
+                Result.retry()
             } catch (e: Exception) {
                 AppLogger.e("InitialSetupWorker failed due to unexpected error", e)
-                return Result.failure()
+                Result.failure()
+            }
+
+    private suspend fun performSetupSteps() {
+        deps.usageUseCase.refreshOperatorInfo()
+
+        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+            deps.callTracker.onBootAwaited()
+        } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
+
+        val result = checkAndPerformMigrations()
+        if (result != null && result != Result.success()) {
+            val isRetry = result == Result.retry()
+            throw if (isRetry) IOException("Migration retry") else IllegalStateException("Migration failed")
+        }
+
+        performCleanupSafe {
+            if (!deps.autoResetUseCase.performAutoReset(shouldNotify = false)) {
+                AppLogger.w("InitialSetupWorker: Auto-reset partially failed")
+                }
+        }
+        performCleanupSafe { deps.trafficTracker.updateTrafficUsage() }
+
+        deps.usageStateRepository.refresh()
+        deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+
+        if (deps.permissionManager.hasPhoneStatePermission()) {
+            deps.workScheduler.schedulePeriodicUsageCheck()
+        }
+        deps.migrationFlagsRepository.setInitialSetupCompleted(true)
+    }
+
+    private suspend fun performCleanupSafe(block: suspend () -> Unit) {
+        try {
+            block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+            AppLogger.w("InitialSetupWorker: cleanup step failed", e)
             }
         }
 
         private suspend fun checkAndPerformMigrations(): Result? {
-            val migrationV1Completed = fetchMigrationV1Flag()
-            val migrationStabilityCompleted = fetchMigrationStabilityFlag()
+            val v1Completed = fetchFlag("migrationV1") { deps.migrationFlagsRepository.isMigrationV1Completed() }
+            val stabilityCompleted =
+                fetchFlag("stability") { deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted() }
 
-            if (migrationV1Completed && migrationStabilityCompleted) {
-                return null
-            }
+            if (v1Completed && stabilityCompleted) return null
 
-            val hasPermission = deps.permissionManager.hasPhoneStatePermission()
-
-            return if (!hasPermission) {
-                handleMigrationWithoutPermission(migrationV1Completed)
+            return if (!deps.permissionManager.hasPhoneStatePermission()) {
+                handleMigrationWithoutPermission(v1Completed)
             } else {
-                handleMigrationWithPermission(migrationV1Completed)
+                handleMigrationWithPermission(v1Completed)
             }
         }
 
-        private suspend fun fetchMigrationV1Flag(): Boolean =
+    private suspend fun fetchFlag(
+        name: String,
+        provider: () -> Flow<Boolean>,
+    ): Boolean =
             try {
-                deps.migrationFlagsRepository.isMigrationV1Completed().firstWithTimeout()
+                provider().firstWithTimeout()
             } catch (e: IOException) {
-                AppLogger.e("InitialSetupWorker: Critical error reading migrationV1 flag", e)
-                throw IOException("Failed to read migrationV1 flag", e)
-            } ?: throw IOException("DataStore timeout reading migrationV1 flag")
-
-        private suspend fun fetchMigrationStabilityFlag(): Boolean =
-            try {
-                deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted().firstWithTimeout()
-            } catch (e: IOException) {
-                AppLogger.e("InitialSetupWorker: Critical error reading migrationStability flag", e)
-                throw IOException("Failed to read migrationStability flag", e)
-            } ?: throw IOException("DataStore timeout reading migrationStability flag")
+                AppLogger.e("InitialSetupWorker: Critical error reading $name flag", e)
+                throw IOException("Failed to read $name flag", e)
+            } ?: throw IOException("DataStore timeout reading $name flag")
 
         private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): Result? {
             val hasLegacyData =
@@ -129,13 +131,10 @@ class InitialSetupWorker
                     return Result.retry()
                 }
 
-            if (hasLegacyData) {
-                AppLogger.d("Migration deferred: permission missing but legacy data exists")
-            } else {
+            if (!hasLegacyData) {
                 if (!v1Completed) {
                     deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
                     deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                    AppLogger.d("Migration V1 skipped: no legacy data found")
                 }
                 deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                 deps.migrationService.markSchemaCurrent()
@@ -144,89 +143,62 @@ class InitialSetupWorker
         }
 
         private suspend fun handleMigrationWithPermission(v1Completed: Boolean): Result? {
-            var activeSims: List<ActiveSimInfo>? = null
-            try {
-                activeSims = getActiveSimsWithRetry()
-            } catch (e: IOException) {
-                AppLogger.w("InitialSetupWorker: Failed to get active SIMs for migration, retrying", e)
-            }
-
-            var finalResult: Result? = null
-            if (activeSims == null) {
-                finalResult = Result.retry()
-            } else {
-                val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
-                var hasLegacyData: Boolean? = null
+            val activeSims =
                 try {
-                    hasLegacyData = deps.migrationService.hasLegacyData(activeIdentities)
+                    getActiveSimsWithRetry()
+                } catch (e: IOException) {
+                    AppLogger.w("InitialSetupWorker: Failed to get active SIMs, retrying", e)
+                    null
+                }
+
+            if (activeSims == null) return Result.retry()
+
+            val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
+            val hasLegacyData =
+                try {
+                    deps.migrationService.hasLegacyData(activeIdentities)
                 } catch (e: IOException) {
                     AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
+                    null
                 }
 
-                if (hasLegacyData == null) {
-                    finalResult = Result.retry()
-                } else if (activeSims.isEmpty()) {
-                    handleEmptySimsMigration(v1Completed, hasLegacyData)
-                } else {
-                    finalResult = performActualMigration(activeSims)
+            return when {
+                hasLegacyData == null -> Result.retry()
+                activeSims.isEmpty() -> {
+                    if (!hasLegacyData) {
+                        if (!v1Completed) {
+                            deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+                            deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
+                        }
+                        deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+                        deps.migrationService.markSchemaCurrent()
+                    }
+                    null
                 }
-            }
-            return finalResult
-        }
 
-        private suspend fun handleEmptySimsMigration(
-            v1Completed: Boolean,
-            hasLegacyData: Boolean,
-        ) {
-            if (hasLegacyData) {
-                AppLogger.d("Migration deferred: no active SIMs found but legacy data exists")
-            } else {
-                if (!v1Completed) {
-                    deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
-                    deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.NO_LEGACY_DATA)
-                    AppLogger.d("Migration V1 skipped: no active SIMs and no legacy data")
-                }
-                deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-                deps.migrationService.markSchemaCurrent()
+                else -> performActualMigration(activeSims)
             }
         }
 
         private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =
             try {
                 var totalFailures = 0
-                var totalConflicts = 0
                 activeSims.forEach { info ->
                     val outcome = deps.migrationService.migrateLegacyData(info.identity)
                     totalFailures += outcome.failures
-                    totalConflicts += outcome.conflicts
-                }
-
-                if (totalConflicts > 0) {
-                    AppLogger.w(
-                        "InitialSetupWorker: Migration resolved $totalConflicts conflicts (legacy values backed up).",
-                    )
                 }
 
                 if (totalFailures > 0) {
-                    AppLogger.e("InitialSetupWorker: Migration finished with $totalFailures failures.")
-                    if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
-                        AppLogger.w("InitialSetupWorker: Retrying migration (attempt $runAttemptCount)")
-                        return Result.retry()
-                    } else {
-                        AppLogger.e(
-                            "InitialSetupWorker: Max migration attempts reached. " +
-                                "Marking as completed despite failures.",
-                        )
-                    }
+                    if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) return Result.retry()
+                    AppLogger.e("InitialSetupWorker: Max migration attempts reached with $totalFailures failures.")
                 }
 
                 deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
                 deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                 deps.migrationService.markSchemaCurrent()
-                AppLogger.d("Identity migrations completed in InitialSetupWorker")
                 null
             } catch (e: IOException) {
-                AppLogger.w("InitialSetupWorker: Migration failed due to IO error, retrying", e)
+                AppLogger.w("InitialSetupWorker: Actual migration failed due to IO error, retrying", e)
                 Result.retry()
             }
 
@@ -235,20 +207,13 @@ class InitialSetupWorker
                 .observeActiveSims()
                 .firstWithTimeout()
                 ?.let { return it }
-
-            AppLogger.w(
-                "InitialSetupWorker: observeActiveSims timed out, retrying with " +
-                    "${Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS / Constants.Time.MILLIS_IN_SECOND}s...",
-            )
-
-            val secondAttempt =
-                deps.simIdentityRepository.observeActiveSims().firstWithTimeout(
-                    Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS,
-                )
-            return secondAttempt ?: throw IOException("Timeout observing active SIMs")
+            return deps.simIdentityRepository.observeActiveSims().firstWithTimeout(
+                Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS,
+            ) ?: throw IOException("Timeout observing active SIMs")
         }
 
         private companion object {
             private const val MAX_MIGRATION_ATTEMPTS = 3
+            private const val WORKER_TIMEOUT_MS = 120_000L
         }
     }

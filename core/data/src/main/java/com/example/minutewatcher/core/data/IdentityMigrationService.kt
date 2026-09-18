@@ -73,7 +73,7 @@ open class IdentityMigrationService
          * @return `true` if legacy keys are found and migration is required, `false` otherwise.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
+         * @throws CancellationException if the operation is cancelled.
          */
         suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean =
             try {
@@ -139,7 +139,7 @@ open class IdentityMigrationService
          * redundant checks on subsequent app launches.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
+         * @throws CancellationException if the operation is cancelled.
          */
         suspend fun markSchemaCurrent() {
             try {
@@ -164,8 +164,8 @@ open class IdentityMigrationService
          * @return `true` if any legacy data was successfully migrated, `false` otherwise.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * @throws java.io.IOException if DataStore migration fails due to I/O error.
-         * @throws kotlinx.coroutines.CancellationException if the migration process is cancelled.
+         * @throws IOException if DataStore migration fails due to I/O error.
+         * @throws CancellationException if the migration process is cancelled.
          * @throws Exception if a fatal error occurs during migration execution.
          */
         open suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome =

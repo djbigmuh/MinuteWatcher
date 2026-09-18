@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.ObservationHandle
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -25,11 +26,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -51,12 +49,13 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @Singleton
 @Suppress("TooManyFunctions")
-open class SemanticSearchManager
+class SemanticSearchManager
     @Inject
     constructor(
         private val sessionManager: AppSearchSessionManager,
         private val indexer: SnapshotIndexer,
-        private val errorHandler: AppSearchErrorHandler,
+        @get:VisibleForTesting
+        internal val errorHandler: AppSearchErrorHandler,
         @ApplicationScope private val scope: CoroutineScope,
         @IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
@@ -77,7 +76,8 @@ open class SemanticSearchManager
             statusMachine.transition(newStatus, force)
         }
 
-        private var lastSnapshotHash: Int? = null
+    @VisibleForTesting
+    internal var lastSnapshotHash: Int? = null
         private var lastSnapshotVersion: SchemaVersion? = null
 
         /** Result of an indexing attempt. */
@@ -91,12 +91,21 @@ open class SemanticSearchManager
             data object MutexTimeout : IndexResult
         }
 
-        private var job: Job? = null
+    private val observationHandle = ObservationHandle(scope, "SemanticSearchManager")
+
+    /** Current observation job, if any. */
+    @VisibleForTesting
+    internal val job: Job? get() = observationHandle.currentJob
+
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
         private val initMutex = Mutex()
-        private val indexMutex = Mutex()
-        private val consecutiveMutexTimeouts = AtomicInteger(0)
+
+    @VisibleForTesting
+    internal val indexMutex = Mutex()
+
+    @VisibleForTesting
+    internal val consecutiveMutexTimeouts = AtomicInteger(0)
 
         override suspend fun recover() {
             initMutex.withLock {
@@ -164,47 +173,21 @@ open class SemanticSearchManager
         }
 
         @OptIn(FlowPreview::class)
-        private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
+        private fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             if (isCurrentObservationActive(snapshotFlow)) return
 
-            cancelAndJoinPreviousJob()
-
             lastSnapshotFlow = snapshotFlow
-            job =
-                scope.launch {
-                    snapshotFlow
-                        .debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS }
-                        .collect { snapshot ->
-                            processSnapshotInternal(snapshot)
-                        }
-                }
+            observationHandle.start(
+                snapshotFlow.debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS },
+            ) { snapshot ->
+                processSnapshotInternal(snapshot)
+            }
         }
 
         private fun isCurrentObservationActive(snapshotFlow: StateFlow<GlobalSnapshot>): Boolean =
             job?.isActive == true && (lastSnapshotFlow === snapshotFlow)
 
-        private suspend fun cancelAndJoinPreviousJob() {
-            val currentJob = job ?: return
-            currentJob.cancel()
-            try {
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    currentJob.join()
-                } ?: run {
-                    AppLogger.w("SemanticSearchManager: previous observation job did not terminate in time")
-                    currentJob.cancel()
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e(
-                    "SemanticSearchManager: failed to join previous observation job during setupObservation",
-                    e,
-                )
-            }
-        }
-
         private suspend fun processSnapshotInternal(snapshot: GlobalSnapshot) {
-            currentCoroutineContext().ensureActive()
             try {
                 // Initializing/Indexing status removed as it was dead and unused.
                 val result =

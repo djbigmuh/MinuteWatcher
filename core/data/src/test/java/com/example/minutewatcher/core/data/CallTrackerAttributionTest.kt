@@ -210,13 +210,10 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
     fun `refreshStatus cleans up attributionFailures for inactive subIds`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val tracker = createTracker()
+            val resolver = createAttributionResolver()
+            val tracker = createTracker(attributionResolver = resolver)
 
             // 1. Manually add entries to attributionFailures using public API
-            val resolverField = CallTracker::class.java.getDeclaredField("attributionResolver")
-            resolverField.isAccessible = true
-            val resolver = resolverField.get(tracker) as CallAttributionResolver
-
             val inactiveSubId = 99
             val activeSubId = 1
             resolver.setFailureCountForTest(inactiveSubId, 1)

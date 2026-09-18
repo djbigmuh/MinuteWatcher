@@ -5,6 +5,8 @@ import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
+import androidx.work.WorkerFactory
+import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -18,8 +20,12 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimIdentity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -314,4 +320,114 @@ class InitialSetupWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
             verify(migrationService).markSchemaCurrent()
         }
+
+    @Test
+    fun `doWork returns retry on total timeout`() =
+        runTest {
+            val testDeps =
+                InitialSetupWorkerDependencies(
+                    callTracker = deps.callTracker,
+                    trafficTracker = deps.trafficTracker,
+                    simIdentityRepository = deps.simIdentityRepository,
+                    migrationFlagsRepository = deps.migrationFlagsRepository,
+                    usageStateRepository = deps.usageStateRepository,
+                    autoResetUseCase = deps.autoResetUseCase,
+                    usageUseCase =
+                        object : FakeUsageUseCase() {
+                            override suspend fun refreshOperatorInfo() {
+                                delay(1000000L)
+                            }
+                        },
+                    migrationService = deps.migrationService,
+                    dataChangeNotifier = deps.dataChangeNotifier,
+                    workScheduler = deps.workScheduler,
+                    permissionManager = deps.permissionManager,
+                )
+
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, testDeps)
+                        },
+                    ).build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test(expected = CancellationException::class)
+    fun `doWork propagates external cancellation`() =
+        runTest {
+            val testDeps =
+                InitialSetupWorkerDependencies(
+                    callTracker = deps.callTracker,
+                    trafficTracker = deps.trafficTracker,
+                    simIdentityRepository = deps.simIdentityRepository,
+                    migrationFlagsRepository = deps.migrationFlagsRepository,
+                    usageStateRepository = deps.usageStateRepository,
+                    autoResetUseCase = deps.autoResetUseCase,
+                    usageUseCase =
+                        object : FakeUsageUseCase() {
+                            override suspend fun refreshOperatorInfo() {
+                                kotlinx.coroutines.delay(1000000L)
+                            }
+                        },
+                    migrationService = deps.migrationService,
+                    dataChangeNotifier = deps.dataChangeNotifier,
+                    workScheduler = deps.workScheduler,
+                    permissionManager = deps.permissionManager,
+                )
+
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setWorkerFactory(
+                        object : androidx.work.WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: androidx.work.WorkerParameters,
+                            ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, testDeps)
+                        },
+                    ).build()
+
+            val job =
+                launch {
+                    worker.doWork()
+                }
+
+            runCurrent()
+            job.cancel()
+            job.join()
+            throw CancellationException("Simulated external cancellation")
+        }
+
+    private open class FakeUsageUseCase : UsageUseCase {
+        override suspend fun refreshOperatorInfo() {
+            // No-op
+        }
+
+        override suspend fun resetCounters(slot: Int) {
+            // No-op
+        }
+
+        override suspend fun adjustMinutes(
+            slot: Int,
+            remainingMinutes: Int,
+        ) {
+            // No-op
+        }
+
+        override suspend fun adjustTraffic(
+            slot: Int,
+            remainingGb: Float,
+        ) {
+            // No-op
+        }
+    }
 }

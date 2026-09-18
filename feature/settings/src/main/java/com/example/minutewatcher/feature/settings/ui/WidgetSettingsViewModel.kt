@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
 import com.example.minutewatcher.core.common.di.ApplicationScope
@@ -80,7 +81,8 @@ class WidgetSettingsViewModel
         private var autoSaveJob: Job? = null
 
         @Volatile
-        private var lastSavedSettings: WidgetSettingsState? = null
+        @VisibleForTesting
+        internal var lastSavedSettings: WidgetSettingsState? = null
 
         private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
         private val pendingUpdatesLock = Any()
@@ -372,6 +374,11 @@ class WidgetSettingsViewModel
             }
             super.onCleared()
         }
+
+    @VisibleForTesting
+    internal fun onClearedForTest() {
+        onCleared()
+    }
 
         companion object {
             private val LOAD_TIMEOUT: Duration = 15.seconds

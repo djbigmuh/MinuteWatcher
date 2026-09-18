@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.semantic
 
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -9,7 +10,7 @@ import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.cancelAndJoinWithTimeout
+import com.example.minutewatcher.core.common.util.ObservationHandle
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -28,11 +29,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -71,7 +69,11 @@ class ShortcutManager
 
         private val initMutex = Mutex()
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
-        private var job: Job? = null
+    private val observationHandle = ObservationHandle(scope, "ShortcutManager")
+
+    /** Current observation job, if any. */
+    @VisibleForTesting
+    internal val job: Job? get() = observationHandle.currentJob
 
         /**
          * Updates the tracker status using canonical prioritized rules.
@@ -84,16 +86,6 @@ class ShortcutManager
         }
 
         /**
-         * Инициализирует наблюдение за snapshot-потоком.
-         * Идемпотентен: повторный вызов отменяет предыдущее наблюдение
-         * и запускает новое. `job?.join()` гарантирует, что старая корутина
-         * полностью завершилась до запуска новой.
-         *
-         * **Строгое соблюдение API:** на AOSP StateFlow эмитит значения
-         * последовательно. Debounce гарантирует отсутствие дублирующих индексаций.
-         * Если кастомная прошивка эмитит значения вне порядка — это проблема
-         * кастомной прошивки.
-         *
          * Initializes the shortcut manager by observing the snapshot flow.
          *
          * @param snapshotFlow Flow of global usage snapshots.
@@ -107,50 +99,32 @@ class ShortcutManager
         }
 
         @OptIn(FlowPreview::class)
-        private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
+        @VisibleForTesting
+        internal suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
                 lastSnapshotFlow = snapshotFlow
-                val oldJob = job
-                if (oldJob != null) {
-                    oldJob.cancelAndJoinWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                    if (oldJob.isActive) {
-                        AppLogger.w(
-                            "ShortcutManager: previous observation job did not terminate in time, forcing cancel",
-                        )
-                        oldJob.cancel()
-                        try {
-                            oldJob.join()
-                        } catch (_: Exception) {
-                            // Джоб завершён принудительно
-                        }
-                        currentCoroutineContext().ensureActive()
-                    }
-                    job = null
-                }
-                job =
-                    scope.launch {
+                observationHandle.start(
+                    snapshotFlow.debounce { snapshot ->
+                        if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
+                    },
+                ) { snapshot ->
+                    try {
                         transitionStatus(TrackingStatus.Active)
-                        snapshotFlow
-                            .debounce { snapshot ->
-                                if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
-                            }.collect { snapshot ->
-                                try {
-                                    withContext(ioDispatcher) {
-                                        updateShortcuts(snapshot)
-                                    }
-                                    transitionStatus(TrackingStatus.Active)
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (
-                                    @Suppress("TooGenericExceptionCaught")
-                                    e: Exception,
-                                ) {
-                                    AppLogger.e("Failed to update dynamic shortcuts", e)
-                                    val type = classifyShortcutError(e)
-                                    transitionStatus(TrackingStatus.Error(type, e.message))
-                                }
-                            }
+                        withContext(ioDispatcher) {
+                            updateShortcuts(snapshot)
+                        }
+                        transitionStatus(TrackingStatus.Active)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (
+                        @Suppress("TooGenericExceptionCaught")
+                        e: Exception,
+                    ) {
+                        AppLogger.e("Failed to update dynamic shortcuts", e)
+                        val type = classifyShortcutError(e)
+                        transitionStatus(TrackingStatus.Error(type, e.message))
                     }
+                }
             }
         }
 

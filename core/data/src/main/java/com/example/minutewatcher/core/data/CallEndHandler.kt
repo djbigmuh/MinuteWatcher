@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
@@ -177,7 +178,8 @@ internal class CallEndHandler
          * **Cleanup invariant:** This block does not rethrow exceptions, including [CancellationException].
          * The cancellation of the outer scope should be checked by the caller.
          */
-        private suspend fun finalizeCallEnd(
+        @VisibleForTesting
+        internal suspend fun finalizeCallEnd(
             shouldRefreshStatus: Boolean,
             context: CallTrackingContext,
         ) {

@@ -100,10 +100,7 @@ class WidgetSettingsRepository
             }
 
         private suspend fun loadSimStatesInternal(activeSims: List<ActiveSimInfo>): Map<Int, SimSettingsState>? {
-            val allIdentities =
-                (activeSims.map { it.identity.stableId } + activeSims.map { "sim_${it.slotIndex}" })
-                    .toSet()
-                    .toList()
+            val allIdentities = activeSims.map { it.identity.stableId }
 
             val batchSettings =
                 if (activeSims.isEmpty()) {
@@ -117,29 +114,14 @@ class WidgetSettingsRepository
             return batchSettings?.let { batch ->
                 activeSims.associate { info ->
                     val identity = info.identity.stableId
-                    val fallbackKey = "sim_${info.slotIndex}"
-                    val settingsByIdentity = batch[identity]
-                    val settingsByFallback = batch[fallbackKey]
+                    val settings = batch[identity]
 
-                    val settings =
-                        when {
-                            settingsByIdentity != null -> settingsByIdentity
-                            settingsByFallback != null -> {
-                                AppLogger.w(
-                                    "WidgetSettingsRepository: settings found ONLY via fallback key for slot " +
-                                        "${info.slotIndex}",
-                                )
-                                settingsByFallback
-                            }
-
-                            else -> {
-                                AppLogger.w(
-                                    "WidgetSettingsRepository: settings not found for slot ${info.slotIndex} " +
-                                        "(identity: $identity, fallback: $fallbackKey)",
-                                )
-                                null
-                            }
-                        }
+                    if (settings == null) {
+                        AppLogger.w(
+                            "WidgetSettingsRepository: settings not found for slot " +
+                                "${info.slotIndex} (identity: $identity)",
+                        )
+                    }
 
                     info.slotIndex to (settings ?: SimSettingsState()).copy(lastKnownIdentity = identity)
                 }
@@ -251,6 +233,14 @@ class WidgetSettingsRepository
             return failedSlots
         }
 
+    /**
+     * Maps a slot index to its settings using the SIM identity.
+     *
+     * **Attribution logic:**
+     * Widget settings are attributed by SIM identity. Slot-scoped keys are avoided
+     * to prevent legacy data migration from incorrectly transferring settings
+     * between different SIM cards in the same slot.
+     */
         private suspend fun mapSlotToSettings(
             slot: Int,
             simSettings: SimSettingsState,
@@ -260,25 +250,23 @@ class WidgetSettingsRepository
             try {
                 val identity = simIdentityRepository.getIdentity(slot)
                 simSettingsMap[identity] = simSettings
-                val fallbackKey = "sim_$slot"
-                if (identity != fallbackKey) {
-                    simSettingsMap[fallbackKey] = simSettings
-                }
             } catch (e: SeedUnavailableException) {
                 AppLogger.w(
                     "saveSimSettings: seed unavailable for slot $slot. " +
-                        "Saving with fallback key and last known identity.",
+                        "Saving with last known identity if available.",
                     e,
                 )
-                simSettingsMap["sim_$slot"] = simSettings
                 simSettings.lastKnownIdentity?.let { lastId ->
-                    if (lastId != "sim_$slot") {
-                        simSettingsMap[lastId] = simSettings
-                    }
-                }
+                    simSettingsMap[lastId] = simSettings
+                } ?: failedSlots.add(slot)
             } catch (e: SimNotFoundException) {
-                AppLogger.w("saveSimSettings: SIM not found in slot $slot. Saving with fallback key.", e)
-                simSettingsMap["sim_$slot"] = simSettings
+                AppLogger.w(
+                    "saveSimSettings: SIM not found in slot $slot. Saving with last known identity if available.",
+                    e,
+                )
+                simSettings.lastKnownIdentity?.let { lastId ->
+                    simSettingsMap[lastId] = simSettings
+                } ?: failedSlots.add(slot)
             } catch (e: InvalidSlotException) {
                 AppLogger.w("saveSimSettings: invalid slot $slot. Skipping.", e)
                 failedSlots.add(slot)

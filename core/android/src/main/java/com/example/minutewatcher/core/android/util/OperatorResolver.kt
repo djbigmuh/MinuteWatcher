@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -168,7 +169,6 @@ object OperatorResolver {
 
     /**
      * Loads the MCC/MNC database from assets.
-     * Uses portable regex parsing to avoid dependency on real JSONObject in plain unit tests.
      */
     private fun loadDbInternal(context: Context): Map<String, String> =
         try {
@@ -176,11 +176,10 @@ object OperatorResolver {
             val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
             val jsonString = reader.use { it.readText() }
 
+            val jsonObject = JSONObject(jsonString)
             val map = mutableMapOf<String, String>()
-            // Simple flat JSON object parsing with regex
-            val regex = Regex("\"([^\"]+)\"\\s*:\\s*\"([^\"]+)\"")
-            regex.findAll(jsonString).forEach { match ->
-                map[match.groupValues[1]] = match.groupValues[2]
+            jsonObject.keys().forEach { key ->
+                map[key] = jsonObject.getString(key)
             }
             map
         } catch (e: IOException) {
@@ -192,65 +191,6 @@ object OperatorResolver {
             emptyMap()
         }
 
-    fun resolve(
-        context: Context,
-        operatorName: String,
-        networkOperator: String,
-        simSlot: Int,
-    ): String = resolveByCandidates(context, operatorName, listOf(networkOperator), simSlot)
-
-    /**
-     * Resolves operator name using a list of MCC/MNC candidates.
-     * Returns the name of the first candidate that matches a key in the database.
-     * If no match is found, falls back to token matching and then generic formatting.
-     */
-    fun resolveByCandidates(
-        context: Context,
-        operatorName: String,
-        candidates: List<String>,
-        simSlot: Int,
-    ): String {
-        if (isValidSpecificName(operatorName)) return operatorName
-
-        val database = loadDb(context)
-        var matchedCode: String? = null
-        var resKey: String? = null
-
-        for (code in candidates) {
-            if (code.isNotEmpty() && code != "00000") {
-                val key = database[code]
-                if (key != null) {
-                    matchedCode = code
-                    resKey = key
-                    break
-                }
-            }
-        }
-
-        val resolved =
-            if (resKey != null) {
-                resolveFromDbKey(context, resKey)
-            } else {
-                val primaryCode = candidates.firstOrNull().orEmpty()
-                if (primaryCode.isNotEmpty() && primaryCode != "00000") {
-                    AppLogger.w(
-                        "Unknown MCC/MNC candidates detected: $candidates. " +
-                            "Consider adding it to mcc_mnc_db.json",
-                    )
-                }
-                null
-            }
-
-        val fallbackCode =
-            if (candidates.size >= 2) {
-                candidates[1]
-            } else {
-                candidates.firstOrNull().orEmpty()
-            }
-
-        return resolved ?: fallbackResolution(context, fallbackCode, simSlot)
-    }
-
     /**
      * Data structure to return both resolved name and the code that matched.
      */
@@ -260,7 +200,8 @@ object OperatorResolver {
     )
 
     /**
-     * Similar to resolveByCandidates but also returns the code that actually matched the database.
+     * Resolves operator name using a list of MCC/MNC candidates.
+     * Returns the code that actually matched the database if any.
      */
     fun resolveWithMatchedCode(
         context: Context,
@@ -271,24 +212,16 @@ object OperatorResolver {
         if (isValidSpecificName(operatorName)) return Resolution(operatorName, null)
 
         val database = loadDb(context)
-        var matchedCode: String? = null
-        var resKey: String? = null
+        val searchResult = findInDatabase(database, candidates)
 
-        for (code in candidates) {
-            if (code.isNotEmpty() && code != "00000") {
-                val key = database[code]
-                if (key != null) {
-                    matchedCode = code
-                    resKey = key
-                    break
-                }
-            }
-        }
+        val resKey = searchResult.first
+        val matchedCode = searchResult.second
 
         val resolved =
             if (resKey != null) {
                 resolveFromDbKey(context, resKey)
             } else {
+                logUnknownCandidates(candidates)
                 null
             }
 
@@ -296,6 +229,31 @@ object OperatorResolver {
             Resolution(resolved, matchedCode)
         } else {
             Resolution(fallbackResolution(context, candidates.firstOrNull().orEmpty(), simSlot), null)
+        }
+    }
+
+    private fun findInDatabase(
+        database: Map<String, String>,
+        candidates: List<String>,
+    ): Pair<String?, String?> {
+        for (code in candidates) {
+            if (code.isNotEmpty() && code != "00000") {
+                val key = database[code]
+                if (key != null) {
+                    return key to code
+                }
+            }
+        }
+        return null to null
+    }
+
+    private fun logUnknownCandidates(candidates: List<String>) {
+        val primaryCode = candidates.firstOrNull().orEmpty()
+        if (primaryCode.isNotEmpty() && primaryCode != "00000") {
+            AppLogger.w(
+                "Unknown MCC/MNC candidates detected: $candidates. " +
+                    "Consider adding it to mcc_mnc_db.json",
+            )
         }
     }
 

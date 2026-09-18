@@ -24,6 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -145,16 +146,31 @@ class WidgetSettingsRepositoryTest {
         }
 
     @Test
-    fun `saveSimSettings saves with fallback key when seed is unavailable`() =
+    fun `saveSimSettings saves with last known identity when seed is unavailable`() =
         runTest {
-            val simState = SimSettingsState(showSim = true)
+            val lastId = "last_known_id"
+            val simState = SimSettingsState(showSim = true, lastKnownIdentity = lastId)
             val state = WidgetSettingsState(simStates = mapOf(0 to simState))
 
             whenever(simIdentityRepository.getIdentity(0)).thenThrow(SeedUnavailableException(0))
 
             repository.saveSimSettings(state)
 
-            verify(simWidgetVisibilityRepository).setSimSettingsBatch(mapOf("sim_0" to simState))
+            verify(simWidgetVisibilityRepository).setSimSettingsBatch(mapOf(lastId to simState))
+        }
+
+    @Test
+    fun `saveSimSettings records failed slot when seed and last known identity are unavailable`() =
+        runTest {
+            val simState = SimSettingsState(showSim = true, lastKnownIdentity = null)
+            val state = WidgetSettingsState(simStates = mapOf(0 to simState))
+
+            whenever(simIdentityRepository.getIdentity(0)).thenThrow(SeedUnavailableException(0))
+
+            val failedSlots = repository.saveSimSettings(state)
+
+            assertEquals(listOf(0), failedSlots)
+            verify(simWidgetVisibilityRepository, never()).setSimSettingsBatch(any())
         }
 
     private fun createMockActiveSims(): List<ActiveSimInfo> =

@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.IdentitySource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -40,6 +41,8 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.io.IOException
@@ -241,15 +244,20 @@ class SimIdentityRepositoryHangTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
+            val mockSeedRepo =
+                mock<SimIdentitySeedRepository> {
+                    // Return flow that never emits
+                    on { seedFlow } doReturn MutableSharedFlow()
+                }
+            whenever(mockSeedRepo.getOrCreateSeedOrEphemeralFallback(any())).thenAnswer {
+                SeedResolutionResult.Ephemeral("fallback_seed")
+            }
+
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds4"),
-                    seedRepository =
-                        mock {
-                            // Return flow that never emits
-                            on { seedFlow } doReturn MutableSharedFlow()
-                        },
+                    seedRepository = mockSeedRepo,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
@@ -257,9 +265,8 @@ class SimIdentityRepositoryHangTest {
                     scope = backgroundScope,
                 )
 
-            // Act: wait for internal timeout (SEED_TOTAL_TIMEOUT_MS + 2000ms)
-            // SEED_TOTAL_TIMEOUT_MS is 13000ms
-            advanceTimeBy(15_100.milliseconds)
+            // Act: wait for internal timeout (SEED_GENERATION_TIMEOUT_MS + 2000ms)
+            advanceTimeBy((Constants.Flow.SEED_GENERATION_TIMEOUT_MS + 2000).milliseconds)
             runCurrent()
 
             // We expect the flow to emit SeedResult.Fallback, which leads to
@@ -274,6 +281,8 @@ class SimIdentityRepositoryHangTest {
 
             // Assert: should be empty list, not hang
             assertTrue("Result should be empty list after timeout", result != null)
+            verify(mockSeedRepo, times(1)).getOrCreateSeedOrEphemeralFallback(any())
+            verify(permissionManager, times(1)).getActiveSubscriptions()
         }
 
     @Test
@@ -446,5 +455,50 @@ class SimIdentityRepositoryHangTest {
             // provided by the replay cache of the shared seedFlow.
             val id2 = identityRepo.getSimIdentity(0)
             assertEquals("Should still use last known identity after hang", id1.stableId, id2.stableId)
+        }
+
+    @Test
+    fun `observeActiveSims does not hang when getOrCreateSeedOrEphemeralFallback hangs`() =
+        runTest {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
+
+            val hangingSeedRepo =
+                object : SimIdentitySeedRepository {
+                    override val seedFlow: Flow<String> = flowOf("")
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
+                    override suspend fun setSeed(seed: String) {
+                        // No-op
+                    }
+
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
+                        delay(1000.seconds)
+                        return SeedResolutionResult.Ephemeral("never_reached")
+                    }
+                }
+
+            val identityRepo =
+                SimIdentityRepositoryTestHelper.createRepository(
+                    discoveryDeps = discoveryDeps,
+                    dataStore = createTestDataStore("ds_hang_observer"),
+                    seedRepository = hangingSeedRepo,
+                    appSettingsRepository = appSettingsRepository,
+                    migrationService = migrationService,
+                    mockSimProvider = mockSimProvider,
+                    timeProvider = timeProvider,
+                    scope = backgroundScope,
+                )
+
+            advanceTimeBy((Constants.Flow.SEED_GENERATION_TIMEOUT_MS * 3).milliseconds)
+            runCurrent()
+
+            val result =
+                withTimeoutOrNull(5.seconds) {
+                    identityRepo.observeActiveSims().first { it.isEmpty() }
+                }
+            assertTrue("Should not hang even if seed repository generation hangs", result != null)
         }
 }

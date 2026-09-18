@@ -90,34 +90,32 @@ class EphemeralSeedGatingTest {
     @Test
     fun `SimIdentityCache evicts unstable identities when full`() {
         val maxCacheSize = 64
-        // Fill cache with stable identities
+        // 1. Fill cache with stable identities
         for (i in 1..maxCacheSize) {
             val identity = SimIdentity("stable_$i", i, i, IdentitySource.ICCID, isStable = true)
             cache.getOrCreateCanonical(identity)
         }
 
-        // Add one more unstable identity
+        // 2. Add an unstable identity
         val unstable = SimIdentity("unstable", 99, 99, IdentitySource.ICCID, isStable = false)
-        cache.getOrCreateCanonical(unstable)
+        val canonicalUnstable = cache.getOrCreateCanonical(unstable)
+        assertTrue("Unstable identity should be cached initially", canonicalUnstable === unstable)
 
-        // Let's verify size
-        val field = SimIdentityCache::class.java.getDeclaredField("canonicalIdentities")
-        field.isAccessible = true
-        val canonicalMap = field.get(cache) as Map<*, *>
-
-        // At this point size is 65 (64 stable + 1 unstable).
-        // Next unstable will trigger eviction of the existing unstable one.
-
+        // 3. Add another unstable identity to trigger eviction (size is now >= maxCacheSize)
         val unstable2 = SimIdentity("unstable2", 100, 100, IdentitySource.ICCID, isStable = false)
         cache.getOrCreateCanonical(unstable2)
 
-        // Now size should be 65 again, but unstable1 should be gone.
-        assertEquals(65, canonicalMap.size)
-        assertFalse(canonicalMap.containsKey("unstable"))
-        assertTrue(canonicalMap.containsKey("unstable2"))
+        // 4. Verify 'unstable' was evicted: getOrCreateCanonical should return the NEW object, not the cached one.
+        val unstableAgain = SimIdentity("unstable", 99, 99, IdentitySource.ICCID, isStable = false)
+        val result = cache.getOrCreateCanonical(unstableAgain)
 
-        // Stable ones should still be there
-        assertTrue(canonicalMap.containsKey("stable_1"))
+        assertTrue("Previous unstable should have been evicted", result === unstableAgain)
+        assertFalse("Should not be the old object from cache", result === unstable)
+
+        // 5. Stable ones should NOT be evicted
+        val stableAgain = SimIdentity("stable_1", 1, 1, IdentitySource.ICCID, isStable = true)
+        val stableResult = cache.getOrCreateCanonical(stableAgain)
+        assertFalse("Stable identity should NOT be evicted", stableResult === stableAgain)
     }
 
     @Test

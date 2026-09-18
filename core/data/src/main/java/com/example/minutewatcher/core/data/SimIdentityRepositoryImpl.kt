@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
@@ -33,7 +34,8 @@ import kotlin.time.Duration.Companion.milliseconds
 class SimIdentityRepositoryImpl
     @Inject
     internal constructor(
-        private val observer: SimIdentityObserver,
+        @get:VisibleForTesting
+        internal val observer: SimIdentityObserver,
         private val resolver: SimIdentityResolver,
         private val persistence: SimIdentityPersistence,
     ) : SimIdentityRepository {

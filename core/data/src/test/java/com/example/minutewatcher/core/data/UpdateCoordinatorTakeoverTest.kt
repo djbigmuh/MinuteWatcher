@@ -19,13 +19,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -45,7 +50,9 @@ class UpdateCoordinatorTakeoverTest {
     @Test
     fun `forced update takeover does not kill observation cycle`() =
         runTest {
-            val snapshotFlow = MutableStateFlow(createSnapshot(500L, "Initial"))
+            // Snapshots must differ by fields included in content hash (e.g. used/remaining).
+            // timestamp and operatorName are excluded from hash (see SnapshotUtils.calculateContentHash).
+            val snapshotFlow = MutableStateFlow(createSnapshot(500L, "Initial", used = 0))
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
 
             val coordinator =
@@ -62,12 +69,15 @@ class UpdateCoordinatorTakeoverTest {
             val hangStarted = CompletableDeferred<Unit>()
             widgetUpdater.onUpdateStarted = { if (widgetUpdater.shouldHang) hangStarted.complete(Unit) }
 
-            snapshotFlow.value = createSnapshot(1000L, "A")
+            // Emit snapshot "A" with different 'used' value to ensure hash mismatch
+            snapshotFlow.value = createSnapshot(1000L, "A", used = 10)
 
             advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
             runCurrent()
 
-            hangStarted.await()
+            withTimeout(5.seconds) {
+                hangStarted.await()
+            }
             assertEquals("Should have started second update", 2, widgetUpdater.callCount)
 
             // 3. Perform forced update (takeover)
@@ -78,12 +88,14 @@ class UpdateCoordinatorTakeoverTest {
             runCurrent()
 
             assertEquals("Should have 3 calls after forced update", 3, widgetUpdater.callCount)
+            verify(dataRefreshNotifier).notifyRefresh(eq(true), any())
 
             widgetUpdater.releaseHangingUpdate()
             runCurrent()
 
             // 4. Check observation cycle is still alive by emitting another snapshot
-            snapshotFlow.value = createSnapshot(2000L, "B")
+            // Snapshot "B" must also have different 'used' value
+            snapshotFlow.value = createSnapshot(2000L, "B", used = 20)
 
             advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
             runCurrent()
@@ -119,6 +131,7 @@ class UpdateCoordinatorTakeoverTest {
     private fun createSnapshot(
         timestamp: Long,
         content: String,
+        used: Long = 0,
     ) = GlobalSnapshot(
         version = SchemaVersion(1, 0, 0),
         timestamp = timestamp,
@@ -137,8 +150,8 @@ class UpdateCoordinatorTakeoverTest {
                                     operatorName = content,
                                     packageType = PackageType.MINUTES,
                                     limit = 100,
-                                    used = 0,
-                                    remaining = 100,
+                                    used = used,
+                                    remaining = 100 - used,
                                     unit = MeasurementUnit.MINUTES,
                                     periodStart = 0,
                                     periodEnd = 0,

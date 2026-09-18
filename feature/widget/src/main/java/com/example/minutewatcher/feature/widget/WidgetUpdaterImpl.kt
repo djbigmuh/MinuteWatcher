@@ -11,12 +11,11 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -47,7 +46,7 @@ class WidgetUpdaterImpl
         private val errorClassifier: WidgetErrorClassifier,
     ) : WidgetUpdater {
         private val coalescingMutex = Mutex()
-        private var activeUpdate: CompletableDeferred<WidgetUpdateResult>? = null
+    private val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
 
         /**
          * Tracks whether a LimitExceeded error has been handled within the CURRENT update call.
@@ -68,12 +67,12 @@ class WidgetUpdaterImpl
         override suspend fun updateAll(): WidgetUpdateResult {
             val (deferred, isCoalesced) =
                 coalescingMutex.withLock {
-                    val active = activeUpdate?.takeIf { !it.isCompleted }
+                    val active = activeUpdate.get()?.takeIf { !it.isCompleted }
                     if (active != null) {
                         active to true
                     } else {
                         val new = CompletableDeferred<WidgetUpdateResult>()
-                        activeUpdate = new
+                        activeUpdate.set(new)
                         new to false
                     }
                 }
@@ -101,11 +100,7 @@ class WidgetUpdaterImpl
                 deferred.complete(result)
                 result
             } catch (e: CancellationException) {
-                coalescingMutex.withLock {
-                    if (activeUpdate === deferred) {
-                        activeUpdate = null
-                    }
-                }
+                activeUpdate.compareAndSet(deferred, null)
                 deferred.complete(
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
@@ -137,13 +132,7 @@ class WidgetUpdaterImpl
                 )
                 throw e
             } finally {
-                withContext(NonCancellable) {
-                    coalescingMutex.withLock {
-                        if (activeUpdate === deferred) {
-                            activeUpdate = null
-                        }
-                    }
-                }
+                activeUpdate.compareAndSet(deferred, null)
             }
 
         private suspend fun executeUpdateProcess(): WidgetUpdateResult =

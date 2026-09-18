@@ -84,8 +84,8 @@ abstract class CallTrackerTestFixtures {
     internal fun createTracker(
         scope: CoroutineScope = testScope,
         repo: CallSessionRepository = callSessionRepository,
+        attributionResolver: CallAttributionResolver = createAttributionResolver(),
     ): CallTracker {
-        val attributionResolver = createAttributionResolver()
         val sessionCleaner = createSessionCleaner(attributionResolver, repo)
         val settingsHandler = createSettingsHandler()
         val mutexHolder = createMutexHolder()

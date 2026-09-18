@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -81,54 +83,81 @@ internal class SimIdentitySeedRepositoryImpl
             while (attempt < MAX_RETRIES) {
                 val result =
                     try {
-                        // 1. Clean read without write transaction
-                        val currentSeed = dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED]
+                        val currentSeed = readPersistentSeed()
                         if (!currentSeed.isNullOrEmpty()) {
                             SeedResolutionResult.Persistent(currentSeed)
                         } else {
-                            // 2. If empty, generate and write idempotently
-                            val newSeed = generator()
-                            val updated =
-                                dataStore.edit { preferences ->
-                                    if (preferences[DataStoreKeys.SIM_IDENTITY_SEED].isNullOrEmpty()) {
-                                        preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
-                                    }
-                                }
-                            val storedSeed = updated[DataStoreKeys.SIM_IDENTITY_SEED]
-                            if (!storedSeed.isNullOrEmpty()) {
-                                AppLogger.d("SimIdentitySeedRepositoryImpl: New seed stored.")
-                                SeedResolutionResult.Persistent(storedSeed)
-                            } else {
-                                null
-                            }
+                            generateAndWritePersistentSeed(generator)
                         }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: IOException) {
-                        if (attempt == MAX_RETRIES - 1) {
-                            AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
-                            null
-                        } else {
-                            val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
-                            AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying in ${delayMs}ms...")
-                            delay(delayMs.milliseconds)
-                            null
-                        }
+                        handlePersistentSeedError(attempt, e)
                     }
 
                 if (result is SeedResolutionResult.Persistent) {
-                    seedMutex.withLock {
-                        if (_isEphemeralSeedActive.value) {
-                            AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
-                            _isEphemeralSeedActive.value = false
-                            cachedEphemeralSeed = null
-                        }
-                    }
+                    clearEphemeralStateOnPersistentRestored()
                     return result
                 }
                 attempt++
             }
             return null
+        }
+
+    private suspend fun readPersistentSeed(): String? {
+        val readOutcome: Result<String?>? =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                Result.success(dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED])
+            }
+        return (readOutcome ?: throw IOException("DataStore read timeout")).getOrThrow()
+    }
+
+    private suspend fun generateAndWritePersistentSeed(generator: () -> String): SeedResolutionResult.Persistent? {
+        val newSeed = generator()
+        val editOutcome: Result<Preferences>? =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                Result.success(
+                    dataStore.edit { preferences ->
+                        if (preferences[DataStoreKeys.SIM_IDENTITY_SEED].isNullOrEmpty()) {
+                            preferences[DataStoreKeys.SIM_IDENTITY_SEED] = newSeed
+                        }
+                    },
+                )
+            }
+
+        val updated = (editOutcome ?: throw IOException("DataStore write timeout")).getOrThrow()
+        val storedSeed = updated[DataStoreKeys.SIM_IDENTITY_SEED]
+        return if (!storedSeed.isNullOrEmpty()) {
+            AppLogger.d("SimIdentitySeedRepositoryImpl: New seed stored.")
+            SeedResolutionResult.Persistent(storedSeed)
+        } else {
+            null
+        }
+    }
+
+    private suspend fun handlePersistentSeedError(
+        attempt: Int,
+        e: IOException,
+    ): Nothing? {
+        if (attempt == MAX_RETRIES - 1) {
+            AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
+            return null
+        } else {
+            val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
+            AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying in ${delayMs}ms...")
+            delay(delayMs.milliseconds)
+            return null
+        }
+    }
+
+    private suspend fun clearEphemeralStateOnPersistentRestored() {
+        seedMutex.withLock {
+            if (_isEphemeralSeedActive.value) {
+                AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
+                _isEphemeralSeedActive.value = false
+                cachedEphemeralSeed = null
+            }
+            }
         }
 
         companion object {

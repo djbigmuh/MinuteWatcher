@@ -968,10 +968,8 @@ class WidgetSettingsViewModelTest {
             // Verify no save yet
             assertTrue(capturedStates.isEmpty())
 
-            // 2. Act: Call onCleared via reflection
-            val method = vm.javaClass.getDeclaredMethod("onCleared")
-            method.isAccessible = true
-            method.invoke(vm)
+            // 2. Act: Call onCleared via test hook
+            vm.onClearedForTest()
             runCurrent()
 
             // 3. Assert: Verify emergency save WAS triggered in appScope
@@ -985,10 +983,8 @@ class WidgetSettingsViewModelTest {
         runTest {
             initViewModel()
 
-            // Force lastSavedSettings to null via reflection
-            val lastSavedField = viewModel.javaClass.getDeclaredField("lastSavedSettings")
-            lastSavedField.isAccessible = true
-            lastSavedField.set(viewModel, null)
+            // Force lastSavedSettings to null via VisibleForTesting property
+            viewModel.lastSavedSettings = null
 
             // Change something to make current != lastSaved (if it were non-null)
             viewModel.updateSettings { it.copy(fontSize = 4) }
@@ -998,9 +994,7 @@ class WidgetSettingsViewModelTest {
             verify(saver, never()).save(any(), any())
 
             // Act: Call onCleared
-            val method = viewModel.javaClass.getDeclaredMethod("onCleared")
-            method.isAccessible = true
-            method.invoke(viewModel)
+            viewModel.onClearedForTest()
             runCurrent()
 
             // Assert: Verify NO save was triggered because lastSavedSettings is null
@@ -1039,9 +1033,7 @@ class WidgetSettingsViewModelTest {
             runCurrent()
 
             // 2. Trigger onCleared
-            val method = vm.javaClass.getDeclaredMethod("onCleared")
-            method.isAccessible = true
-            method.invoke(vm)
+            vm.onClearedForTest()
 
             // 3. Verify no save started
             assertFalse(hangingSaveStarted.isCompleted)

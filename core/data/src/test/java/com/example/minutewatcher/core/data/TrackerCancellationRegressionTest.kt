@@ -11,7 +11,6 @@ import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -26,9 +25,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrackerCancellationRegressionTest {
@@ -54,38 +50,20 @@ class TrackerCancellationRegressionTest {
         runTest {
             val tracker = createTracker(backgroundScope)
 
-            val field =
-                TrafficTracker::class.java.getDeclaredField("initJob").apply {
-                    isAccessible = true
-                }
-            val atomicRef = field.get(tracker) as AtomicReference<Job?>
-
-            // Create a job that will stay in 'Cancelling' state for a bit
+            // 1. Create a job that will stay in 'Cancelling' state for a bit
             val oldJob =
                 backgroundScope.launch {
                     withContext(NonCancellable) {
                         delay(1000)
                     }
                 }
-            atomicRef.set(oldJob)
-
-            val method =
-                TrafficTracker::class.java.getDeclaredMethod(
-                    "startInitialization",
-                    Continuation::class.java,
-                )
-            method.isAccessible = true
+            tracker.initJob.set(oldJob)
 
             var startInitializationFinished = false
             val job =
                 launch {
                     try {
-                        suspendCoroutineUninterceptedOrReturn<Any?> { cont ->
-                            method.invoke(
-                                tracker,
-                                cont,
-                            )
-                        }
+                        tracker.startInitialization()
                         startInitializationFinished = true
                     } catch (
                         @Suppress("SwallowedException")
@@ -131,24 +109,8 @@ class TrackerCancellationRegressionTest {
             whenever(context.refreshStatus(any()))
                 .thenThrow(kotlinx.coroutines.CancellationException("Test"))
 
-            val method =
-                CallEndHandler::class.java.getDeclaredMethod(
-                    "finalizeCallEnd",
-                    Boolean::class.javaPrimitiveType,
-                    CallTrackingContext::class.java,
-                    Continuation::class.java,
-                )
-            method.isAccessible = true
-
             // Should not throw
-            suspendCoroutineUninterceptedOrReturn<Any?> { cont ->
-                method.invoke(
-                    handler,
-                    true,
-                    context,
-                    cont,
-                )
-            }
+            handler.finalizeCallEnd(true, context)
 
             verify(context).refreshStatus(false)
         }

@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -14,62 +13,58 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
-import java.lang.reflect.Field
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStopTest : CallTrackerTestFixtures() {
     @Test
-    fun `stop cancels permissionObserverJob`() =
+    fun `stop halts permission-driven status refresh`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
             callTracker.ensureStarted()
             advanceUntilIdle()
 
-            val jobField: Field = CallTracker::class.java.getDeclaredField("permissionObserverJob")
-            jobField.isAccessible = true
+            // 1. Initial refresh during start
+            verify(callSessionRepository, atLeast(1)).getActiveCallSubIds()
 
-            val jobBefore = jobField.get(callTracker) as? Job
-            Assert.assertNotNull("Job should be started", jobBefore)
-            Assert.assertTrue("Job should be active", jobBefore?.isActive == true)
+            // 2. Permission change triggers refresh
+            permissionChangesFlow.emit(Unit)
+            advanceUntilIdle()
+            verify(callSessionRepository, times(2)).getActiveCallSubIds()
 
+            // 3. Act: stop the tracker
             callTracker.stop()
             advanceUntilIdle()
 
-            Assert.assertNull("Job reference should be cleared", jobField.get(callTracker))
-            Assert.assertTrue("Job should be cancelled", jobBefore?.isCancelled == true)
+            // 4. Permission change after stop should NOT trigger refresh
+            permissionChangesFlow.emit(Unit)
+            advanceUntilIdle()
+            verify(callSessionRepository, times(2)).getActiveCallSubIds() // Still 2
         }
 
     @Test
-    fun `onCallStarted restarts permissionObserverJob`() =
+    fun `ensureStarted ensures permission observer is active and unique`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            val callTracker = createTracker(backgroundScope)
+            val callTracker = createTracker()
+
+            // 1. Double start
             callTracker.ensureStarted()
+            callTracker.recover() // Also triggers startPermissionObserver
             advanceUntilIdle()
 
-            val jobField: Field = CallTracker::class.java.getDeclaredField("permissionObserverJob")
-            jobField.isAccessible = true
-
-            val jobBefore = jobField.get(callTracker) as? Job
-            Assert.assertNotNull(jobBefore)
-
-            // Stop the tracker to reset isInitialized
-            callTracker.stop()
+            // 2. Emit permission change. If unique, only ONE refresh should happen.
+            permissionChangesFlow.emit(Unit)
             advanceUntilIdle()
 
-            callTracker.onCallStarted(subId = 1)
-            advanceUntilIdle()
-
-            val jobAfter = jobField.get(callTracker) as? Job
-            Assert.assertNotNull(jobAfter)
-            Assert.assertNotSame("Job should be restarted", jobBefore, jobAfter)
-            Assert.assertTrue("Old job should be cancelled", jobBefore?.isCancelled == true)
-            Assert.assertTrue("New job should be active", jobAfter?.isActive == true)
+            // Initial refresh from ensureStarted (1) + refresh from recover (1) + ONE from permission change (1) = 3
+            verify(callSessionRepository, times(3)).getActiveCallSubIds()
         }
 
     @Test

@@ -34,7 +34,9 @@ fun AdjustmentComposeDialog(
             if (isMinutes) {
                 initialValue.toInt().toString()
             } else {
-                "%.1f".format(Locale.US, initialValue)
+                // Locale.getDefault() is used because the user should see their local decimal separator.
+                // The input is then normalized by NumberInputNormalizer.
+                String.format(Locale.getDefault(), "%.1f", initialValue)
             },
         )
     }

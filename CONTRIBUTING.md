@@ -110,5 +110,55 @@ following configurations are enforced:
 
 - **DataStore:** When running plain JUnit tests on Windows that use DataStore, ensure each test method uses a **unique
   filename** (e.g., using `UUID.randomUUID()`) to avoid `IOException` during file renaming due to OS-level file locking.
-- **Paths:** Avoid spaces or non-ASCII characters in the project path (e.g., `C:\Users\Павел Мухин`). This can cause
+- **Paths:** Avoid spaces or non-ASCII characters in the project path (e.g., `C:\Users\Username`). This can cause
   `NoSuchFileException` in Robolectric native runtime loading.
+
+## Naming and History Policy
+
+### 1. Commit Messages
+
+Commit messages must use the imperative mood and clearly describe the change and its motivation.
+
+- **Prohibited:** External task/audit IDs (e.g., `TZ-*`, `Task N`, `#123`), links to task files, mentions of specific AI
+  assistants, or project phases (e.g., `Phase 1`).
+- **Prohibited:** Meaningless messages (single numbers, one-word summaries).
+- **Explanation:** The commit body should explain "why" a change was made, not "which task" it fulfills.
+
+### 2. Code Comments and KDoc
+
+Comments must describe the code, its contracts, invariants, and reliability criteria.
+
+- **Prohibited:** References to the work history, such as "added in Task 5", "fixed during audit", or dates of
+  modification.
+- Git history serves as the record of changes; source code must remain clean of process artifacts.
+
+### 3. Test Naming
+
+Test names must be behavioral and describe the scenario and expected outcome (e.g.,
+`recover cancellation completes promptly`).
+
+- **Avoid:** Task numbers or direct references to private field names if the same logic can be expressed through
+  observable behavior.
+
+### 4. Concurrency Cleanup Rule
+
+To prevent deadlocks and ensure system liveness:
+
+- Cleanup operations in `finally` blocks must be either non-suspending (e.g., atomic sets/removals) or strictly
+  time-limited.
+- **Forbidden:** Waiting for a `Mutex` inside `NonCancellable` unless it's guaranteed to be available quickly.
+- Atomic flags (`AtomicBoolean`, `AtomicReference`) should be preferred for gating logic and must not be wrapped in
+  mutexes.
+
+### 5. Test Discipline
+
+- **Timeouts:** Every `await()` or `join()` in a test must be wrapped in `withTimeout` with a descriptive message to
+  avoid infinite hangs.
+- **Encapsulation:** Reflection-based access to private members for testing is strictly forbidden.
+- **Fakes over Mocks:** For complex suspendable collaborators, prefer providing a `Fake` implementation over a `Mock`,
+  as un-stubbed mocks can silently change the execution flow.
+
+### 6. Instruction Files
+
+External task files, instruction documents, and audit requirements must never be committed to the repository.
+

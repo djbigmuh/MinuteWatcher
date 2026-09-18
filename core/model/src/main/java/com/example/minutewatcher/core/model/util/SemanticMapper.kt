@@ -7,13 +7,14 @@ import com.example.minutewatcher.core.model.MinutesModel
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.TrafficModel
+import java.util.Locale
 
 object SemanticMapper {
     @JvmStatic
     fun getDocumentId(
         slot: Int,
         type: PackageType,
-    ): String = "sim_${slot}_${type.name.lowercase()}"
+    ): String = "sim_${slot}_${type.name.lowercase(Locale.ROOT)}"
 
     @JvmStatic
     fun mapMinutes(

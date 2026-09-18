@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SemanticMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -144,7 +145,7 @@ open class SnapshotIndexer
             val staleIds = mutableSetOf<String>()
             SimConstants.SUPPORTED_SLOT_INDICES.forEach { slot ->
                 staleTypes.forEach { typeName ->
-                    staleIds.add("sim_${slot}_${typeName.lowercase()}")
+                    staleIds.add("sim_${slot}_${typeName.lowercase(Locale.ROOT)}")
                 }
             }
             return staleIds

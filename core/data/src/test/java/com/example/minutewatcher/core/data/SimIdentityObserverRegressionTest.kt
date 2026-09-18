@@ -6,7 +6,6 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -63,13 +62,8 @@ class SimIdentityObserverRegressionTest {
 
             val observer = createObserver(backgroundScope)
 
-            // 3. Collect from seedFlow (internal access via reflection or check output)
-            val seedResultField = SimIdentityObserver::class.java.getDeclaredField("seedFlow")
-            seedResultField.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val seedFlow = seedResultField.get(observer) as Flow<SeedResult>
-
-            val result = seedFlow.first()
+            // 3. Collect from seedFlow
+            val result = observer.seedFlow.first()
 
             // BUG: it will be SeedResult.Fallback
             // EXPECTED: it should be SeedResult.Real
@@ -91,12 +85,7 @@ class SimIdentityObserverRegressionTest {
 
             val observer = createObserver(backgroundScope)
 
-            val seedResultField = SimIdentityObserver::class.java.getDeclaredField("seedFlow")
-            seedResultField.isAccessible = true
-            @Suppress("UNCHECKED_CAST")
-            val seedFlow = seedResultField.get(observer) as Flow<SeedResult>
-
-            val result = seedFlow.first()
+            val result = observer.seedFlow.first()
 
             assertTrue(
                 "Expected SeedResult.Fallback for ephemeral seed, but got $result",

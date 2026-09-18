@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.CancellationException
+import java.util.Locale
 
 object SimUtils {
     fun getOperatorIconResource(operatorName: String): Int =
@@ -25,7 +26,7 @@ object SimUtils {
         return try {
             val resId = OperatorResolver.getOperatorResourceId(operatorName)
             when {
-                resId != null -> getStringSafe(localizedContext, resId, operatorName.uppercase())
+                resId != null -> getStringSafe(localizedContext, resId, operatorName.uppercase(Locale.ROOT))
                 operatorName.isNotEmpty() -> truncateName(operatorName)
                 else -> localizedContext.getString(R.string.no_sim_found)
             }
@@ -81,6 +82,13 @@ object SimUtils {
         return context
     }
 
+    /**
+     * Checks if the given operator name indicates an inactive or unidentifiable SIM.
+     *
+     * **Reliability criteria:** some firmwares return the literal "null" string
+     * when a SIM is present but its metadata is not yet available, instead of
+     * returning a null or empty value as defined in AOSP.
+     */
     fun isInactiveSim(operatorName: String?): Boolean =
         operatorName.isNullOrEmpty() || operatorName.equals("null", ignoreCase = true)
 }

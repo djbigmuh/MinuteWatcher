@@ -85,12 +85,6 @@ configure<ApplicationExtension> {
         }
     }
 
-    tasks.withType<Test>().configureEach {
-        // Phase 2: Structural acceleration.
-        // Robolectric sandboxes are reused within the same JVM.
-        // forkEvery = 10 removed for stability (inherited from root)
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

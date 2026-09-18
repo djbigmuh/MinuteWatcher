@@ -7,14 +7,18 @@ import androidx.datastore.preferences.core.emptyPreferences
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SeedResolutionResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,6 +29,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -233,5 +238,34 @@ class SimIdentitySeedRepositoryImplTest {
             assertTrue(result is SeedResolutionResult.Persistent)
             assertEquals(existingSeed, result.seed)
             assertEquals("updateData (edit) should NOT have been called for reading existing seed", 0, updateDataCalls)
+        }
+
+    @Test
+    fun `getOrCreateSeedOrEphemeralFallback does not hang when DataStore hangs`() =
+        runTest {
+            val hangingDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> = MutableSharedFlow()
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        val deferred = CompletableDeferred<Preferences>()
+                        return deferred.await()
+                    }
+                }
+
+            val repo = SimIdentitySeedRepositoryImpl(hangingDataStore)
+
+            var result: SeedResolutionResult? = null
+            val job =
+                launch {
+                    result = repo.getOrCreateSeedOrEphemeralFallback { "ephemeral-fallback-seed" }
+                }
+
+            advanceTimeBy(20_000.milliseconds)
+            runCurrent()
+
+            assertTrue("Job should complete within bounded virtual time", job.isCompleted)
+            assertTrue("Result should be Ephemeral due to DataStore hang", result is SeedResolutionResult.Ephemeral)
+            assertEquals("ephemeral-fallback-seed", result?.seed)
         }
 }

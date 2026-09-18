@@ -132,7 +132,9 @@ private fun rememberSimLimitState(
     val initialTrafficText =
         remember(initialTrafficMb) {
             val gb = initialTrafficMb / Constants.MB_PER_GB
-            "%.1f".format(Locale.US, gb)
+            // Locale.getDefault() is used because the user should see their local decimal separator.
+            // The input is then normalized by NumberInputNormalizer.
+            String.format(Locale.getDefault(), "%.1f", gb)
         }
 
     return key(slot) {

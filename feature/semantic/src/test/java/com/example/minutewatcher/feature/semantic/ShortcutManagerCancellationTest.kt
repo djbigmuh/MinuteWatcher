@@ -5,23 +5,19 @@ import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withContext
-import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.mock
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShortcutManagerCancellationTest {
@@ -46,89 +42,58 @@ class ShortcutManagerCancellationTest {
     }
 
     @Test
-    fun `ShortcutManager setupObservation does NOT proceed if cancelled during join`() =
-        runTest {
-            val oldJob = setupOldJobInShortcutManager()
-            val method = getSetupObservationMethod()
+    fun `repeated initialize replaces previous observation and only new one reacts`() =
+        runTest(testDispatcher) {
+            val flow1 = MutableStateFlow(createSnapshot(100L))
+            val flow2 = MutableStateFlow(createSnapshot(200L))
 
-            val snapshotFlow = createSnapshotFlow()
-            var setupObservationFinished = false
-            val job =
-                launch {
-                    try {
-                        suspendCoroutineUninterceptedOrReturn<Any?> { cont ->
-                            method.invoke(
-                                shortcutManager,
-                                snapshotFlow,
-                                cont,
-                            )
-                        }
-                        setupObservationFinished = true
-                    } catch (
-                        @Suppress("SwallowedException")
-                        e: Exception,
-                    ) {
-                        // expected
-                    }
-                }
-
+            // 1. Initial observation
+            shortcutManager.initialize(flow1)
             runCurrent()
-            job.cancel()
+            advanceUntilIdle() // Process first emission
+            verify(shortcutApplier, times(1)).apply(any(), any())
+
+            // 2. Re-initialize with new flow
+            shortcutManager.initialize(flow2)
             runCurrent()
+            advanceUntilIdle() // Process first emission of flow2
+            verify(shortcutApplier, times(2)).apply(any(), any())
 
-            testScheduler.advanceTimeBy(2000)
-            runCurrent()
+            // 3. Emit in old flow - should NOT trigger anything
+            flow1.value = createSnapshot(101L)
+            advanceUntilIdle()
+            verify(shortcutApplier, times(2)).apply(any(), any())
 
-            assertFalse(
-                "setupObservation should have been cancelled and NOT finished",
-                setupObservationFinished,
-            )
-
-            val field =
-                ShortcutManager::class.java.getDeclaredField("job").apply {
-                    isAccessible = true
-                }
-            val currentJob = field.get(shortcutManager) as? Job
-            assertFalse(
-                "New job should NOT have been launched",
-                currentJob != null && currentJob != oldJob && currentJob.isActive,
-            )
+            // 4. Emit in new flow - should trigger
+            flow2.value = createSnapshot(201L)
+            advanceUntilIdle()
+            verify(shortcutApplier, times(3)).apply(any(), any())
         }
 
-    private fun setupOldJobInShortcutManager(): Job {
-        val field =
-            ShortcutManager::class.java.getDeclaredField("job").apply {
-                isAccessible = true
-            }
+    @Test
+    fun `recover restores observation of last flow`() =
+        runTest(testDispatcher) {
+            val flow = MutableStateFlow(createSnapshot(100L))
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+            verify(shortcutApplier, times(1)).apply(any(), any())
 
-        // Create a job that will stay in 'Cancelling' state for a bit
-        val oldJob =
-            testScope.launch {
-                withContext(NonCancellable) {
-                    delay(1000)
-                }
-            }
-        field.set(shortcutManager, oldJob)
-        return oldJob
-    }
+            // Simulate recovery (e.g. after process death or manual trigger)
+            shortcutManager.recover()
+            advanceUntilIdle()
 
-    private fun getSetupObservationMethod() =
-        ShortcutManager::class.java
-            .getDeclaredMethod(
-                "setupObservation",
-                StateFlow::class.java,
-                Continuation::class.java,
-            ).apply {
-                isAccessible = true
-            }
+            // Emission should still work
+            flow.value = createSnapshot(101L)
+            advanceUntilIdle()
+            verify(shortcutApplier, atLeastOnce()).apply(any(), any())
+        }
 
-    private fun createSnapshotFlow() =
-        MutableStateFlow(
-            GlobalSnapshot(
-                version = SchemaVersion(1, 0, 0),
-                timestamp = 1000L,
-                simSnapshots = emptyList(),
-                capabilities = emptyList(),
-            ),
+    private fun createSnapshot(timestamp: Long) =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = timestamp,
+            simSnapshots = emptyList(),
+            capabilities = emptyList(),
+            isManualUpdate = true, // 0 debounce
         )
 }

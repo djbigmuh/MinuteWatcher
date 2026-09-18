@@ -181,16 +181,8 @@ class SimIdentityRepositoryRaceTest {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun getInternalSeedFlow(repository: SimIdentityRepositoryImpl): Flow<Any> {
-        val observerField = SimIdentityRepositoryImpl::class.java.getDeclaredField("observer")
-
-        observerField.isAccessible = true
-
-        val observer = observerField.get(repository)
-        val seedFlowField = observer.javaClass.getDeclaredField("seedFlow")
-        seedFlowField.isAccessible = true
-        return seedFlowField.get(observer) as Flow<Any>
-    }
+    private fun getInternalSeedFlow(repository: SimIdentityRepositoryImpl): Flow<Any> =
+        repository.observer.seedFlow as Flow<Any>
 
     @Test
     fun `concurrent getSimIdentity calls are serialized by mutex`() =

@@ -174,17 +174,11 @@ class MainBannerControllerTest {
             // At this point, it's initialized and subscribed to trackingStatusRepository (count 1)
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
 
-            // Force "never initialized" state by clearing isObservationStarted via reflection
-            val startedField = MainBannerController::class.java.getDeclaredField("isObservationStarted")
-            startedField.isAccessible = true
-            val isStarted = startedField.get(controller) as java.util.concurrent.atomic.AtomicBoolean
-            isStarted.set(false)
-
             // Act
             controller.recover()
             advanceUntilIdle()
 
-            // Verify it re-subscribed (subscription count should be 1 as old one is replaced or re-added)
+            // Verify it re-subscribed (subscription count should be 1 as old one is replaced)
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
         }
 

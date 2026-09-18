@@ -15,20 +15,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeast
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.lang.reflect.Field
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ResetManagerCancellationTest {
@@ -57,7 +51,7 @@ class ResetManagerCancellationTest {
     }
 
     @Test
-    fun `test cancellation during finally withLock does not cause flag leak`() =
+    fun `performAutoReset cancellation updates cooldown and preserves state consistency`() =
         runTest(testDispatcher) {
             val identity = "sim_1"
             val simInfo = createSimInfo(identity)
@@ -65,17 +59,15 @@ class ResetManagerCancellationTest {
 
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simInfo)))
 
-            // 1. Get the mutex via reflection
-            val mutexField: Field = ResetManager::class.java.getDeclaredField("resetMutex")
-            mutexField.isAccessible = true
-            val resetMutex = mutexField.get(resetManager) as Mutex
-
             val reachedCheck = CompletableDeferred<Unit>()
+            var usageFetchCount = 0
             whenever(simUsageRepository.getSimUsage(identity)).thenAnswer {
+                usageFetchCount++
                 reachedCheck.complete(Unit)
                 flowOf(usage)
             }
 
+            // 1. Run first attempt and cancel it while suspended in usage fetch
             val job =
                 launch {
                     resetManager.performAutoReset(false)
@@ -83,20 +75,21 @@ class ResetManagerCancellationTest {
 
             reachedCheck.await()
             runCurrent()
-            resetMutex.lock() // Block the finally block
+            job.cancelAndJoin()
 
-            job.cancelAndJoin() // Cancel while it's waiting for mutex in finally
+            assertEquals("Should have fetched usage once", 1, usageFetchCount)
 
-            resetMutex.unlock()
+            // 2. Try to run again immediately. It should be skipped due to cooldown from finally.
+            resetManager.performAutoReset(false)
+            runCurrent()
+            assertEquals("Should NOT have fetched usage again due to cooldown", 1, usageFetchCount)
 
-            // 2. Now try to run again. If flag did NOT leak, it will proceed.
-            timeProvider.advance(3600000) // Pass cooldown
+            // 3. Advance time past cooldown
+            timeProvider.advance(46 * 60 * 1000) // 46 minutes
 
             resetManager.performAutoReset(false)
-            advanceUntilIdle()
-
-            // Verify it was called twice (once in the cancelled run, once in the successful run)
-            verify(simUsageResetRepository, atLeast(2)).resetSimUsageIfDue(eq(identity), any(), any())
+            runCurrent()
+            assertEquals("Should have fetched usage again after cooldown", 2, usageFetchCount)
         }
 
     private fun createSimInfo(identity: String) =

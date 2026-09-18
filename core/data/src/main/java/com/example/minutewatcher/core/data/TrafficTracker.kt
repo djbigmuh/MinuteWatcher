@@ -54,16 +54,9 @@ internal class TrafficUpdateTimeoutException(
  * Tracks mobile traffic usage for the device.
  * Attributes all mobile traffic to the CURRENT DEFAULT DATA SIM.
  *
- * This class acts as an orchestrator, delegating specific responsibilities to:
- * - [TrafficBaselineManager] for persistent baseline management and retries.
- * - [TrafficDeltaCalculator] for delta computation and usage updates.
- * - [TrafficSimChangeHandler] for handling SIM card changes.
- *
- * **Contract:**
- * - A timeout when fetching active SIMs is treated as a transient error and does
- *   NOT affect current tracking state or retry counters.
- * - An empty list of active SIMs is treated as "no data to track", which triggers
- *   cleanup of stale retry states.
+ * This class acts as an orchestrator, delegating specific responsibilities to specialized components.
+ * Single-flight initialization is enforced via an atomic flag, ensuring cleanup upon cancellation
+ * is completely non-blocking.
  *
  * NOTE: Suppressing TooManyFunctions as this class is the central orchestrator for traffic tracking,
  * delegating to specialized components while maintaining the primary tracking lifecycle.
@@ -105,35 +98,40 @@ class TrafficTracker
         }
 
         private val trafficMutex = Mutex()
-        private val initMutex = Mutex()
         private val updateMutex = Mutex()
         private val initializationFailed = AtomicBoolean(false)
         private val isInitializing = AtomicBoolean(false)
 
         @VisibleForTesting
         internal val lastSuccessElapsed = AtomicLong(0L)
-        private val initJob = AtomicReference<Job?>(null)
+
+    @VisibleForTesting
+    internal val initJob = AtomicReference<Job?>(null)
         private var permissionObserverJob: Job? = null
         private var simObserverJob: Job? = null
         private var lastObservedDataSubId: Int? = null
 
+    private fun tryClaimInitialization(): Boolean = isInitializing.compareAndSet(false, true)
+
+    private fun releaseInitialization() {
+        isInitializing.set(false)
+    }
+
         init {
-            isInitializing.set(true)
-            scope.launch {
-                try {
-                    startInitialization()
-                } finally {
-                    withContext(NonCancellable) {
-                        initMutex.withLock {
-                            isInitializing.set(false)
-                        }
+            if (tryClaimInitialization()) {
+                scope.launch {
+                    try {
+                        startInitialization()
+                    } finally {
+                        releaseInitialization()
                     }
                 }
             }
             startAutomaticRecoveryObservers()
         }
 
-        private suspend fun startInitialization() {
+    @VisibleForTesting
+    internal suspend fun startInitialization() {
             val oldJob = initJob.getAndSet(currentCoroutineContext().job)
             oldJob?.cancel()
             try {
@@ -209,15 +207,12 @@ class TrafficTracker
             }
         }
 
-        private suspend fun checkAndScheduleAutoRecovery(reason: String) {
+    private fun checkAndScheduleAutoRecovery(reason: String) {
             val shouldStart =
-                initMutex.withLock {
-                    if (!isInitializing.get() && initializationFailed.compareAndSet(true, false)) {
-                        isInitializing.set(true)
-                        true
-                    } else {
-                        false
-                    }
+                if (initializationFailed.get() && tryClaimInitialization()) {
+                    true
+                } else {
+                    false
                 }
             if (shouldStart) {
                 AppLogger.d("TrafficTracker: attempting auto-recovery after $reason")
@@ -225,20 +220,14 @@ class TrafficTracker
                     try {
                         startInitialization()
                     } finally {
-                        withContext(NonCancellable) {
-                            initMutex.withLock {
-                                isInitializing.set(false)
-                            }
-                        }
+                        releaseInitialization()
                     }
                 }
             }
         }
 
         private suspend fun initializeWithRetry() {
-            initMutex.withLock {
-                performInitializeWithRetry()
-            }
+            performInitializeWithRetry()
         }
 
         private suspend fun performInitializeWithRetry() {
@@ -300,24 +289,17 @@ class TrafficTracker
 
         override suspend fun recover() {
             val shouldStart =
-                initMutex.withLock {
-                    if (!isInitializing.get() && initializationFailed.get()) {
-                        isInitializing.set(true)
-                        true
-                    } else {
-                        false
-                    }
+                if (initializationFailed.get() && tryClaimInitialization()) {
+                    true
+                } else {
+                    false
                 }
             if (shouldStart) {
                 AppLogger.d("TrafficTracker: attempting manual recovery")
                 try {
                     performInitializeWithRetry()
                 } finally {
-                    withContext(NonCancellable) {
-                        initMutex.withLock {
-                            isInitializing.set(false)
-                        }
-                    }
+                    releaseInitialization()
                 }
             } else {
                 updateTrafficUsage()
@@ -668,11 +650,13 @@ class TrafficTracker
             statsResult: StatsResult,
         ) {
             if (statsResult is StatsResult.Success) {
-                withContext(NonCancellable) {
-                    simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
-                    simChangeHandler.updateLastDataSubId(target.dataSubId)
-                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
-                }
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    withContext(NonCancellable) {
+                        simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
+                        simChangeHandler.updateLastDataSubId(target.dataSubId)
+                        dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
+                    }
+                } ?: AppLogger.e("TrafficTracker: retry action baseline write timed out")
                 baselineManager.removeRetry(targetIdentity)
                 lastSuccessElapsed.set(timeProvider.elapsedRealtime())
                 transitionStatus(TrackingStatus.Active, force = true)

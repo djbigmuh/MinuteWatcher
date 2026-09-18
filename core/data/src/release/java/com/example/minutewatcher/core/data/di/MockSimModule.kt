@@ -1,7 +1,7 @@
 package com.example.minutewatcher.core.data.di
 
 import com.example.minutewatcher.core.data.MockSimProvider
-import com.example.minutewatcher.core.data.ProductionMockSimProvider
+import com.example.minutewatcher.core.data.NoOpMockSimProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -10,8 +10,9 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class MockSimModule {
+@Suppress("unused")
+interface MockSimModule {
     @Binds
     @Singleton
-    abstract fun bindMockSimProvider(impl: ProductionMockSimProvider): MockSimProvider
+    fun bindMockSimProvider(impl: NoOpMockSimProvider): MockSimProvider
 }

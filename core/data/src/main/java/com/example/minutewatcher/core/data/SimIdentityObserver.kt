@@ -89,22 +89,6 @@ internal class SimIdentityObserver
         private val lastSeedRef = AtomicReference<SeedResult?>(null)
         private val migrationTriggered = AtomicBoolean(false)
 
-        init {
-            scope.launch {
-                try {
-                    val initialSeed = seedRepository.seedFlow.first()
-                    if (initialSeed.isEmpty()) {
-                        AppLogger.d("SimIdentityObserver: Initial seed empty, triggering generation")
-                        generateSeedWithRetry()
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("SimIdentityObserver: Failed to check/generate initial seed", e)
-                }
-            }
-        }
-
         override suspend fun recover() {
             if (!isObservationInitialized.get()) {
                 AppLogger.w("SimIdentityObserver: recover() called before observation was initialized, ignoring")
@@ -181,19 +165,20 @@ internal class SimIdentityObserver
                                 .map { SeedResult.Real(it, isStable = true) },
                         )
                     }.catch { e ->
+                        if (e is CancellationException) throw e
                         AppLogger.e("SimIdentityObserver: seedFlow source error", e)
-                        val fallbackSeedResult =
+                        val fallback =
                             try {
-                                seedRepository.getOrCreateSeedOrEphemeralFallback {
-                                    UUID.randomUUID().toString()
+                                withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                                    seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
                                 }
-                            } catch (
-                                @Suppress("SwallowedException")
-                                inner: Exception,
-                            ) {
-                                SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+                            } catch (inner: CancellationException) {
+                                throw inner
+                            } catch (inner: Exception) {
+                                AppLogger.e("SimIdentityObserver: fallback seed resolution failed", inner)
+                                null
                             }
-                        emit(toSeedResult(fallbackSeedResult))
+                        emit(toSeedResult(fallback ?: SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())))
                     }
                 }.distinctUntilChanged()
                 .shareIn(
@@ -481,24 +466,27 @@ internal class SimIdentityObserver
             }
         }
 
-        private suspend fun generateSeedWithRetry(): SeedResolutionResult =
+    /**
+     * Generates seed identity with bounded timeout attempts and deterministic fallback.
+     * Total execution time is bounded by approximately 2 * SEED_GENERATION_TIMEOUT_MS.
+     */
+    private suspend fun generateSeedWithRetry(): SeedResolutionResult {
+        repeat(2) {
             try {
-                withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                    seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
-                } ?: seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
+                val result =
+                    withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
+                        seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
+                    }
+                if (result != null) return result
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("SimIdentityObserver: Seed generation process failed", e)
-                try {
-                    seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
-                } catch (
-                    @Suppress("SwallowedException")
-                    inner: Exception,
-                ) {
-                    SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+                AppLogger.e("SimIdentityObserver: seed resolution attempt failed", e)
                 }
             }
+        AppLogger.e("SimIdentityObserver: seed resolution failed, using ephemeral seed")
+        return SeedResolutionResult.Ephemeral(UUID.randomUUID().toString())
+    }
 
         companion object {
             private const val MAX_BACKOFF_EXPONENT = 4

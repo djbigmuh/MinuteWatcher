@@ -225,9 +225,5 @@ abstract class SemanticSearchManagerTestFixtures {
         }
     }
 
-    protected fun getErrorHandler(manager: SemanticSearchManager): AppSearchErrorHandler {
-        val field = SemanticSearchManager::class.java.getDeclaredField("errorHandler")
-        field.isAccessible = true
-        return field.get(manager) as AppSearchErrorHandler
-    }
+    protected fun getErrorHandler(manager: SemanticSearchManager): AppSearchErrorHandler = manager.errorHandler
 }

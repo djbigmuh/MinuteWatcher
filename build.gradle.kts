@@ -55,8 +55,8 @@ subprojects {
         jvmArgs("-Dnet.bytebuddy.experimental=true")
         // Centralized Robolectric configuration
         systemProperty("robolectric.sdk", "37")
-        // Redirect Robolectric dependencies and home to avoid spaces/non-ASCII in path (e.g. C:\Users\Павел Мухин)
-        // This fixes java.nio.file.NoSuchFileException caused by %20 in path and native runtime loading issues.
+        // Redirect Robolectric dependencies and home to avoid paths containing spaces or non-ASCII characters.
+        // This fixes java.nio.file.NoSuchFileException caused by URI encoding and native runtime loading issues.
         val userHomeDir = rootProject.projectDir.resolve(".gradle/user-home")
         val roboCacheDir = rootProject.projectDir.resolve(".gradle/robolectric-cache")
         val tmpDir = rootProject.projectDir.resolve("build/tmp")

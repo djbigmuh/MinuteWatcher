@@ -57,8 +57,8 @@ class UsageUseCaseImpl
                 val slot = info.simSlotIndex
                 if (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
                     val identity = simIdentityRepository.getIdentity(slot)
-                    val displayName = info.displayName?.toString() ?: ""
-                    val carrierName = info.carrierName?.toString() ?: ""
+                    val displayName = info.displayName?.toString().orEmpty()
+                    val carrierName = info.carrierName?.toString().orEmpty()
 
                     val candidates = SimIdentityUtils.mccMncCandidates(info)
 
@@ -74,7 +74,7 @@ class UsageUseCaseImpl
                     // else the first (raw) candidate for compatibility.
                     simIdentityRepository.setSimCode(
                         identity,
-                        resolution.matchedCode ?: candidates.firstOrNull() ?: "",
+                        resolution.matchedCode ?: candidates.firstOrNull().orEmpty(),
                     )
                 }
             }

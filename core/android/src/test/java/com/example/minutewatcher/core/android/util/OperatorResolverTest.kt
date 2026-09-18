@@ -63,56 +63,58 @@ class OperatorResolverTest {
 
     @Test
     fun testResolve_ByDisplayName() {
-        val result = OperatorResolver.resolve(context, "My Operator", "25001", 0)
-        assertEquals("My Operator", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "My Operator", emptyList(), 0)
+        assertEquals("My Operator", result.name)
     }
 
     @Test
     fun testResolve_ByMccMnc_MTS() {
-        val result = OperatorResolver.resolve(context, "", "25001", 0)
-        assertEquals("MTS", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("25001"), 0)
+        assertEquals("MTS", result.name)
+        assertEquals("25001", result.matchedCode)
     }
 
     @Test
     fun testResolve_ByMccMnc_Beeline() {
-        val result = OperatorResolver.resolve(context, "null", "25099", 1)
-        assertEquals("Beeline", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "null", listOf("25099"), 1)
+        assertEquals("Beeline", result.name)
+        assertEquals("25099", result.matchedCode)
     }
 
     @Test
     fun testResolve_Unknown() {
-        val result = OperatorResolver.resolve(context, "", "99999", 0)
-        assertEquals("Operator with mcc MCC:999 MNC:99", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("99999"), 0)
+        assertEquals("Operator with mcc MCC:999 MNC:99", result.name)
     }
 
     @Test
     fun testResolve_Empty() {
-        val result = OperatorResolver.resolve(context, "", "", 1)
-        assertEquals("Operator 2", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", emptyList(), 1)
+        assertEquals("Operator 2", result.name)
     }
 
     @Test
     fun testResolve_Rostelecom() {
-        val result = OperatorResolver.resolve(context, "", "25039", 0)
-        assertEquals("Rostelecom", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("25039"), 0)
+        assertEquals("Rostelecom", result.name)
     }
 
     @Test
     fun testResolve_A1() {
-        val result = OperatorResolver.resolve(context, "", "23201", 0)
-        assertEquals("A1", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("23201"), 0)
+        assertEquals("A1", result.name)
     }
 
     @Test
     fun testResolve_Three() {
-        val result = OperatorResolver.resolve(context, "", "23205", 0)
-        assertEquals("Three", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("23205"), 0)
+        assertEquals("Three", result.name)
     }
 
     @Test
     fun testResolve_Movistar() {
-        val result = OperatorResolver.resolve(context, "", "21407", 0)
-        assertEquals("Movistar", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("21407"), 0)
+        assertEquals("Movistar", result.name)
     }
 
     @Test
@@ -129,22 +131,8 @@ class OperatorResolverTest {
 
     @Test
     fun `isValidSpecificName rejects null string case-insensitively`() {
-        val result = OperatorResolver.resolve(context, "NULL", "25001", 0)
-        assertEquals("MTS", result)
-    }
-
-    @Test
-    fun testResolveByCandidates_MTS_from_raw() {
-        val candidates = listOf("2501", "25001", "250001")
-        val result = OperatorResolver.resolveByCandidates(context, "", candidates, 0)
-        assertEquals("MTS", result)
-    }
-
-    @Test
-    fun testResolveByCandidates_Unknown() {
-        val candidates = listOf("9991", "99901", "999001")
-        val result = OperatorResolver.resolveByCandidates(context, "", candidates, 0)
-        assertEquals("Operator with mcc MCC:999 MNC:01", result)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "NULL", listOf("25001"), 0)
+        assertEquals("MTS", result.name)
     }
 
     @Test
@@ -153,5 +141,23 @@ class OperatorResolverTest {
         val resolution = OperatorResolver.resolveWithMatchedCode(context, "", candidates, 0)
         assertEquals("MTS", resolution.name)
         assertEquals("25001", resolution.matchedCode)
+    }
+
+    @Test
+    fun testResolveWithMatchedCode_FallbackToGeneric() {
+        val candidates = listOf("99901", "9991", "999001")
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", candidates, 0)
+        assertEquals("Operator with mcc MCC:999 MNC:01", result.name)
+    }
+
+    @Test
+    fun `loadDbInternal loads all keys from the database`() {
+        // We use a real file if it's available in assets or just verify the logic with our json mock
+        // Since we're in a unit test with mocked assets, the 'json' field above is used.
+        val candidates = listOf("25001", "25099", "21407", "25039", "23201", "23205")
+        for (code in candidates) {
+            val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf(code), 0)
+            assertTrue("Should match code $code", result.matchedCode == code)
+        }
     }
 }

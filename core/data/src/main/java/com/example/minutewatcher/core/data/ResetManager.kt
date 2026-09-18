@@ -12,11 +12,7 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -42,12 +38,6 @@ class ResetManager
         private val dataChangeNotifier: DataChangeNotifier,
         private val timeProvider: TimeProvider,
     ) : AutoResetUseCase {
-        /**
-         * High-level mutex to coordinate the overall auto-reset process across all SIMs.
-         * This complements the lower-level [SimUsageRepositoryImpl.resetMutex] which ensures
-         * atomicity for individual SIM reset operations.
-         */
-        private val resetMutex = Mutex()
         private val lastResetCheck = ConcurrentHashMap<String, Long>()
         private val pendingResets = ConcurrentHashMap.newKeySet<String>()
 
@@ -128,6 +118,14 @@ class ResetManager
             return allProcessed && handleAutoResetResult(ioException, skippedCount, successCount, activeSims.size)
         }
 
+    /**
+     * Processes a single SIM reset with atomic single-flight gating and cooldown protection.
+     *
+     * **Reliability criteria:**
+     * - Single-flight is ensured by atomic `pendingResets.add`.
+     * - Cooldown is enforced via `lastResetCheck`.
+     * - Cleanup is non-blocking to prevent stalling during cancellation.
+     */
         private suspend fun processSingleSimReset(
             simInfo: ActiveSimInfo,
             now: Long,
@@ -136,29 +134,20 @@ class ResetManager
         ): Boolean {
             val identity = simInfo.identity.stableId
 
-            val shouldCheck =
-                resetMutex.withLock {
-                    val lastCheck = lastResetCheck[identity]
-                    val isCoolingDown = (lastCheck != null) && ((nowElapsed - lastCheck) < CHECK_INTERVAL_MS)
-                    if (isCoolingDown || !pendingResets.add(identity)) {
-                        false
-                    } else {
-                        true
-                    }
-                }
+        val lastCheck = lastResetCheck[identity]
+        val isCoolingDown = (lastCheck != null) && ((nowElapsed - lastCheck) < CHECK_INTERVAL_MS)
+        if (isCoolingDown || !pendingResets.add(identity)) {
+            return true // Skip or already pending is not a failure of the coordinator
+        }
 
-            if (!shouldCheck) return true // Skip or already pending is not a failure of the coordinator
-
-            return try {
+        val result =
+            try {
                 checkAndPerformSingleReset(simInfo, now, resetIdentities)
             } finally {
-                withContext(NonCancellable) {
-                    resetMutex.withLock {
-                        lastResetCheck[identity] = nowElapsed
-                        pendingResets.remove(identity)
-                    }
-                }
+                lastResetCheck[identity] = nowElapsed
+                pendingResets.remove(identity)
             }
+        return result
         }
 
         private suspend fun checkAndPerformSingleReset(
@@ -184,11 +173,9 @@ class ResetManager
             return true
         }
 
-        private suspend fun cleanupStaleCheckTimestamps(activeSims: List<ActiveSimInfo>) {
-            resetMutex.withLock {
-                val activeIdentitySet = activeSims.asSequence().map { it.identity.stableId }.toSet()
-                lastResetCheck.keys.removeAll { it !in activeIdentitySet }
-            }
+    private fun cleanupStaleCheckTimestamps(activeSims: List<ActiveSimInfo>) {
+        val activeIdentitySet = activeSims.asSequence().map { it.identity.stableId }.toSet()
+        lastResetCheck.keys.removeAll { it !in activeIdentitySet }
         }
 
         private fun handleAutoResetResult(

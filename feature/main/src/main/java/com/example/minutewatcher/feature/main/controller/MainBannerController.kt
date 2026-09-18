@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
@@ -87,7 +88,7 @@ class MainBannerController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun incrementAppSearchRetry() {
-            appSearchRetryCount.value++
+            appSearchRetryCount.update { it + 1 }
         }
 
         /**

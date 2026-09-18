@@ -11,8 +11,8 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 @Suppress("unused")
-abstract class MockSimModule {
+interface MockSimModule {
     @Binds
     @Singleton
-    abstract fun bindMockSimProvider(impl: NoOpMockSimProvider): MockSimProvider
+    fun bindMockSimProvider(impl: NoOpMockSimProvider): MockSimProvider
 }

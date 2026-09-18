@@ -87,8 +87,8 @@ open class CallTracker
         }
 
         private val trackerState = AtomicReference(State.IDLE)
-        private var permissionObserverJob: Job? = null
-        private var initJob: Job? = null
+    private val permissionObserverJob = AtomicReference<Job?>(null)
+    private val initJob = AtomicReference<Job?>(null)
 
         @Volatile
         private var initDeferred = CompletableDeferred<Unit>()
@@ -115,7 +115,7 @@ open class CallTracker
                 }
                 try {
                     startPermissionObserver()
-                    initJob =
+                    val newInitJob =
                         scope.launch {
                             try {
                                 initMutex.withLock {
@@ -134,6 +134,7 @@ open class CallTracker
                                 initDeferred.completeExceptionally(e)
                             }
                         }
+                    initJob.set(newInitJob)
                 } catch (e: CancellationException) {
                     trackerState.set(State.IDLE)
                     throw e
@@ -151,8 +152,7 @@ open class CallTracker
 
         private fun startPermissionObserver() {
             val changesFlow = permissionStateNotifier.changes
-            permissionObserverJob?.cancel()
-            permissionObserverJob =
+            val newJob =
                 scope.launch {
                     changesFlow
                         .retryWhen { cause, attempt ->
@@ -187,6 +187,7 @@ open class CallTracker
                             }
                         }
                 }
+            permissionObserverJob.getAndSet(newJob)?.cancel()
         }
 
         /**
@@ -429,10 +430,8 @@ open class CallTracker
          */
         @VisibleForTesting
         fun stop() {
-            initJob?.cancel()
-            initJob = null
-            permissionObserverJob?.cancel()
-            permissionObserverJob = null
+            initJob.getAndSet(null)?.cancel()
+            permissionObserverJob.getAndSet(null)?.cancel()
             trackerState.set(State.IDLE)
             synchronized(this) {
                 // Cancel current deferred to unblock any awaiters (e.g. in workers or handlers)
