@@ -208,8 +208,9 @@ internal class CallEndHandler
         private suspend fun fetchCallEndData(
             subId: Int,
             eventElapsedRealtime: Long,
-        ): CallEndData =
-            CallEndData(
+        ): CallEndData {
+            val currentBootTime = if (eventElapsedRealtime > 0) eventElapsedRealtime else timeProvider.elapsedRealtime()
+            return CallEndData(
                 startTimeResult =
                     retryHelper.readWithRetry(
                         label = "endCall:startTime",
@@ -226,16 +227,10 @@ internal class CallEndHandler
                     retryHelper.readWithRetry(
                         label = "endCall:uptime",
                     ) { callSessionRepository.getUptime(subId) },
-                currentBootTime =
-                    if (eventElapsedRealtime >
-                        0
-                    ) {
-                        eventElapsedRealtime
-                    } else {
-                        timeProvider.elapsedRealtime()
-                    },
+                currentBootTime = currentBootTime,
                 currentUptime = timeProvider.uptimeMillis(),
             )
+        }
 
         @Suppress("ReturnCount")
         private suspend fun processCallEndLocked(
@@ -275,38 +270,38 @@ internal class CallEndHandler
             return handleCallEndResult(subId, durationResult, context)
         }
 
-    private suspend fun handleCallEndResult(
-        subId: Int,
-        result: CallEndResult,
-        context: CallTrackingContext,
-    ): Boolean =
-        when (result) {
-            CallEndResult.CLEANUP_AND_REFRESH -> {
-                sessionCleaner.cleanupCounters(subId, context)
-                true
+        private suspend fun handleCallEndResult(
+            subId: Int,
+            result: CallEndResult,
+            context: CallTrackingContext,
+        ): Boolean =
+            when (result) {
+                CallEndResult.CLEANUP_AND_REFRESH -> {
+                    sessionCleaner.cleanupCounters(subId, context)
+                    true
+                }
+
+                CallEndResult.CLEANUP_ONLY -> {
+                    sessionCleaner.cleanupCounters(subId, context)
+                    false
+                }
+
+                CallEndResult.REFRESH_ONLY -> true
+                else -> false
             }
 
-            CallEndResult.CLEANUP_ONLY -> {
-                sessionCleaner.cleanupCounters(subId, context)
-                false
-            }
-
-            CallEndResult.REFRESH_ONLY -> true
-            else -> false
-        }
-
-    /**
-     * Validates the call duration and determines if cleanup or refresh is needed.
-     *
-     * @return [CallEndResult.CONTINUE] if validation passed.
-     *         [CallEndResult.CLEANUP_AND_REFRESH] if session was cleaned up (no bootTime) and refresh is needed.
-     *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up with error (duration exceeded).
-     */
+        /**
+         * Validates the call duration and determines if cleanup or refresh is needed.
+         *
+         * @return [CallEndResult.CONTINUE] if validation passed.
+         *         [CallEndResult.CLEANUP_AND_REFRESH] if session was cleaned up (no bootTime) and refresh is needed.
+         *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up with error (duration exceeded).
+         */
         private suspend fun validateCallDuration(
             subId: Int,
             data: CallEndData,
             context: CallTrackingContext,
-    ): CallEndResult {
+        ): CallEndResult {
             val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
             return when {
                 (savedBootTime > data.currentBootTime) ||
@@ -329,20 +324,20 @@ internal class CallEndHandler
             }
         }
 
-    /**
-     * Processes the call duration and determines if cleanup or refresh is needed.
-     *
-     * @return [CallEndResult.CLEANUP_AND_REFRESH] if session must be cleared and status refreshed.
-     *         [CallEndResult.REFRESH_ONLY] if work is done (including cleanup) and status refresh is needed.
-     *         [CallEndResult.HANDLED_WITH_ERROR] if an error was set, no immediate refresh needed.
-     */
+        /**
+         * Processes the call duration and determines if cleanup or refresh is needed.
+         *
+         * @return [CallEndResult.CLEANUP_AND_REFRESH] if session must be cleared and status refreshed.
+         *         [CallEndResult.REFRESH_ONLY] if work is done (including cleanup) and status refresh is needed.
+         *         [CallEndResult.HANDLED_WITH_ERROR] if an error was set, no immediate refresh needed.
+         */
         private suspend fun processCallDurationLocked(
             subId: Int,
             durationSeconds: Int,
             data: CallEndData,
             notify: Boolean,
             context: CallTrackingContext,
-    ): CallEndResult =
+        ): CallEndResult =
             when {
                 durationSeconds < 0 -> {
                     AppLogger.w(
@@ -410,13 +405,13 @@ internal class CallEndHandler
         private fun calculateDurationMinutes(seconds: Int): Int =
             ((seconds + Constants.Time.SECONDS_IN_MINUTE) - 1) / Constants.Time.SECONDS_IN_MINUTE
 
-    private enum class CallEndResult {
-        CONTINUE,
-        CLEANUP_AND_REFRESH,
-        CLEANUP_ONLY,
-        REFRESH_ONLY,
-        HANDLED_WITH_ERROR,
-    }
+        private enum class CallEndResult {
+            CONTINUE,
+            CLEANUP_AND_REFRESH,
+            CLEANUP_ONLY,
+            REFRESH_ONLY,
+            HANDLED_WITH_ERROR,
+        }
 
         internal data class CallEndData(
             val startTimeResult: Result<Long>,

@@ -228,19 +228,18 @@ class AppSettingsRepositoryImpl
             prefs[DataStoreKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
         }
 
-        private fun Preferences.toAppSettings(): AppSettings {
-            return AppSettings()
+        private fun Preferences.toAppSettings(): AppSettings =
+            AppSettings()
                 .let { mapBasicSettings(it) }
                 .let { mapSystemSettings(it) }
                 .let { mapTrackingSettings(it) }
                 .let { mapWidgetSettings(it) }
                 .copy(isLoaded = true)
-        }
 
-    private fun Preferences.mapBasicSettings(current: AppSettings): AppSettings {
-        val theme = AppTheme.fromValue(read(DataStoreKeys.APP_THEME, -1))
-        val language = this[DataStoreKeys.APP_LANGUAGE]
-        return current.copy(theme = theme, language = language)
+        private fun Preferences.mapBasicSettings(current: AppSettings): AppSettings {
+            val theme = AppTheme.fromValue(read(DataStoreKeys.APP_THEME, -1))
+            val language = this[DataStoreKeys.APP_LANGUAGE]
+            return current.copy(theme = theme, language = language)
         }
 
         private fun Preferences.mapSystemSettings(current: AppSettings): AppSettings =

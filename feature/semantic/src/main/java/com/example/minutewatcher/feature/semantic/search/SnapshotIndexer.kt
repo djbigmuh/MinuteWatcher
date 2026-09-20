@@ -14,7 +14,6 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SemanticMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
-import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 

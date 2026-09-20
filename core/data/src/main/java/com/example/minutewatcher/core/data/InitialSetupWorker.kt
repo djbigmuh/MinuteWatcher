@@ -213,8 +213,8 @@ class InitialSetupWorker
             } ?: flow.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: emptyList()
         }
 
-    companion object {
-        const val EXTRA_TRIGGERED_BY_BOOT = "triggered_by_boot"
+        companion object {
+            const val EXTRA_TRIGGERED_BY_BOOT = "triggered_by_boot"
             private const val MAX_MIGRATION_ATTEMPTS = 3
             private const val WORKER_TIMEOUT_MS = 120_000L
         }

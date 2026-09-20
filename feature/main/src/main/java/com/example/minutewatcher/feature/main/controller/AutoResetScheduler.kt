@@ -28,7 +28,7 @@ import javax.inject.Inject
  * не изменяет данные).
  */
 class AutoResetScheduler
-@Inject
+    @Inject
     constructor(
         private val savedStateHandle: SavedStateHandle,
         private val autoResetUseCase: AutoResetUseCase,

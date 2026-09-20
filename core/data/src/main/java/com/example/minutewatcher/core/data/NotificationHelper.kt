@@ -43,13 +43,13 @@ class NotificationHelper
             notificationManager.createNotificationChannel(channel)
         }
 
-    /**
-     * Sends a usage notification.
-     *
-     * Defensive contract: notification delivery should never cause app crash.
-     * Platform implementations of NotificationManager may throw various RuntimeExceptions.
-     */
-    @Suppress("TooGenericExceptionCaught")
+        /**
+         * Sends a usage notification.
+         *
+         * Defensive contract: notification delivery should never cause app crash.
+         * Platform implementations of NotificationManager may throw various RuntimeExceptions.
+         */
+        @Suppress("TooGenericExceptionCaught")
         fun sendUsageNotification(
             title: String,
             message: String,
@@ -99,13 +99,13 @@ class NotificationHelper
             }
         }
 
-    /**
-     * Safely checks if notifications are enabled.
-     *
-     * Defensive contract: checking notification status should never cause app crash.
-     * Platform implementations of NotificationManagerCompat may throw various RuntimeExceptions.
-     */
-    @Suppress("TooGenericExceptionCaught")
+        /**
+         * Safely checks if notifications are enabled.
+         *
+         * Defensive contract: checking notification status should never cause app crash.
+         * Platform implementations of NotificationManagerCompat may throw various RuntimeExceptions.
+         */
+        @Suppress("TooGenericExceptionCaught")
         private fun areNotificationsEnabledSafe(): Boolean =
             try {
                 NotificationManagerCompat.from(context).areNotificationsEnabled()

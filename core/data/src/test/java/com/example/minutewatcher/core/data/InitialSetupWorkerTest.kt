@@ -24,8 +24,8 @@ import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
@@ -517,10 +517,11 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
 
             // Flow that is NOT a StateFlow and hangs
-            val nonStateFlow = flow {
-                emit(emptyList<ActiveSimInfo>())
-                kotlinx.coroutines.awaitCancellation()
-            }
+            val nonStateFlow =
+                flow {
+                    emit(emptyList<ActiveSimInfo>())
+                    kotlinx.coroutines.awaitCancellation()
+                }
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(nonStateFlow)
 
             val result = createWorker().doWork()
