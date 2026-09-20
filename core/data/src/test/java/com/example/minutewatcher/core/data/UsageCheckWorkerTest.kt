@@ -5,12 +5,19 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.AutoResetUseCase
+import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.RefreshResult
+import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.MeasurementUnit
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
@@ -40,8 +47,14 @@ import org.robolectric.RobolectricTestRunner
 class UsageCheckWorkerTest {
     private val usageStateRepository: UsageStateRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
+    private val simNotificationFlagsRepository: SimNotificationFlagsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
+    private val autoResetUseCase: AutoResetUseCase = mock()
+    private val trafficTracker: TrafficTracker = mock()
     private val notificationHelper: NotificationHelper = mock()
+    private val dataChangeNotifier: DataChangeNotifier = mock()
+    private val usageUseCase: UsageUseCase = mock()
+    private val timeProvider: TimeProvider = mock()
     private val permissionManager: PermissionManager = mock()
     private val testDispatcher = StandardTestDispatcher()
 
@@ -52,16 +65,20 @@ class UsageCheckWorkerTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         val workerParams: WorkerParameters = mock()
-        worker =
-            UsageCheckWorker(
-                context,
-                workerParams,
-                usageStateRepository,
-                simUsageRepository,
-                appSettingsRepository,
-                notificationHelper,
-                permissionManager,
+        val deps =
+            UsageWorkerDependencies(
+                simUsageRepository = simUsageRepository,
+                simNotificationFlagsRepository = simNotificationFlagsRepository,
+                appSettingsRepository = appSettingsRepository,
+                autoResetUseCase = autoResetUseCase,
+                trafficTracker = trafficTracker,
+                notificationHelper = notificationHelper,
+                dataChangeNotifier = dataChangeNotifier,
+                usageStateRepository = usageStateRepository,
+                usageUseCase = usageUseCase,
+                timeProvider = timeProvider,
             )
+        worker = UsageCheckWorker(context, workerParams, deps, testDispatcher)
     }
 
     private suspend fun setupDefaultMocks() {
@@ -77,14 +94,18 @@ class UsageCheckWorkerTest {
     ): GlobalSnapshot {
         val entity =
             SemanticEntity(
-                slot = 0,
+                id = "0_minutes",
+                simSlot = 0,
                 operatorName = "MTS",
-                type = PackageType.MINUTES,
+                packageType = PackageType.MINUTES,
                 used = minutesUsed.toLong(),
                 limit = minutesLimit.toLong(),
                 remaining = (minutesLimit - minutesUsed).toLong(),
-                resetDay = 1,
-                lastUpdate = 0L,
+                unit = MeasurementUnit.MINUTES,
+                periodStart = 0L,
+                periodEnd = 0L,
+                lastUpdateTime = 0L,
+                sourceType = DataSourceType.SYSTEM,
             )
         val simSnapshot =
             SimSnapshot(
@@ -110,14 +131,18 @@ class UsageCheckWorkerTest {
     ): GlobalSnapshot {
         val entity =
             SemanticEntity(
-                slot = 0,
+                id = "0_traffic",
+                simSlot = 0,
                 operatorName = "MTS",
-                type = PackageType.DATA,
+                packageType = PackageType.DATA,
                 used = used,
                 limit = limit,
                 remaining = remaining,
-                resetDay = 1,
-                lastUpdate = 0L,
+                unit = MeasurementUnit.BYTES,
+                periodStart = 0L,
+                periodEnd = 0L,
+                lastUpdateTime = 0L,
+                sourceType = DataSourceType.SYSTEM,
             )
         val simSnapshot =
             SimSnapshot(
@@ -161,7 +186,14 @@ class UsageCheckWorkerTest {
     @Test
     fun `doWork returns success when no snapshots`() =
         runTest(testDispatcher) {
-            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Timeout(null))
+            val emptySnapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Timeout(emptySnapshot))
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.success(), result)
         }

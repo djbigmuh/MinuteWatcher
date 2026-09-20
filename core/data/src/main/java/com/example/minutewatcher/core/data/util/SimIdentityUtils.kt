@@ -23,18 +23,32 @@ object SimIdentityUtils {
         if (mcc.isEmpty()) return emptyList()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val mnc = info.mncString.orEmpty()
-            if (mnc.isNotEmpty()) listOf("$mcc$mnc") else emptyList()
+            mccMncModern(mcc, info)
         } else {
-            val mncRaw = info.mncStringCompat
-            if (mncRaw.isEmpty()) return emptyList()
-
-            listOf(
-                "$mcc$mncRaw",
-                "$mcc${mncRaw.padStart(MNC_LEN_2, '0')}",
-                "$mcc${mncRaw.padStart(MNC_LEN_3, '0')}",
-            ).distinct()
+            mccMncLegacy(mcc, info)
         }
+    }
+
+    private fun mccMncModern(
+        mcc: String,
+        info: SubscriptionInfo,
+    ): List<String> {
+        val mnc = info.mncString.orEmpty()
+        return if (mnc.isNotEmpty()) listOf("$mcc$mnc") else emptyList()
+    }
+
+    private fun mccMncLegacy(
+        mcc: String,
+        info: SubscriptionInfo,
+    ): List<String> {
+        val mncRaw = info.mncStringCompat
+        if (mncRaw.isEmpty()) return emptyList()
+
+        return listOf(
+            "$mcc$mncRaw",
+            "$mcc${mncRaw.padStart(MNC_LEN_2, '0')}",
+            "$mcc${mncRaw.padStart(MNC_LEN_3, '0')}",
+        ).distinct()
     }
 
     private const val MNC_LEN_2 = 2

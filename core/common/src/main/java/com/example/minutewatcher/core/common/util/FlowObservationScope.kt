@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.common.util
 
+import com.example.minutewatcher.core.common.util.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -7,6 +8,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
@@ -32,6 +34,11 @@ class FlowObservationScope<T>(
     @Volatile
     private var _currentJob: Job? = null
 
+    private var lastFlow: Flow<T>? = null
+    private var lastContext: CoroutineContext? = null
+    private var lastCollector: (suspend (T) -> Unit)? = null
+    private var isShutdown = false
+
     /**
      * The currently active observation job, if any.
      */
@@ -49,24 +56,69 @@ class FlowObservationScope<T>(
         flow: Flow<T>,
         context: CoroutineContext = EmptyCoroutineContext,
         collector: suspend (T) -> Unit,
-    ): Job =
+    ): Job? =
         mutex.withLock {
-            _currentJob?.cancel()
-            val newJob =
-                scope.launch(context) {
-                    flow.collectLatest { collector(it) }
-                }
-            _currentJob = newJob
-            newJob
+            if (isShutdown) return null
+            lastFlow = flow
+            lastContext = context
+            lastCollector = collector
+            startObservationLocked()
         }
+
+    /**
+     * Restarts the last observation if it was active.
+     */
+    suspend fun recover(): Job? =
+        mutex.withLock {
+            if (isShutdown || lastFlow == null) return null
+            AppLogger.d("FlowObservationScope($tag): recovery requested")
+            startObservationLocked()
+        }
+
+    private fun startObservationLocked(): Job {
+        _currentJob?.cancel()
+        val flow = lastFlow!!
+        val context = lastContext ?: EmptyCoroutineContext
+        val collector = lastCollector!!
+        val newJob =
+            scope.launch(context) {
+                flow.collectLatest { collector(it) }
+            }
+        _currentJob = newJob
+        return newJob
+    }
+
+    /**
+     * Stops the current observation and waits for it to complete.
+     *
+     * @param timeoutMs Timeout in milliseconds to wait for the job to complete.
+     * @return True if the job completed within the timeout, false otherwise.
+     */
+    suspend fun stopAndAwait(timeoutMs: Long): Boolean {
+        val jobToWait =
+            mutex.withLock {
+                val job = _currentJob
+                _currentJob = null
+                job?.cancel()
+                job
+            } ?: return true
+
+        return withTimeoutOrNull(timeoutMs) {
+            jobToWait.join()
+            true
+        } ?: false
+    }
 
     /**
      * Stops the current observation and clears all internal references.
      */
     suspend fun shutdown() {
         mutex.withLock {
+            isShutdown = true
             _currentJob?.cancel()
             _currentJob = null
+            lastFlow = null
+            lastCollector = null
         }
     }
 }

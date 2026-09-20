@@ -42,6 +42,20 @@ class SimIdentityUtilsTest {
 
     @Test
     @Config(sdk = [28]) // behavior-specific SDK
+    fun `mccMncCandidates on API 28 removes duplicates when padding matches raw`() {
+        val info: SubscriptionInfo = mock()
+        @Suppress("DEPRECATION")
+        whenever(info.mcc).thenReturn(250)
+        @Suppress("DEPRECATION")
+        whenever(info.mnc).thenReturn(10) // 2 digits raw
+
+        val candidates = SimIdentityUtils.mccMncCandidates(info)
+        // mcc=250, mncRaw=10 -> 25010, 25010 (padded 2), 250010 (padded 3) -> 25010, 250010
+        assertEquals(listOf("25010", "250010"), candidates)
+    }
+
+    @Test
+    @Config(sdk = [28]) // behavior-specific SDK
     fun `mccMncCandidates on API 28 returns empty when mcc is unavailable`() {
         val info: SubscriptionInfo = mock()
         @Suppress("DEPRECATION")
@@ -75,5 +89,27 @@ class SimIdentityUtilsTest {
 
         val candidates = SimIdentityUtils.mccMncCandidates(info)
         assertEquals(listOf("25001"), candidates)
+    }
+
+    @Test
+    @Config(sdk = [34]) // behavior-specific SDK (API 29+)
+    fun `mccMncCandidates on API 29 plus returns empty when mnc is empty`() {
+        val info: SubscriptionInfo = mock()
+        whenever(info.mccString).thenReturn("250")
+        whenever(info.mncString).thenReturn("")
+
+        val candidates = SimIdentityUtils.mccMncCandidates(info)
+        assertEquals(emptyList<String>(), candidates)
+    }
+
+    @Test
+    @Config(sdk = [34]) // behavior-specific SDK (API 29+)
+    fun `mccMncCandidates on API 29 plus returns empty when mnc is null`() {
+        val info: SubscriptionInfo = mock()
+        whenever(info.mccString).thenReturn("250")
+        whenever(info.mncString).thenReturn(null)
+
+        val candidates = SimIdentityUtils.mccMncCandidates(info)
+        assertEquals(emptyList<String>(), candidates)
     }
 }

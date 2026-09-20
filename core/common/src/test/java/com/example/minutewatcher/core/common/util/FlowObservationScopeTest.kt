@@ -55,7 +55,7 @@ class FlowObservationScopeTest {
             scope.observe(flow2) { values2.add(it) }
             runCurrent()
 
-            assertTrue("First job should be cancelled", job1.isCancelled)
+            assertTrue("First job should be cancelled", job1?.isCancelled == true)
 
             flow1.emit(1)
             flow2.emit(10)
@@ -224,7 +224,7 @@ class FlowObservationScopeTest {
             scope.shutdown()
             runCurrent()
 
-            assertTrue("Job should be cancelled", job.isCancelled)
+            assertTrue("Job should be cancelled", job?.isCancelled == true)
             assertNull("currentJob should be null", scope.currentJob)
 
             // Ensure recover does nothing after shutdown
