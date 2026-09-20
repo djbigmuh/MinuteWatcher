@@ -110,8 +110,11 @@ class MainViewModel
                     val onboardingCompleted = data.settings.onboardingCompleted
                     val isSettingsLoaded = data.settings.isLoaded
 
+                    val shouldShowOnboarding = isSettingsLoaded && !onboardingCompleted
+                    val isUiBlocked = data.onboardingDialogShowing || data.usageAccess
+
                     // Logic for showing Onboarding Dialog
-                    if (isSettingsLoaded && !onboardingCompleted && !data.onboardingDialogShowing && !data.usageAccess) {
+                    if (shouldShowOnboarding && !isUiBlocked) {
                         AppLogger.d("MainViewModel: Triggering onboarding dialog")
                         dialogController.setShowOnboardingDialog(true)
                     }
@@ -161,7 +164,7 @@ class MainViewModel
 
         fun retryTraffic() = controllers.simData.retryTraffic()
 
-    fun retrySimDiscovery() = controllers.simData.retrySimDiscovery()
+        fun retrySimDiscovery() = controllers.simData.retrySimDiscovery()
 
         fun dismissWidgetError() = controllers.settings.dismissWidgetError()
 

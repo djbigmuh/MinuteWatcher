@@ -21,7 +21,6 @@ import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -339,6 +338,7 @@ open class IdentityMigrationService
             var migratedCount = 0
             var conflictCount = 0
             var failureCount = 0
+            var partialFailure = false
 
             try {
                 val success =
@@ -360,20 +360,22 @@ open class IdentityMigrationService
 
                 if (!success) {
                     AppLogger.e("IdentityMigrationService: Batch migration timed out for $storeName")
-                    return MigrationOutcome(failures = mappings.size, partialFailure = true)
+                    failureCount = mappings.size
+                    partialFailure = true
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("IdentityMigrationService: Batch migration failed for $storeName", e)
-                return MigrationOutcome(failures = mappings.size, partialFailure = true)
+                failureCount = mappings.size
+                partialFailure = true
             }
 
             return MigrationOutcome(
                 migrated = migratedCount,
                 conflicts = conflictCount,
                 failures = failureCount,
-                partialFailure = failureCount > 0,
+                partialFailure = partialFailure || (failureCount > 0),
             )
         }
 
