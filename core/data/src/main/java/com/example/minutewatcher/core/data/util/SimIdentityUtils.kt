@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data.util
 import android.os.Build
 import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.mccStringCompat
+import com.example.minutewatcher.core.common.util.mncStringCompat
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
@@ -25,8 +26,9 @@ object SimIdentityUtils {
             val mnc = info.mncString.orEmpty()
             if (mnc.isNotEmpty()) listOf("$mcc$mnc") else emptyList()
         } else {
-            @Suppress("DEPRECATION")
-            val mncRaw = info.mnc.toString()
+            val mncRaw = info.mncStringCompat
+            if (mncRaw.isEmpty()) return emptyList()
+
             listOf(
                 "$mcc$mncRaw",
                 "$mcc${mncRaw.padStart(MNC_LEN_2, '0')}",

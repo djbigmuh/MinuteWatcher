@@ -43,7 +43,7 @@ class SimWidgetVisibilityRepositoryImpl
             dataStore.data.map { prefs ->
                 identities
                     .asSequence()
-                    .filter { !it.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX) }
+                    .filter { !SimConstants.isInvalid(it) }
                     .associateWith { identity ->
                         SimSettingsState(
                             showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: true,
@@ -66,7 +66,7 @@ class SimWidgetVisibilityRepositoryImpl
         override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
             dataStore.edit { prefs ->
                 settingsMap.forEach { (identity, settings) ->
-                    if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+                    if (SimConstants.isInvalid(identity)) {
                         AppLogger.w("setSimSettingsBatch skipped for invalid identity: $identity")
                         return@forEach
                     }

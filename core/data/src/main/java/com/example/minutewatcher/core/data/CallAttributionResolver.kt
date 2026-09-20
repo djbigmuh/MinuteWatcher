@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -107,7 +108,7 @@ internal class CallAttributionResolver
             attributionFailures.clear()
         }
 
-        @androidx.annotation.VisibleForTesting
+    @VisibleForTesting
         fun setFailureCountForTest(
             subId: Int,
             count: Int,

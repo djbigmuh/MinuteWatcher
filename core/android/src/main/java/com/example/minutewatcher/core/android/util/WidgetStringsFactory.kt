@@ -23,7 +23,6 @@ object WidgetStringsFactory {
             minutesAbbr = context.getString(R.string.minutes_abbr),
             limitText = context.getString(R.string.limit_text),
             gbAbbr = context.getString(R.string.gb_abbr),
-            fractionFormat = context.getString(R.string.fraction_format),
         )
 
     fun createOperatorNames(

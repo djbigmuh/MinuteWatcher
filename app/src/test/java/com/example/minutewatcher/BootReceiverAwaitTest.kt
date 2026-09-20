@@ -100,7 +100,7 @@ class BootReceiverAwaitTest {
 
             val workScheduler = mock<WorkScheduler>()
             // Match explicit force = true to detect stubbing mismatch
-            whenever(workScheduler.scheduleInitialSetup(force = true)).thenReturn(operation)
+            whenever(workScheduler.scheduleInitialSetup(force = true, triggeredByBoot = true)).thenReturn(operation)
 
             val receiver =
                 object : BootReceiver() {
@@ -116,7 +116,7 @@ class BootReceiverAwaitTest {
             runCurrent()
 
             // Positive assertions
-            verify(workScheduler).scheduleInitialSetup(force = true)
+            verify(workScheduler).scheduleInitialSetup(force = true, triggeredByBoot = true)
             verify(operation).result
             assertTrue("No errors should be logged", capturedErrors.isEmpty())
 

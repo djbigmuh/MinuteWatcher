@@ -77,7 +77,6 @@
     <string name="theme_system_icon" translatable="false">🌓</string>
     <string name="theme_light_icon" translatable="false">☀️</string>
     <string name="theme_dark_icon" translatable="false">🌙</string>
-    <string name="fraction_format" translatable="false">/%1$s</string>
     <string name="adjustment_mark" translatable="false">*adj</string>
     <string name="tile_operator_value_format" translatable="false">%1$s: %2$s</string>
 </resources>

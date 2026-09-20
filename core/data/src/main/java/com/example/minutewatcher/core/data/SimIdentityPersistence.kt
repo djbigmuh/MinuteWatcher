@@ -164,10 +164,7 @@ class SimIdentityPersistence
         }
 
         fun getSimOperator(identity: String): Flow<String> {
-            if (identity.startsWith(
-                    SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
-                )
-            ) {
+            if (SimConstants.isInvalid(identity)) {
                 return flowOf("")
             }
             return combine(
@@ -179,10 +176,7 @@ class SimIdentityPersistence
         }
 
         fun getCustomSimOperator(identity: String): Flow<String?> {
-            if (identity.startsWith(
-                    SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
-                )
-            ) {
+            if (SimConstants.isInvalid(identity)) {
                 return flowOf(null)
             }
             return dataStore.data.map { it[DataStoreKeys.customSimOperatorKey(identity)] }
@@ -192,7 +186,7 @@ class SimIdentityPersistence
             identity: String,
             name: String,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) return
+            if (SimConstants.isInvalid(identity)) return
             dataStore.edit { it[DataStoreKeys.simOperatorKey(identity)] = name }
         }
 
@@ -200,7 +194,7 @@ class SimIdentityPersistence
             identity: String,
             name: String?,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) return
+            if (SimConstants.isInvalid(identity)) return
             dataStore.edit { prefs ->
                 if (name == null) {
                     prefs.remove(DataStoreKeys.customSimOperatorKey(identity))
@@ -211,10 +205,7 @@ class SimIdentityPersistence
         }
 
         fun getSimCode(identity: String): Flow<String> {
-            if (identity.startsWith(
-                    SimConstants.INVALID_SLOT_IDENTITY_PREFIX,
-                )
-            ) {
+            if (SimConstants.isInvalid(identity)) {
                 return flowOf("")
             }
             return getData(DataStoreKeys.simCodeKey(identity), "")
@@ -224,7 +215,7 @@ class SimIdentityPersistence
             identity: String,
             code: String,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) return
+            if (SimConstants.isInvalid(identity)) return
             dataStore.edit { it[DataStoreKeys.simCodeKey(identity)] = code }
         }
 

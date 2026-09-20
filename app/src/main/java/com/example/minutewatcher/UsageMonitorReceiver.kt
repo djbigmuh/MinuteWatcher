@@ -81,8 +81,8 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
         val data =
             Data
                 .Builder()
-                .putString("state", state)
-                .putInt("subId", subId)
+                .putString(CallEventWorker.EXTRA_STATE, state)
+                .putInt(CallEventWorker.EXTRA_SUB_ID, subId)
                 .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, SystemClock.elapsedRealtime())
                 .build()
 

@@ -5,6 +5,9 @@ import android.telephony.SubscriptionInfo
 
 /**
  * Compatibility extension for [SubscriptionInfo.getMccString].
+ *
+ * NOTE: [Integer.MAX_VALUE] is the value used by the framework on API < 29
+ * to represent unavailable MCC.
  */
 val SubscriptionInfo.mccStringCompat: String
     get() =
@@ -15,11 +18,14 @@ val SubscriptionInfo.mccStringCompat: String
             // where mcc/mnc fields are the only way to get these values.
             // MCC is always 3 digits according to ITU E.212.
             @Suppress("DEPRECATION")
-            mcc.toString().padStart(3, '0')
+            if (mcc == Integer.MAX_VALUE) "" else mcc.toString().padStart(3, '0')
         }
 
 /**
  * Compatibility extension for [SubscriptionInfo.getMncString].
+ *
+ * NOTE: [Integer.MAX_VALUE] is the value used by the framework on API < 29
+ * to represent unavailable MNC.
  */
 val SubscriptionInfo.mncStringCompat: String
     get() =
@@ -29,5 +35,5 @@ val SubscriptionInfo.mncStringCompat: String
             // @Suppress("DEPRECATION") is required for backward compatibility with API < 29
             // where mcc/mnc fields are the only way to get these values.
             @Suppress("DEPRECATION")
-            mnc.toString()
+            if (mnc == Integer.MAX_VALUE) "" else mnc.toString()
         }

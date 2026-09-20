@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
+import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -30,12 +31,23 @@ class WorkScheduler
          *
          * @param force If true, uses [ExistingWorkPolicy.REPLACE] to ensure fresh initialization.
          *              Otherwise, uses [ExistingWorkPolicy.KEEP].
+         * @param triggeredByBoot If true, indicates that the work was triggered by a system boot event.
          * @return [Operation] that can be used to track the progress of the enqueuing operation.
          * Safe to call from any coroutine context.
          */
-        fun scheduleInitialSetup(force: Boolean = false): Operation {
+        fun scheduleInitialSetup(
+            force: Boolean = false,
+            triggeredByBoot: Boolean = false,
+        ): Operation {
+            val inputData =
+                Data
+                    .Builder()
+                    .putBoolean(InitialSetupWorker.EXTRA_TRIGGERED_BY_BOOT, triggeredByBoot)
+                    .build()
+
             val workRequest =
                 OneTimeWorkRequestBuilder<InitialSetupWorker>()
+                    .setInputData(inputData)
                     .setBackoffCriteria(
                         BackoffPolicy.EXPONENTIAL,
                         BACKOFF_SECONDS,

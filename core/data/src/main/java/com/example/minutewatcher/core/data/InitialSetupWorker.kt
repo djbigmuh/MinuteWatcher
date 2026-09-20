@@ -6,7 +6,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
-import com.example.minutewatcher.core.data.InitialSetupWorker.Companion.WORKER_TIMEOUT_MS
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MigrationSkipReason
@@ -62,9 +61,11 @@ class InitialSetupWorker
         private suspend fun performSetupSteps() {
             deps.usageUseCase.refreshOperatorInfo()
 
-            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                deps.callTracker.onBootAwaited()
-            } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
+            if (inputData.getBoolean(EXTRA_TRIGGERED_BY_BOOT, false)) {
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    deps.callTracker.onBootAwaited()
+                } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
+            }
 
             val result = checkAndPerformMigrations()
             if (result != null && result != Result.success()) {
@@ -209,10 +210,11 @@ class InitialSetupWorker
             val flow = deps.simIdentityRepository.observeActiveSims()
             return withTimeoutOrNull(Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds) {
                 flow.first { it.isNotEmpty() }
-            } ?: (flow as? kotlinx.coroutines.flow.StateFlow<List<ActiveSimInfo>>)?.value ?: emptyList()
+            } ?: flow.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: emptyList()
         }
 
-        private companion object {
+    companion object {
+        const val EXTRA_TRIGGERED_BY_BOOT = "triggered_by_boot"
             private const val MAX_MIGRATION_ATTEMPTS = 3
             private const val WORKER_TIMEOUT_MS = 120_000L
         }

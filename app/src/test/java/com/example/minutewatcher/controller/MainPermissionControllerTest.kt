@@ -93,7 +93,7 @@ class MainPermissionControllerTest {
             )
 
             advanceUntilIdle()
-            verify(workScheduler).scheduleInitialSetup(any())
+            verify(workScheduler).scheduleInitialSetup(any(), any())
             assertTrue("Should check notifications if phone and usage granted", notificationsChecked)
         }
 
@@ -143,6 +143,6 @@ class MainPermissionControllerTest {
             advanceUntilIdle()
 
             // Should schedule setup because check timed out (null result)
-            verify(workScheduler).scheduleInitialSetup(eq(false))
+            verify(workScheduler).scheduleInitialSetup(eq(false), eq(false))
         }
 }

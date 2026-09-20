@@ -28,7 +28,7 @@ open class BootReceiver : BroadcastReceiver() {
             try {
                 // Force REPLACE on boot to ensure fresh initialization after restart.
                 // We await the enqueue operation to ensure it persists before finish().
-                provideWorkScheduler().scheduleInitialSetup(force = true).result.await()
+                provideWorkScheduler().scheduleInitialSetup(force = true, triggeredByBoot = true).result.await()
                 AppLogger.d("BootReceiver: InitialSetup scheduled successfully")
             } catch (e: CancellationException) {
                 throw e

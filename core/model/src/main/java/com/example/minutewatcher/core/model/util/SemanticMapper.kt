@@ -10,11 +10,22 @@ import com.example.minutewatcher.core.model.TrafficModel
 import java.util.Locale
 
 object SemanticMapper {
+    /**
+     * Returns a stable document identifier for AppSearch.
+     *
+     * Contract: "sim_${slot}_${typeName.lowercase(Locale.ROOT)}"
+     */
+    @JvmStatic
+    fun getDocumentId(
+        slot: Int,
+        typeName: String,
+    ): String = "sim_${slot}_${typeName.lowercase(Locale.ROOT)}"
+
     @JvmStatic
     fun getDocumentId(
         slot: Int,
         type: PackageType,
-    ): String = "sim_${slot}_${type.name.lowercase(Locale.ROOT)}"
+    ): String = getDocumentId(slot, type.name)
 
     @JvmStatic
     fun mapMinutes(

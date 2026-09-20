@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.domain.WidgetUpdateCoordinator
+import dagger.Lazy
 import javax.inject.Inject
 
 /**
@@ -23,5 +24,5 @@ class MainViewModelControllers
         val settings: MainSettingsController,
         val simData: MainSimDataController,
         val resume: MainResumeController,
-        val widgetObservationRecovery: dagger.Lazy<WidgetUpdateCoordinator>,
+        val widgetObservationRecovery: Lazy<WidgetUpdateCoordinator>,
     )

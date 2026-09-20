@@ -41,6 +41,32 @@ class SimIdentityUtilsTest {
     }
 
     @Test
+    @Config(sdk = [28]) // behavior-specific SDK
+    fun `mccMncCandidates on API 28 returns empty when mcc is unavailable`() {
+        val info: SubscriptionInfo = mock()
+        @Suppress("DEPRECATION")
+        whenever(info.mcc).thenReturn(Integer.MAX_VALUE)
+        @Suppress("DEPRECATION")
+        whenever(info.mnc).thenReturn(1)
+
+        val candidates = SimIdentityUtils.mccMncCandidates(info)
+        assertEquals(emptyList<String>(), candidates)
+    }
+
+    @Test
+    @Config(sdk = [28]) // behavior-specific SDK
+    fun `mccMncCandidates on API 28 returns empty when mnc is unavailable`() {
+        val info: SubscriptionInfo = mock()
+        @Suppress("DEPRECATION")
+        whenever(info.mcc).thenReturn(250)
+        @Suppress("DEPRECATION")
+        whenever(info.mnc).thenReturn(Integer.MAX_VALUE)
+
+        val candidates = SimIdentityUtils.mccMncCandidates(info)
+        assertEquals(emptyList<String>(), candidates)
+    }
+
+    @Test
     @Config(sdk = [34]) // behavior-specific SDK (API 29+)
     fun `mccMncCandidates on API 29 plus returns single canonical candidate`() {
         val info: SubscriptionInfo = mock()

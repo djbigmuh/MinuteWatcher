@@ -56,7 +56,7 @@ if ($env:JAVA_HOME) {
 $gradleArgs = if ($Quick) {
     @('ktlintCheck', 'detekt', '--continue')
 } else {
-    @('ktlintCheck', 'detekt', 'lintDebug', 'testDebugUnitTest', 'assembleDebug', '--continue')
+    @('ktlintCheck', 'detekt', 'lintDebug', 'testDebugUnitTest', 'assembleDebug', 'assembleRelease', '--continue')
 }
 
 Write-Host "Running verification: ./gradlew $($gradleArgs -join ' ')" -ForegroundColor Cyan

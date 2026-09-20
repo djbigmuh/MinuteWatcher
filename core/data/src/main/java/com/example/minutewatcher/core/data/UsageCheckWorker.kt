@@ -26,11 +26,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
-@HiltWorker
 /**
  * UsageCheckWorker encapsulates a single background check cycle
  * for limit usage across all active SIM cards.
  */
+@HiltWorker
 @Suppress("TooManyFunctions")
 class UsageCheckWorker
     @AssistedInject

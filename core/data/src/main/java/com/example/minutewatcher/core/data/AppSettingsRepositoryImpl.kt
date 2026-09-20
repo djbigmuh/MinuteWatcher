@@ -229,14 +229,18 @@ class AppSettingsRepositoryImpl
         }
 
         private fun Preferences.toAppSettings(): AppSettings {
-            val default = AppSettings()
-            val theme = AppTheme.fromValue(read(DataStoreKeys.APP_THEME, -1))
-            val language = this[DataStoreKeys.APP_LANGUAGE]
-
-            return mapSystemSettings(default)
-                .copy(theme = theme, language = language, isLoaded = true)
+            return AppSettings()
+                .let { mapBasicSettings(it) }
+                .let { mapSystemSettings(it) }
                 .let { mapTrackingSettings(it) }
                 .let { mapWidgetSettings(it) }
+                .copy(isLoaded = true)
+        }
+
+    private fun Preferences.mapBasicSettings(current: AppSettings): AppSettings {
+        val theme = AppTheme.fromValue(read(DataStoreKeys.APP_THEME, -1))
+        val language = this[DataStoreKeys.APP_LANGUAGE]
+        return current.copy(theme = theme, language = language)
         }
 
         private fun Preferences.mapSystemSettings(current: AppSettings): AppSettings =

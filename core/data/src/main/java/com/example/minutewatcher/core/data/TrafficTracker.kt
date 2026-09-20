@@ -303,7 +303,7 @@ class TrafficTracker
 
         suspend fun resetBaseline(identity: String) {
             val startElapsed = timeProvider.elapsedRealtime()
-            if (identity.startsWith(Constants.SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (Constants.SimConstants.isInvalid(identity)) {
                 AppLogger.w("TrafficTracker: resetBaseline called with invalid identity: $identity")
                 return
             }

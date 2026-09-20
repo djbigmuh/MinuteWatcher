@@ -21,6 +21,9 @@ object OperatorResolver {
 
     private val genericSimRegex = Regex("^sim\\s*\\d*$", RegexOption.IGNORE_CASE)
 
+    private val tokenSplitWithDashRegex = Regex("[^a-z0-9&-]+")
+    private val tokenSplitWithoutDashRegex = Regex("[^a-z0-9&]+")
+
     @VisibleForTesting
     internal val operatorResourceMap =
         mapOf(
@@ -332,8 +335,8 @@ object OperatorResolver {
         if (normalized == target) return true
 
         // 2. Check in tokens split by common delimiters (excluding dash if token has it)
-        val regex = if (target.contains("-")) "[^a-z0-9&-]+" else "[^a-z0-9&]+"
-        val tokens = normalized.split(Regex(regex)).filter { it.isNotEmpty() }
+        val regex = if (target.contains("-")) tokenSplitWithDashRegex else tokenSplitWithoutDashRegex
+        val tokens = normalized.split(regex).filter { it.isNotEmpty() }
 
         return tokens.contains(target)
     }

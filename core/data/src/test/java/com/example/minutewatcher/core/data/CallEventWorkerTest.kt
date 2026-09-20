@@ -37,8 +37,8 @@ class CallEventWorkerTest {
             val inputData =
                 Data
                     .Builder()
-                    .putString("state", "OFFHOOK")
-                    .putInt("subId", subId)
+                    .putString(CallEventWorker.EXTRA_STATE, "OFFHOOK")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, subId)
                     .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, eventTime)
                     .build()
 
@@ -69,8 +69,8 @@ class CallEventWorkerTest {
             val inputData =
                 Data
                     .Builder()
-                    .putString("state", "IDLE")
-                    .putInt("subId", subId)
+                    .putString(CallEventWorker.EXTRA_STATE, "IDLE")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, subId)
                     .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, eventTime)
                     .build()
 
@@ -99,7 +99,7 @@ class CallEventWorkerTest {
             val inputData =
                 Data
                     .Builder()
-                    .putString("state", "UNKNOWN_STATE")
+                    .putString(CallEventWorker.EXTRA_STATE, "UNKNOWN_STATE")
                     .build()
 
             val worker =
@@ -127,7 +127,7 @@ class CallEventWorkerTest {
             val inputData =
                 Data
                     .Builder()
-                    .putString("state", "RINGING")
+                    .putString(CallEventWorker.EXTRA_STATE, "RINGING")
                     .build()
 
             val worker =

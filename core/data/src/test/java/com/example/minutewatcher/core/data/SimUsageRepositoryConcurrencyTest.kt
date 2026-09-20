@@ -56,7 +56,7 @@ class SimUsageRepositoryConcurrencyTest {
             val now = 1000000000000L
 
             // Подготовка данных
-            repository.setLastResetDate(identity, 0L)
+            repository.setLastResetDate(identity, 1L)
             repository.setMinutesUsed(identity, 50)
 
             // 3. Запускаем конкурентные вызовы на ОДНОМ И ТОМ ЖЕ экземпляре репозитория

@@ -8,6 +8,5 @@
       </ID>
       <ID>ReturnCount:InitialSetupWorker.kt:InitialSetupWorker$override suspend fun doWork: Result</ID>
       <ID>ThrowsCount:InitialSetupWorker.kt:InitialSetupWorker$override suspend fun doWork: Result</ID>
-      <ID>TooGenericExceptionCaught:NotificationHelper.kt:NotificationHelper$e: RuntimeException</ID>
   </CurrentIssues>
 </SmellBaseline>

@@ -158,6 +158,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_1"), eq(1), any())
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
         }
 
     @Test
@@ -181,6 +182,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_1"), eq(1), any())
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
         }
 
     @Test
@@ -204,6 +206,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_1"), eq(1), any())
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
         }
 
     @Test

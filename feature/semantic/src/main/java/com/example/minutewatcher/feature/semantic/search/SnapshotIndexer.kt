@@ -145,7 +145,7 @@ open class SnapshotIndexer
             val staleIds = mutableSetOf<String>()
             SimConstants.SUPPORTED_SLOT_INDICES.forEach { slot ->
                 staleTypes.forEach { typeName ->
-                    staleIds.add("sim_${slot}_${typeName.lowercase(Locale.ROOT)}")
+                    staleIds.add(SemanticMapper.getDocumentId(slot, typeName))
                 }
             }
             return staleIds

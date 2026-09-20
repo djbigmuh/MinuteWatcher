@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.Data
 import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
@@ -87,8 +88,15 @@ class InitialSetupWorkerBootTest {
     @Test
     fun `doWork waits for onBootAwaited to complete`() =
         runTest {
+            val inputData =
+                Data
+                    .Builder()
+                    .putBoolean(InitialSetupWorker.EXTRA_TRIGGERED_BY_BOOT, true)
+                    .build()
+
             val worker =
                 TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setInputData(inputData)
                     .setWorkerFactory(
                         object : WorkerFactory() {
                             override fun createWorker(

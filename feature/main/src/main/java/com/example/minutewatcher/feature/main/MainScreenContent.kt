@@ -20,8 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,26 +36,18 @@ fun MainScreenContent(
     var isRefreshing by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
-    // Task 13.2: Scroll to highlighted slot even if data is loaded later.
+    // Wait for the highlighted slot to appear in the loaded data (including gradual SIM discovery).
+    // Scroll once and finish the effect. Wait terminates automatically if highlightedSlot is reset.
     LaunchedEffect(highlightedSlot) {
         val slot = highlightedSlot ?: return@LaunchedEffect
 
-        // Wait for Success state with the requested slot
         snapshotFlow { uiState }
-            .filter { it is SimCardListState.Success }
-            .collectLatest { state ->
-                val success = state as SimCardListState.Success
-                val index = success.simCards.indexOfFirst { it.slot == slot }
-                if (index >= 0) {
-                    AppLogger.d("MainScreenContent: scrolling to highlighted slot $slot at index $index")
-                    listState.animateScrollToItem(index)
-                    // Once scrolled, we stop observing until highlightedSlot changes again.
-                    return@collectLatest
-                } else {
-                    AppLogger.w("MainScreenContent: slot $slot not found in Success list, stopping wait")
-                    // If slot not found in a successful list, we stop waiting.
-                    return@collectLatest
-                }
+            .filterIsInstance<SimCardListState.Success>()
+            .first { state -> state.simCards.any { it.slot == slot } }
+            .let { state ->
+                val index = state.simCards.indexOfFirst { it.slot == slot }
+                AppLogger.d("MainScreenContent: scrolling to highlighted slot $slot at index $index")
+                listState.animateScrollToItem(index)
             }
     }
 

@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import com.example.minutewatcher.core.android.util.SimCardMapper.negativeLogged
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MinutesModel

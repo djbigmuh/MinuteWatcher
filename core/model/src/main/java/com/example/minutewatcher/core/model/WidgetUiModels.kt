@@ -44,7 +44,6 @@ data class WidgetUiState(
  * @property minutesAbbr Minutes abbreviation (e.g., "min.").
  * @property limitText "Limit" text.
  * @property gbAbbr Gigabytes abbreviation ("GB").
- * @property fractionFormat Fraction format ("/%1$s").
  */
 @Immutable
 data class WidgetStrings(
@@ -52,7 +51,6 @@ data class WidgetStrings(
     val minutesAbbr: String,
     val limitText: String,
     val gbAbbr: String,
-    val fractionFormat: String,
 )
 
 /**

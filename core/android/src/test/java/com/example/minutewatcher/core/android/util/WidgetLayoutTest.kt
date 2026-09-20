@@ -291,6 +291,5 @@ class WidgetLayoutTest {
             minutesAbbr = "min.",
             limitText = "Limit",
             gbAbbr = "GB",
-            fractionFormat = "/%1\$s",
         )
 }

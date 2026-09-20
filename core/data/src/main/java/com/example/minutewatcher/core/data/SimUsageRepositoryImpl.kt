@@ -267,9 +267,13 @@ class SimUsageRepositoryImpl
         /**
          * Resets SIM usage if the billing period has passed.
          *
+         * If the last reset date is not recorded ([Constants.Data.EMPTY_TIMESTAMP]),
+         * the current billing window is opened at [nowMillis] without clearing usage.
+         * Subsequent checks will trigger reset only after the period boundary.
+         *
          * @param autoResetDay Day of month for reset.
          * @param nowMillis Current timestamp.
-         * @return True if reset was actually performed.
+         * @return True if reset was actually performed (statistics cleared).
          * Guaranteed to be atomic via [resetMutex].
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if write fails.
@@ -292,7 +296,11 @@ class SimUsageRepositoryImpl
                     val innerLastResetDate =
                         prefs[DataStoreKeys.lastResetDateKey(identity)]
                             ?: Constants.Data.EMPTY_TIMESTAMP
-                    if (innerLastResetDate < periodStart) {
+
+                    if (innerLastResetDate == Constants.Data.EMPTY_TIMESTAMP) {
+                        prefs[DataStoreKeys.lastResetDateKey(identity)] = nowMillis
+                        actuallyReset = false
+                    } else if (innerLastResetDate < periodStart) {
                         resetLogic.applyResetWithRollover(prefs, identity, nowMillis)
                         actuallyReset = true
                     }

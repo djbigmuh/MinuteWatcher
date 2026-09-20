@@ -37,7 +37,6 @@ class WidgetUiMapperTest {
             minutesAbbr = "min.",
             limitText = "Limit",
             gbAbbr = "GB",
-            fractionFormat = "/%1\$s",
         )
 
     @Test

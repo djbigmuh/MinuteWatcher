@@ -21,8 +21,8 @@ class CallEventWorker
     ) : CoroutineWorker(appContext, workerParams) {
         override suspend fun doWork(): Result {
             try {
-                val state = inputData.getString("state")
-                val subId = inputData.getInt("subId", -1)
+                val state = inputData.getString(EXTRA_STATE)
+                val subId = inputData.getInt(EXTRA_SUB_ID, -1)
                 val eventElapsedRealtime = inputData.getLong(EXTRA_EVENT_ELAPSED_REALTIME, -1L)
 
                 when (state) {
@@ -48,6 +48,8 @@ class CallEventWorker
         }
 
         companion object {
+            const val EXTRA_STATE = "state"
+            const val EXTRA_SUB_ID = "subId"
             const val EXTRA_EVENT_ELAPSED_REALTIME = "eventElapsedRealtime"
         }
     }

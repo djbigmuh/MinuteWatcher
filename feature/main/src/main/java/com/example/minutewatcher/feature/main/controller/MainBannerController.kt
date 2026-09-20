@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -165,7 +166,7 @@ class MainBannerController
         private data class BannerFlags(
             val retry: Int,
             val dismissed: Boolean,
-            val settings: com.example.minutewatcher.core.model.AppSettings,
+            val settings: AppSettings,
             val ephemeralActive: Boolean,
         )
 
@@ -176,7 +177,7 @@ class MainBannerController
             val notificationsGranted: Boolean,
             val retry: Int,
             val dismissed: Boolean,
-            val settings: com.example.minutewatcher.core.model.AppSettings,
+            val settings: AppSettings,
             val ephemeralActive: Boolean,
         )
 

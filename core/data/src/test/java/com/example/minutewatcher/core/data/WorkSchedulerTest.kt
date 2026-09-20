@@ -27,5 +27,6 @@ class WorkSchedulerTest {
         // But we can verify that the method exists and can be called.
         workScheduler.scheduleInitialSetup(force = false)
         workScheduler.scheduleInitialSetup(force = true)
+        workScheduler.scheduleInitialSetup(force = true, triggeredByBoot = true)
     }
 }

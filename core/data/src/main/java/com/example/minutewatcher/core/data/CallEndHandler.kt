@@ -253,33 +253,60 @@ internal class CallEndHandler
                 AppLogger.d("CallTracker: received IDLE for subId $subId but no session was active")
                 return true
             }
-            if (!validateCallDuration(subId, data, context)) {
-                return false
+
+            val validationResult = validateCallDuration(subId, data, context)
+            if (validationResult != CallEndResult.CONTINUE) {
+                return handleCallEndResult(subId, validationResult, context)
             }
+
             val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
             val durationSeconds =
                 ((data.currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
 
-            return if (processCallDurationLocked(
+            val durationResult =
+                processCallDurationLocked(
                     subId = subId,
                     durationSeconds = durationSeconds,
                     data = data,
                     notify = notify,
                     context = context,
                 )
-            ) {
-                sessionCleaner.cleanupCounters(subId, context)
-                true
-            } else {
-                false
-            }
+
+            return handleCallEndResult(subId, durationResult, context)
         }
 
+    private suspend fun handleCallEndResult(
+        subId: Int,
+        result: CallEndResult,
+        context: CallTrackingContext,
+    ): Boolean =
+        when (result) {
+            CallEndResult.CLEANUP_AND_REFRESH -> {
+                sessionCleaner.cleanupCounters(subId, context)
+                true
+            }
+
+            CallEndResult.CLEANUP_ONLY -> {
+                sessionCleaner.cleanupCounters(subId, context)
+                false
+            }
+
+            CallEndResult.REFRESH_ONLY -> true
+            else -> false
+        }
+
+    /**
+     * Validates the call duration and determines if cleanup or refresh is needed.
+     *
+     * @return [CallEndResult.CONTINUE] if validation passed.
+     *         [CallEndResult.CLEANUP_AND_REFRESH] if session was cleaned up (no bootTime) and refresh is needed.
+     *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up with error (duration exceeded).
+     */
         private suspend fun validateCallDuration(
             subId: Int,
             data: CallEndData,
             context: CallTrackingContext,
-        ): Boolean {
+    ): CallEndResult {
             val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
             return when {
                 (savedBootTime > data.currentBootTime) ||
@@ -290,48 +317,50 @@ internal class CallEndHandler
                     val message = "Call duration exceeded max limit for subId $subId"
                     AppLogger.w("CallTracker: $message, clearing session")
                     context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
-                    sessionCleaner.cleanupCounters(subId, context)
-                    false
+                    CallEndResult.CLEANUP_ONLY
                 }
 
                 savedBootTime == 0L -> {
                     AppLogger.w("CallTracker: bootTime not recorded for subId $subId, clearing session")
-                    sessionCleaner.cleanupCounters(subId, context)
-                    false
+                    CallEndResult.CLEANUP_AND_REFRESH
                 }
 
-                else -> true
+                else -> CallEndResult.CONTINUE
             }
         }
 
+    /**
+     * Processes the call duration and determines if cleanup or refresh is needed.
+     *
+     * @return [CallEndResult.CLEANUP_AND_REFRESH] if session must be cleared and status refreshed.
+     *         [CallEndResult.REFRESH_ONLY] if work is done (including cleanup) and status refresh is needed.
+     *         [CallEndResult.HANDLED_WITH_ERROR] if an error was set, no immediate refresh needed.
+     */
         private suspend fun processCallDurationLocked(
             subId: Int,
             durationSeconds: Int,
             data: CallEndData,
             notify: Boolean,
             context: CallTrackingContext,
-        ): Boolean =
+    ): CallEndResult =
             when {
                 durationSeconds < 0 -> {
                     AppLogger.w(
                         "CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring",
                     )
-                    sessionCleaner.cleanupCounters(subId, context)
-                    false
+                    CallEndResult.CLEANUP_AND_REFRESH
                 }
 
                 durationSeconds > (Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND) -> {
                     AppLogger.w(
                         "CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId",
                     )
-                    sessionCleaner.cleanupCounters(subId, context)
-                    false
+                    CallEndResult.CLEANUP_AND_REFRESH
                 }
 
                 data.savedUptimeResult.getOrElse { 0L }.let { (it > 0L) && (data.currentUptime < it) } -> {
                     AppLogger.w("CallTracker: negative uptime duration detected for subId $subId, ignoring")
-                    sessionCleaner.cleanupCounters(subId, context)
-                    false
+                    CallEndResult.CLEANUP_AND_REFRESH
                 }
 
                 else -> {
@@ -344,8 +373,7 @@ internal class CallEndHandler
 
                     if (durationSeconds == 0) {
                         AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
-                        sessionCleaner.cleanupCounters(subId, context)
-                        false
+                        CallEndResult.CLEANUP_AND_REFRESH
                     } else if (targetIdentity != null) {
                         val durationMinutes = calculateDurationMinutes(durationSeconds)
                         val callMarker = data.savedBootTimeResult.getOrElse { 0L }
@@ -356,12 +384,13 @@ internal class CallEndHandler
                             notify = notify,
                             callMarker = callMarker,
                         )
-                        true
+                        CallEndResult.CLEANUP_AND_REFRESH
                     } else {
-                        attributionResolver.handleAttributionFailure(subId, {
-                            context.updateStatus(it)
-                        }, { sessionCleaner.cleanupCounters(it, context) })
-                        false
+                        val cleared =
+                            attributionResolver.handleAttributionFailure(subId, {
+                                context.updateStatus(it)
+                            }, { sessionCleaner.cleanupCounters(it, context) })
+                        if (cleared) CallEndResult.REFRESH_ONLY else CallEndResult.HANDLED_WITH_ERROR
                     }
                 }
             }
@@ -380,6 +409,14 @@ internal class CallEndHandler
 
         private fun calculateDurationMinutes(seconds: Int): Int =
             ((seconds + Constants.Time.SECONDS_IN_MINUTE) - 1) / Constants.Time.SECONDS_IN_MINUTE
+
+    private enum class CallEndResult {
+        CONTINUE,
+        CLEANUP_AND_REFRESH,
+        CLEANUP_ONLY,
+        REFRESH_ONLY,
+        HANDLED_WITH_ERROR,
+    }
 
         internal data class CallEndData(
             val startTimeResult: Result<Long>,

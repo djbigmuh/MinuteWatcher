@@ -36,7 +36,7 @@ class SimNotificationFlagsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getNotifiedLowMinutes called with invalid identity: $identity")
                 return flowOf(value = false)
             }
@@ -53,7 +53,7 @@ class SimNotificationFlagsRepositoryImpl
             identity: String,
             notified: Boolean,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setNotifiedLowMinutes called with invalid identity: $identity")
                 return
             }
@@ -66,7 +66,7 @@ class SimNotificationFlagsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getNotifiedLowTraffic(identity: String): Flow<Boolean> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getNotifiedLowTraffic called with invalid identity: $identity")
                 return flowOf(value = false)
             }
@@ -83,7 +83,7 @@ class SimNotificationFlagsRepositoryImpl
             identity: String,
             notified: Boolean,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setNotifiedLowTraffic called with invalid identity: $identity")
                 return
             }
@@ -96,7 +96,7 @@ class SimNotificationFlagsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getNotifiedExhaustedMinutes(identity: String): Flow<Boolean> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getNotifiedExhaustedMinutes called with invalid identity: $identity")
                 return flowOf(value = false)
             }
@@ -113,7 +113,7 @@ class SimNotificationFlagsRepositoryImpl
             identity: String,
             notified: Boolean,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setNotifiedExhaustedMinutes called with invalid identity: $identity")
                 return
             }
@@ -126,7 +126,7 @@ class SimNotificationFlagsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getNotifiedExhaustedTraffic(identity: String): Flow<Boolean> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getNotifiedExhaustedTraffic called with invalid identity: $identity")
                 return flowOf(value = false)
             }
@@ -143,7 +143,7 @@ class SimNotificationFlagsRepositoryImpl
             identity: String,
             notified: Boolean,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setNotifiedExhaustedTraffic called with invalid identity: $identity")
                 return
             }

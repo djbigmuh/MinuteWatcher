@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.Data
 import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
@@ -23,6 +24,7 @@ import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -130,6 +132,43 @@ class InitialSetupWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(autoResetUseCase).performAutoReset(shouldNotify = false)
+        }
+
+    @Test
+    fun `performSetupSteps calls onBootAwaited when boot flag is true`() =
+        runTest {
+            val inputData =
+                Data
+                    .Builder()
+                    .putBoolean(InitialSetupWorker.EXTRA_TRIGGERED_BY_BOOT, true)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setInputData(inputData)
+                    .setWorkerFactory(
+                        object : androidx.work.WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: androidx.work.WorkerParameters,
+                            ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
+                        },
+                    ).build()
+
+            worker.doWork()
+
+            verify(callTracker).onBootAwaited()
+        }
+
+    @Test
+    fun `performSetupSteps skips onBootAwaited when boot flag is false`() =
+        runTest {
+            val worker = createWorker()
+
+            worker.doWork()
+
+            verify(callTracker, never()).onBootAwaited()
         }
 
     @Test
@@ -469,6 +508,24 @@ class InitialSetupWorkerTest {
             // Migration deferred because list is empty and legacy data exists
             verify(migrationFlagsRepository, never()).setMigrationV1Completed(completed = true)
             verify(migrationService, never()).markSchemaCurrent()
+        }
+
+    @Test
+    fun `doWork handles non-StateFlow observeActiveSims and completes`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
+
+            // Flow that is NOT a StateFlow and hangs
+            val nonStateFlow = flow {
+                emit(emptyList<ActiveSimInfo>())
+                kotlinx.coroutines.awaitCancellation()
+            }
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(nonStateFlow)
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
         }
 
     private open class FakeUsageUseCase : UsageUseCase {

@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.controller
 
+import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
@@ -30,8 +31,7 @@ class MainInitializationController
         private val dialogController: MainDialogController,
         private val autoResetScheduler: AutoResetScheduler,
         private val timeProvider: TimeProvider,
-        @com.example.minutewatcher.core.common.di.IoDispatcher
-        private val ioDispatcher: CoroutineDispatcher,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val _initializationState = MutableStateFlow<InitializationState>(InitializationState.NotStarted)
         val initializationState: StateFlow<InitializationState> = _initializationState.asStateFlow()

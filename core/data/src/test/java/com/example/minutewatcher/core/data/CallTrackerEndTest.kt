@@ -665,4 +665,80 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // Verify cleanup eventually succeeded
             verify(callSessionRepository, times(2)).clearCallSession(eq(subId))
         }
+
+    @Test
+    fun `onCallEnded with zero duration cleans up and refreshes status to Idle`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            // 1. Manually set status to Active to verify it changes to Idle after cleanup
+            callTracker.onCallStarted(1)
+            advanceUntilIdle()
+            assertEquals(TrackingStatus.Active, callTracker.status.value)
+
+            // 2. Mock zero duration (currentTime == savedBootTime)
+            val bootTime = timeProvider.elapsedRealtime()
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(timeProvider.now()))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            // 3. Act: End call
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            // 4. Assert: session cleared and status is Idle (refreshed)
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
+        }
+
+    @Test
+    fun `onCallEnded with missing bootTime cleans up and refreshes status to Idle`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            callTracker.onCallStarted(1)
+            advanceUntilIdle()
+            assertEquals(TrackingStatus.Active, callTracker.status.value)
+
+            // Mock missing bootTime (0L)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(timeProvider.now()))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
+        }
+
+    @Test
+    fun `onCallEnded with extremely long session sets Error and does NOT refresh to Idle`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            // Started 13 hours ago
+            val bootTime = timeProvider.elapsedRealtime() - (Constants.Calls.MAX_CALL_DURATION_MS + 1000L)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(timeProvider.now() - 1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
+
+            callTracker.onCallEnded(subId = 1)
+            advanceUntilIdle()
+
+            // Verify session cleared
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
+            // Status remains Error, NOT Idle
+            assertTrue(callTracker.status.value is TrackingStatus.Error)
+        }
 }

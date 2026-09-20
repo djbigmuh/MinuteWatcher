@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import android.content.Context
 import com.example.minutewatcher.core.android.util.SimCardMapper
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.semantic.SemanticCapabilities
 import com.example.minutewatcher.core.data.semantic.SemanticVersion
@@ -95,7 +96,7 @@ class UsageStateRepositoryImpl
     constructor(
         @param:ApplicationContext private val context: Context,
         private val deps: UsageRepositoryDependencies,
-        @com.example.minutewatcher.core.common.di.ApplicationScope private val scope: CoroutineScope,
+        @ApplicationScope private val scope: CoroutineScope,
     ) : UsageStateRepository,
         TrackingStatusProvider {
         override val key: TrackingKey = TrackingKey.USAGE_STATE

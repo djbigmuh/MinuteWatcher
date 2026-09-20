@@ -55,7 +55,7 @@ class SimLimitsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getTrafficLimit(identity: String): Flow<Int> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getTrafficLimit called with invalid identity: $identity")
                 return flowOf(0)
             }
@@ -77,7 +77,7 @@ class SimLimitsRepositoryImpl
             trafficLimitMb: Int,
             rolloverEnabled: Boolean,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("updateSimLimits called with invalid identity: $identity")
                 return
             }
@@ -98,7 +98,7 @@ class SimLimitsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getAutoReset(identity: String): Flow<Boolean> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getAutoReset called with invalid identity: $identity")
                 return flowOf(value = false)
             }
@@ -111,7 +111,7 @@ class SimLimitsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getAutoResetDay(identity: String): Flow<Int> {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("getAutoResetDay called with invalid identity: $identity")
                 return flowOf(1)
             }
@@ -131,7 +131,7 @@ class SimLimitsRepositoryImpl
             day: Int,
             enabled: Boolean,
         ) {
-            if (identity.startsWith(SimConstants.INVALID_SLOT_IDENTITY_PREFIX)) {
+            if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("setAutoReset called with invalid identity: $identity")
                 return
             }

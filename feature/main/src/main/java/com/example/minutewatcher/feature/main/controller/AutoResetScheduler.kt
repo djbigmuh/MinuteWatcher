@@ -4,9 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AutoResetUseCase
-import com.example.minutewatcher.feature.main.controller.AutoResetScheduler.Companion.KEY_LAST_AUTO_RESET_CHECK
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.inject.Inject
 
 /**
  * Планировщик автоматического сброса лимитов.
@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * не изменяет данные).
  */
 class AutoResetScheduler
-    @javax.inject.Inject
+@Inject
     constructor(
         private val savedStateHandle: SavedStateHandle,
         private val autoResetUseCase: AutoResetUseCase,

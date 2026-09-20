@@ -156,7 +156,7 @@ class BootReceiverTest {
 
             // Use real context but mock workScheduler to throw
             receiver.workScheduler = mock(WorkScheduler::class.java)
-            whenever(receiver.workScheduler.scheduleInitialSetup(anyBoolean()))
+            whenever(receiver.workScheduler.scheduleInitialSetup(anyBoolean(), anyBoolean()))
                 .thenThrow(RuntimeException("Intentional failure"))
 
             val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
