@@ -54,12 +54,12 @@ class TrackingRecoveryController
             trackingStatusRepository.recoverTracking(TrackingKey.TRAFFIC)
         }
 
-    /**
-     * Retries SIM discovery recovery.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    suspend fun retrySimDiscovery() {
-        trackingStatusRepository.recoverTracking(TrackingKey.SIM_DISCOVERY)
-    }
+        /**
+         * Retries SIM discovery recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        suspend fun retrySimDiscovery() {
+            trackingStatusRepository.recoverTracking(TrackingKey.SIM_DISCOVERY)
+        }
     }

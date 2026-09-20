@@ -85,7 +85,7 @@ internal class SimIdentityObserver
         private val recoveryJob = AtomicReference<Job?>(null)
 
         private val lastSeedRef = AtomicReference<SeedResult?>(null)
-    private val lastEphemeralSeed = AtomicReference<String?>(null)
+        private val lastEphemeralSeed = AtomicReference<String?>(null)
         private val migrationTriggered = AtomicBoolean(false)
 
         override suspend fun recover() {

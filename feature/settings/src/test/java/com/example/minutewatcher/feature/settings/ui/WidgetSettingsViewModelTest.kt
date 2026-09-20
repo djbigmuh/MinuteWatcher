@@ -5,16 +5,12 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.AppTheme
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -208,7 +204,11 @@ class WidgetSettingsViewModelTest {
         runTest {
             initViewModel()
             viewModel.updateSettings { it.copy(transparency = 80) }
-            assertEquals(80, viewModel.state.value.settings?.transparency)
+            assertEquals(
+                80,
+                viewModel.state.value.settings
+                    ?.transparency,
+            )
         }
 
     @Test
@@ -216,7 +216,11 @@ class WidgetSettingsViewModelTest {
         runTest {
             initViewModel()
             viewModel.updateSettings { it.copy(fontSize = 1) }
-            assertEquals(1, viewModel.state.value.settings?.fontSize)
+            assertEquals(
+                1,
+                viewModel.state.value.settings
+                    ?.fontSize,
+            )
         }
 
     @Test
@@ -224,7 +228,11 @@ class WidgetSettingsViewModelTest {
         runTest {
             initViewModel()
             viewModel.updateSettings { it.copy(layoutMode = 1) }
-            assertEquals(1, viewModel.state.value.settings?.layoutMode)
+            assertEquals(
+                1,
+                viewModel.state.value.settings
+                    ?.layoutMode,
+            )
         }
 
     @Test
@@ -232,7 +240,11 @@ class WidgetSettingsViewModelTest {
         runTest {
             initViewModel()
             viewModel.updateSettings { it.copy(simArrangement = 1) }
-            assertEquals(1, viewModel.state.value.settings?.simArrangement)
+            assertEquals(
+                1,
+                viewModel.state.value.settings
+                    ?.simArrangement,
+            )
         }
 
     @Test
@@ -240,7 +252,13 @@ class WidgetSettingsViewModelTest {
         runTest {
             initViewModel()
             viewModel.updateSimSettings(0) { it.copy(showSim = true) }
-            assertEquals(true, viewModel.state.value.settings?.simStates?.get(0)?.showSim)
+            assertEquals(
+                true,
+                viewModel.state.value.settings
+                    ?.simStates
+                    ?.get(0)
+                    ?.showSim,
+            )
         }
 
     @Test

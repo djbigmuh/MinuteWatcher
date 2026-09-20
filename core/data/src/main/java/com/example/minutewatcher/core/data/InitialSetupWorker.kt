@@ -195,21 +195,21 @@ class InitialSetupWorker
                 Result.retry()
             }
 
-    /**
-     * Fetches active SIM cards with a bounded wait for the first non-empty list.
-     *
-     * On a cold start, the discovery process may take some time. This method waits
-     * up to [Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS] for at least one SIM
-     * to be discovered. If the timeout expires, it returns the current (potentially empty)
-     * list, which is correct for devices without SIM cards.
-     *
-     * @return List of active SIM cards.
-     */
+        /**
+         * Fetches active SIM cards with a bounded wait for the first non-empty list.
+         *
+         * On a cold start, the discovery process may take some time. This method waits
+         * up to [Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS] for at least one SIM
+         * to be discovered. If the timeout expires, it returns the current (potentially empty)
+         * list, which is correct for devices without SIM cards.
+         *
+         * @return List of active SIM cards.
+         */
         private suspend fun getActiveSimsWithRetry(): List<ActiveSimInfo> {
-        val flow = deps.simIdentityRepository.observeActiveSims()
-        return withTimeoutOrNull(Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds) {
-            flow.first { it.isNotEmpty() }
-        } ?: (flow as? kotlinx.coroutines.flow.StateFlow<List<ActiveSimInfo>>)?.value ?: emptyList()
+            val flow = deps.simIdentityRepository.observeActiveSims()
+            return withTimeoutOrNull(Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds) {
+                flow.first { it.isNotEmpty() }
+            } ?: (flow as? kotlinx.coroutines.flow.StateFlow<List<ActiveSimInfo>>)?.value ?: emptyList()
         }
 
         private companion object {

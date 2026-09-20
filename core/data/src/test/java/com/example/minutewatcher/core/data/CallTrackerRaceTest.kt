@@ -165,7 +165,11 @@ class CallTrackerRaceTest {
             // as the mutex serializes access and only the first call
             // should write the session (others will see startTime != 0).
             verify(callSessionRepository, times(1)).saveCallSession(
-                eq(1), argThat { this > 0L }, any(), any(), anyOrNull()
+                eq(1),
+                argThat { this > 0L },
+                any(),
+                any(),
+                anyOrNull(),
             )
         }
 

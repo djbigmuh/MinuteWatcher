@@ -28,7 +28,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -123,7 +122,7 @@ class UpdateCoordinatorTest {
             assertEquals(
                 "Status should be Active after successful restart",
                 TrackingStatus.Active,
-                coordinator.status.value
+                coordinator.status.value,
             )
 
             supervisorJob.cancel()
@@ -161,7 +160,7 @@ class UpdateCoordinatorTest {
             val status = coordinator.status.value as TrackingStatus.Error
             assertTrue(
                 "Should contain 'Retrying in', got: ${status.message}",
-                status.message?.contains("Retrying in") == true
+                status.message?.contains("Retrying in") == true,
             )
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
 
@@ -199,7 +198,7 @@ class UpdateCoordinatorTest {
             val status = coordinator.status.value as TrackingStatus.Error
             assertTrue(
                 "Should contain 'permanently stopped', got: ${status.message}",
-                status.message?.contains("permanently stopped") == true
+                status.message?.contains("permanently stopped") == true,
             )
 
             verify(widgetUpdater, times(15)).updateAll()
@@ -336,7 +335,7 @@ class UpdateCoordinatorTest {
             assertEquals(
                 "Status should be Idle immediately after recover",
                 TrackingStatus.Idle,
-                coordinator.status.value
+                coordinator.status.value,
             )
 
             whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
@@ -349,61 +348,67 @@ class UpdateCoordinatorTest {
         }
     }
 
-    private fun createEmptySnapshot() = GlobalSnapshot(
-        version = SchemaVersion(1, 0, 0),
-        timestamp = 0L,
-        simSnapshots = emptyList(),
-        capabilities = emptyList()
-    )
+    private fun createEmptySnapshot() =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = 0L,
+            simSnapshots = emptyList(),
+            capabilities = emptyList(),
+        )
 
     private fun createSnapshot(
         timestamp: Long,
         content: String,
         suppressUpdate: Boolean = false,
-        isManual: Boolean = false
+        isManual: Boolean = false,
     ) = GlobalSnapshot(
         version = SchemaVersion(1, 0, content.hashCode()),
         timestamp = timestamp,
         isManualUpdate = isManual,
         suppressWidgetUpdate = suppressUpdate,
-        simSnapshots = listOf(
-            SimSnapshot(
-                slot = 0,
-                identity = "sim_0",
-                operatorName = "MTS",
-                autoResetDay = 1,
-                entities = mapOf(
-                    PackageType.MINUTES to SemanticEntity(
-                        id = content,
-                        simSlot = 0,
-                        operatorName = "MTS",
-                        packageType = PackageType.MINUTES,
-                        limit = 100L,
-                        used = 10L,
-                        remaining = 90L,
-                        unit = MeasurementUnit.MINUTES,
-                        periodStart = 0L,
-                        periodEnd = 0L,
-                        sourceType = DataSourceType.SYSTEM,
-                        lastUpdateTime = 0L
-                    )
-                )
-            )
-        ),
-        capabilities = emptyList()
+        simSnapshots =
+            listOf(
+                SimSnapshot(
+                    slot = 0,
+                    identity = "sim_0",
+                    operatorName = "MTS",
+                    autoResetDay = 1,
+                    entities =
+                        mapOf(
+                            PackageType.MINUTES to
+                                SemanticEntity(
+                                    id = content,
+                                    simSlot = 0,
+                                    operatorName = "MTS",
+                                    packageType = PackageType.MINUTES,
+                                    limit = 100L,
+                                    used = 10L,
+                                    remaining = 90L,
+                                    unit = MeasurementUnit.MINUTES,
+                                    periodStart = 0L,
+                                    periodEnd = 0L,
+                                    sourceType = DataSourceType.SYSTEM,
+                                    lastUpdateTime = 0L,
+                                ),
+                        ),
+                ),
+            ),
+        capabilities = emptyList(),
     )
 
     @Test
-    fun `test recover does not leak monitoring coroutines`() = runTest {
-        val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
-        whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
-        val coordinator = UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
-        coordinator.status
-        repeat(10) { backgroundScope.launch { coordinator.recover() } }
-        testScheduler.advanceUntilIdle()
-        snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "LeakTest"))
-        testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-        testScheduler.runCurrent()
-        verify(widgetUpdater, atLeastOnce()).updateAll()
-    }
+    fun `test recover does not leak monitoring coroutines`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            coordinator.status
+            repeat(10) { backgroundScope.launch { coordinator.recover() } }
+            testScheduler.advanceUntilIdle()
+            snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "LeakTest"))
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+            verify(widgetUpdater, atLeastOnce()).updateAll()
+        }
 }

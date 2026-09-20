@@ -202,7 +202,7 @@ class UsageCheckWorkerTest {
             autoReset = true,
             autoResetDay = 1,
             lastResetDate = 0L,
-            rolloverEnabled = false
+            rolloverEnabled = false,
         )
 
     private fun createUtcMillis(
@@ -352,8 +352,10 @@ class UsageCheckWorkerTest {
 
             worker.doWork()
 
-            val criticalLabel = ApplicationProvider.getApplicationContext<Context>()
-                .getString(R.string.usage_level_critical)
+            val criticalLabel =
+                ApplicationProvider
+                    .getApplicationContext<Context>()
+                    .getString(R.string.usage_level_critical)
             verify(notificationHelper).sendUsageNotification(
                 title = any(),
                 message = argThat { contains(criticalLabel) },
@@ -361,7 +363,6 @@ class UsageCheckWorkerTest {
                 type = eq(1),
             )
         }
-
 
     @Test
     fun `doWork skips notifications when settings load fails`() =

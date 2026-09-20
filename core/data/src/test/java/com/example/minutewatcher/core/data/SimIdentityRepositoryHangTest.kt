@@ -46,7 +46,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -118,17 +117,22 @@ class SimIdentityRepositoryHangTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
-            val hangingSeedRepo = object : SimIdentitySeedRepository {
-                override val seedFlow: Flow<String> = MutableSharedFlow()
-                override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-                override suspend fun setSeed(seed: String) = Unit
-                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
-                    delay(1000.seconds)
-                    return SeedResolutionResult.Ephemeral("ephemeral")
-                }
+            val hangingSeedRepo =
+                object : SimIdentitySeedRepository {
+                    override val seedFlow: Flow<String> = MutableSharedFlow()
+                    override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
-                override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
-            }
+                    override suspend fun setSeed(seed: String) = Unit
+
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
+                        delay(1000.seconds)
+                        return SeedResolutionResult.Ephemeral("ephemeral")
+                    }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
+                }
 
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(

@@ -26,8 +26,6 @@ android {
             isReturnDefaultValues = true
         }
     }
-
-
 }
 
 ksp {

@@ -239,10 +239,10 @@ class AppSettingsRepositoryImpl
                 .let { mapWidgetSettings(it) }
         }
 
-    private fun Preferences.mapSystemSettings(current: AppSettings): AppSettings =
-        current.copy(
-            migrationV1Completed = read(DataStoreKeys.MIGRATION_V1_COMPLETED, current.migrationV1Completed),
-            onboardingCompleted = read(DataStoreKeys.ONBOARDING_COMPLETED, current.onboardingCompleted),
+        private fun Preferences.mapSystemSettings(current: AppSettings): AppSettings =
+            current.copy(
+                migrationV1Completed = read(DataStoreKeys.MIGRATION_V1_COMPLETED, current.migrationV1Completed),
+                onboardingCompleted = read(DataStoreKeys.ONBOARDING_COMPLETED, current.onboardingCompleted),
                 notificationPermissionRequested =
                     read(DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED, current.notificationPermissionRequested),
                 wasPhonePermissionRequestedBefore =
@@ -250,32 +250,32 @@ class AppSettingsRepositoryImpl
                         DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE,
                         current.wasPhonePermissionRequestedBefore,
                     ),
-            benchmarkSimCount = read(DataStoreKeys.BENCHMARK_SIM_COUNT, current.benchmarkSimCount),
+                benchmarkSimCount = read(DataStoreKeys.BENCHMARK_SIM_COUNT, current.benchmarkSimCount),
             )
 
-    private fun Preferences.mapTrackingSettings(current: AppSettings): AppSettings =
-        current.copy(
-            notifyLowMinutes = read(DataStoreKeys.NOTIFY_LOW_MINUTES, current.notifyLowMinutes),
-            notifyLowTraffic = read(DataStoreKeys.NOTIFY_LOW_TRAFFIC, current.notifyLowTraffic),
+        private fun Preferences.mapTrackingSettings(current: AppSettings): AppSettings =
+            current.copy(
+                notifyLowMinutes = read(DataStoreKeys.NOTIFY_LOW_MINUTES, current.notifyLowMinutes),
+                notifyLowTraffic = read(DataStoreKeys.NOTIFY_LOW_TRAFFIC, current.notifyLowTraffic),
                 inaccurateCallAttributionsCount =
                     read(DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT, current.inaccurateCallAttributionsCount),
-            callTrackingEnabled = read(DataStoreKeys.CALL_TRACKING_ENABLED, current.callTrackingEnabled),
+                callTrackingEnabled = read(DataStoreKeys.CALL_TRACKING_ENABLED, current.callTrackingEnabled),
             )
 
-    private fun Preferences.mapWidgetSettings(current: AppSettings): AppSettings =
-        current.copy(
-            widgetLayoutMode = read(DataStoreKeys.WIDGET_LAYOUT_MODE, current.widgetLayoutMode),
-            widgetSimArrangement = read(DataStoreKeys.WIDGET_SIM_ARRANGEMENT, current.widgetSimArrangement),
-            widgetTransparency = read(DataStoreKeys.WIDGET_TRANSPARENCY, current.widgetTransparency),
-            widgetFontSize = read(DataStoreKeys.WIDGET_FONT_SIZE, current.widgetFontSize),
-            widgetBackgroundColor = read(DataStoreKeys.WIDGET_BACKGROUND_COLOR, current.widgetBackgroundColor),
-            widgetLimitExceeded = read(DataStoreKeys.WIDGET_LIMIT_EXCEEDED, current.widgetLimitExceeded),
+        private fun Preferences.mapWidgetSettings(current: AppSettings): AppSettings =
+            current.copy(
+                widgetLayoutMode = read(DataStoreKeys.WIDGET_LAYOUT_MODE, current.widgetLayoutMode),
+                widgetSimArrangement = read(DataStoreKeys.WIDGET_SIM_ARRANGEMENT, current.widgetSimArrangement),
+                widgetTransparency = read(DataStoreKeys.WIDGET_TRANSPARENCY, current.widgetTransparency),
+                widgetFontSize = read(DataStoreKeys.WIDGET_FONT_SIZE, current.widgetFontSize),
+                widgetBackgroundColor = read(DataStoreKeys.WIDGET_BACKGROUND_COLOR, current.widgetBackgroundColor),
+                widgetLimitExceeded = read(DataStoreKeys.WIDGET_LIMIT_EXCEEDED, current.widgetLimitExceeded),
             )
 
-    private fun <T> Preferences.read(
-        key: Preferences.Key<T>,
-        default: T,
-    ): T = this[key] ?: default
+        private fun <T> Preferences.read(
+            key: Preferences.Key<T>,
+            default: T,
+        ): T = this[key] ?: default
 
         companion object {
             private const val LOG_THRESHOLD = 5

@@ -353,18 +353,18 @@ class MainSimDataController
             }
         }
 
-    /**
-     * Повторяет попытку разрешения seed и обнаружения SIM.
-     *
-     * Retries SIM discovery recovery.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    fun retrySimDiscovery() {
-        scope.launch {
-            trackingRecoveryController.retrySimDiscovery()
+        /**
+         * Повторяет попытку разрешения seed и обнаружения SIM.
+         *
+         * Retries SIM discovery recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        fun retrySimDiscovery() {
+            scope.launch {
+                trackingRecoveryController.retrySimDiscovery()
+            }
         }
-    }
 
         private suspend fun performBlockWithRetry(
             slot: Int,

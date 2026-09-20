@@ -320,9 +320,10 @@ class SettingsRepositoryImplTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
             val settingsList = mutableListOf<AppSettings>()
 
-            val job = launch {
-                repository.getAppSettings().toList(settingsList)
-            }
+            val job =
+                launch {
+                    repository.getAppSettings().toList(settingsList)
+                }
             advanceUntilIdle()
 
             // Initial state AppSettings() is filtered by isLoaded=false
@@ -340,9 +341,10 @@ class SettingsRepositoryImplTest {
             val settingsList = mutableListOf<AppSettings>()
 
             // 1. Start collecting
-            val job = launch {
-                repository.getAppSettings().toList(settingsList)
-            }
+            val job =
+                launch {
+                    repository.getAppSettings().toList(settingsList)
+                }
             advanceUntilIdle()
 
             // At this point, it might have emitted the first DataStore value (empty prefs)

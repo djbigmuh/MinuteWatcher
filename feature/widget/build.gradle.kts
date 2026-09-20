@@ -30,8 +30,6 @@ android {
             isReturnDefaultValues = true
         }
     }
-
-
 }
 
 dependencies {

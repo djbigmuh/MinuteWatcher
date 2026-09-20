@@ -5,32 +5,22 @@ import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.SimIdentity
-import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -39,7 +29,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -49,9 +38,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.io.IOException
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -143,8 +129,6 @@ class SimIdentityObserverTest {
             job.cancel()
         }
 
-
-
     @Test
     fun `seedFlow automatically recovers from Fallback to Real after cooldown`() =
         runTest(UnconfinedTestDispatcher()) {
@@ -152,19 +136,29 @@ class SimIdentityObserverTest {
             whenever(seedRepository.seedFlow).thenReturn(seedFlowSource)
 
             var persistentAvailable = false
-            val fakeRepo = object : SimIdentitySeedRepository by seedRepository {
-                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
-                    if (persistentAvailable) return SeedResolutionResult.Persistent("real")
-                    throw IOException()
+            val fakeRepo =
+                object : SimIdentitySeedRepository by seedRepository {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
+                        if (persistentAvailable) return SeedResolutionResult.Persistent("real")
+                        throw IOException()
+                    }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = "ephemeral"
                 }
 
-                override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = "ephemeral"
-            }
-
-            val observer = SimIdentityObserver(
-                discovery, fakeRepo, appSettingsRepository, mockSimProvider,
-                fetcher, migrationService, backgroundScope, cache
-            )
+            val observer =
+                SimIdentityObserver(
+                    discovery,
+                    fakeRepo,
+                    appSettingsRepository,
+                    mockSimProvider,
+                    fetcher,
+                    migrationService,
+                    backgroundScope,
+                    cache,
+                )
             val emissions = mutableListOf<SeedResult>()
             val job = launch { observer.seedFlow.collect { emissions.add(it) } }
 
@@ -185,31 +179,49 @@ class SimIdentityObserverTest {
             val seedFlowSource = MutableStateFlow("")
             whenever(seedRepository.seedFlow).thenReturn(seedFlowSource)
 
-            val fakeRepo = object : SimIdentitySeedRepository by seedRepository {
-                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
-                    if (seedFlowSource.value.isEmpty()) return SeedResolutionResult.Ephemeral("ephemeral")
-                    return SeedResolutionResult.Persistent(seedFlowSource.value)
+            val fakeRepo =
+                object : SimIdentitySeedRepository by seedRepository {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
+                        if (seedFlowSource.value.isEmpty()) return SeedResolutionResult.Ephemeral("ephemeral")
+                        return SeedResolutionResult.Persistent(seedFlowSource.value)
+                    }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = "ephemeral"
                 }
 
-                override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = "ephemeral"
-            }
-
-            val observer = SimIdentityObserver(
-                discovery, fakeRepo, appSettingsRepository, mockSimProvider,
-                fetcher, migrationService, backgroundScope, cache
-            )
+            val observer =
+                SimIdentityObserver(
+                    discovery,
+                    fakeRepo,
+                    appSettingsRepository,
+                    mockSimProvider,
+                    fetcher,
+                    migrationService,
+                    backgroundScope,
+                    cache,
+                )
             val job = launch { observer.activeSimsCache.collect {} }
 
             // 1. Ensure Fallback
             testScheduler.advanceTimeBy(15.seconds)
             assertTrue(observer.seedFlow.first() is SeedResult.Fallback)
 
-            val sims = listOf(
-                ActiveSimInfo(
-                    SimIdentity("id", 1, 0, IdentitySource.ICCID, isStable = true),
-                    0, 1, "icc", "SIM", "Carrier", "12345", true, true
+            val sims =
+                listOf(
+                    ActiveSimInfo(
+                        SimIdentity("id", 1, 0, IdentitySource.ICCID, isStable = true),
+                        0,
+                        1,
+                        "icc",
+                        "SIM",
+                        "Carrier",
+                        "12345",
+                        true,
+                        true,
+                    ),
                 )
-            )
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(SimDiscoveryResult.Available(sims))
 
             // 2. Mock migration FAILURE
@@ -244,26 +256,36 @@ class SimIdentityObserverTest {
             whenever(seedRepository.seedFlow).thenReturn(seedFlowSource)
 
             var fail = true
-            val fakeRepo = object : SimIdentitySeedRepository by seedRepository {
-                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
-                    if (fail) throw IOException()
-                    return SeedResolutionResult.Persistent("real")
+            val fakeRepo =
+                object : SimIdentitySeedRepository by seedRepository {
+                    override suspend fun getOrCreateSeedOrEphemeralFallback(
+                        generator: () -> String,
+                    ): SeedResolutionResult {
+                        if (fail) throw IOException()
+                        return SeedResolutionResult.Persistent("real")
+                    }
+
+                    override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = "ephemeral"
                 }
 
-                override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = "ephemeral"
-            }
-
-            val observer = SimIdentityObserver(
-                discovery, fakeRepo, appSettingsRepository, mockSimProvider,
-                fetcher, migrationService, backgroundScope, cache
-            )
+            val observer =
+                SimIdentityObserver(
+                    discovery,
+                    fakeRepo,
+                    appSettingsRepository,
+                    mockSimProvider,
+                    fetcher,
+                    migrationService,
+                    backgroundScope,
+                    cache,
+                )
             val emissions = mutableListOf<SeedResult>()
             val job = launch { observer.seedFlow.collect { emissions.add(it) } }
 
             testScheduler.advanceTimeBy(15.seconds)
             assertTrue(
                 "Initially should be Fallback, was ${emissions.lastOrNull()}",
-                emissions.last() is SeedResult.Fallback
+                emissions.last() is SeedResult.Fallback,
             )
 
             fail = false
@@ -274,7 +296,7 @@ class SimIdentityObserverTest {
 
             assertTrue(
                 "Last emission should be Real after recover, was ${emissions.last()}",
-                emissions.last() is SeedResult.Real
+                emissions.last() is SeedResult.Real,
             )
             job.cancel()
         }
@@ -285,10 +307,11 @@ class SimIdentityObserverTest {
         return field.get(observer) as MutableSharedFlow<Unit>
     }
 
-    private fun createEmptySnapshot() = GlobalSnapshot(
-        version = SchemaVersion(1, 0, 0),
-        timestamp = 0L,
-        simSnapshots = emptyList(),
-        capabilities = emptyList()
-    )
+    private fun createEmptySnapshot() =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = 0L,
+            simSnapshots = emptyList(),
+            capabilities = emptyList(),
+        )
 }

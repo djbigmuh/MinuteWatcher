@@ -55,8 +55,6 @@ android {
             isReturnDefaultValues = true
         }
     }
-
-
 }
 
 dependencies {

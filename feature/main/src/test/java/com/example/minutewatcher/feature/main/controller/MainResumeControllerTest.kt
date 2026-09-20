@@ -205,7 +205,7 @@ class MainResumeControllerTest {
             assertEquals(
                 "Should update last resume timestamp to current now",
                 now,
-                savedStateHandle.get<Long>("last_resume_timestamp")
+                savedStateHandle.get<Long>("last_resume_timestamp"),
             )
         }
 
@@ -235,7 +235,7 @@ class MainResumeControllerTest {
             assertEquals(
                 "Should not update timestamp if debounced",
                 last,
-                savedStateHandle.get<Long>("last_resume_timestamp")
+                savedStateHandle.get<Long>("last_resume_timestamp"),
             )
         }
 

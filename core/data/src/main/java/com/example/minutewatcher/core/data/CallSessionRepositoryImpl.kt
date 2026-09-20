@@ -56,44 +56,44 @@ class CallSessionRepositoryImpl
             dataStore.edit { it[DataStoreKeys.LAST_DATA_SUB_ID] = subId }
         }
 
-    /**
-     * Atomically saves all call session data for the given subId.
-     *
-     * @throws IOException если DataStore не может выполнить запись.
-     */
-    override suspend fun saveCallSession(
-        subId: Int,
-        startTime: Long,
-        bootTime: Long,
-        uptime: Long,
-        identity: String?,
-    ) {
-        dataStore.edit { prefs ->
-            prefs[DataStoreKeys.callStartTimeKey(subId)] = startTime
-            prefs[DataStoreKeys.bootTimeKey(subId)] = bootTime
-            prefs[DataStoreKeys.uptimeKey(subId)] = uptime
-            val identityKey = DataStoreKeys.callIdentityKey(subId)
-            if (identity == null) {
-                prefs.remove(identityKey)
-            } else {
-                prefs[identityKey] = identity
+        /**
+         * Atomically saves all call session data for the given subId.
+         *
+         * @throws IOException если DataStore не может выполнить запись.
+         */
+        override suspend fun saveCallSession(
+            subId: Int,
+            startTime: Long,
+            bootTime: Long,
+            uptime: Long,
+            identity: String?,
+        ) {
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.callStartTimeKey(subId)] = startTime
+                prefs[DataStoreKeys.bootTimeKey(subId)] = bootTime
+                prefs[DataStoreKeys.uptimeKey(subId)] = uptime
+                val identityKey = DataStoreKeys.callIdentityKey(subId)
+                if (identity == null) {
+                    prefs.remove(identityKey)
+                } else {
+                    prefs[identityKey] = identity
+                }
             }
         }
-    }
 
-    /**
-     * Atomically clears all call session keys for the given subId.
-     *
-     * @throws IOException если DataStore не может выполнить запись.
-     */
-    override suspend fun clearCallSession(subId: Int) {
-        dataStore.edit { prefs ->
-            prefs.remove(DataStoreKeys.callStartTimeKey(subId))
-            prefs.remove(DataStoreKeys.bootTimeKey(subId))
-            prefs.remove(DataStoreKeys.uptimeKey(subId))
-            prefs.remove(DataStoreKeys.callIdentityKey(subId))
+        /**
+         * Atomically clears all call session keys for the given subId.
+         *
+         * @throws IOException если DataStore не может выполнить запись.
+         */
+        override suspend fun clearCallSession(subId: Int) {
+            dataStore.edit { prefs ->
+                prefs.remove(DataStoreKeys.callStartTimeKey(subId))
+                prefs.remove(DataStoreKeys.bootTimeKey(subId))
+                prefs.remove(DataStoreKeys.uptimeKey(subId))
+                prefs.remove(DataStoreKeys.callIdentityKey(subId))
+            }
         }
-    }
 
         /**
          * Returns the call start time for the given subId.

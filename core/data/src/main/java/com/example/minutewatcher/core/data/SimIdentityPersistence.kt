@@ -108,8 +108,8 @@ class SimIdentityPersistence
             }
         }
 
-    private suspend fun fetchCurrentPrefs(): Preferences =
-        dataStore.data.firstWithTimeout() ?: throw IOException("DataStore read timeout")
+        private suspend fun fetchCurrentPrefs(): Preferences =
+            dataStore.data.firstWithTimeout() ?: throw IOException("DataStore read timeout")
 
         private fun isIdentityUpdateRequired(
             identity: SimIdentity,

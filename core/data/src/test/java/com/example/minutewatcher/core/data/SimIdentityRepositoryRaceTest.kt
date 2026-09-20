@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
@@ -147,7 +146,7 @@ class SimIdentityRepositoryRaceTest {
             assertTrue("Should have emitted Real seed", emissions.isNotEmpty())
             assertTrue(
                 "All emissions must be Real, found: $emissions",
-                emissions.all { it.toString().contains("real_seed") }
+                emissions.all { it.toString().contains("real_seed") },
             )
 
             // 2. Wait past total timeout to ensure no Fallback is emitted late

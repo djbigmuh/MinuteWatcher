@@ -73,7 +73,11 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             // Assert: verify clearSession was called (which sets 0) before starting new
             verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
             verify(callSessionRepository, atLeastOnce()).saveCallSession(
-                eq(1), argThat { this > 0L }, any(), any(), anyOrNull()
+                eq(1),
+                argThat { this > 0L },
+                any(),
+                any(),
+                anyOrNull(),
             )
         }
 
@@ -99,7 +103,11 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
 
             // Assert: verify that even with clearSession failure, new session was still saved
             verify(callSessionRepository, atLeastOnce()).saveCallSession(
-                eq(1), argThat { this > 0L }, any(), any(), anyOrNull()
+                eq(1),
+                argThat { this > 0L },
+                any(),
+                any(),
+                anyOrNull(),
             )
         }
 
@@ -265,7 +273,11 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
 
             // Verify session was NOT started (only cleanup called)
             verify(callSessionRepository, never()).saveCallSession(
-                eq(1), argThat { this > 0L }, any(), any(), anyOrNull()
+                eq(1),
+                argThat { this > 0L },
+                any(),
+                any(),
+                anyOrNull(),
             )
             verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
         }

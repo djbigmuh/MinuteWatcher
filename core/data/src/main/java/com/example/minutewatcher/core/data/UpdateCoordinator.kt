@@ -61,12 +61,14 @@ class UpdateCoordinator
         private val statusMachine = TrackingStatusMachine()
         override val status: StateFlow<TrackingStatus> = statusMachine.status
 
-    /**
-     * Private exception type used to fail the observation loop on terminal errors.
-     * This type does NOT extend [CancellationException], so it will fail the [Job]
-     * and trigger the monitoring restart mechanism.
-     */
-    private class TerminalUpdateException(message: String) : RuntimeException(message)
+        /**
+         * Private exception type used to fail the observation loop on terminal errors.
+         * This type does NOT extend [CancellationException], so it will fail the [Job]
+         * and trigger the monitoring restart mechanism.
+         */
+        private class TerminalUpdateException(
+            message: String,
+        ) : RuntimeException(message)
 
         /**
          * Updates the coordinator status using canonical prioritized rules.
@@ -285,7 +287,7 @@ class UpdateCoordinator
             return firstSnapshot
         }
 
-    @Suppress("SwallowedException", "ThrowsCount")
+        @Suppress("SwallowedException", "ThrowsCount")
         private suspend fun processSnapshotSafe(
             snapshot: GlobalSnapshot,
             observationJob: Job,

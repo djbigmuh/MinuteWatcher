@@ -416,16 +416,24 @@ class InitialSetupWorkerTest {
             whenever(migrationService.hasLegacyData(any())).thenReturn(true)
 
             val identity = SimIdentity("icc_slow", 1, 0, IdentitySource.ICCID, isStable = true)
-            val activeSim = ActiveSimInfo(
-                identity, 0, 1, "slow", "MTS", "MTS", "25001",
-                isDefaultData = true, isDefaultVoice = true
-            )
+            val activeSim =
+                ActiveSimInfo(
+                    identity,
+                    0,
+                    1,
+                    "slow",
+                    "MTS",
+                    "MTS",
+                    "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
 
             val slowFlow = MutableStateFlow<List<ActiveSimInfo>>(emptyList())
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(slowFlow)
 
             whenever(migrationService.migrateLegacyData(any())).thenReturn(
-                IdentityMigrationService.MigrationOutcome(migrated = 1)
+                IdentityMigrationService.MigrationOutcome(migrated = 1),
             )
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)

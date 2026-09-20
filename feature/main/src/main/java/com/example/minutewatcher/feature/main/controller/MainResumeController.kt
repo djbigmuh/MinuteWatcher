@@ -27,15 +27,15 @@ class MainResumeController
     ) {
         private var resumeRefreshJob: Job? = null
 
-    /**
-     * Handles activity resume logic, including debounce and stale data checks.
-     *
-     * **Debounce logic:** Prevents rapid re-runs within RESUME_DEBOUNCE_MS.
-     * If monotonic clocks were reset (detected via negative time difference after reboot),
-     * the debounce is considered expired and execution continues immediately.
-     *
-     * **Thread Safety:** Safe to call from any thread; internal logic runs in the provided scope.
-     */
+        /**
+         * Handles activity resume logic, including debounce and stale data checks.
+         *
+         * **Debounce logic:** Prevents rapid re-runs within RESUME_DEBOUNCE_MS.
+         * If monotonic clocks were reset (detected via negative time difference after reboot),
+         * the debounce is considered expired and execution continues immediately.
+         *
+         * **Thread Safety:** Safe to call from any thread; internal logic runs in the provided scope.
+         */
         fun onActivityResume(
             scope: CoroutineScope,
             initController: MainInitializationController,
@@ -45,10 +45,10 @@ class MainResumeController
             val now = timeProvider.elapsedRealtime()
             val last = savedStateHandle.get<Long>(KEY_LAST_RESUME_TIMESTAMP) ?: -1L
 
-        val timeDiff = now - last
-        val isDebounced = (last != -1L) && (timeDiff >= 0) && (timeDiff < RESUME_DEBOUNCE_MS)
+            val timeDiff = now - last
+            val isDebounced = (last != -1L) && (timeDiff >= 0) && (timeDiff < RESUME_DEBOUNCE_MS)
 
-        if (isDebounced) {
+            if (isDebounced) {
                 return
             }
             savedStateHandle[KEY_LAST_RESUME_TIMESTAMP] = now

@@ -19,8 +19,8 @@ import javax.inject.Singleton
 class AppSearchErrorHandler
     @Inject
     constructor() {
-    private val _consecutiveIndexFailures = AtomicInteger(0)
-    val consecutiveIndexFailures: Int get() = _consecutiveIndexFailures.get()
+        private val _consecutiveIndexFailures = AtomicInteger(0)
+        val consecutiveIndexFailures: Int get() = _consecutiveIndexFailures.get()
 
         fun resetFailures() {
             _consecutiveIndexFailures.set(0)
@@ -95,12 +95,13 @@ class AppSearchErrorHandler
                 currentStatus is TrackingStatus.Error &&
                     currentStatus.type == TrackingStatus.ErrorType.DATABASE_ERROR
 
-            val failures = if (isSameErrorType) {
-                _consecutiveIndexFailures.incrementAndGet()
-            } else {
-                _consecutiveIndexFailures.set(1)
-                1
-            }
+            val failures =
+                if (isSameErrorType) {
+                    _consecutiveIndexFailures.incrementAndGet()
+                } else {
+                    _consecutiveIndexFailures.set(1)
+                    1
+                }
 
             val baseMessage = errorOverride ?: "Indexing failed"
             val failureMessage = "Indexing failed after $MAX_CONSECUTIVE_INDEX_FAILURES consecutive errors"

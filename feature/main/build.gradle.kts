@@ -31,8 +31,6 @@ android {
             isReturnDefaultValues = true
         }
     }
-
-
 }
 
 dependencies {

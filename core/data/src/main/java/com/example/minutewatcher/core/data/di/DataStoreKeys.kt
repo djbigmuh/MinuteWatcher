@@ -110,8 +110,7 @@ internal object DataStoreKeys {
     @JvmStatic fun minutesUsedKey(identity: String) = intPreferencesKey("minutes_used_$identity")
 
     @JvmStatic
-    fun lastCountedCallMarkerKey(identity: String) =
-        longPreferencesKey("last_counted_call_marker_$identity")
+    fun lastCountedCallMarkerKey(identity: String) = longPreferencesKey("last_counted_call_marker_$identity")
 
     @JvmStatic fun manualAdjustmentKey(identity: String) = intPreferencesKey("manual_adjustment_$identity")
 
