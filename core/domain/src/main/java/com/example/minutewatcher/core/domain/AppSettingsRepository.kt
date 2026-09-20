@@ -16,13 +16,13 @@ import kotlin.coroutines.cancellation.CancellationException
 interface AppSettingsRepository {
     /**
      * Returns a flow of application settings.
+     *
+     * The flow does not emit any values until the settings are successfully loaded
+     * from persistent storage for the first time.
+     * Consumers performing one-time reads (e.g., using `first()`) should use timeouts
+     * and handle potential lack of emission.
      */
     fun getAppSettings(): Flow<AppSettings>
-
-    /**
-     * Returns the current application settings once.
-     */
-    suspend fun getAppSettingsOnce(): AppSettings = getAppSettings().first()
 
     /**
      * Observes application settings as a StateFlow.

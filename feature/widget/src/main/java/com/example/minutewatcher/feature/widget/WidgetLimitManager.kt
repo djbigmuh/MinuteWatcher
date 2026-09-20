@@ -74,8 +74,6 @@ open class WidgetLimitManager
         open suspend fun setWidgetLimitExceeded(value: Boolean) {
             cachedLimitExceeded = value
             try {
-                val current = appSettingsRepository.observeAppSettings().value
-                if (current.widgetLimitExceeded == value) return
                 appSettingsRepository.updateAppSettings {
                     it.copy(widgetLimitExceeded = value)
                 }

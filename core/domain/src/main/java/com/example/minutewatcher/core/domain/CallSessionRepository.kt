@@ -24,19 +24,34 @@ interface CallSessionRepository {
     suspend fun setLastDataSubId(subId: Int)
 
     /**
-     * Returns a flow of the call start time for the given subscription.
+     * Atomically saves all call session data for the given subscription.
+     *
+     * @param subId Subscription ID.
+     * @param startTime Local start time of the call.
+     * @param bootTime Device elapsedRealtime when the call started.
+     * @param uptime Device uptime when the call started.
+     * @param identity Stable SIM identity. If null, the identity key is removed.
+     * @throws IOException if storage access fails.
      */
-    fun getCallStartTime(subId: Int): Flow<Long>
+    suspend fun saveCallSession(
+        subId: Int,
+        startTime: Long,
+        bootTime: Long,
+        uptime: Long,
+        identity: String?,
+    )
 
     /**
-     * Sets the call start time for the given subscription.
+     * Atomically clears all call session keys for the given subscription.
      *
      * @throws IOException if storage access fails.
      */
-    suspend fun setCallStartTime(
-        subId: Int,
-        time: Long,
-    )
+    suspend fun clearCallSession(subId: Int)
+
+    /**
+     * Returns a flow of the call start time for the given subscription.
+     */
+    fun getCallStartTime(subId: Int): Flow<Long>
 
     /**
      * Returns a flow of the boot time for the given subscription.
@@ -44,44 +59,14 @@ interface CallSessionRepository {
     fun getBootTime(subId: Int): Flow<Long>
 
     /**
-     * Sets the boot time for the given subscription.
-     *
-     * @throws IOException if storage access fails.
-     */
-    suspend fun setBootTime(
-        subId: Int,
-        time: Long,
-    )
-
-    /**
      * Returns a flow of the uptime for the given subscription.
      */
     fun getUptime(subId: Int): Flow<Long>
 
     /**
-     * Sets the uptime for the given subscription.
-     *
-     * @throws IOException if storage access fails.
-     */
-    suspend fun setUptime(
-        subId: Int,
-        time: Long,
-    )
-
-    /**
      * Returns a flow of the call identity for the given subscription.
      */
     fun getCallIdentity(subId: Int): Flow<String?>
-
-    /**
-     * Sets the call identity for the given subscription.
-     *
-     * @throws IOException if storage access fails.
-     */
-    suspend fun setCallIdentity(
-        subId: Int,
-        identity: String?,
-    )
 
     /**
      * Clears all call session data.

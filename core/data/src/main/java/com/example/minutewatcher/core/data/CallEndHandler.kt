@@ -348,7 +348,14 @@ internal class CallEndHandler
                         false
                     } else if (targetIdentity != null) {
                         val durationMinutes = calculateDurationMinutes(durationSeconds)
-                        settingsHandler.writeCallDuration(targetIdentity, durationMinutes, isFallbackUsed, notify)
+                        val callMarker = data.savedBootTimeResult.getOrElse { 0L }
+                        settingsHandler.writeCallDuration(
+                            identity = targetIdentity,
+                            durationMinutes = durationMinutes,
+                            isFallbackUsed = isFallbackUsed,
+                            notify = notify,
+                            callMarker = callMarker,
+                        )
                         true
                     } else {
                         attributionResolver.handleAttributionFailure(subId, {

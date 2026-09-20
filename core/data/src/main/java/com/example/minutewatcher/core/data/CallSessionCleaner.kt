@@ -19,10 +19,7 @@ internal class CallSessionCleaner
             context: CallTrackingContext,
         ) {
             try {
-                callSessionRepository.setCallStartTime(subId, 0L)
-                callSessionRepository.setCallIdentity(subId, null)
-                callSessionRepository.setBootTime(subId, 0L)
-                callSessionRepository.setUptime(subId, 0L)
+                callSessionRepository.clearCallSession(subId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

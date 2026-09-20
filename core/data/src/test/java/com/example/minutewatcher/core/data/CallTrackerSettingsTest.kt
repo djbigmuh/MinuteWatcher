@@ -13,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
@@ -44,7 +45,7 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
                 "Expected timeout message, but was: ${(status as TrackingStatus.Error).message}",
                 status.message?.contains("Timeout") == true,
             )
-            verify(callSessionRepository, never()).setCallStartTime(eq(1), any())
+            verify(callSessionRepository, never()).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
         }
 
     @Test
@@ -74,7 +75,7 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
 
             assertEquals(3, attempts)
             // Verify it continued to handleCallStarted
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), any())
+            verify(callSessionRepository, atLeastOnce()).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
         }
 
     @Test

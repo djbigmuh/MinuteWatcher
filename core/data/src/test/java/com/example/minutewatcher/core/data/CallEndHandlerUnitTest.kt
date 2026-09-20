@@ -64,7 +64,7 @@ class CallEndHandlerUnitTest {
             handler.endCall(1, eventElapsedRealtime = -1L, notify = true, context = context)
 
             // Assert
-            verify(settingsHandler).writeCallDuration(eq("id_1"), eq(1), eq(false), eq(true))
+            verify(settingsHandler).writeCallDuration(eq("id_1"), eq(1), eq(false), eq(true), eq(5000L))
             verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
         }
 }

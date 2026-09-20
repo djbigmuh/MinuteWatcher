@@ -87,13 +87,13 @@ class WidgetLimitManagerTest {
         }
 
     @Test
-    fun `setWidgetLimitExceeded does not update repository when value is same`() =
+    fun `setWidgetLimitExceeded updates repository even when value is same`() =
         runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = true)
 
             manager.setWidgetLimitExceeded(value = true)
 
-            verify(appSettingsRepository, never()).updateAppSettings(any())
+            verify(appSettingsRepository).updateAppSettings(any())
         }
 
     @Test

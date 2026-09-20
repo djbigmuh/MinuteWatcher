@@ -108,9 +108,10 @@ class MainViewModel
                     )
                 }.collect { data ->
                     val onboardingCompleted = data.settings.onboardingCompleted
+                    val isSettingsLoaded = data.settings.isLoaded
 
                     // Logic for showing Onboarding Dialog
-                    if (!onboardingCompleted && !data.onboardingDialogShowing && !data.usageAccess) {
+                    if (isSettingsLoaded && !onboardingCompleted && !data.onboardingDialogShowing && !data.usageAccess) {
                         AppLogger.d("MainViewModel: Triggering onboarding dialog")
                         dialogController.setShowOnboardingDialog(true)
                     }
@@ -160,17 +161,13 @@ class MainViewModel
 
         fun retryTraffic() = controllers.simData.retryTraffic()
 
+    fun retrySimDiscovery() = controllers.simData.retrySimDiscovery()
+
         fun dismissWidgetError() = controllers.settings.dismissWidgetError()
 
         fun dismissInaccurateCalls() = controllers.settings.dismissInaccurateCalls()
 
         fun dismissOperationError() = controllers.simData.dismissOperationError()
-
-        fun retryBanners() {
-            viewModelScope.launch {
-                controllers.banner.recover()
-            }
-        }
 
         fun retryWidgetObservation() {
             viewModelScope.launch {

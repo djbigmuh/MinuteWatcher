@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -302,7 +303,8 @@ class SimIdentityRepositoryImplPersistenceTest {
             secondSaveStarted.await()
 
             // Advance time to let second save finish
-            advanceUntilIdle()
+            runCurrent()
+            secondSaveJob.join()
 
             // Verify second save finished while first was still "migrating"
             val prefs = realDataStore.data.first()
@@ -311,7 +313,6 @@ class SimIdentityRepositoryImplPersistenceTest {
             // Cleanup
             canFinishMigration.complete(Unit)
             saveJob.join()
-            secondSaveJob.join()
         }
 
     @Test

@@ -124,10 +124,6 @@ class InitialSetupWorkerBootTest {
             bootCompleted.set(true)
         }
 
-        override fun onBoot() {
-            // no-op
-        }
-
         override fun ensureStarted() {
             // no-op
         }

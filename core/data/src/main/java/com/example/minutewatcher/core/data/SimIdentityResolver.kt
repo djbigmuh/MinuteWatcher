@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.InvalidSlotException
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
@@ -28,6 +29,14 @@ internal class SimIdentityResolver
         private val persistence: SimIdentityPersistence,
         private val cache: SimIdentityCache,
     ) {
+    /**
+     * Resolves the identity for the specified SIM slot.
+     *
+     * @throws InvalidSlotException if the slot index is invalid.
+     * @throws SimNotFoundException if no SIM is in the slot.
+     * @throws SeedUnavailableException if identity seed is unavailable within timeout.
+     * @throws IOException if DataStore access fails during persistence.
+     */
         suspend fun getSimIdentity(
             slot: Int,
             activeSimsCache: StateFlow<List<ActiveSimInfo>>,
@@ -54,7 +63,8 @@ internal class SimIdentityResolver
                 cache.getManual(slot)?.let { return@withLock it }
 
                 // 2. Resolve
-                val (seedValue, isStable) = resolveSeedInternal(seedFlow)
+                val seed = resolveSeedInternal(seedFlow) ?: throw SeedUnavailableException(slot)
+                val (seedValue, isStable) = seed
                 val resolvedIdentity = resolveIdentityInternal(slot, seedValue, isStable)
                 val identity = cache.getOrCreateCanonical(resolvedIdentity)
 
@@ -68,7 +78,7 @@ internal class SimIdentityResolver
             }
         }
 
-        private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): Pair<String, Boolean> {
+    private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): Pair<String, Boolean>? {
             val seed =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     seedFlow.firstOrNull()
@@ -77,12 +87,7 @@ internal class SimIdentityResolver
             return when (seed) {
                 is SeedResult.Real -> seed.value to seed.isStable
                 is SeedResult.Fallback -> seed.seed to false
-                null -> {
-                    // This is only possible on timeout, we don't have a shared ephemeral seed here easily
-                    // but we should probably avoid random UUID anyway.
-                    // However, resolver is rarely used in ephemeral mode.
-                    throw IOException("Timeout resolving seed result")
-                }
+                null -> null
             }
         }
 

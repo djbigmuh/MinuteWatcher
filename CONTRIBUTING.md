@@ -91,8 +91,8 @@ To maintain a reliable testing environment on Windows and prevent issues with na
 following configurations are enforced:
 
 - **`maxParallelForks = 1`**: Prevents multiple JVMs from competing for system resources and native library locks.
-- **`forkEvery = 0` (or `null`)**: Unit tests are executed in a single JVM process per module. This allows **Robolectric
-  ** to reuse its sandboxes, significantly speeding up execution (Structural Acceleration).
+- **`forkEvery = 1`**: Ensures each test class runs in a fresh JVM. This prevents side effects between
+  test classes and avoids issues with Robolectric native runtimes on Windows.
 - **`isReturnDefaultValues = true`**: Enabled for all modules. This allows plain JUnit tests to run without Robolectric
   for logic that doesn't strictly depend on Android constants or native behavior.
 

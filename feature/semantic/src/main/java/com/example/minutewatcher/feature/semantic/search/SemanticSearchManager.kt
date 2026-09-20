@@ -452,7 +452,7 @@ class SemanticSearchManager
                 dataStore: DataStore<Preferences>,
                 timeProvider: TimeProvider,
             ): SemanticSearchManager {
-                val errorHandler = AppSearchErrorHandler(timeProvider)
+                val errorHandler = AppSearchErrorHandler()
                 return SemanticSearchManager(
                     sessionManager = AppSearchSessionManager(context, appSearchWrapper, errorHandler),
                     indexer = SnapshotIndexer(appSearchWrapper, errorHandler, dataStore),

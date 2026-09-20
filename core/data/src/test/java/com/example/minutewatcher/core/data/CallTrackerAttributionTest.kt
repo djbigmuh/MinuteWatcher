@@ -11,6 +11,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
@@ -27,12 +28,12 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             // Start call on subId 1
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), any())
+            verify(callSessionRepository, atLeastOnce()).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
 
             // Start call on subId 2
             callTracker.onCallStarted(subId = 2)
             advanceUntilIdle()
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(2), any())
+            verify(callSessionRepository, atLeastOnce()).saveCallSession(eq(2), any(), any(), any(), anyOrNull())
         }
 
     @Test
@@ -57,7 +58,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Heuristic attribution is removed, so NO sessions should be closed
-            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
+            verify(callSessionRepository, never()).clearCallSession(any())
         }
 
     @Test
@@ -128,9 +129,9 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Assert: No minutes incremented
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
             // No calls cleared
-            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
+            verify(callSessionRepository, never()).clearCallSession(any())
         }
 
     @Test
@@ -202,8 +203,8 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Assert: verify NO sessions were cleared and NO minutes were added
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
-            verify(callSessionRepository, never()).setCallStartTime(any(), eq(0L))
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
+            verify(callSessionRepository, never()).clearCallSession(any())
         }
 
     @Test
@@ -255,10 +256,10 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Assert: Voice session on SIM 1 is closed
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(voiceSubId), eq(0L))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(voiceSubId))
             // Minutes incremented for SIM 1
-            verify(simUsageRepository).incrementMinutesUsed(eq("id_voice"), any())
+            verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_voice"), any(), any())
             // SIM 2 session was NOT attempted to be closed
-            verify(callSessionRepository, never()).setCallStartTime(eq(2), any())
+            verify(callSessionRepository, never()).saveCallSession(eq(2), any(), any(), any(), anyOrNull())
         }
 }

@@ -3,15 +3,12 @@ package com.example.minutewatcher.feature.semantic.search
 import android.os.DeadObjectException
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.exceptions.AppSearchException
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.mockito.kotlin.mock
 
 class AppSearchErrorHandlerTest {
-    private val timeProvider: TimeProvider = mock()
-    private val errorHandler = AppSearchErrorHandler(timeProvider)
+    private val errorHandler = AppSearchErrorHandler()
 
     @Test
     fun `handleInitializationError classifies IllegalStateException with not supported as UNKNOWN`() {

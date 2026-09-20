@@ -38,7 +38,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Duration should be 2 minutes (60s + 40s = 100s -> 2 min ceiling)
-            verify(simUsageRepository, atLeastOnce()).incrementMinutesUsed(eq("id_0"), eq(2))
+            verify(simUsageRepository, atLeastOnce()).incrementMinutesUsedForCall(eq("id_0"), eq(2), any())
         }
 
     @Test
@@ -60,7 +60,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
         }
 
     @Test
@@ -88,7 +88,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Duration should be 1 minute (60s), NOT 60 minutes (1h)
-            verify(simUsageRepository, atLeastOnce()).incrementMinutesUsed(eq("id_0"), eq(1))
+            verify(simUsageRepository, atLeastOnce()).incrementMinutesUsedForCall(eq("id_0"), eq(1), any())
         }
 
     @Test
@@ -113,7 +113,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // 3. Duration should be 60s -> 1 minute (NOT 119s -> 2 minutes)
-            verify(simUsageRepository).incrementMinutesUsed(eq("id_0"), eq(1))
+            verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_0"), eq(1), any())
         }
 
     @Test
@@ -134,7 +134,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
         }
 
     @Test
@@ -157,7 +157,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(1))
+            verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_1"), eq(1), any())
         }
 
     @Test
@@ -180,7 +180,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(1))
+            verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_1"), eq(1), any())
         }
 
     @Test
@@ -203,7 +203,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(1))
+            verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_1"), eq(1), any())
         }
 
     @Test
@@ -226,6 +226,6 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            verify(simUsageRepository).incrementMinutesUsed(eq("id_1"), eq(2))
+            verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_1"), eq(2), any())
         }
 }

@@ -19,6 +19,7 @@ interface SimIdentityRepository {
      *
      * @throws InvalidSlotException if the slot index is invalid.
      * @throws SimNotFoundException if no SIM is in the slot.
+     * @throws SeedUnavailableException if identity seed is unavailable within timeout (storage failure).
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
@@ -29,6 +30,7 @@ interface SimIdentityRepository {
      *
      * @throws InvalidSlotException if the slot index is invalid.
      * @throws SimNotFoundException if no SIM is in the slot.
+     * @throws SeedUnavailableException if identity seed is unavailable within timeout (storage failure).
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is cancelled.
      */

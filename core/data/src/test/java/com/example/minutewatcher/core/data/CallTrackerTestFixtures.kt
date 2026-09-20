@@ -72,6 +72,9 @@ abstract class CallTrackerTestFixtures {
 
         whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("MTS"))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+        runBlocking {
+            whenever(simUsageRepository.incrementMinutesUsedForCall(any(), any(), any())).thenReturn(true)
+        }
         @Suppress("DEPRECATION")
         whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
         whenever(telephonyManager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)

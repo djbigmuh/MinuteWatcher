@@ -14,6 +14,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
@@ -143,15 +144,7 @@ class InitialSetupWorker
         }
 
         private suspend fun handleMigrationWithPermission(v1Completed: Boolean): Result? {
-            val activeSims =
-                try {
-                    getActiveSimsWithRetry()
-                } catch (e: IOException) {
-                    AppLogger.w("InitialSetupWorker: Failed to get active SIMs, retrying", e)
-                    null
-                }
-
-            if (activeSims == null) return Result.retry()
+            val activeSims = getActiveSimsWithRetry()
 
             val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
             val hasLegacyData =
@@ -202,14 +195,21 @@ class InitialSetupWorker
                 Result.retry()
             }
 
+    /**
+     * Fetches active SIM cards with a bounded wait for the first non-empty list.
+     *
+     * On a cold start, the discovery process may take some time. This method waits
+     * up to [Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS] for at least one SIM
+     * to be discovered. If the timeout expires, it returns the current (potentially empty)
+     * list, which is correct for devices without SIM cards.
+     *
+     * @return List of active SIM cards.
+     */
         private suspend fun getActiveSimsWithRetry(): List<ActiveSimInfo> {
-            deps.simIdentityRepository
-                .observeActiveSims()
-                .firstWithTimeout()
-                ?.let { return it }
-            return deps.simIdentityRepository.observeActiveSims().firstWithTimeout(
-                Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS,
-            ) ?: throw IOException("Timeout observing active SIMs")
+        val flow = deps.simIdentityRepository.observeActiveSims()
+        return withTimeoutOrNull(Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds) {
+            flow.first { it.isNotEmpty() }
+        } ?: (flow as? kotlinx.coroutines.flow.StateFlow<List<ActiveSimInfo>>)?.value ?: emptyList()
         }
 
         private companion object {

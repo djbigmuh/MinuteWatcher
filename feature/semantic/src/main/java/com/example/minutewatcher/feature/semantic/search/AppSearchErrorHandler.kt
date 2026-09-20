@@ -4,10 +4,9 @@ import android.os.DeadObjectException
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,14 +18,12 @@ import javax.inject.Singleton
 @Singleton
 class AppSearchErrorHandler
     @Inject
-    constructor(
-        private val timeProvider: TimeProvider,
-    ) {
-        private val failureState = AtomicReference(0 to 0L)
-        val consecutiveIndexFailures: Int get() = failureState.get().first
+    constructor() {
+    private val _consecutiveIndexFailures = AtomicInteger(0)
+    val consecutiveIndexFailures: Int get() = _consecutiveIndexFailures.get()
 
         fun resetFailures() {
-            failureState.set(0 to 0L)
+            _consecutiveIndexFailures.set(0)
         }
 
         fun handleSchemaException(
@@ -98,13 +95,13 @@ class AppSearchErrorHandler
                 currentStatus is TrackingStatus.Error &&
                     currentStatus.type == TrackingStatus.ErrorType.DATABASE_ERROR
 
-            val newState =
-                failureState.updateAndGet { (count, _) ->
-                    val newCount = if (isSameErrorType) count + 1 else 1
-                    newCount to timeProvider.elapsedRealtime()
-                }
+            val failures = if (isSameErrorType) {
+                _consecutiveIndexFailures.incrementAndGet()
+            } else {
+                _consecutiveIndexFailures.set(1)
+                1
+            }
 
-            val failures = newState.first
             val baseMessage = errorOverride ?: "Indexing failed"
             val failureMessage = "Indexing failed after $MAX_CONSECUTIVE_INDEX_FAILURES consecutive errors"
 

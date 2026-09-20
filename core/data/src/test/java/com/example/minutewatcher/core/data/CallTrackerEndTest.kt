@@ -18,6 +18,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
@@ -67,7 +68,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
         }
 
     @Test
@@ -112,7 +113,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             callTracker.onCallEnded(-1)
             advanceUntilIdle()
 
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
         }
 
     @Test
@@ -165,8 +166,8 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Both should be closed due to global IDLE safety
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(2), eq(0L))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(2))
         }
 
     @Test
@@ -241,9 +242,9 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Assert
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
             // Verify session WAS cleared
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
         }
 
     @Test
@@ -283,15 +284,9 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
 
             // Assert:
             // 1. Session IS cleared
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(
-                eq(subId),
-                eq(0L),
-            )
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(subId))
             // 2. Minutes are NOT incremented
-            verify(simUsageRepository, never()).incrementMinutesUsed(
-                any(),
-                any(),
-            )
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
         }
 
     @Test
@@ -320,10 +315,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // 1. ALL sessions are cleared
             verify(callSessionRepository).clearAllCallSessions()
             // 2. Minutes are NOT incremented
-            verify(simUsageRepository, never()).incrementMinutesUsed(
-                any(),
-                any(),
-            )
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
         }
 
     @Test
@@ -348,7 +340,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // Simulate write failure in simUsageRepository
             doAnswer { throw IOException("Write failed") }
                 .whenever(simUsageRepository)
-                .incrementMinutesUsed(eq(identity), any())
+                .incrementMinutesUsedForCall(eq(identity), any(), any())
 
             timeProvider.advance(1000)
 
@@ -388,7 +380,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // Simulate write failure
             doAnswer { throw IOException("Write failed") }
                 .whenever(simUsageRepository)
-                .incrementMinutesUsed(eq(identity), any())
+                .incrementMinutesUsedForCall(eq(identity), any(), any())
 
             // Act & Assert: it should propagate the exception
             val caught =
@@ -431,7 +423,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Assert: verify session WAS cleared
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(subId))
             // Status should be Error
             val status = callTracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
@@ -464,8 +456,8 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Assert
-            // 1. Session IS cleared (setCallStartTime called with 0)
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(subId), eq(0L))
+            // 1. Session IS cleared (clearCallSession called)
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(subId))
 
             // 2. Status is Error
             val status = callTracker.status.value
@@ -483,8 +475,8 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // Arrange: Trigger timeout
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(MutableSharedFlow())
 
-            // Arrange: clearSession (setCallStartTime) throws exception
-            whenever(callSessionRepository.setCallStartTime(eq(1), any()))
+            // Arrange: clearSession throws exception
+            whenever(callSessionRepository.clearCallSession(eq(1)))
                 .thenThrow(RuntimeException("DataStore crash"))
 
             // Act: End call (which calls loadCallSessionData)
@@ -498,8 +490,8 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                 status.message?.contains("Session cleanup failed") == true,
             )
 
-            // Verify clearSession (setCallStartTime) WAS called twice (initial + propagation)
-            verify(callSessionRepository, times(2)).setCallStartTime(eq(1), eq(0L))
+            // Verify clearSession WAS called twice (initial + propagation)
+            verify(callSessionRepository, times(2)).clearCallSession(eq(1))
         }
 
     @Test
@@ -573,9 +565,9 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Verify minutes were NOT incremented
-            verify(simUsageRepository, never()).incrementMinutesUsed(any(), any())
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
             // Verify session was cleared
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
         }
 
     @Test
@@ -601,7 +593,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             // Simulate write failure
             doAnswer { throw IOException("DataStore failure") }
                 .whenever(simUsageRepository)
-                .incrementMinutesUsed(eq(identity), any())
+                .incrementMinutesUsedForCall(eq(identity), any(), any())
 
             // Act
             try {
@@ -615,5 +607,63 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             val status = callTracker.status.value
             assertTrue("Status should be Error", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
+    fun `idempotent minutes recording upon retry after cleanup failure`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            val subId = 1
+            val identity = "id_1"
+            val bootTime = 5000L
+            val durationMinutes = 5
+
+            // Arrange: Setup active session
+            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(2000L))
+            whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(identity))
+
+            // Mock successful increment
+            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime)))
+                .thenReturn(true)
+
+            // Mock failure during session cleanup
+            whenever(callSessionRepository.clearCallSession(eq(subId)))
+                .thenAnswer { throw IOException("Cleanup failed") }
+
+            // Act: First attempt
+            timeProvider.setRealtime(bootTime + (durationMinutes * 60000L))
+            try {
+                callTracker.onCallEnded(subId)
+            } catch (e: IOException) {
+                assertEquals("Cleanup failed", e.message)
+            }
+            advanceUntilIdle()
+
+            // Verify increment happened once
+            verify(simUsageRepository, times(1))
+                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime))
+
+            // Act: Second attempt (Retry)
+            // Now mock that it was already counted
+            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime)))
+                .thenReturn(false)
+            // And cleanup now succeeds
+            whenever(callSessionRepository.clearCallSession(eq(subId))).thenReturn(Unit)
+
+            callTracker.onCallEnded(subId)
+            advanceUntilIdle()
+
+            // Verify increment called again but with false result (idempotency)
+            verify(simUsageRepository, times(2))
+                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime))
+
+            // Verify cleanup eventually succeeded
+            verify(callSessionRepository, times(2)).clearCallSession(eq(subId))
         }
 }

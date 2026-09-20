@@ -364,13 +364,6 @@ open class CallTracker
             }
         }
 
-        open fun onBoot() {
-            ensureStarted()
-            scope.launch {
-                onBootAwaited()
-            }
-        }
-
         /**
          * Clears stale call sessions after boot.
          *

@@ -36,12 +36,7 @@ android {
         }
     }
 
-    tasks.withType<Test>().configureEach {
-        // Phase 2: Structural acceleration.
-        // Robolectric sandboxes are reused within the same JVM.
-        // SingletonResetRule handles state cleanup.
-        // forkEvery = 10 removed for stability
-    }
+
 }
 
 dependencies {

@@ -8,17 +8,13 @@ import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
-import com.example.minutewatcher.core.domain.WidgetSaveResult
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,8 +32,6 @@ class WidgetSettingsRepository
         private val simIdentityRepository: SimIdentityRepository,
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
     ) : WidgetSettingsLoader {
-        private val saveMutex = Mutex()
-
         /**
          * Loads the current unified widget settings state.
          *
@@ -127,60 +121,6 @@ class WidgetSettingsRepository
                 }
             }
         }
-
-        /**
-         * Saves the widget settings state to DataStore.
-         *
-         * Обеспечивает атомарность на уровне репозитория с использованием [saveMutex].
-         * Операции выполняются в строгом порядке: сначала сохраняются SIM-настройки,
-         * затем общие настройки. Это гарантирует согласованность при сбоях в "хрупких"
-         * частях DataStore (связанных с SIM identity).
-         *
-         * @param state The state to save.
-         * @param skipSimSettings Если true, SIM-специфичные настройки НЕ сохраняются.
-         * @return [WidgetSaveResult] indicating full or partial success.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context. Sequential execution is enforced via [saveMutex].
-         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
-         */
-        override suspend fun save(
-            state: WidgetSettingsState,
-            skipSimSettings: Boolean,
-        ): WidgetSaveResult =
-            saveMutex.withLock {
-                try {
-                    // 1. Сохраняем SIM-настройки (более хрупкая операция).
-                    // Если она выбросит исключение, общие настройки не будут затронуты.
-                    val failedSlots =
-                        if (state.simListLoadFailed || skipSimSettings) {
-                            emptyList()
-                        } else {
-                            saveSimSettings(state)
-                        }
-
-                    // 2. Сохраняем общие настройки.
-                    var generalSaved = false
-                    if (!state.settingsLoadFailed) {
-                        saveGeneralSettings(state)
-                        generalSaved = true
-                    } else {
-                        AppLogger.w("save: general settings were not loaded. Skipping general settings save.")
-                    }
-
-                    // 3. Формируем результат на основе успеха обеих операций.
-                    return when {
-                        failedSlots.isNotEmpty() -> WidgetSaveResult.PartialSuccess
-                        generalSaved && state.simListLoadFailed -> WidgetSaveResult.PartialSuccess
-                        generalSaved -> WidgetSaveResult.Success
-                        else -> WidgetSaveResult.Failed
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("WidgetSettingsRepository: failed to save widget settings", e)
-                    WidgetSaveResult.Failed
-                }
-            }
 
         /**
          * Saves general widget settings (layout, transparency, etc.) to DataStore.

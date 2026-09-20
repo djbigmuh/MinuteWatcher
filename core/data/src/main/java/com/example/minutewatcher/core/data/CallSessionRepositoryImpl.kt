@@ -56,25 +56,51 @@ class CallSessionRepositoryImpl
             dataStore.edit { it[DataStoreKeys.LAST_DATA_SUB_ID] = subId }
         }
 
+    /**
+     * Atomically saves all call session data for the given subId.
+     *
+     * @throws IOException если DataStore не может выполнить запись.
+     */
+    override suspend fun saveCallSession(
+        subId: Int,
+        startTime: Long,
+        bootTime: Long,
+        uptime: Long,
+        identity: String?,
+    ) {
+        dataStore.edit { prefs ->
+            prefs[DataStoreKeys.callStartTimeKey(subId)] = startTime
+            prefs[DataStoreKeys.bootTimeKey(subId)] = bootTime
+            prefs[DataStoreKeys.uptimeKey(subId)] = uptime
+            val identityKey = DataStoreKeys.callIdentityKey(subId)
+            if (identity == null) {
+                prefs.remove(identityKey)
+            } else {
+                prefs[identityKey] = identity
+            }
+        }
+    }
+
+    /**
+     * Atomically clears all call session keys for the given subId.
+     *
+     * @throws IOException если DataStore не может выполнить запись.
+     */
+    override suspend fun clearCallSession(subId: Int) {
+        dataStore.edit { prefs ->
+            prefs.remove(DataStoreKeys.callStartTimeKey(subId))
+            prefs.remove(DataStoreKeys.bootTimeKey(subId))
+            prefs.remove(DataStoreKeys.uptimeKey(subId))
+            prefs.remove(DataStoreKeys.callIdentityKey(subId))
+        }
+    }
+
         /**
          * Returns the call start time for the given subId.
          *
          * Safe to call from any coroutine context.
          */
         override fun getCallStartTime(subId: Int): Flow<Long> = get(DataStoreKeys.callStartTimeKey(subId), 0L)
-
-        /**
-         * Sets the call start time for the given subId.
-         *
-         * Safe to call from any coroutine context.
-         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
-         */
-        override suspend fun setCallStartTime(
-            subId: Int,
-            time: Long,
-        ) {
-            dataStore.edit { it[DataStoreKeys.callStartTimeKey(subId)] = time }
-        }
 
         /**
          * Returns the device boot time recorded when the call started on the given subId.
@@ -84,37 +110,11 @@ class CallSessionRepositoryImpl
         override fun getBootTime(subId: Int): Flow<Long> = get(DataStoreKeys.bootTimeKey(subId), 0L)
 
         /**
-         * Records the device boot time for a call on the given subId.
-         *
-         * Safe to call from any coroutine context.
-         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
-         */
-        override suspend fun setBootTime(
-            subId: Int,
-            time: Long,
-        ) {
-            dataStore.edit { it[DataStoreKeys.bootTimeKey(subId)] = time }
-        }
-
-        /**
          * Returns the device uptime recorded when the call started on the given subId.
          *
          * Safe to call from any coroutine context.
          */
         override fun getUptime(subId: Int): Flow<Long> = get(DataStoreKeys.uptimeKey(subId), 0L)
-
-        /**
-         * Records the device uptime for a call on the given subId.
-         *
-         * Safe to call from any coroutine context.
-         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
-         */
-        override suspend fun setUptime(
-            subId: Int,
-            time: Long,
-        ) {
-            dataStore.edit { it[DataStoreKeys.uptimeKey(subId)] = time }
-        }
 
         /**
          * Returns the stable SIM identity associated with the active call on the given subId.
@@ -125,25 +125,6 @@ class CallSessionRepositoryImpl
             dataStore.data.map {
                 it[DataStoreKeys.callIdentityKey(subId)]
             }
-
-        /**
-         * Sets the stable SIM identity for an active call on the given subId.
-         *
-         * Safe to call from any coroutine context.
-         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
-         */
-        override suspend fun setCallIdentity(
-            subId: Int,
-            identity: String?,
-        ) {
-            dataStore.edit {
-                if (identity == null) {
-                    it.remove(DataStoreKeys.callIdentityKey(subId))
-                } else {
-                    it[DataStoreKeys.callIdentityKey(subId)] = identity
-                }
-            }
-        }
 
         /**
          * Clears all recorded call session data.

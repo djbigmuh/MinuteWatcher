@@ -23,6 +23,7 @@ import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
@@ -68,7 +69,7 @@ class InitialSetupWorkerTest {
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
         whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
         whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
-        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+        whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
 
         val emptySnapshot =
             GlobalSnapshot(
@@ -136,7 +137,7 @@ class InitialSetupWorkerTest {
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
 
             val result = createWorker().doWork()
 
@@ -185,7 +186,7 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             whenever(migrationService.hasLegacyData(any())).thenReturn(true)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
@@ -204,7 +205,7 @@ class InitialSetupWorkerTest {
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
                 ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
 
@@ -244,7 +245,7 @@ class InitialSetupWorkerTest {
                     isDefaultVoice = true,
                 )
 
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim1)))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim1)))
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
 
             val result = createWorker().doWork()
@@ -263,7 +264,7 @@ class InitialSetupWorkerTest {
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
                 ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
@@ -300,7 +301,7 @@ class InitialSetupWorkerTest {
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
                 ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim)))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
             whenever(usageStateRepository.refresh()).thenReturn(
@@ -405,6 +406,61 @@ class InitialSetupWorkerTest {
             job.cancel()
             job.join()
             throw CancellationException("Simulated external cancellation")
+        }
+
+    @Test
+    fun `doWork waits for slow discovery and performs migration`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
+            whenever(migrationService.hasLegacyData(any())).thenReturn(true)
+
+            val identity = SimIdentity("icc_slow", 1, 0, IdentitySource.ICCID, isStable = true)
+            val activeSim = ActiveSimInfo(
+                identity, 0, 1, "slow", "MTS", "MTS", "25001",
+                isDefaultData = true, isDefaultVoice = true
+            )
+
+            val slowFlow = MutableStateFlow<List<ActiveSimInfo>>(emptyList())
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(slowFlow)
+
+            whenever(migrationService.migrateLegacyData(any())).thenReturn(
+                IdentityMigrationService.MigrationOutcome(migrated = 1)
+            )
+
+            Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
+
+            launch {
+                delay(2000L)
+                slowFlow.value = listOf(activeSim)
+            }
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(migrationService).migrateLegacyData(activeSim.identity)
+            verify(migrationFlagsRepository).setMigrationV1Completed(completed = true)
+        }
+
+    @Test
+    fun `doWork continues with empty list after discovery timeout`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
+            whenever(migrationService.hasLegacyData(any())).thenReturn(true)
+
+            val slowFlow = MutableStateFlow<List<ActiveSimInfo>>(emptyList())
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(slowFlow)
+
+            Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
+
+            // No emission within 15s timeout
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            // Migration deferred because list is empty and legacy data exists
+            verify(migrationFlagsRepository, never()).setMigrationV1Completed(completed = true)
+            verify(migrationService, never()).markSchemaCurrent()
         }
 
     private open class FakeUsageUseCase : UsageUseCase {

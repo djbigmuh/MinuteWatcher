@@ -67,6 +67,7 @@ class WidgetSettingsRepositoryTest {
                     widgetBackgroundColor = 0xFF000000.toInt(),
                     widgetTransparency = 0,
                     widgetLimitExceeded = false,
+                    isLoaded = true,
                 )
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
 
@@ -85,7 +86,7 @@ class WidgetSettingsRepositoryTest {
             // firstWithTimeout on flowOf(emptyList()) returns emptyList, not null.
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
-            val appSettings = AppSettings()
+            val appSettings = AppSettings(isLoaded = true)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
 
             val result = repository.load()
@@ -101,7 +102,7 @@ class WidgetSettingsRepositoryTest {
             val activeSimsFlow = MutableSharedFlow<List<ActiveSimInfo>>(replay = 1)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow)
 
-            val appSettings = AppSettings()
+            val appSettings = AppSettings(isLoaded = true)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
 
             val simSettings = SimSettingsState()
@@ -171,6 +172,19 @@ class WidgetSettingsRepositoryTest {
 
             assertEquals(listOf(0), failedSlots)
             verify(simWidgetVisibilityRepository, never()).setSimSettingsBatch(any())
+        }
+
+    @Test
+    fun `load returns fallback with settingsLoadFailed when app settings timeout`() =
+        runTest {
+            // Mock timeout: a flow that never emits
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+
+            val result = repository.load()
+
+            assertNotNull(result)
+            assertEquals(true, result.settingsLoadFailed)
         }
 
     private fun createMockActiveSims(): List<ActiveSimInfo> =

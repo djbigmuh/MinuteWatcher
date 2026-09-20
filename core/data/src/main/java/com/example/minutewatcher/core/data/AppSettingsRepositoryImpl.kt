@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -123,30 +123,15 @@ class AppSettingsRepositoryImpl
         /**
          * Returns a flow of application settings.
          *
+         * The flow emits only when settings are successfully loaded from DataStore (isLoaded = true).
+         * It does not emit the default initial state.
+         * Consumers performing one-time reads (e.g., using `first()`) should use timeouts
+         * and handle potential lack of emission.
+         *
          * Safe to call from any coroutine context.
          * @throws IOException if DataStore reading fails.
          */
-        override fun getAppSettings(): Flow<AppSettings> = appSettingsState
-
-        /**
-         * Returns the current application settings once.
-         *
-         * Ensures a fresh read from DataStore by waiting for the first emission
-         * if the internal flow is not currently active.
-         */
-        override suspend fun getAppSettingsOnce(): AppSettings =
-            try {
-                dataStore.data.first().toAppSettings()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e(
-                    "getAppSettingsOnce: CRITICAL failure to read from DataStore, " +
-                        "returning defaults",
-                    e,
-                )
-                AppSettings()
-            }
+        override fun getAppSettings(): Flow<AppSettings> = appSettingsState.filter { it.isLoaded }
 
         /**
          * Returns a state flow of application settings.
@@ -245,55 +230,52 @@ class AppSettingsRepositoryImpl
 
         private fun Preferences.toAppSettings(): AppSettings {
             val default = AppSettings()
-            return default
-                .copy(
-                    theme = AppTheme.fromValue(this[DataStoreKeys.APP_THEME] ?: -1),
-                    language = this[DataStoreKeys.APP_LANGUAGE],
-                    isLoaded = true,
-                ).mapSystemSettings(this, default)
-                .mapTrackingSettings(this, default)
-                .mapWidgetSettings(this, default)
+            val theme = AppTheme.fromValue(read(DataStoreKeys.APP_THEME, -1))
+            val language = this[DataStoreKeys.APP_LANGUAGE]
+
+            return mapSystemSettings(default)
+                .copy(theme = theme, language = language, isLoaded = true)
+                .let { mapTrackingSettings(it) }
+                .let { mapWidgetSettings(it) }
         }
 
-        private fun AppSettings.mapSystemSettings(
-            prefs: Preferences,
-            default: AppSettings,
-        ): AppSettings =
-            copy(
-                migrationV1Completed = prefs[DataStoreKeys.MIGRATION_V1_COMPLETED] ?: default.migrationV1Completed,
-                onboardingCompleted = prefs[DataStoreKeys.ONBOARDING_COMPLETED] ?: default.onboardingCompleted,
+    private fun Preferences.mapSystemSettings(current: AppSettings): AppSettings =
+        current.copy(
+            migrationV1Completed = read(DataStoreKeys.MIGRATION_V1_COMPLETED, current.migrationV1Completed),
+            onboardingCompleted = read(DataStoreKeys.ONBOARDING_COMPLETED, current.onboardingCompleted),
                 notificationPermissionRequested =
-                    prefs[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED] ?: default.notificationPermissionRequested,
+                    read(DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED, current.notificationPermissionRequested),
                 wasPhonePermissionRequestedBefore =
-                    prefs[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE]
-                        ?: default.wasPhonePermissionRequestedBefore,
-                benchmarkSimCount = prefs[DataStoreKeys.BENCHMARK_SIM_COUNT] ?: default.benchmarkSimCount,
+                    read(
+                        DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE,
+                        current.wasPhonePermissionRequestedBefore,
+                    ),
+            benchmarkSimCount = read(DataStoreKeys.BENCHMARK_SIM_COUNT, current.benchmarkSimCount),
             )
 
-        private fun AppSettings.mapTrackingSettings(
-            prefs: Preferences,
-            default: AppSettings,
-        ): AppSettings =
-            copy(
-                notifyLowMinutes = prefs[DataStoreKeys.NOTIFY_LOW_MINUTES] ?: default.notifyLowMinutes,
-                notifyLowTraffic = prefs[DataStoreKeys.NOTIFY_LOW_TRAFFIC] ?: default.notifyLowTraffic,
+    private fun Preferences.mapTrackingSettings(current: AppSettings): AppSettings =
+        current.copy(
+            notifyLowMinutes = read(DataStoreKeys.NOTIFY_LOW_MINUTES, current.notifyLowMinutes),
+            notifyLowTraffic = read(DataStoreKeys.NOTIFY_LOW_TRAFFIC, current.notifyLowTraffic),
                 inaccurateCallAttributionsCount =
-                    prefs[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] ?: default.inaccurateCallAttributionsCount,
-                callTrackingEnabled = prefs[DataStoreKeys.CALL_TRACKING_ENABLED] ?: default.callTrackingEnabled,
+                    read(DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT, current.inaccurateCallAttributionsCount),
+            callTrackingEnabled = read(DataStoreKeys.CALL_TRACKING_ENABLED, current.callTrackingEnabled),
             )
 
-        private fun AppSettings.mapWidgetSettings(
-            prefs: Preferences,
-            default: AppSettings,
-        ): AppSettings =
-            copy(
-                widgetLayoutMode = prefs[DataStoreKeys.WIDGET_LAYOUT_MODE] ?: default.widgetLayoutMode,
-                widgetSimArrangement = prefs[DataStoreKeys.WIDGET_SIM_ARRANGEMENT] ?: default.widgetSimArrangement,
-                widgetTransparency = prefs[DataStoreKeys.WIDGET_TRANSPARENCY] ?: default.widgetTransparency,
-                widgetFontSize = prefs[DataStoreKeys.WIDGET_FONT_SIZE] ?: default.widgetFontSize,
-                widgetBackgroundColor = prefs[DataStoreKeys.WIDGET_BACKGROUND_COLOR] ?: default.widgetBackgroundColor,
-                widgetLimitExceeded = prefs[DataStoreKeys.WIDGET_LIMIT_EXCEEDED] ?: default.widgetLimitExceeded,
+    private fun Preferences.mapWidgetSettings(current: AppSettings): AppSettings =
+        current.copy(
+            widgetLayoutMode = read(DataStoreKeys.WIDGET_LAYOUT_MODE, current.widgetLayoutMode),
+            widgetSimArrangement = read(DataStoreKeys.WIDGET_SIM_ARRANGEMENT, current.widgetSimArrangement),
+            widgetTransparency = read(DataStoreKeys.WIDGET_TRANSPARENCY, current.widgetTransparency),
+            widgetFontSize = read(DataStoreKeys.WIDGET_FONT_SIZE, current.widgetFontSize),
+            widgetBackgroundColor = read(DataStoreKeys.WIDGET_BACKGROUND_COLOR, current.widgetBackgroundColor),
+            widgetLimitExceeded = read(DataStoreKeys.WIDGET_LIMIT_EXCEEDED, current.widgetLimitExceeded),
             )
+
+    private fun <T> Preferences.read(
+        key: Preferences.Key<T>,
+        default: T,
+    ): T = this[key] ?: default
 
         companion object {
             private const val LOG_THRESHOLD = 5

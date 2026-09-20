@@ -146,10 +146,13 @@ internal class CallStartHandler
             targetSubId: Int,
             data: CallStartData,
         ) {
-            callSessionRepository.setCallStartTime(targetSubId, data.now)
-            callSessionRepository.setBootTime(targetSubId, data.bootTime)
-            callSessionRepository.setUptime(targetSubId, data.uptime)
-            callSessionRepository.setCallIdentity(targetSubId, data.currentIdentity)
+            callSessionRepository.saveCallSession(
+                subId = targetSubId,
+                startTime = data.now,
+                bootTime = data.bootTime,
+                uptime = data.uptime,
+                identity = data.currentIdentity,
+            )
             AppLogger.d("Call start recorded for subId $targetSubId at ${data.now} (identity=${data.currentIdentity})")
         }
 

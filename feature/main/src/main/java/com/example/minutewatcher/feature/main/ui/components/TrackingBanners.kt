@@ -19,7 +19,7 @@ fun TrackingBanners(
         )
         StorageDegradedBanner(
             state = state,
-            onRetry = callbacks.onRetryWidgetObservation,
+            onRetry = callbacks.onRetrySimDiscovery,
         )
         PermissionBanners(state, callbacks)
         ErrorBanners(state, callbacks)

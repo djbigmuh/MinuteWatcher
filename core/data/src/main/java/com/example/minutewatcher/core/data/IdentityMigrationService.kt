@@ -12,9 +12,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.data.util.SimIdentityUtils
 import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
@@ -22,9 +24,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Service for migrating legacy DataStore keys to the modern identity-based format.
@@ -77,18 +81,18 @@ open class IdentityMigrationService
          */
         suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean =
             try {
-                val appPrefs = appDataStore.data.first()
+                val appPrefs =
+                    appDataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                        ?: throw IOException("App DataStore read timeout in hasLegacyData")
                 val currentSchema = appPrefs[DataStoreKeys.DATA_SCHEMA_VERSION] ?: 0
                 if (currentSchema >= DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION) {
                     false
                 } else {
                     val appHasLegacy = appPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
-                    val simHasLegacy =
-                        simDataStore.data
-                            .first()
-                            .asMap()
-                            .keys
-                            .any { it.isLegacyKey(activeIdentities) }
+                    val simPrefs =
+                        simDataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                            ?: throw IOException("Sim DataStore read timeout in hasLegacyData")
+                    val simHasLegacy = simPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
                     appHasLegacy || simHasLegacy
                 }
             } catch (e: CancellationException) {
@@ -96,10 +100,7 @@ open class IdentityMigrationService
             } catch (e: IOException) {
                 // Re-throw IOException to allow caller to retry upon transient failures.
                 throw e
-            } catch (e: IllegalStateException) {
-                AppLogger.e("IdentityMigrationService: Permanent error checking for legacy data", e)
-                false
-            } catch (e: IllegalArgumentException) {
+            } catch (e: Exception) {
                 AppLogger.e("IdentityMigrationService: Permanent error checking for legacy data", e)
                 false
             }
@@ -143,7 +144,11 @@ open class IdentityMigrationService
          */
         suspend fun markSchemaCurrent() {
             try {
-                appDataStore.edit { it[DataStoreKeys.DATA_SCHEMA_VERSION] = DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION }
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    appDataStore.edit { prefs ->
+                        prefs[DataStoreKeys.DATA_SCHEMA_VERSION] = DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION
+                    }
+                } ?: AppLogger.e("IdentityMigrationService: Timeout marking schema current")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -303,7 +308,9 @@ open class IdentityMigrationService
             if (activeIdentity.source == IdentitySource.SUBSCRIPTION_ID) {
                 val subId = activeIdentity.subscriptionId
                 if (subId != null) {
-                    val simPrefs = simDataStore.data.first()
+                    val simPrefs =
+                        simDataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                            ?: throw IOException("Sim DataStore read timeout in findLegacySuffixes")
                     // Find all "subscription_id_icc_..." keys that map to this subId.
                     // These keys were created by previous versions to maintain identity stability.
                     val iccIdentities =
@@ -334,17 +341,26 @@ open class IdentityMigrationService
             var failureCount = 0
 
             try {
-                dataStore.edit { prefs ->
-                    performHygieneCleanup(prefs)
+                val success =
+                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                        dataStore.edit { prefs ->
+                            performHygieneCleanup(prefs)
 
-                    val (migrated, conflicts, failures) = migrateSuffixes(prefs, mappings, storeName)
-                    migratedCount = migrated
-                    conflictCount = conflicts
-                    failureCount = failures
+                            val (migrated, conflicts, failures) = migrateSuffixes(prefs, mappings, storeName)
+                            migratedCount = migrated
+                            conflictCount = conflicts
+                            failureCount = failures
 
-                    if (subIdForCleanup != null) {
-                        performSimCleanup(prefs, subIdForCleanup)
-                    }
+                            if (subIdForCleanup != null) {
+                                performSimCleanup(prefs, subIdForCleanup)
+                            }
+                        }
+                        true
+                    } ?: false
+
+                if (!success) {
+                    AppLogger.e("IdentityMigrationService: Batch migration timed out for $storeName")
+                    return MigrationOutcome(failures = mappings.size, partialFailure = true)
                 }
             } catch (e: CancellationException) {
                 throw e

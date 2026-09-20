@@ -33,8 +33,11 @@ internal class CallTrackingSettingsHandler
             durationMinutes: Int,
             isFallbackUsed: Boolean,
             notify: Boolean,
+            callMarker: Long,
         ): Boolean {
-            simUsageRepository.incrementMinutesUsed(identity, durationMinutes)
+            val incremented = simUsageRepository.incrementMinutesUsedForCall(identity, durationMinutes, callMarker)
+            if (!incremented) return true
+
             if (isFallbackUsed) {
                 appSettingsRepository.updateAppSettings {
                     it.copy(inaccurateCallAttributionsCount = it.inaccurateCallAttributionsCount + 1)
@@ -43,7 +46,10 @@ internal class CallTrackingSettingsHandler
             if (notify) {
                 dataChangeNotifier.notifyDataChanged()
             }
-            AppLogger.d("Call recorded: $durationMinutes min for $identity (fallback=$isFallbackUsed)")
+            AppLogger.d(
+                "Call recorded: $durationMinutes min for $identity " +
+                    "(marker=$callMarker, fallback=$isFallbackUsed)",
+            )
             return true
         }
     }

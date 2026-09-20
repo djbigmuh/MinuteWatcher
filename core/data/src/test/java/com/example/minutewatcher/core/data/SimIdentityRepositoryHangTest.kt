@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
+import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
@@ -111,27 +112,35 @@ class SimIdentityRepositoryHangTest {
             },
         )
 
-    @Test(expected = IOException::class)
+    @Test(expected = SeedUnavailableException::class)
     fun `getSimIdentity throws error when activeSimsCache hangs`() =
         runTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
+            val hangingSeedRepo = object : SimIdentitySeedRepository {
+                override val seedFlow: Flow<String> = MutableSharedFlow()
+                override val isEphemeralSeedActive: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+                override suspend fun setSeed(seed: String) = Unit
+                override suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult {
+                    delay(1000.seconds)
+                    return SeedResolutionResult.Ephemeral("ephemeral")
+                }
+
+                override suspend fun getOrCreateEphemeralSeed(generator: () -> String): String = generator()
+            }
+
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
                     dataStore = createTestDataStore("ds1"),
-                    seedRepository = seedRepository,
+                    seedRepository = hangingSeedRepo,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
                     scope = backgroundScope,
                 )
-
-            // Mock seedRepository.seedFlow to return a flow that never emits,
-            // which will cause getSeed() to timeout and throw IOException.
-            whenever(seedRepository.seedFlow).thenReturn(MutableSharedFlow())
 
             // Act
             identityRepo.getSimIdentity(0)
@@ -185,7 +194,7 @@ class SimIdentityRepositoryHangTest {
                     try {
                         identityRepo.getSimIdentity(0)
                         "success"
-                    } catch (_: java.io.IOException) {
+                    } catch (_: SeedUnavailableException) {
                         "error"
                     }
                 }

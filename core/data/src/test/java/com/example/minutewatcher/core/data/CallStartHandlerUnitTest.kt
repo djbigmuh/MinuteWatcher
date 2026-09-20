@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -61,9 +62,13 @@ class CallStartHandlerUnitTest {
             handler.executeCallStart(1, eventElapsedRealtime = -1L, context = context)
 
             // Assert
-            verify(callSessionRepository).setCallStartTime(1, 1000L)
-            verify(callSessionRepository).setBootTime(1, 2000L)
-            verify(callSessionRepository).setCallIdentity(1, null)
+            verify(callSessionRepository).saveCallSession(
+                subId = eq(1),
+                startTime = eq(1000L),
+                bootTime = eq(2000L),
+                uptime = eq(3000L),
+                identity = eq(null),
+            )
 
             // Regression: Should not retry null identity, so time should be 0
             Assert.assertEquals("Virtual time should not advance for null identity", 0, testScheduler.currentTime)

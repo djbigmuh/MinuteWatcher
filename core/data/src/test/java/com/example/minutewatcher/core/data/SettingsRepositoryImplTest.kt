@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -88,6 +89,52 @@ class SettingsRepositoryImplTest {
 
             val activeSubIds = repository.getActiveCallSubIds()
             assertEquals(setOf(1, 3), activeSubIds?.toSet())
+        }
+
+    @Test
+    fun testSaveCallSession_WritesAllFieldsAtomically() =
+        runTest {
+            val repository = CallSessionRepositoryImpl(dataStore)
+            val subId = 1
+            val startTime = 1000L
+            val bootTime = 2000L
+            val uptime = 3000L
+            val identity = "test_identity"
+
+            repository.saveCallSession(subId, startTime, bootTime, uptime, identity)
+            advanceUntilIdle()
+
+            val prefs = dataStore.data.first()
+            assertEquals(startTime, prefs[DataStoreKeys.callStartTimeKey(subId)])
+            assertEquals(bootTime, prefs[DataStoreKeys.bootTimeKey(subId)])
+            assertEquals(uptime, prefs[DataStoreKeys.uptimeKey(subId)])
+            assertEquals(identity, prefs[DataStoreKeys.callIdentityKey(subId)])
+        }
+
+    @Test
+    fun testClearCallSession_RemovesAllFieldsAtomically() =
+        runTest {
+            val repository = CallSessionRepositoryImpl(dataStore)
+            val subId = 1
+
+            // 1. Setup session
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.callStartTimeKey(subId)] = 1000L
+                prefs[DataStoreKeys.bootTimeKey(subId)] = 2000L
+                prefs[DataStoreKeys.uptimeKey(subId)] = 3000L
+                prefs[DataStoreKeys.callIdentityKey(subId)] = "test_id"
+            }
+
+            // 2. Clear
+            repository.clearCallSession(subId)
+            advanceUntilIdle()
+
+            // 3. Verify
+            val prefs = dataStore.data.first()
+            assertNull(prefs[DataStoreKeys.callStartTimeKey(subId)])
+            assertNull(prefs[DataStoreKeys.bootTimeKey(subId)])
+            assertNull(prefs[DataStoreKeys.uptimeKey(subId)])
+            assertNull(prefs[DataStoreKeys.callIdentityKey(subId)])
         }
 
     @Test
@@ -200,20 +247,20 @@ class SettingsRepositoryImplTest {
         }
 
     @Test
-    fun testGetAppSettingsOnce_ReturnsFreshDataWithoutSubscribers() =
+    fun testGetAppSettings_ReturnsFreshDataWithoutSubscribers() =
         runTest {
-            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
             // 1. Initial default value
-            assertEquals(false, repository.getAppSettingsOnce().onboardingCompleted)
+            assertEquals(false, repository.getAppSettings().first().onboardingCompleted)
 
             // 2. Update directly via DataStore (bypassing repository for pure test)
             dataStore.edit { prefs ->
                 prefs[DataStoreKeys.ONBOARDING_COMPLETED] = true
             }
 
-            // 3. getAppSettingsOnce should return the new value
-            assertEquals(true, repository.getAppSettingsOnce().onboardingCompleted)
+            // 3. getAppSettings().first() should return the new value
+            assertEquals(true, repository.getAppSettings().first().onboardingCompleted)
         }
 
     @Test
@@ -265,5 +312,63 @@ class SettingsRepositoryImplTest {
             assertEquals(2, settingsList.size)
             assertEquals(false, settingsList[0].onboardingCompleted)
             assertEquals(true, settingsList[1].onboardingCompleted)
+        }
+
+    @Test
+    fun testGetAppSettings_SuspendsUntilLoaded() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val settingsList = mutableListOf<AppSettings>()
+
+            val job = launch {
+                repository.getAppSettings().toList(settingsList)
+            }
+            advanceUntilIdle()
+
+            // Initial state AppSettings() is filtered by isLoaded=false
+            // Only loaded settings from DataStore should be present
+            assertTrue(settingsList.isNotEmpty())
+            assertTrue(settingsList.all { it.isLoaded })
+
+            job.cancel()
+        }
+
+    @Test
+    fun testGetAppSettings_FiltersNotLoaded() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
+            val settingsList = mutableListOf<AppSettings>()
+
+            // 1. Start collecting
+            val job = launch {
+                repository.getAppSettings().toList(settingsList)
+            }
+            advanceUntilIdle()
+
+            // At this point, it might have emitted the first DataStore value (empty prefs)
+            // or nothing if DataStore is slow.
+            // Crucially, ANY emitted value must have isLoaded = true.
+            assertTrue(settingsList.all { it.isLoaded })
+
+            // 2. Trigger another emission
+            repository.updateAppSettings { it.copy(onboardingCompleted = true) }
+            advanceUntilIdle()
+
+            assertTrue(settingsList.isNotEmpty())
+            assertTrue(settingsList.last().isLoaded)
+            assertTrue(settingsList.last().onboardingCompleted)
+
+            job.cancel()
+        }
+
+    @Test
+    fun testObserveAppSettings_DoesNotFilter() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+            // observeAppSettings() returns appSettingsState, which is a StateFlow
+            // We just ensure we can get a value and it eventually becomes loaded
+            advanceUntilIdle()
+            val loaded = repository.observeAppSettings().value
+            assertEquals(true, loaded.isLoaded)
         }
 }

@@ -97,7 +97,7 @@ fun SimLimitComposeDialog(
 }
 
 @Composable
-private fun rememberValidationMessages(): ValidationMessages =
+internal fun rememberValidationMessages(): ValidationMessages =
     ValidationMessages(
         required = stringResource(id = R.string.validation_error_field_required),
         invalidNumber = stringResource(id = R.string.validation_error_invalid_number),
@@ -115,7 +115,7 @@ private fun rememberValidationMessages(): ValidationMessages =
             ),
     )
 
-private data class ValidationMessages(
+internal data class ValidationMessages(
     val required: String,
     val invalidNumber: String,
     val minutesRange: String,
@@ -149,7 +149,7 @@ private fun rememberSimLimitState(
 }
 
 @Stable
-private class SimLimitState(
+internal class SimLimitState(
     initialMinutesText: String,
     initialTrafficText: String,
     initialRolloverEnabled: Boolean,
@@ -242,76 +242,89 @@ private class SimLimitState(
         return result
     }
 
+    /**
+     * Handles changes in the minutes input field.
+     *
+     * **Contract:**
+     * 1. Single-character input: if the current text is "0" and the user types a digit '1'-'9',
+     *    the "0" is replaced by that digit. Typing '0' results in "0".
+     * 2. Full selection replacement: trusts [newValue] as the result of the replacement.
+     * 3. All other cases: normalizes the input using [NumberInputNormalizer] and strips leading zeros.
+     */
     fun onMinutesChange(newValue: TextFieldValue) {
         if (newValue.text.length > MAX_MINUTES_CHARS) return
 
         val old = minutesText
         var processed = newValue
 
-        // If it was "0" and user typed a digit, just replace it regardless of selection
+        // Replace initial "0" only on single-character addition
         if (shouldReplaceInitialZero(old, newValue)) {
-            val typed = newValue.text.filter { it != '0' }.ifEmpty { "0" }
-            if (typed.all { it.isDigit() }) {
-                processed = newValue.copy(text = typed, selection = TextRange(typed.length))
-            }
-        } else if (isFullSelectionOverwrite(old, newValue)) {
-            val added = newValue.text.removePrefix(old.text).ifEmpty { newValue.text.removeSuffix(old.text) }
-            if (added.isNotEmpty() && added != newValue.text) {
-                processed = newValue.copy(text = added, selection = TextRange(added.length))
+            val typedChar = newValue.text.last()
+            if (typedChar in '1'..'9') {
+                val newText = typedChar.toString()
+                processed = newValue.copy(text = newText, selection = TextRange(newText.length))
+            } else if (typedChar == '0') {
+                processed = newValue.copy(text = "0", selection = TextRange(1))
             }
         }
 
-        val normalized = NumberInputNormalizer.normalize(processed.text)
-        minutesText = processed.copy(text = normalized)
+        var text = NumberInputNormalizer.normalize(processed.text)
+        // Strip leading zeros for minutes
+        if (text.length > 1 && text.startsWith("0")) {
+            text = text.dropWhile { it == '0' }.ifEmpty { "0" }
+        }
+
+        minutesText = processed.copy(text = text, selection = TextRange(text.length))
         minutesError = null
     }
 
     private fun shouldReplaceInitialZero(
         old: TextFieldValue,
         newValue: TextFieldValue,
-    ): Boolean = old.text == "0" && newValue.text.length == 2 && newValue.text != "0"
+    ): Boolean = old.text == "0" && newValue.text.length == 2 && newValue.text.startsWith("0")
 
-    private fun isFullSelectionOverwrite(
-        old: TextFieldValue,
-        newValue: TextFieldValue,
-    ): Boolean =
-        old.selection.start == 0 &&
-            old.selection.end == old.text.length &&
-            old.text.isNotEmpty() &&
-            newValue.text.length > old.text.length
-
+    /**
+     * Handles changes in the traffic input field.
+     *
+     * **Contract:**
+     * 1. Single-character input: if the current text is "0" or "0.0" and the user types a digit,
+     *    the initial text is replaced by that digit.
+     * 2. Full selection replacement: trusts [newValue] as the result of the replacement.
+     * 3. All other cases: normalizes the input using [NumberInputNormalizer] and strips leading zeros
+     *    if not a decimal.
+     */
     fun onTrafficChange(newValue: TextFieldValue) {
         if (newValue.text.length > MAX_TRAFFIC_CHARS) return
 
         val old = trafficText
         var processed = newValue
 
-        // If it was "0" or "0.0" and user typed a digit, just replace it
+        // Replace initial "0" or "0.0" only on single-character addition
         if (shouldReplaceInitialTrafficZero(old, newValue)) {
-            val typedChar = newValue.text.find { it !in old.text }
-            if (typedChar != null && typedChar.isDigit()) {
+            val typedChar = newValue.text.last()
+            if (typedChar.isDigit()) {
                 val newText = typedChar.toString()
                 processed = newValue.copy(text = newText, selection = TextRange(newText.length))
             }
         }
 
-        // Standard selection overwrite logic
-        if (processed == newValue && isFullSelectionOverwrite(old, newValue)) {
-            val added = newValue.text.removePrefix(old.text).ifEmpty { newValue.text.removeSuffix(old.text) }
-            if (added.isNotEmpty() && added != newValue.text) {
-                processed = newValue.copy(text = added, selection = TextRange(added.length))
-            }
+        var text = NumberInputNormalizer.normalize(processed.text)
+        // Strip leading zeros for traffic if it's not a decimal starting with "0."
+        if (text.length > 1 && text.startsWith("0") && !text.startsWith("0.")) {
+            text = text.dropWhile { it == '0' }.ifEmpty { "0" }
         }
 
-        val normalized = NumberInputNormalizer.normalize(processed.text)
-        trafficText = processed.copy(text = normalized)
+        trafficText = processed.copy(text = text, selection = TextRange(text.length))
         trafficError = null
     }
 
     private fun shouldReplaceInitialTrafficZero(
         old: TextFieldValue,
         newValue: TextFieldValue,
-    ): Boolean = (old.text == "0" || old.text == "0.0") && newValue.text.length > old.text.length
+    ): Boolean {
+        val isInitial = old.text == "0" || old.text == "0.0"
+        return isInitial && newValue.text.length == old.text.length + 1 && newValue.text.startsWith(old.text)
+    }
 }
 
 @Composable

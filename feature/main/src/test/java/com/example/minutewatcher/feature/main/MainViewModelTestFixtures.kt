@@ -121,6 +121,7 @@ abstract class MainViewModelTestFixtures {
             MutableStateFlow(
                 AppSettings(
                     onboardingCompleted = true,
+                    isLoaded = true,
                 ),
             ),
         )
@@ -130,6 +131,7 @@ abstract class MainViewModelTestFixtures {
             flowOf(
                 AppSettings(
                     onboardingCompleted = true,
+                    isLoaded = true,
                 ),
             ),
         )
@@ -224,7 +226,6 @@ abstract class MainViewModelTestFixtures {
             settings = settingsController,
             simData = simDataController,
             resume = resumeController,
-            dataRefreshNotifier = dataRefreshNotifier,
             widgetObservationRecovery = { updateCoordinator },
         )
     }

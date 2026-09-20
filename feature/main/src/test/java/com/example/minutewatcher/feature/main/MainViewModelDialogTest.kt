@@ -1,10 +1,13 @@
 package com.example.minutewatcher.feature.main
 
+import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -77,5 +80,22 @@ class MainViewModelDialogTest : MainViewModelTestFixtures() {
 
             viewModel.completeOnboarding()
             assertEquals(false, viewModel.showOnboardingDialog.value)
+        }
+
+    @Test
+    fun `onboarding dialog is not shown when settings are not loaded`() =
+        testScope.runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = false, isLoaded = false))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val viewModel = createViewModel(backgroundScope)
+
+            // Even if onboardingCompleted is false, dialog should not show because isLoaded is false
+            assertEquals(false, viewModel.showOnboardingDialog.value)
+
+            // Now emit loaded settings
+            settingsFlow.value = AppSettings(onboardingCompleted = false, isLoaded = true)
+
+            assertEquals(true, viewModel.showOnboardingDialog.value)
         }
 }

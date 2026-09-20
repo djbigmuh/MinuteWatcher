@@ -61,6 +61,13 @@ class UpdateCoordinator
         private val statusMachine = TrackingStatusMachine()
         override val status: StateFlow<TrackingStatus> = statusMachine.status
 
+    /**
+     * Private exception type used to fail the observation loop on terminal errors.
+     * This type does NOT extend [CancellationException], so it will fail the [Job]
+     * and trigger the monitoring restart mechanism.
+     */
+    private class TerminalUpdateException(message: String) : RuntimeException(message)
+
         /**
          * Updates the coordinator status using canonical prioritized rules.
          */
@@ -278,15 +285,18 @@ class UpdateCoordinator
             return firstSnapshot
         }
 
-        @Suppress("SwallowedException")
+    @Suppress("SwallowedException", "ThrowsCount")
         private suspend fun processSnapshotSafe(
             snapshot: GlobalSnapshot,
             observationJob: Job,
         ) {
             try {
                 processSnapshot(snapshot)
+            } catch (e: TerminalUpdateException) {
+                // Terminal failure from within processSnapshot. Rethrow to fail observation job.
+                throw e
             } catch (e: CancellationException) {
-                // Distinguish between takeover (forced update) and genuine cancellation or terminal failure.
+                // Distinguish between takeover (forced update) and genuine cancellation.
                 // In takeover, performForcedUpdate already cleared currentUpdateJob.
                 val isTakeoverDetected = currentUpdateJob.get() == null && observationJob.isActive
 
@@ -297,7 +307,6 @@ class UpdateCoordinator
                     throw e
                 }
             } catch (
-                @Suppress("SwallowedException")
                 e: Exception,
             ) {
                 AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
@@ -310,13 +319,20 @@ class UpdateCoordinator
                     newHash,
                 )
                 // Fail the observation loop to trigger monitoring-based restart.
-                // We use CancellationException WITHOUT a non-cancellation cause to prevent crashing test scope.
-                throw CancellationException("Observation loop failed: ${e.message}")
+                // Rethrowing original exception instead of wrapping in CancellationException
+                // to ensure the observation Job fails correctly.
+                throw e
             }
         }
 
         private fun launchMonitoringJob(newJob: Job): Job {
-            // Monitoring completion: if observation fails — restart with exponential delay.
+            /**
+             * Monitoring completion: if observation job fails (due to terminal error or unexpected exception)
+             * this monitoring job will perform a restart with exponential delay.
+             *
+             * Note: external cancellations (takeover, recover, shutdown) are handled via join()
+             * and ensureActive() to avoid restarting when deliberately stopped.
+             */
             return scope.launch {
                 newJob.join()
 
@@ -449,9 +465,9 @@ class UpdateCoordinator
                     if (result is WidgetUpdateResult.Failure &&
                         result.reason == WidgetUpdateResult.FailureReason.TERMINAL
                     ) {
-                        // Throwing CancellationException here will fail the current observation job
+                        // Throwing non-cancellation exception here will fail the current observation job
                         // and trigger the monitoring-based restart with backoffs.
-                        throw CancellationException("Terminal widget update failure")
+                        throw TerminalUpdateException("Terminal widget update failure")
                     }
                 } finally {
                     currentUpdateJob.compareAndSet(coroutineContext.job, null)

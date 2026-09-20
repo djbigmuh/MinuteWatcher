@@ -29,9 +29,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -87,6 +85,7 @@ internal class SimIdentityObserver
         private val recoveryJob = AtomicReference<Job?>(null)
 
         private val lastSeedRef = AtomicReference<SeedResult?>(null)
+    private val lastEphemeralSeed = AtomicReference<String?>(null)
         private val migrationTriggered = AtomicBoolean(false)
 
         override suspend fun recover() {
@@ -136,56 +135,42 @@ internal class SimIdentityObserver
             manualTrigger
                 .onStart { emit(Unit) }
                 .flatMapLatest {
-                    flow {
-                        // Ждем первого значения из репозитория.
-                        // В DataStore оно всегда есть (хотя бы пустая строка).
-                        // Используем таймаут для защиты от "зависшего" DataStore.
-                        val initialSeed =
-                            withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                                seedRepository.seedFlow.first()
+                    val repoFlow =
+                        seedRepository.seedFlow
+                            .filter { it.isNotEmpty() }
+                            .map { SeedResult.Real(it, isStable = true) }
+                            .catch { e ->
+                                if (e is CancellationException) throw e
+                                AppLogger.e("SimIdentityObserver: repoFlow error", e)
                             }
 
-                        when {
-                            initialSeed.isNullOrEmpty() -> {
-                                // First attempt to generate a real seed before falling back
-                                val generationResult = generateSeedWithRetry()
-                                emit(toSeedResult(generationResult))
+                    val retryFlow =
+                        flow {
+                            // 1. Initial attempt to resolve seed (persistent or ephemeral).
+                            var resolution = generateSeedWithRetry()
+                            if (resolution is SeedResolutionResult.Ephemeral) {
+                                lastEphemeralSeed.set(resolution.seed)
                             }
+                            emit(toSeedResult(resolution))
 
-                            else -> {
-                                // Сид есть — используем его
-                                emit(SeedResult.Real(initialSeed, isStable = true))
+                            // 2. If resolution fell back to ephemeral (storage failed),
+                            // start a background loop to periodically retry persistent resolution.
+                            while (resolution is SeedResolutionResult.Ephemeral) {
+                                delay(DISCOVERY_RECOVERY_COOLDOWN_MS.milliseconds)
+                                AppLogger.d("SimIdentityObserver: periodic persistent seed retry")
+                                resolution = generateSeedWithRetry()
+                                if (resolution is SeedResolutionResult.Ephemeral) {
+                                    lastEphemeralSeed.set(resolution.seed)
+                                }
+                                emit(toSeedResult(resolution))
                             }
+                        }.catch { e ->
+                            if (e is CancellationException) throw e
+                            AppLogger.e("SimIdentityObserver: seed resolution loop error", e)
                         }
 
-                        // Подписка на будущие изменения
-                        emitAll(
-                            seedRepository.seedFlow
-                                .filter { it.isNotEmpty() }
-                                .map { SeedResult.Real(it, isStable = true) },
-                        )
-                    }.catch { e ->
-                        if (e is CancellationException) throw e
-                        AppLogger.e("SimIdentityObserver: seedFlow source error", e)
-                        val fallback =
-                            try {
-                                withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
-                                    seedRepository.getOrCreateSeedOrEphemeralFallback { UUID.randomUUID().toString() }
-                                }
-                            } catch (inner: CancellationException) {
-                                throw inner
-                            } catch (inner: Exception) {
-                                AppLogger.e("SimIdentityObserver: fallback seed resolution failed", inner)
-                                null
-                            }
-                        val resolvedFallback =
-                            fallback ?: SeedResolutionResult.Ephemeral(
-                                seedRepository.getOrCreateEphemeralSeed {
-                                    UUID.randomUUID().toString()
-                                },
-                            )
-                        emit(toSeedResult(resolvedFallback))
-                    }
+                    // Merge both flows: reactive updates from DataStore and periodic manual retries.
+                    merge(retryFlow, repoFlow)
                 }.distinctUntilChanged()
                 .shareIn(
                     scope,
@@ -437,37 +422,56 @@ internal class SimIdentityObserver
          * Checks if a transition from Fallback (ephemeral) seed to Real (persistent) seed
          * has occurred and triggers identity migration if needed.
          *
-         * **Migration Guard:** The migration is triggered at most once for a given pair
-         * of seed values (transition from specific Fallback to specific Real).
-         * If the system returns to Fallback state, the trigger is reset to allow
-         * migration if another persistent seed is eventually resolved.
+         * **Migration Guard:** The migration is triggered when transitioning from Fallback to Real,
+         * or if discovery emits while in Real state and a previous migration attempt failed.
+         * If the system returns to Fallback state, the trigger is reset.
          */
         private fun checkAndTriggerMigration(
             currentSeed: SeedResult,
             sims: List<ActiveSimInfo>,
         ) {
             val lastSeed = lastSeedRef.getAndSet(currentSeed)
-            if (lastSeed is SeedResult.Fallback && currentSeed is SeedResult.Real) {
-                if (migrationTriggered.compareAndSet(false, true)) {
-                    AppLogger.d("SimIdentityObserver: detecting Fallback -> Real transition, triggering migration")
+            if (currentSeed is SeedResult.Real) {
+                // Trigger migration on Fallback -> Real transition, or retry if previously failed.
+                val shouldTrigger = (lastSeed is SeedResult.Fallback) || !migrationTriggered.get()
+                if (shouldTrigger && migrationTriggered.compareAndSet(false, true)) {
+                    val fallbackSeedValue = (lastSeed as? SeedResult.Fallback)?.seed ?: lastEphemeralSeed.get()
+
+                    if (fallbackSeedValue == null) {
+                        // If we have no record of ephemeral seed being used, nothing to migrate.
+                        migrationTriggered.set(true) // Mark as "done" to avoid repeated warnings
+                        return
+                    }
+
+                    AppLogger.d(
+                        "SimIdentityObserver: triggering migration from $fallbackSeedValue to persistent seed",
+                    )
                     scope.launch {
                         try {
-                            val outcome = migrationService.migrateFromEphemeralSeed(lastSeed.seed, sims)
+                            val outcome = migrationService.migrateFromEphemeralSeed(fallbackSeedValue, sims)
                             AppLogger.d(
                                 "SimIdentityObserver: migration from ephemeral seed finished. " +
                                     "Outcome: migrated=${outcome.migrated}, conflicts=${outcome.conflicts}, " +
                                     "failures=${outcome.failures}",
                             )
                             if (outcome.failures > 0) {
-                                AppLogger.e("SimIdentityObserver: migration had ${outcome.failures} failures")
+                                AppLogger.e(
+                                    "SimIdentityObserver: migration had ${outcome.failures} failures, will retry",
+                                )
+                                // Reset trigger on failure to allow retry upon next discovery emission
+                                migrationTriggered.set(false)
                             }
                         } catch (e: Exception) {
-                            AppLogger.e("SimIdentityObserver: migration failed with unexpected error", e)
+                            if (e is CancellationException) throw e
+                            AppLogger.e("SimIdentityObserver: migration failed with unexpected error, will retry", e)
+                            // Reset trigger on exception to allow retry
+                            migrationTriggered.set(false)
                         }
                     }
                 }
             } else if (currentSeed is SeedResult.Fallback) {
-                // Reset trigger when we are in Fallback, so we can trigger again when we go to Real
+                // Track ephemeral seed and reset trigger for future migration
+                lastEphemeralSeed.set(currentSeed.seed)
                 migrationTriggered.set(false)
             }
         }

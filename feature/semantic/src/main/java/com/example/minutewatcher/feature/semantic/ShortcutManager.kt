@@ -151,7 +151,6 @@ class ShortcutManager
          * **Contract:** Snapshots with [Constants.Data.EMPTY_TIMESTAMP] are ignored to avoid
          * removing all dynamic shortcuts during cold start.
          */
-        @Suppress("InstanceOfCheckForException")
         suspend fun updateShortcutsSync(snapshot: GlobalSnapshot): Boolean =
             try {
                 if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {

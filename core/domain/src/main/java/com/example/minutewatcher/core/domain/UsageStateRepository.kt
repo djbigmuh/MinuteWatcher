@@ -68,5 +68,6 @@ interface UsageStateRepository {
      * @throws IOException if storage or network access fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
+    @Throws(IOException::class)
     suspend fun refresh(): RefreshResult
 }

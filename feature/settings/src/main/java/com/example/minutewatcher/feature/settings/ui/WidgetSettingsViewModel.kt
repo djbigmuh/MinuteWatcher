@@ -243,10 +243,6 @@ class WidgetSettingsViewModel
                     )
                 }
 
-                if (lastSavedSettings == null) {
-                    lastSavedSettings = finalSettings
-                }
-
                 if (finalSettings != loaded) {
                     autoSaveTrigger.tryEmit(Unit)
                 }
@@ -316,6 +312,11 @@ class WidgetSettingsViewModel
                 currentSettings == null -> {
                     AppLogger.w("saveAndNotify called before settings were loaded")
                     SaveResult.Failed("Settings are still loading")
+                }
+
+                (lastSavedSettings != null) && (currentSettings == lastSavedSettings) -> {
+                    AppLogger.d("saveAndNotify: no changes since last save, skipping")
+                    SaveResult.Success
                 }
 
                 else -> {

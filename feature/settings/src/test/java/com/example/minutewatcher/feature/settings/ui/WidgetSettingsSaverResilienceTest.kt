@@ -1,7 +1,6 @@
 package com.example.minutewatcher.feature.settings.ui
 
 import com.example.minutewatcher.core.common.util.initTestLogger
-import com.example.minutewatcher.core.domain.WidgetSaveResult
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CompletableDeferred
@@ -43,11 +42,6 @@ class WidgetSettingsSaverResilienceTest {
                     }
 
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
-
-                    override suspend fun save(
-                        state: WidgetSettingsState,
-                        skipSimSettings: Boolean,
-                    ) = WidgetSaveResult.Success
                 }
 
             val saver = WidgetSettingsSaver(controlledLoader, mock())

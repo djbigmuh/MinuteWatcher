@@ -83,23 +83,43 @@ class SimUsageRepositoryImpl
         }
 
         /**
-         * Increments minutes used for the identity by the given delta.
+         * Increments minutes used for the identity by the given delta for a specific call.
+         *
+         * Idempotent implementation using [callMarker]. If the marker matches the saved one,
+         * no changes are made and false is returned.
+         *
+         * The [callMarker] is the session's bootTime (elapsedRealtime of the call start).
+         * Marker collisions between different boots are theoretically possible only if
+         * elapsedRealtime matches exactly, which is handled as a conservative skip.
          *
          * Safe to call from any coroutine context.
+         * @return True if incremented, false if already counted or identity is invalid.
          * @throws java.io.IOException if write fails.
          */
-        override suspend fun incrementMinutesUsed(
+        override suspend fun incrementMinutesUsedForCall(
             identity: String,
-            delta: Int,
-        ) {
+            deltaMinutes: Int,
+            callMarker: Long,
+        ): Boolean {
             if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("incrementMinutesUsed called with invalid identity: $identity")
-                return
+                AppLogger.w("incrementMinutesUsedForCall called with invalid identity: $identity")
+                return false
             }
+            var result = false
             dataStore.edit { prefs ->
+                val lastMarker = prefs[DataStoreKeys.lastCountedCallMarkerKey(identity)] ?: 0L
+                if (lastMarker == callMarker) {
+                    AppLogger.d("incrementMinutesUsedForCall: call $callMarker already counted for $identity")
+                    result = false
+                    return@edit
+                }
+
                 val current = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0
-                prefs[DataStoreKeys.minutesUsedKey(identity)] = current + delta
+                prefs[DataStoreKeys.minutesUsedKey(identity)] = current + deltaMinutes
+                prefs[DataStoreKeys.lastCountedCallMarkerKey(identity)] = callMarker
+                result = true
             }
+            return result
         }
 
         /**

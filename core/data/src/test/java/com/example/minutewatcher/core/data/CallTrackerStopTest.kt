@@ -81,6 +81,20 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
                             override suspend fun getActiveCallSubIds(): List<Int>? {
                                 initLock.withLock { return emptyList() }
                             }
+
+                            override suspend fun saveCallSession(
+                                subId: Int,
+                                startTime: Long,
+                                bootTime: Long,
+                                uptime: Long,
+                                identity: String?,
+                            ) {
+                                callSessionRepository.saveCallSession(subId, startTime, bootTime, uptime, identity)
+                            }
+
+                            override suspend fun clearCallSession(subId: Int) {
+                                callSessionRepository.clearCallSession(subId)
+                            }
                         },
                 )
 
@@ -122,6 +136,20 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
                         object : CallSessionRepository by callSessionRepository {
                             override suspend fun getActiveCallSubIds(): List<Int>? {
                                 initLock.withLock { return emptyList() }
+                            }
+
+                            override suspend fun saveCallSession(
+                                subId: Int,
+                                startTime: Long,
+                                bootTime: Long,
+                                uptime: Long,
+                                identity: String?,
+                            ) {
+                                callSessionRepository.saveCallSession(subId, startTime, bootTime, uptime, identity)
+                            }
+
+                            override suspend fun clearCallSession(subId: Int) {
+                                callSessionRepository.clearCallSession(subId)
                             }
                         },
                 )

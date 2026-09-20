@@ -95,11 +95,11 @@ class NotificationHelper
         private fun areNotificationsEnabledSafe(): Boolean =
             try {
                 NotificationManagerCompat.from(context).areNotificationsEnabled()
-            } catch (e: Exception) {
-                // Catches SecurityException, DeadObjectException, RuntimeException
-                // and other system service issues to ensure notification status check doesn't crash.
-                @Suppress("TooGenericExceptionCaught")
-                AppLogger.w("Error checking notification status: ${e.javaClass.simpleName}: ${e.message}")
+            } catch (e: SecurityException) {
+                AppLogger.w("Error checking notification status: SecurityException: ${e.message}")
+                false
+            } catch (e: RuntimeException) {
+                AppLogger.w("Error checking notification status: RuntimeException: ${e.message}")
                 false
             }
 

@@ -38,6 +38,6 @@ data class TrackingBannerCallbacks(
     val onGrantNotificationPermission: () -> Unit,
     val onDismissWidgetError: () -> Unit,
     val onDismissInaccurateCalls: () -> Unit,
-    val onRetryBanners: () -> Unit,
     val onRetryWidgetObservation: () -> Unit,
+    val onRetrySimDiscovery: () -> Unit,
 )

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
@@ -13,7 +14,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -51,11 +51,11 @@ class SimIdentityPersistence
             if (validIdentities.isEmpty()) return
 
             try {
-                val preEditPrefs = fetchCurrentPrefs()
-                val toMigrate = validIdentities.filter { isMigrationRequired(it, preEditPrefs) }
-                val failedIds = performMigrations(toMigrate)
-
                 withTimeout(SAVE_TIMEOUT_MS.milliseconds) {
+                    val preEditPrefs = fetchCurrentPrefs()
+                    val toMigrate = validIdentities.filter { isMigrationRequired(it, preEditPrefs) }
+                    val failedIds = performMigrations(toMigrate)
+
                     saveMutex.withLock {
                         val anyUpdateRequired = validIdentities.any { isIdentityUpdateRequired(it, preEditPrefs) }
                         if (!anyUpdateRequired && toMigrate.isEmpty()) return@withLock
@@ -71,7 +71,7 @@ class SimIdentityPersistence
                     }
                 }
             } catch (e: TimeoutCancellationException) {
-                AppLogger.e("SimIdentityPersistence: Save operation timed out (mutex or IO)")
+                AppLogger.e("SimIdentityPersistence: Save operation timed out (mutex, migration or IO)")
                 throw IOException("Save operation timed out", e)
             }
         }
@@ -108,7 +108,8 @@ class SimIdentityPersistence
             }
         }
 
-        private suspend fun fetchCurrentPrefs(): Preferences = dataStore.data.first()
+    private suspend fun fetchCurrentPrefs(): Preferences =
+        dataStore.data.firstWithTimeout() ?: throw IOException("DataStore read timeout")
 
         private fun isIdentityUpdateRequired(
             identity: SimIdentity,

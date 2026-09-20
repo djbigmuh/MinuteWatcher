@@ -18,6 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
@@ -50,7 +51,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), any())
+            verify(callSessionRepository, atLeastOnce()).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
         }
 
     @Test
@@ -70,8 +71,10 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Assert: verify clearSession was called (which sets 0) before starting new
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), argThat { this > 0L })
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
+            verify(callSessionRepository, atLeastOnce()).saveCallSession(
+                eq(1), argThat { this > 0L }, any(), any(), anyOrNull()
+            )
         }
 
     @Test
@@ -86,16 +89,18 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(10000L))
 
-            // Arrange: clearSession (setCallStartTime) throws exception
-            whenever(callSessionRepository.setCallStartTime(eq(1), eq(0L)))
+            // Arrange: clearSession throws exception
+            whenever(callSessionRepository.clearCallSession(eq(1)))
                 .thenThrow(IllegalStateException("Clear failed"))
 
             // Act
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 
-            // Assert: verify that even with clearSession failure, new startTime was still set
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), argThat { this > 0L })
+            // Assert: verify that even with clearSession failure, new session was still saved
+            verify(callSessionRepository, atLeastOnce()).saveCallSession(
+                eq(1), argThat { this > 0L }, any(), any(), anyOrNull()
+            )
         }
 
     @Test
@@ -123,7 +128,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             )
 
             // Verify session WAS cleared for safety
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
         }
 
     @Test
@@ -258,9 +263,11 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 
-            // Verify session was NOT started (only cleanup set to 0)
-            verify(callSessionRepository, never()).setCallStartTime(eq(1), argThat { this > 0L })
-            verify(callSessionRepository, atLeastOnce()).setCallStartTime(eq(1), eq(0L))
+            // Verify session was NOT started (only cleanup called)
+            verify(callSessionRepository, never()).saveCallSession(
+                eq(1), argThat { this > 0L }, any(), any(), anyOrNull()
+            )
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
         }
 
     @Test
@@ -301,7 +308,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Verify first start time is set
-            verify(callSessionRepository).setCallStartTime(eq(1), eq(1000L))
+            verify(callSessionRepository).saveCallSession(eq(1), eq(1000L), any(), any(), anyOrNull())
 
             // 2. Mock that there's an active session
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
@@ -315,7 +322,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // Verify that 2000L was NOT set as startTime
-            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(2000L))
+            verify(callSessionRepository, never()).saveCallSession(eq(1), eq(2000L), any(), any(), anyOrNull())
         }
 
     @Test
@@ -360,7 +367,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             callTracker.onCallStarted(subId = 1)
             advanceUntilIdle()
 
-            // Assert: verify no new startTime was set
-            verify(callSessionRepository, never()).setCallStartTime(eq(1), eq(2000L))
+            // Assert: verify no new session was saved
+            verify(callSessionRepository, never()).saveCallSession(eq(1), eq(2000L), any(), any(), anyOrNull())
         }
 }

@@ -1,6 +1,5 @@
 package com.example.minutewatcher.feature.main.controller
 
-import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.WidgetUpdateCoordinator
 import javax.inject.Inject
 
@@ -14,7 +13,6 @@ import javax.inject.Inject
  * @property settings Controller for application settings.
  * @property simData Controller for SIM card data management.
  * @property resume Controller for activity resume logic.
- * @property dataRefreshNotifier Notifier for data refresh events.
  * @property widgetObservationRecovery Lazy reference to coordinator for recovery.
  */
 class MainViewModelControllers
@@ -25,6 +23,5 @@ class MainViewModelControllers
         val settings: MainSettingsController,
         val simData: MainSimDataController,
         val resume: MainResumeController,
-        val dataRefreshNotifier: DataRefreshNotifier,
         val widgetObservationRecovery: dagger.Lazy<WidgetUpdateCoordinator>,
     )

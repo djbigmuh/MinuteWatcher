@@ -25,6 +25,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -160,10 +161,12 @@ class CallTrackerRaceTest {
             // API compliance: on AOSP DataStore.edit serializes writes.
             // callMutex in CallTracker further serializes read-modify-write at the app level.
             // Test verifies that concurrent calls do not result in double session writes.
-            // Verification: setCallStartTime called exactly once for subId=1,
+            // Verification: saveCallSession called exactly once for subId=1,
             // as the mutex serializes access and only the first call
             // should write the session (others will see startTime != 0).
-            verify(callSessionRepository, times(1)).setCallStartTime(eq(1), argThat { this > 0L })
+            verify(callSessionRepository, times(1)).saveCallSession(
+                eq(1), argThat { this > 0L }, any(), any(), anyOrNull()
+            )
         }
 
     @Test
@@ -178,7 +181,7 @@ class CallTrackerRaceTest {
             launch { tracker.onCallStarted(2) }
             advanceUntilIdle()
 
-            verify(callSessionRepository).setCallStartTime(eq(1), any())
-            verify(callSessionRepository).setCallStartTime(eq(2), any())
+            verify(callSessionRepository).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
+            verify(callSessionRepository).saveCallSession(eq(2), any(), any(), any(), anyOrNull())
         }
 }

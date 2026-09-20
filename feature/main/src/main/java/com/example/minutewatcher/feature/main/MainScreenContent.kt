@@ -15,10 +15,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,17 +36,27 @@ fun MainScreenContent(
     var isRefreshing by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
+    // Task 13.2: Scroll to highlighted slot even if data is loaded later.
     LaunchedEffect(highlightedSlot) {
         val slot = highlightedSlot ?: return@LaunchedEffect
-        val state = uiState
-        if (state is SimCardListState.Success) {
-            val index = state.simCards.indexOfFirst { it.slot == slot }
-            if (index >= 0) {
-                listState.animateScrollToItem(index)
+
+        // Wait for Success state with the requested slot
+        snapshotFlow { uiState }
+            .filter { it is SimCardListState.Success }
+            .collectLatest { state ->
+                val success = state as SimCardListState.Success
+                val index = success.simCards.indexOfFirst { it.slot == slot }
+                if (index >= 0) {
+                    AppLogger.d("MainScreenContent: scrolling to highlighted slot $slot at index $index")
+                    listState.animateScrollToItem(index)
+                    // Once scrolled, we stop observing until highlightedSlot changes again.
+                    return@collectLatest
+                } else {
+                    AppLogger.w("MainScreenContent: slot $slot not found in Success list, stopping wait")
+                    // If slot not found in a successful list, we stop waiting.
+                    return@collectLatest
+                }
             }
-        } else {
-            AppLogger.w("Cannot scroll to slot $slot: UI state is ${state::class.simpleName}")
-        }
     }
 
     PullToRefreshBox(
@@ -97,8 +110,8 @@ private fun rememberTrackingBannerCallbacks(
             onGrantNotificationPermission = actions.onGrantNotificationPermission,
             onDismissWidgetError = viewModel::dismissWidgetError,
             onDismissInaccurateCalls = viewModel::dismissInaccurateCalls,
-            onRetryBanners = { viewModel.retryBanners() },
             onRetryWidgetObservation = { viewModel.retryWidgetObservation() },
+            onRetrySimDiscovery = { viewModel.retrySimDiscovery() },
         )
     }
 

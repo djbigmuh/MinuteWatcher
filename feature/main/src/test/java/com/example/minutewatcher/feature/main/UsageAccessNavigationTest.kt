@@ -187,7 +187,6 @@ class UsageAccessNavigationTest {
                 settings = settingsController,
                 simData = simDataController,
                 resume = resumeController,
-                dataRefreshNotifier = dataRefreshNotifier,
                 widgetObservationRecovery = { updateCoordinator },
             )
 
@@ -242,8 +241,8 @@ class UsageAccessNavigationTest {
                         onGrantNotificationPermission = {},
                         onDismissWidgetError = {},
                         onDismissInaccurateCalls = {},
-                        onRetryBanners = {},
                         onRetryWidgetObservation = {},
+                        onRetrySimDiscovery = {},
                     ),
             )
         }

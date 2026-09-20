@@ -178,4 +178,90 @@ class MainResumeControllerTest {
             runCurrent()
             assertEquals("Should run again after debounce time", 2, refreshCount)
         }
+
+    @Test
+    fun `onActivityResume allows execution when clocks reset after reboot`() =
+        runTest {
+            val now = 1000L
+            val lastFuture = now + 100000L // Immitate value from previous session before reboot
+            savedStateHandle["last_resume_timestamp"] = lastFuture
+            whenever(timeProvider.elapsedRealtime()).thenReturn(now)
+            initializationState.value = InitializationState.Completed
+            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_TIME] = 0L // Force stale
+
+            var refreshCalled = false
+            controller.onActivityResume(
+                scope = backgroundScope,
+                initController = initController,
+                onRefreshNeeded = {
+                    refreshCalled = true
+                    true
+                },
+                onUpdateLastRefreshAt = {},
+            )
+            runCurrent()
+
+            assertTrue("Should run even if time diff is negative (reboot)", refreshCalled)
+            assertEquals(
+                "Should update last resume timestamp to current now",
+                now,
+                savedStateHandle.get<Long>("last_resume_timestamp")
+            )
+        }
+
+    @Test
+    fun `onActivityResume blocks execution within debounce`() =
+        runTest {
+            val now = 100000L
+            val last = now - 1000L // 1 second ago (within 5s debounce)
+            savedStateHandle["last_resume_timestamp"] = last
+            whenever(timeProvider.elapsedRealtime()).thenReturn(now)
+            initializationState.value = InitializationState.Completed
+            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_TIME] = 0L
+
+            var refreshCalled = false
+            controller.onActivityResume(
+                scope = backgroundScope,
+                initController = initController,
+                onRefreshNeeded = {
+                    refreshCalled = true
+                    true
+                },
+                onUpdateLastRefreshAt = {},
+            )
+            runCurrent()
+
+            assertFalse("Should be blocked by debounce", refreshCalled)
+            assertEquals(
+                "Should not update timestamp if debounced",
+                last,
+                savedStateHandle.get<Long>("last_resume_timestamp")
+            )
+        }
+
+    @Test
+    fun `onActivityResume allows execution after debounce expires`() =
+        runTest {
+            val now = 100000L
+            val last = now - 6000L // 6 seconds ago (past 5s debounce)
+            savedStateHandle["last_resume_timestamp"] = last
+            whenever(timeProvider.elapsedRealtime()).thenReturn(now)
+            initializationState.value = InitializationState.Completed
+            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_TIME] = 0L
+
+            var refreshCalled = false
+            controller.onActivityResume(
+                scope = backgroundScope,
+                initController = initController,
+                onRefreshNeeded = {
+                    refreshCalled = true
+                    true
+                },
+                onUpdateLastRefreshAt = {},
+            )
+            runCurrent()
+
+            assertTrue("Should allow execution after debounce expires", refreshCalled)
+            assertEquals("Should update timestamp", now, savedStateHandle.get<Long>("last_resume_timestamp"))
+        }
 }

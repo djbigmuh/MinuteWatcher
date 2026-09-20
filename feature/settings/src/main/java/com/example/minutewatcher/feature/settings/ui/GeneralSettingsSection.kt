@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.resources.R
+import kotlin.math.roundToInt
 
 @Composable
 fun GeneralSettingsSection(
@@ -118,7 +119,7 @@ private fun TransparencySetting(
     SettingLabel(stringResource(id = R.string.background_transparency))
     Slider(
         value = state.transparency.toFloat(),
-        onValueChange = { onUpdateTransparency(it.toInt()) },
+        onValueChange = { onUpdateTransparency(it.roundToInt()) },
         valueRange = 0f..100f,
         steps = 99,
         enabled = enabled,
@@ -134,7 +135,7 @@ private fun FontSizeSetting(
     SettingLabel(stringResource(id = R.string.font_size))
     Slider(
         value = state.fontSize.toFloat(),
-        onValueChange = { onUpdateFontSize(it.toInt()) },
+        onValueChange = { onUpdateFontSize(it.roundToInt()) },
         valueRange = 0f..4f,
         steps = 3,
         enabled = enabled,
