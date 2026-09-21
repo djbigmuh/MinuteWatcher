@@ -1,15 +1,10 @@
 package com.example.minutewatcher
 
 import android.Manifest
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Intent
 import android.content.LocusId
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,25 +19,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.example.minutewatcher.controller.MainPermissionController
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
-import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants.IntentExtras
-import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen
 import com.example.minutewatcher.feature.main.SimCardScreenActions
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
-import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -73,7 +63,7 @@ class MainActivity : AppCompatActivity() {
             lastPermissionState = savedInstanceState.getInt(KEY_LAST_PERMISSION_STATE, -1)
         }
 
-        setupObservers()
+        MainActivityThemeObserver.observe(lifecycleScope, lifecycle, viewModel)
         setupLocusContext()
 
         setContent {
@@ -84,48 +74,9 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    private fun setupObservers() {
-        observeAppTheme()
-        observeAppLanguage()
-    }
-
     private fun setupLocusContext() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             setLocusContext(LocusId("main_screen"), null)
-        }
-    }
-
-    private fun observeAppTheme() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.appTheme.collect { theme ->
-                    val mode =
-                        when (theme) {
-                            AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-                            AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
-                            AppTheme.FOLLOW_SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                        }
-                    AppCompatDelegate.setDefaultNightMode(mode)
-                }
-            }
-        }
-    }
-
-    private fun observeAppLanguage() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.appLanguage.collect { lang ->
-                    val appLocale: LocaleListCompat =
-                        if (lang == null) {
-                            LocaleListCompat.getEmptyLocaleList()
-                        } else {
-                            LocaleListCompat.forLanguageTags(lang)
-                        }
-                    if (AppCompatDelegate.getApplicationLocales() != appLocale) {
-                        AppCompatDelegate.setApplicationLocales(appLocale)
-                    }
-                }
-            }
         }
     }
 
@@ -142,8 +93,8 @@ class MainActivity : AppCompatActivity() {
                 val actions =
                     remember(viewModel) {
                         SimCardScreenActions(
-                            onOpenSettings = { openWidgetSettings() },
-                            onAddWidget = { addWidgetToHomeScreen() },
+                            onOpenSettings = { MainActivityNavigator.openWidgetSettings(this@MainActivity) },
+                            onAddWidget = { MainActivityNavigator.addWidgetToHomeScreen(this@MainActivity) },
                             onThemeChange = { theme -> viewModel.setTheme(theme) },
                             onLanguageChange = { lang -> handleLanguageChange(lang) },
                             onGrantPhonePermission = {
@@ -154,10 +105,10 @@ class MainActivity : AppCompatActivity() {
                                 viewModel.setUsageAccessDialog(true)
                             },
                             onOpenUsageAccessSettings = {
-                                openUsageAccessSettings()
+                                MainActivityNavigator.openUsageAccessSettings(this@MainActivity)
                             },
                             onOpenAppSettings = {
-                                openAppSettings()
+                                MainActivityNavigator.openAppSettings(this@MainActivity)
                             },
                             onGrantNotificationPermission = {
                                 permissionHandler.requestNotificationPermission()
@@ -196,10 +147,6 @@ class MainActivity : AppCompatActivity() {
                 viewModel.highlightSlot(simSlot)
             }
         }
-    }
-
-    private fun openWidgetSettings() {
-        startActivity(Intent(this, WidgetSettingsActivity::class.java))
     }
 
     private val permissionHandler = PermissionHandler()
@@ -276,53 +223,6 @@ class MainActivity : AppCompatActivity() {
                 viewModel.setNotificationPermissionRequested()
                 notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-        }
-    }
-
-    private fun openAppSettings() {
-        startActivity(NavigationIntentFactory.getAppSettingsIntent(this))
-    }
-
-    private fun openUsageAccessSettings() {
-        // Priority: "Usage Access" screen for the specific app.
-        try {
-            startActivity(NavigationIntentFactory.getUsageAccessSettingsIntent(this))
-            return
-        } catch (e: Exception) {
-            AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
-        }
-        // Fallback: generic list of apps with usage access.
-        try {
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            return
-        } catch (e: Exception) {
-            AppLogger.e("Usage access settings not found, opening app details", e)
-        }
-        openAppSettings()
-    }
-
-    private fun addWidgetToHomeScreen() {
-        val appWidgetManager = getSystemService(AppWidgetManager::class.java)
-        val myProvider = ComponentName(this, MinutesGlanceWidgetReceiver::class.java)
-
-        val existingIds = appWidgetManager.getAppWidgetIds(myProvider)
-        if (existingIds.isNotEmpty()) {
-            Toast.makeText(this, getString(R.string.widget_already_added), Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (appWidgetManager.isRequestPinAppWidgetSupported) {
-            val callbackIntent = Intent(this, PinWidgetReceiver::class.java)
-            val successCallback =
-                PendingIntent.getBroadcast(
-                    this,
-                    0,
-                    callbackIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
-            appWidgetManager.requestPinAppWidget(myProvider, null, successCallback)
-        } else {
-            Toast.makeText(this, getString(R.string.widget_pin_unsupported), Toast.LENGTH_SHORT).show()
         }
     }
 
