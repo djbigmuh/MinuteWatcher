@@ -1,4 +1,9 @@
+package com.example.minutewatcher.core.android.util
+
 import android.content.Context
+import android.content.res.Configuration
+import android.content.res.Resources
+import android.os.LocaleList
 import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
@@ -10,22 +15,10 @@ import java.util.Locale
 class FormatUtilsTest {
     @Test
     fun testFormatTrafficGb() {
-        // Result should be consistent regardless of environment because Locale.US is used internally.
-        // No need to set Locale.setDefault(Locale.US) here.
-        assertEquals("1.5", FormatUtils.formatTrafficGb(1.5f))
-        assertEquals("0.0", FormatUtils.formatTrafficGb(0f))
-    }
-
-    @Test
-    fun `formatTrafficGb uses fixed Locale US regardless of default locale`() {
-        val originalLocale = Locale.getDefault()
-        try {
-            // Arabic locale often uses different decimal separators (e.g. ٫)
-            Locale.setDefault(Locale.forLanguageTag("ar"))
-            assertEquals("1.5", FormatUtils.formatTrafficGb(1.5f))
-        } finally {
-            Locale.setDefault(originalLocale)
-        }
+        assertEquals("1.5", FormatUtils.formatTrafficGb(Locale.US, 1.5f))
+        assertEquals("0.0", FormatUtils.formatTrafficGb(Locale.US, 0f))
+        assertEquals("1,5", FormatUtils.formatTrafficGb(Locale.GERMANY, 1.5f))
+        assertEquals("-1,5", FormatUtils.formatTrafficGb(Locale.GERMANY, -1.5f))
     }
 
     @Test
@@ -36,18 +29,26 @@ class FormatUtilsTest {
 
     @Test
     fun testFormatTrafficDisplayLogic() {
-        assertEquals("1.5 GB", FormatUtils.formatTrafficDisplayLogic(1.5f, 5.0f, false, "GB"))
-        assertEquals("1.5 / 5.0 GB", FormatUtils.formatTrafficDisplayLogic(1.5f, 5.0f, true, "GB"))
+        assertEquals("1.5 GB", FormatUtils.formatTrafficDisplayLogic(Locale.US, 1.5f, 5.0f, false, "GB"))
+        assertEquals("1.5 / 5.0 GB", FormatUtils.formatTrafficDisplayLogic(Locale.US, 1.5f, 5.0f, true, "GB"))
+        assertEquals("1,5 / 5,0 GB", FormatUtils.formatTrafficDisplayLogic(Locale.GERMANY, 1.5f, 5.0f, true, "GB"))
     }
 
     @Test
-    fun `formatTrafficDisplay adds space after remaining_text`() {
+    fun `formatTrafficDisplay uses context locale`() {
         val context = mock<Context>()
+        val resources = mock<Resources>()
+        val config = mock<Configuration>()
+        val localeList = LocaleList(Locale.GERMANY)
+
+        whenever(context.resources).thenReturn(resources)
+        whenever(resources.configuration).thenReturn(config)
+        whenever(config.locales).thenReturn(localeList)
         whenever(context.getString(R.string.remaining_text)).thenReturn("Remaining:")
         whenever(context.getString(R.string.gb_abbr)).thenReturn("GB")
 
         val result = FormatUtils.formatTrafficDisplay(context, 1.5f, 5.0f, true)
-        assertEquals("Remaining: 1.5 / 5.0 GB", result)
+        assertEquals("Remaining: 1,5 / 5,0 GB", result)
     }
 
     @Test

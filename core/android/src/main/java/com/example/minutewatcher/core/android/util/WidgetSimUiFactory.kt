@@ -128,19 +128,19 @@ object WidgetSimUiFactory {
 
         return PackageUiData(
             show = showTraffic,
-            text = formatTrafficValue(entity, limitGb, remGb),
+            text = formatTrafficValue(strings, entity, limitGb, remGb),
             suffix = strings.gbAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = if (showLimit) "/${FormatUtils.formatTrafficGb(limitGb)}" else "",
+            limitText = if (showLimit) "/${FormatUtils.formatTrafficGb(strings.locale, limitGb)}" else "",
             usedFull = "${strings.usedText}: ${
                 formatWithSuffix(
-                    FormatUtils.formatTrafficGb(usedGb),
+                    FormatUtils.formatTrafficGb(strings.locale, usedGb),
                     strings.gbAbbr,
                 )
             }",
             limitFull = "${strings.limitText}: ${
-                formatWithSuffix(FormatUtils.formatTrafficGb(limitGb), strings.gbAbbr)
+                formatWithSuffix(FormatUtils.formatTrafficGb(strings.locale, limitGb), strings.gbAbbr)
             }",
         )
     }
@@ -155,12 +155,13 @@ object WidgetSimUiFactory {
     }
 
     private fun formatTrafficValue(
+        strings: WidgetStrings,
         entity: SemanticEntity?,
         limitGb: Float,
         remGb: Float,
     ): String {
         if (entity == null || limitGb <= 0f) return "-"
-        return FormatUtils.formatTrafficGb(remGb)
+        return FormatUtils.formatTrafficGb(strings.locale, remGb)
     }
 
     private fun formatWithSuffix(

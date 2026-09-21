@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import java.util.Locale
 
 /**
  * Widget state for rendering.
@@ -44,6 +45,7 @@ data class WidgetUiState(
  * @property minutesAbbr Minutes abbreviation (e.g., "min.").
  * @property limitText "Limit" text.
  * @property gbAbbr Gigabytes abbreviation ("GB").
+ * @property locale Effective locale for formatting.
  */
 @Immutable
 data class WidgetStrings(
@@ -51,6 +53,7 @@ data class WidgetStrings(
     val minutesAbbr: String,
     val limitText: String,
     val gbAbbr: String,
+    val locale: Locale = Locale.US,
 )
 
 /**

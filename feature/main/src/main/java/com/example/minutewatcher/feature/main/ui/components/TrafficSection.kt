@@ -84,6 +84,11 @@ private fun TrafficUsageRow(
     context: android.content.Context,
     model: SimCardUiModel,
 ) {
+    val locale =
+        context.resources
+            .configuration
+            .locales
+            .get(0)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -106,7 +111,7 @@ private fun TrafficUsageRow(
                         stringResource(R.string.limit_text),
                         stringResource(
                             R.string.value_unit_format,
-                            FormatUtils.formatTrafficGb(model.effectiveTrafficLimitGb),
+                            FormatUtils.formatTrafficGb(locale, model.effectiveTrafficLimitGb),
                             stringResource(R.string.gb_abbr),
                         ),
                     ),
@@ -153,8 +158,14 @@ private fun TrafficRemainingRow(
 @Composable
 private fun TrafficAdjustment(model: SimCardUiModel) {
     if (model.trafficAdjustmentGb != 0f) {
+        val context = LocalContext.current
+        val locale =
+            context.resources
+                .configuration
+                .locales
+                .get(0)
         AdjustmentLabel(
-            value = FormatUtils.formatTrafficGb(model.trafficAdjustmentGb),
+            value = FormatUtils.formatTrafficGb(locale, model.trafficAdjustmentGb),
             unit = stringResource(R.string.gb_abbr),
             isPositive = model.trafficAdjustmentGb > 0,
         )

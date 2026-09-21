@@ -10,22 +10,24 @@ import java.util.Locale
  */
 object FormatUtils {
     /**
-     * Formats traffic amount in GB with one decimal place.
+     * Formats traffic amount in GB with one decimal place using the provided locale.
      *
-     * **Localization:** uses [Locale.US] to guarantee a dot as separator.
-     * This is necessary for consistent parsing in other parts of the system.
-     * For direct user display (where localized separator matters),
-     * should use specialized UI-layer formatters.
-     *
+     * @param locale Effective locale for decimal separator.
      * @param gb GB amount.
-     * @return Formatted string (e.g., "1.5").
+     * @return Formatted string (e.g., "1.5" or "1,5").
      */
-    fun formatTrafficGb(gb: Float): String = "%.1f".format(Locale.US, gb)
+    fun formatTrafficGb(
+        locale: Locale,
+        gb: Float,
+    ): String = "%.1f".format(locale, gb)
 
     fun formatMbAsGb(
         context: Context,
         mb: Float,
-    ): String = "${formatTrafficGb(mb / Constants.MB_PER_GB)}${context.getString(R.string.gb_abbr)}"
+    ): String {
+        val locale = getLocaleFromContext(context)
+        return "${formatTrafficGb(locale, mb / Constants.MB_PER_GB)}${context.getString(R.string.gb_abbr)}"
+    }
 
     fun formatTrafficDisplay(
         context: Context,
@@ -35,7 +37,8 @@ object FormatUtils {
     ): String {
         if (remainingGb < 0) return "-"
         val gbUnit = context.getString(R.string.gb_abbr)
-        val logic = formatTrafficDisplayLogic(remainingGb, limitGb, showLimit, gbUnit)
+        val locale = getLocaleFromContext(context)
+        val logic = formatTrafficDisplayLogic(locale, remainingGb, limitGb, showLimit, gbUnit)
         return if (showLimit && limitGb > 0) {
             "${context.getString(R.string.remaining_text)} $logic"
         } else {
@@ -44,15 +47,16 @@ object FormatUtils {
     }
 
     fun formatTrafficDisplayLogic(
+        locale: Locale,
         remainingGb: Float,
         limitGb: Float,
         showLimit: Boolean,
         unit: String,
     ): String =
         if (showLimit && limitGb > 0) {
-            "${formatTrafficGb(remainingGb)} / ${formatTrafficGb(limitGb)} $unit"
+            "${formatTrafficGb(locale, remainingGb)} / ${formatTrafficGb(locale, limitGb)} $unit"
         } else {
-            "${formatTrafficGb(remainingGb)} $unit"
+            "${formatTrafficGb(locale, remainingGb)} $unit"
         }
 
     fun formatMinutesDisplay(
@@ -93,4 +97,15 @@ object FormatUtils {
         context: Context,
         days: Int,
     ): String = context.resources.getQuantityString(R.plurals.days_plurals, days, days)
+
+    private fun getLocaleFromContext(context: Context): Locale =
+        try {
+            context.resources
+                .configuration
+                .locales
+                .get(0) ?: Locale.getDefault()
+        } catch (e: Exception) {
+            AppLogger.w("FormatUtils: Failed to get locale from context, using default", e)
+            Locale.getDefault()
+        }
 }
