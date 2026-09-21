@@ -41,6 +41,8 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainSimDataController manages SIM card data, including updates, resets, and adjustments.
+ * Consolidates all SIM-related operations and their error handling around the [executeSimOperation] mechanism.
+ * The number of functions reflects the complexity of supporting various SIM card states and user actions.
  *
  * **Thread Safety:** Safe to call from any coroutine context.
  * **Error Handling:** Propagates [CancellationException].
@@ -57,6 +59,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * @property ioDispatcher Dispatcher for I/O bound operations.
  * @property scope Application-wide coroutine scope for async operations.
  */
+@Suppress("TooManyFunctions")
 class MainSimDataController
     @Inject
     constructor(

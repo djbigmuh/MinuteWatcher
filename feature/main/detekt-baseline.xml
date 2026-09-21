@@ -1,11 +1,5 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
-  <CurrentIssues>
-      <ID>TooManyFunctions:MainSimDataController.kt:MainSimDataController</ID>
-      <ID>TooManyFunctions:MainViewModel.kt:MainViewModel : ViewModel</ID>
-      <ID>
-          TooManyFunctions:TrackingBannerComponents.kt:com.example.minutewatcher.feature.main.ui.components.TrackingBannerComponents.kt
-      </ID>
-  </CurrentIssues>
+  <CurrentIssues/>
 </SmellBaseline>

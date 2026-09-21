@@ -25,6 +25,8 @@ import javax.inject.Inject
 /**
  * MainViewModel for the SIM card list screen.
  * Manages screen state, dialogs, banners, and SIM card data.
+ * Acts as a facade for UI actions, delegating to controllers.
+ * The number of functions is determined by the variety of user interactions available on the screen.
  *
  * **Thread Safety:** Safe to call from any coroutine context.
  * **Error Handling:** Propagates [IOException] and [CancellationException] from underlying repositories.
@@ -34,6 +36,7 @@ import javax.inject.Inject
  * @param savedStateHandle Handle for state preservation across process death.
  */
 @HiltViewModel
+@Suppress("TooManyFunctions")
 class MainViewModel
     @Inject
     constructor(
