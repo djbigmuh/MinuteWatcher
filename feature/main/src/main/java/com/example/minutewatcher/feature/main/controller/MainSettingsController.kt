@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.SettingsUseCase
@@ -57,7 +58,7 @@ class MainSettingsController
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun setTheme(theme: AppTheme) {
-            scope.launch {
+            launchSafely("setTheme") {
                 settingsUseCase.setTheme(theme)
             }
         }
@@ -71,7 +72,7 @@ class MainSettingsController
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun setLanguage(language: String?) {
-            scope.launch {
+            launchSafely("setLanguage") {
                 settingsUseCase.setLanguage(language)
             }
         }
@@ -83,7 +84,7 @@ class MainSettingsController
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun completeOnboarding() {
-            scope.launch {
+            launchSafely("completeOnboarding") {
                 appSettingsRepository.updateAppSettings { it.copy(onboardingCompleted = true) }
             }
         }
@@ -97,7 +98,7 @@ class MainSettingsController
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun dismissWidgetError() {
-            scope.launch {
+            launchSafely("dismissWidgetError") {
                 appSettingsRepository.updateAppSettings { it.copy(widgetLimitExceeded = false) }
             }
         }
@@ -109,7 +110,7 @@ class MainSettingsController
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun dismissInaccurateCalls() {
-            scope.launch {
+            launchSafely("dismissInaccurateCalls") {
                 appSettingsRepository.updateAppSettings { it.copy(inaccurateCallAttributionsCount = 0) }
             }
         }
@@ -121,7 +122,7 @@ class MainSettingsController
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun setNotificationPermissionRequested() {
-            scope.launch {
+            launchSafely("setNotificationPermissionRequested") {
                 appSettingsRepository.updateAppSettings { it.copy(notificationPermissionRequested = true) }
             }
         }
@@ -133,11 +134,26 @@ class MainSettingsController
          * **AOSP DataStore:** Fully compliant with atomic updates.
          */
         fun setPhonePermissionRequested() {
-            scope.launch {
+            launchSafely("setPhonePermissionRequested") {
                 appSettingsRepository.updateAppSettings {
                     it.copy(
                         wasPhonePermissionRequestedBefore = true,
                     )
+                }
+            }
+        }
+
+        private fun launchSafely(
+            operationName: String,
+            block: suspend () -> Unit,
+        ) {
+            scope.launch {
+                try {
+                    block()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSettingsController: $operationName failed", e)
                 }
             }
         }

@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -36,12 +37,14 @@ fun MainScreenContent(
     var isRefreshing by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
+    val currentUiState by rememberUpdatedState(uiState)
+
     // Wait for the highlighted slot to appear in the loaded data (including gradual SIM discovery).
     // Scroll once and finish the effect. Wait terminates automatically if highlightedSlot is reset.
     LaunchedEffect(highlightedSlot) {
         val slot = highlightedSlot ?: return@LaunchedEffect
 
-        snapshotFlow { uiState }
+        snapshotFlow { currentUiState }
             .filterIsInstance<SimCardListState.Success>()
             .first { state -> state.simCards.any { it.slot == slot } }
             .let { state ->

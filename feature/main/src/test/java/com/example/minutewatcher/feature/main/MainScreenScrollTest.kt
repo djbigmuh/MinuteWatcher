@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.SimCardUiModel
@@ -60,8 +61,10 @@ class MainScreenScrollTest {
 
         // 2. Data arrives with slot 5
         uiState.value = SimCardListState.Success(simCards)
-        composeTestRule.waitForIdle()
-        composeTestRule.mainClock.advanceTimeBy(1000L) // Wait for animation
+
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("Operator 5").fetchSemanticsNodes().isNotEmpty()
+        }
 
         // Verify slot 5 is displayed
         composeTestRule.onNodeWithText("Operator 5").assertIsDisplayed()
