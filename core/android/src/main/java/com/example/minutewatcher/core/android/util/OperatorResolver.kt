@@ -106,7 +106,7 @@ object OperatorResolver {
             "yota" to "operator_yota",
             "vodafone" to "operator_vodafone",
             "t-mobile" to "operator_t_mobile",
-            "telekom" to "operator_t_mobile",
+            "telekom" to "operator_telekom",
             "orange" to "operator_orange",
             "o2" to "operator_o2",
             "at&t" to "operator_att",
@@ -119,6 +119,18 @@ object OperatorResolver {
             "claro" to "operator_claro",
             "airtel" to "operator_airtel",
             "jio" to "operator_jio",
+            "vi" to "operator_vi",
+            "docomo" to "operator_ntt_docomo",
+            "softbank" to "operator_softbank",
+            "kddi" to "operator_kddi",
+            "china mobile" to "operator_china_mobile",
+            "china unicom" to "operator_china_unicom",
+            "china telecom" to "operator_china_telecom",
+            "stc" to "operator_stc",
+            "mobily" to "operator_mobily",
+            "zain" to "operator_zain",
+            "etisalat" to "operator_etisalat",
+            "du" to "operator_du",
             "kpn" to "operator_kpn",
             "proximus" to "operator_proximus",
             "swisscom" to "operator_swisscom",
@@ -331,13 +343,27 @@ object OperatorResolver {
         val normalized = lowercase(Locale.ROOT)
         val target = targetToken.lowercase(Locale.ROOT)
 
-        // 1. Check exact match
         if (normalized == target) return true
 
-        // 2. Check in tokens split by common delimiters (excluding dash if token has it)
-        val regex = if (target.contains("-")) tokenSplitWithDashRegex else tokenSplitWithoutDashRegex
-        val tokens = normalized.split(regex).filter { it.isNotEmpty() }
+        return if (target.contains(" ")) {
+            hasMultiWordToken(normalized, target)
+        } else {
+            val regex = if (target.contains("-")) tokenSplitWithDashRegex else tokenSplitWithoutDashRegex
+            normalized.split(regex).filter { it.isNotEmpty() }.contains(target)
+        }
+    }
 
-        return tokens.contains(target)
+    private fun hasMultiWordToken(
+        normalizedName: String,
+        targetToken: String,
+    ): Boolean {
+        val targetParts = targetToken.split(" ").filter { it.isNotEmpty() }
+        val tokens = normalizedName.split(tokenSplitWithoutDashRegex).filter { it.isNotEmpty() }
+
+        if (tokens.size < targetParts.size) return false
+
+        return (0..tokens.size - targetParts.size).any { i ->
+            targetParts.indices.all { j -> tokens[i + j] == targetParts[j] }
+        }
     }
 }

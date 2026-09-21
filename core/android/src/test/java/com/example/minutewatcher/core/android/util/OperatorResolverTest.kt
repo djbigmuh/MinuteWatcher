@@ -5,6 +5,7 @@ import android.content.res.AssetManager
 import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -159,5 +160,41 @@ class OperatorResolverTest {
             val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf(code), 0)
             assertTrue("Should match code $code", result.matchedCode == code)
         }
+    }
+
+    @Test
+    fun `getOperatorResourceId returns operator_telekom for Telekom`() {
+        assertEquals(R.string.operator_telekom, OperatorResolver.getOperatorResourceId("Telekom"))
+    }
+
+    @Test
+    fun `getOperatorResourceId returns operator_t_mobile for T-Mobile`() {
+        assertEquals(R.string.operator_t_mobile, OperatorResolver.getOperatorResourceId("T-Mobile"))
+    }
+
+    @Test
+    fun `getOperatorResourceId returns operator_china_mobile for China Mobile variations`() {
+        assertEquals(R.string.operator_china_mobile, OperatorResolver.getOperatorResourceId("China Mobile"))
+        assertEquals(R.string.operator_china_mobile, OperatorResolver.getOperatorResourceId("CHINA MOBILE"))
+        assertEquals(
+            R.string.operator_china_mobile,
+            OperatorResolver.getOperatorResourceId("China Mobile Communications"),
+        )
+    }
+
+    @Test
+    fun `getOperatorResourceId returns operator_ntt_docomo for Docomo variations`() {
+        assertEquals(R.string.operator_ntt_docomo, OperatorResolver.getOperatorResourceId("NTT Docomo"))
+        assertEquals(R.string.operator_ntt_docomo, OperatorResolver.getOperatorResourceId("Docomo"))
+    }
+
+    @Test
+    fun `getOperatorResourceId returns operator_vodafone for Vodafone`() {
+        assertEquals(R.string.operator_vodafone, OperatorResolver.getOperatorResourceId("Vodafone"))
+    }
+
+    @Test
+    fun `getOperatorResourceId does not match Timor with tim`() {
+        assertNull(OperatorResolver.getOperatorResourceId("Timor"))
     }
 }
