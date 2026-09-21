@@ -66,13 +66,10 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
             return
         }
 
-        // Try to extract subId using various possible keys for better compatibility.
-        // Invariant: "subscription" key corresponds to AOSP PhoneConstants.SUBSCRIPTION_KEY.
-        // Fallback to documented and vendor-specific keys to ensure event attribution.
-        val subId =
-            intent.getIntExtra("subscription", -1).let {
-                if (it == -1) intent.getIntExtra("android.telephony.extra.SUBSCRIPTION_ID", -1) else it
-            }
+        // Extract subId only from the documented AOSP extra "subscription"
+        // (corresponds to AOSP PhoneConstants.SUBSCRIPTION_KEY).
+        // If the key is missing, subId defaults to -1, which is handled downstream by standard attribution.
+        val subId = intent.getIntExtra("subscription", -1)
 
         if (subId == -1) {
             AppLogger.w("UsageMonitorReceiver: subId not found in intent extras")
