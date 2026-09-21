@@ -30,13 +30,15 @@ class SimIdentityCache
             if (!identity.isStable) {
                 evictUnstableIfNeeded()
             }
-            return canonicalIdentities.compute(identity.stableId) { _, existing ->
-                if (existing != null && existing == identity) {
-                    existing
-                } else {
-                    identity
+            val canonical =
+                canonicalIdentities.compute(identity.stableId) { _, existing ->
+                    if (existing != null && existing == identity) {
+                        existing
+                    } else {
+                        identity
+                    }
                 }
-            }!!
+            return canonical ?: identity
         }
 
         private fun evictUnstableIfNeeded() {
