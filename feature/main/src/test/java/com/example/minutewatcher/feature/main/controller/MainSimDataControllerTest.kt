@@ -5,14 +5,21 @@ import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
+import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimCardUiModel
+import com.example.minutewatcher.core.model.TrackingKey
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.SimCardListState
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -23,6 +30,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -304,5 +312,93 @@ class MainSimDataControllerTest {
             val error = controller.lastOperationError.value
             assertEquals(R.string.error_operation_failed_retry, error?.messageRes)
             assertEquals(slot, error?.slot)
+        }
+
+    @Test
+    fun `retryAppSearch does not crash on exception`() =
+        runTest {
+            whenever(trackingRecoveryController.retryAppSearch()).thenThrow(RuntimeException("Recovery failed"))
+            controller = createController()
+            controller.retryAppSearch()
+            testScheduler.advanceUntilIdle()
+        }
+
+    @Test
+    fun `retryCalls does not crash on exception`() =
+        runTest {
+            whenever(trackingRecoveryController.retryCalls()).thenThrow(RuntimeException("Recovery failed"))
+            controller = createController()
+            controller.retryCalls()
+            testScheduler.advanceUntilIdle()
+        }
+
+    @Test
+    fun `retryShortcuts does not crash on exception`() =
+        runTest {
+            whenever(trackingRecoveryController.retryShortcuts()).thenThrow(RuntimeException("Recovery failed"))
+            controller = createController()
+            controller.retryShortcuts()
+            testScheduler.advanceUntilIdle()
+        }
+
+    @Test
+    fun `retryTraffic does not crash on exception and does not notify`() =
+        runTest {
+            whenever(trackingRecoveryController.retryTraffic()).thenThrow(RuntimeException("Recovery failed"))
+            controller = createController()
+            controller.retryTraffic()
+            testScheduler.advanceUntilIdle()
+            verify(dataChangeNotifier, never()).notifyDataChanged(any(), any())
+        }
+
+    @Test
+    fun `retrySimDiscovery does not crash on exception`() =
+        runTest {
+            whenever(trackingRecoveryController.retrySimDiscovery()).thenThrow(RuntimeException("Recovery failed"))
+            controller = createController()
+            controller.retrySimDiscovery()
+            testScheduler.advanceUntilIdle()
+        }
+
+    @Test
+    fun `recovery cancellation is not suppressed`() =
+        runTest {
+            var wasCancelled = false
+            val fakeStatusRepository =
+                object : TrackingStatusRepository {
+                    override suspend fun recoverTracking(key: TrackingKey) {
+                        try {
+                            delay(10_000)
+                        } catch (e: CancellationException) {
+                            wasCancelled = true
+                            throw e
+                        }
+                    }
+
+                    override fun observeTrackingStatus() = flowOf(emptyMap<TrackingKey, TrackingStatus>())
+                }
+
+            val realRecoveryController = TrackingRecoveryController(fakeStatusRepository)
+
+            val appJob = Job()
+            val appScope = CoroutineScope(mainDispatcherRule.testDispatcher + appJob)
+            val testController =
+                MainSimDataController(
+                    usageStateRepository,
+                    realRecoveryController,
+                    simIdentityRepository,
+                    simLimitsRepository,
+                    usageUseCase,
+                    dataChangeNotifier,
+                    mainDispatcherRule.testDispatcher,
+                    appScope,
+                )
+
+            testController.retryAppSearch()
+            testScheduler.runCurrent()
+            appJob.cancel()
+            testScheduler.advanceUntilIdle()
+
+            assertTrue("Cancellation should be propagated", wasCancelled)
         }
 }

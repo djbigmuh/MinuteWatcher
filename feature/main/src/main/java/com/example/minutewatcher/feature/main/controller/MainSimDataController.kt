@@ -314,7 +314,9 @@ class MainSimDataController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retryAppSearch() {
-            scope.launch { trackingRecoveryController.retryAppSearch() }
+            launchSafely("retryAppSearch") {
+                trackingRecoveryController.retryAppSearch()
+            }
         }
 
         /**
@@ -325,7 +327,9 @@ class MainSimDataController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retryCalls() {
-            scope.launch { trackingRecoveryController.retryCalls() }
+            launchSafely("retryCalls") {
+                trackingRecoveryController.retryCalls()
+            }
         }
 
         /**
@@ -336,7 +340,9 @@ class MainSimDataController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retryShortcuts() {
-            scope.launch { trackingRecoveryController.retryShortcuts() }
+            launchSafely("retryShortcuts") {
+                trackingRecoveryController.retryShortcuts()
+            }
         }
 
         /**
@@ -347,7 +353,7 @@ class MainSimDataController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retryTraffic() {
-            scope.launch {
+            launchSafely("retryTraffic") {
                 trackingRecoveryController.retryTraffic()
                 notifyDataChanged(updateWidget = true, force = true)
             }
@@ -361,7 +367,7 @@ class MainSimDataController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retrySimDiscovery() {
-            scope.launch {
+            launchSafely("retrySimDiscovery") {
                 trackingRecoveryController.retrySimDiscovery()
             }
         }
@@ -458,6 +464,21 @@ class MainSimDataController
                 AppLogger.e("MainSimDataController: notifyDataChanged failed", e)
                 false
             }
+
+        private fun launchSafely(
+            operationName: String,
+            block: suspend () -> Unit,
+        ) {
+            scope.launch {
+                try {
+                    block()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSimDataController: $operationName failed", e)
+                }
+            }
+        }
 
         private companion object {
             private const val MAX_RETRY_ATTEMPTS = 3L
