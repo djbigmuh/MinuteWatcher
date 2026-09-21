@@ -85,6 +85,10 @@ class UsageCheckWorkerTest {
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
         whenever(appSettingsRepository.getAppSettings())
             .thenReturn(flowOf(AppSettings(notifyLowMinutes = true, notifyLowTraffic = true, isLoaded = true)))
+        whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(any())).thenReturn(flowOf(false))
     }
 
     private fun createUsageSnapshot(
@@ -195,7 +199,7 @@ class UsageCheckWorkerTest {
                 )
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Timeout(emptySnapshot))
             val result = worker.doWork()
-            assertEquals(ListenableWorker.Result.success(), result)
+            assertEquals(ListenableWorker.Result.retry(), result)
         }
 
     @Test

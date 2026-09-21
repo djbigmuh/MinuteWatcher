@@ -231,7 +231,7 @@ class MainBannerController
                     }
                 }
 
-            job.invokeOnCompletion { cause ->
+            job?.invokeOnCompletion { cause ->
                 if (cause != null && cause !is CancellationException) {
                     AppLogger.e("MainBannerController: Banner observation failed", cause)
                     transitionStatus(

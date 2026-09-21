@@ -19,12 +19,17 @@ import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class SemanticSearchManagerTestFixtures {
@@ -34,10 +39,13 @@ abstract class SemanticSearchManagerTestFixtures {
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
+    protected val testScheduler = TestCoroutineScheduler()
+    protected val testDispatcher = StandardTestDispatcher(testScheduler)
+    protected val backgroundScope = CoroutineScope(testDispatcher + Job())
+
     protected lateinit var context: Context
     protected val timeProvider: TimeProvider = mock()
     protected var currentTime = 1000000L
-    protected val testDispatcher = UnconfinedTestDispatcher()
 
     protected lateinit var fakeWrapper: FakeAppSearchWrapper
     protected lateinit var dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
@@ -46,16 +54,22 @@ abstract class SemanticSearchManagerTestFixtures {
     open fun setup() {
         initTestLogger()
         context = mock()
-        whenever(timeProvider.now()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }
-        whenever(timeProvider.elapsedRealtime()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }
-        whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime + testDispatcher.scheduler.currentTime }
+        whenever(timeProvider.now()).thenAnswer { currentTime + testScheduler.currentTime }
+        whenever(timeProvider.elapsedRealtime()).thenAnswer { currentTime + testScheduler.currentTime }
+        whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime + testScheduler.currentTime }
 
         fakeWrapper = FakeAppSearchWrapper()
+        val testFile = File(tmpFolder.root, "test_app_settings.preferences_pb")
         dataStore =
             PreferenceDataStoreFactory.create(
-                scope = CoroutineScope(testDispatcher),
-                produceFile = { tmpFolder.newFile("test_app_settings.preferences_pb") },
+                scope = backgroundScope,
+                produceFile = { testFile },
             )
+    }
+
+    @After
+    fun tearDown() {
+        backgroundScope.cancel()
     }
 
     protected fun createManager(scope: CoroutineScope) =

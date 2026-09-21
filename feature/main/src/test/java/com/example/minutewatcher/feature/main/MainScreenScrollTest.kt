@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.SimCardUiModel
+import com.example.minutewatcher.core.resources.R
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,6 +31,19 @@ class MainScreenScrollTest {
                 createMockSimCard(slot)
             }
 
+        val actions =
+            SimCardScreenActions(
+                onOpenSettings = {},
+                onAddWidget = {},
+                onThemeChange = {},
+                onLanguageChange = {},
+                onGrantPhonePermission = {},
+                onShowUsageAccessDialog = {},
+                onOpenUsageAccessSettings = {},
+                onOpenAppSettings = {},
+                onGrantNotificationPermission = {},
+            )
+
         composeTestRule.setContent {
             MainScreenContent(
                 uiState = uiState.value,
@@ -37,7 +51,7 @@ class MainScreenScrollTest {
                 viewModel = mock(),
                 trackingBannerState = TrackingBannerState(),
                 highlightedSlot = highlightedSlot.value,
-                actions = mock(),
+                actions = actions,
             )
         }
 
@@ -70,6 +84,19 @@ class MainScreenScrollTest {
 
         val simCards = (0..5).map { slot -> createMockSimCard(slot) }
 
+        val actions =
+            SimCardScreenActions(
+                onOpenSettings = {},
+                onAddWidget = {},
+                onThemeChange = {},
+                onLanguageChange = {},
+                onGrantPhonePermission = {},
+                onShowUsageAccessDialog = {},
+                onOpenUsageAccessSettings = {},
+                onOpenAppSettings = {},
+                onGrantNotificationPermission = {},
+            )
+
         composeTestRule.setContent {
             MainScreenContent(
                 uiState = uiState.value,
@@ -77,7 +104,7 @@ class MainScreenScrollTest {
                 viewModel = mock(),
                 trackingBannerState = TrackingBannerState(),
                 highlightedSlot = highlightedSlot.value,
-                actions = mock(),
+                actions = actions,
             )
         }
 
@@ -96,7 +123,7 @@ class MainScreenScrollTest {
             slot = slot,
             identity = "sim_$slot",
             operatorName = "Operator $slot",
-            iconRes = 0,
+            iconRes = R.drawable.ic_unknown,
             minutesUsed = 0,
             minutesLimit = 100,
             manualAdjustment = 0,

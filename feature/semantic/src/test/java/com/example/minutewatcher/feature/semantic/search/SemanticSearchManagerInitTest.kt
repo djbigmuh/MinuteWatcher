@@ -25,6 +25,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
             val flow = MutableStateFlow(createSnapshotWithOneSim())
 
             manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
 
             assertTrue(
                 "Status was ${manager.status.value}",
@@ -58,6 +59,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
 
             val flow = MutableStateFlow(createSnapshotWithOneSim())
             manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
 
             val status = manager.status.value
             assertTrue(
@@ -133,6 +135,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
             val flow = MutableStateFlow(createSnapshotWithOneSim())
 
             manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
 
             val savedTypes = dataStore.data.first()[stringSetPreferencesKey("appsearch_package_types")]
             val currentTypes = PackageType.entries.map { it.name }.toSet()

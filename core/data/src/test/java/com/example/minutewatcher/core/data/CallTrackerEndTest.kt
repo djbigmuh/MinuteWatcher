@@ -675,6 +675,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             // 1. Manually set status to Active to verify it changes to Idle after cleanup
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
             callTracker.onCallStarted(1)
             advanceUntilIdle()
             assertEquals(TrackingStatus.Active, callTracker.status.value)
@@ -687,6 +688,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
             // 3. Act: End call
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 
@@ -703,6 +705,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             callTracker.ensureStarted()
             advanceUntilIdle()
 
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
             callTracker.onCallStarted(1)
             advanceUntilIdle()
             assertEquals(TrackingStatus.Active, callTracker.status.value)
@@ -711,6 +714,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(timeProvider.now()))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
 
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 

@@ -115,7 +115,6 @@ class UpdateCoordinator
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                 observationScope.currentJob?.cancelAndJoin()
             }
-            observationScope.shutdown()
 
             // 3. Cancel and join any pending setup (initial SIM wait)
             setupJob.get()?.let { job ->
@@ -230,7 +229,7 @@ class UpdateCoordinator
 
                 stateMutex.withLock {
                     currentObservationJob.set(newJob)
-                    monitoringJob.getAndSet(launchMonitoringJob(newJob))?.cancel()
+                    newJob?.let { monitoringJob.getAndSet(launchMonitoringJob(it))?.cancel() }
                     transitionStatus(TrackingStatus.Active)
                 }
             } catch (e: CancellationException) {
