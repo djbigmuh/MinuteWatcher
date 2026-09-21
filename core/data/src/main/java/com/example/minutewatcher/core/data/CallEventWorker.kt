@@ -19,7 +19,7 @@ class CallEventWorker
         @Assisted workerParams: WorkerParameters,
         private val callTracker: CallTracker,
     ) : CoroutineWorker(appContext, workerParams) {
-        override suspend fun doWork(): Result {
+        override suspend fun doWork(): Result =
             try {
                 val state = inputData.getString(EXTRA_STATE)
                 val subId = inputData.getInt(EXTRA_SUB_ID, -1)
@@ -32,20 +32,19 @@ class CallEventWorker
                     else -> AppLogger.w("CallEventWorker: unknown state=$state")
                 }
 
-                return Result.success()
+                Result.success()
             } catch (e: SecurityException) {
                 AppLogger.e("CallEventWorker: Permission error", e)
-                return Result.failure()
+                Result.failure()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
                 AppLogger.w("CallEventWorker: IO error, retrying. Attempt: $runAttemptCount. Message: ${e.message}")
-                return Result.retry()
+                Result.retry()
             } catch (e: Exception) {
                 AppLogger.e("CallEventWorker failed with unexpected error", e)
-                return Result.failure()
+                Result.failure()
             }
-        }
 
         companion object {
             const val EXTRA_STATE = "state"

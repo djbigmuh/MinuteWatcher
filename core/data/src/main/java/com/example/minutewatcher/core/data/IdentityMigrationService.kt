@@ -113,23 +113,15 @@ open class IdentityMigrationService
          * 2. Неоднозначность допустима только пока schema version < CURRENT.
          * Ключи НЕактивных современных identity считаются orphaned-legacy — это штатно: они мигрируются/очищаются.
          */
-        @Suppress("ReturnCount")
         private fun Preferences.Key<*>.isLegacyKey(activeIdentities: Set<String>): Boolean {
             val name = this.name
-            if (name.startsWith(DataStoreKeys.CONFLICT_PREFIX)) return false
-
-            // Modern keys belonging to known active identities are not legacy.
-            if (activeIdentities.any { name.endsWith("_$it") }) return false
-
-            // Unambiguous legacy markers.
-            if (SimConstants.SUPPORTED_SLOT_INDICES.any { name.endsWith("_sim_$it") } ||
-                name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_")
-            ) {
-                return true
+            return when {
+                name.startsWith(DataStoreKeys.CONFLICT_PREFIX) -> false
+                activeIdentities.any { name.endsWith("_$it") } -> false
+                SimConstants.SUPPORTED_SLOT_INDICES.any { name.endsWith("_sim_$it") } ||
+                    name.startsWith("${DataStoreKeys.SUBSCRIPTION_ID_PREFIX}icc_") -> true
+                else -> LEGACY_SUB_PATTERN.containsMatchIn(name) || LEGACY_ICC_PATTERN.containsMatchIn(name)
             }
-
-            // Legacy: keys ENDING with _sub_N or _icc_<hash>
-            return LEGACY_SUB_PATTERN.containsMatchIn(name) || LEGACY_ICC_PATTERN.containsMatchIn(name)
         }
 
         /**

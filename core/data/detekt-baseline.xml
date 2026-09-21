@@ -1,12 +1,5 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
-  <CurrentIssues>
-      <ID>ReturnCount:CallEventWorker.kt:CallEventWorker$override suspend fun doWork: Result</ID>
-      <ID>ReturnCount:IdentityMigrationService.kt:IdentityMigrationService$private fun Preferences.Key&lt;*&gt;.isLegacyKey:
-          Boolean
-      </ID>
-      <ID>ReturnCount:InitialSetupWorker.kt:InitialSetupWorker$override suspend fun doWork: Result</ID>
-      <ID>ThrowsCount:InitialSetupWorker.kt:InitialSetupWorker$override suspend fun doWork: Result</ID>
-  </CurrentIssues>
+  <CurrentIssues/>
 </SmellBaseline>
