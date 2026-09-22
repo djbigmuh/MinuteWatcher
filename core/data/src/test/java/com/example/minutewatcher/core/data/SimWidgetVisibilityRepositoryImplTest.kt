@@ -1,8 +1,8 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -11,27 +11,19 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimWidgetVisibilityRepositoryImplTest {
-    @get:Rule
-    val tmpFolder = TemporaryFolder()
-
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SimWidgetVisibilityRepositoryImpl
 
     @Before
     fun setup() {
-        dataStore =
-            PreferenceDataStoreFactory.create {
-                tmpFolder.newFile("test_sim_widget.preferences_pb")
-            }
+        dataStore = InMemoryPreferencesDataStore()
         repository = SimWidgetVisibilityRepositoryImpl(dataStore)
     }
 

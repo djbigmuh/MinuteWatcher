@@ -1,9 +1,9 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
@@ -18,7 +18,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -28,9 +27,6 @@ class SimUsageRepositoryImplTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    @get:Rule
-    val tmpFolder = TemporaryFolder()
-
     private val testScope = TestScope(mainDispatcherRule.testDispatcher)
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SimUsageRepositoryImpl
@@ -39,10 +35,7 @@ class SimUsageRepositoryImplTest {
     @Before
     fun setup() {
         initTestLogger()
-        dataStore =
-            PreferenceDataStoreFactory.create(
-                scope = testScope,
-            ) { tmpFolder.newFile("test_sim_usage.preferences_pb") }
+        dataStore = InMemoryPreferencesDataStore()
 
         repository =
             SimUsageRepositoryImpl(

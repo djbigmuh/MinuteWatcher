@@ -56,6 +56,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidxTestCoreKtx)
 
+    testFixturesApi(libs.androidxDatastorePreferences)
     testFixturesApi(libs.mockingKotlin)
     testFixturesApi(libs.kotlinxCoroutinesTesting)
     testFixturesApi(libs.junit)

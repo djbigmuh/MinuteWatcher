@@ -15,7 +15,6 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
-@Suppress("TooManyFunctions")
 internal class CallAttributionResolver
     @Inject
     constructor(

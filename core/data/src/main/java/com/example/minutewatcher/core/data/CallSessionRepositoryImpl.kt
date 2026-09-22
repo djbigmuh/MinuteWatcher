@@ -21,11 +21,10 @@ import javax.inject.Singleton
  * AOSP DataStore compliant.
  * Safe to call from any coroutine context.
  *
- * NOTE: Suppressing TooManyFunctions as this repository manages all transient call session metadata
+ * NOTE: This repository manages all transient call session metadata
  * for multiple SIM slots, including start times, identities, and boot state markers.
  */
 @Singleton
-@Suppress("TooManyFunctions")
 class CallSessionRepositoryImpl
     @Inject
     constructor(

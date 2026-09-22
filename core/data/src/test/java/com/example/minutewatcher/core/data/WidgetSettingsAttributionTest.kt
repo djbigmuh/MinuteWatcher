@@ -1,9 +1,9 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
@@ -24,7 +24,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -35,9 +34,6 @@ import org.robolectric.RobolectricTestRunner
 class WidgetSettingsAttributionTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
-
-    @get:Rule
-    val tmpFolder = TemporaryFolder()
 
     private lateinit var appDataStore: DataStore<Preferences>
     private lateinit var simDataStore: DataStore<Preferences>
@@ -52,16 +48,8 @@ class WidgetSettingsAttributionTest {
     @Before
     fun setup() {
         initTestLogger()
-        appDataStore =
-            PreferenceDataStoreFactory.create(
-                scope = testScope,
-                produceFile = { tmpFolder.newFile("app_settings.preferences_pb") },
-            )
-        simDataStore =
-            PreferenceDataStoreFactory.create(
-                scope = testScope,
-                produceFile = { tmpFolder.newFile("sim_settings.preferences_pb") },
-            )
+        appDataStore = InMemoryPreferencesDataStore()
+        simDataStore = InMemoryPreferencesDataStore()
         simWidgetVisibilityRepository = SimWidgetVisibilityRepositoryImpl(simDataStore)
         appSettingsRepository = mock()
         simIdentityRepository = mock()

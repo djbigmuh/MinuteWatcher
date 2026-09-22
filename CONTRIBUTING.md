@@ -77,7 +77,9 @@ For AI-assisted development and auditing, we use `.\MAKE_AUDIT_DUMP.bat`.
 
 ## Non-Stable Dependencies
 As a general rule, we prefer stable releases. However, some non-stable versions (Beta/Alpha) are currently used for specific reasons:
-- **Baseline Profile (Beta)** and **Robolectric (Beta)** are explicitly permitted until stable versions with equivalent fixes are available.
+
+- **Baseline Profile (RC)**, **Robolectric (Beta)** and **Detekt (Alpha)** are explicitly permitted until stable
+  versions with equivalent fixes are available.
 - Before introducing a new non-stable dependency, please discuss it in an issue and document the reason in `libs.versions.toml`.
 
 ## Version Management

@@ -50,6 +50,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * Handles specific exceptions like [SeedUnavailableException] and [SimNotFoundException].
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics for atomic updates and persistence.
  *
+ * NOTE: TooManyFunctions is suppressed: the controller is the command surface
+ * of the SIM data feature area; its methods map 1:1 to ViewModel delegate
+ * calls.
+ *
  * @property usageStateRepository Repository for usage state.
  * @property trackingRecoveryController Controller for tracking recovery operations.
  * @property simIdentityRepository Repository for SIM identity information.

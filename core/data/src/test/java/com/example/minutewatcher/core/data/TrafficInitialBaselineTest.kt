@@ -1,7 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import android.telephony.SubscriptionInfo
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
@@ -15,20 +15,21 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
@@ -41,9 +42,6 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficInitialBaselineTest {
-    @get:Rule
-    val tmpFolder = TemporaryFolder()
-
     private val networkStatsProvider: NetworkStatsProvider = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
@@ -55,6 +53,9 @@ class TrafficInitialBaselineTest {
 
     private val sim1Identity = "sim_1"
     private val retryCounts = mutableMapOf<String, MutableStateFlow<Int?>>()
+
+    private val testDispatcher = StandardTestDispatcher()
+    private val appScope = CoroutineScope(testDispatcher + Job())
 
     @Before
     fun setup() {
@@ -146,13 +147,13 @@ class TrafficInitialBaselineTest {
             permissionStateNotifier,
             mock(),
             timeProvider,
-            backgroundScope,
+            appScope,
         )
     }
 
     @Test
     fun `new SIM with lastResetDate 0 is initialized correctly`() =
-        runTest {
+        runTest(testDispatcher) {
             val tracker = createTracker()
 
             // 1. Mock SIM usage with lastResetDate = 0
@@ -169,7 +170,7 @@ class TrafficInitialBaselineTest {
 
     @Test
     fun `traffic is counted correctly after initialization`() =
-        runTest {
+        runTest(testDispatcher) {
             val tracker = createTracker()
             val now = timeProvider.now()
 
@@ -210,11 +211,8 @@ class TrafficInitialBaselineTest {
 
     @Test
     fun `ensureTrackingWindowInitialized is idempotent`() =
-        runTest {
-            val dataStore =
-                PreferenceDataStoreFactory.create(scope = backgroundScope) {
-                    tmpFolder.newFile("test_sim_usage.preferences_pb")
-                }
+        runTest(testDispatcher) {
+            val dataStore = InMemoryPreferencesDataStore()
             val repository =
                 SimUsageRepositoryImpl(
                     dataStore = dataStore,

@@ -45,6 +45,10 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * Coordinator is a Singleton and uses ApplicationScope, so the observation
  * cycle (observeSnapshot) lives for the entire application lifetime.
+ *
+ * NOTE: TooManyFunctions is suppressed: status management, observation
+ * lifecycle and restart/degradation policies are mutually dependent parts of
+ * one coordination loop.
  */
 @Singleton
 @Suppress("TooManyFunctions")

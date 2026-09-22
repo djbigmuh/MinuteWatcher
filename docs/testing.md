@@ -10,7 +10,6 @@ This document describes the testing strategy for the MinuteWatcher project.
 - **UI Testing**:
     - **Jetpack Compose**: Compose Testing APIs (run locally with Robolectric or on device)
     - **Views**: Espresso
-- **Screenshot Testing**: Compose Preview Screenshot Testing (Experimental)
 - **E2E/Macrobenchmark**: UI Automator + Macrobenchmark
 - **Static Analysis**: Detekt + Ktlint
 - **Code Coverage**: JaCoCo
@@ -41,20 +40,6 @@ Tests requiring a real device or emulator are located in `src/androidTest`.
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew connectedDebugAndroidTest
 ```
 
-### Screenshot Tests
-
-#### Update References
-
-```bash
-$env:ANDROID_PREFS_ROOT=$null; ./gradlew updateDebugScreenshotTest
-```
-
-#### Validate
-
-```bash
-$env:ANDROID_PREFS_ROOT=$null; ./gradlew validateDebugScreenshotTest
-```
-
 ### Static Analysis
 
 ```bash
@@ -68,13 +53,6 @@ To maintain test execution speed and minimize overhead, we follow a strict SDK c
 - **No Routine Pinning**: Do NOT add `@Config(sdk = [35])` or any other SDK pinning to test classes if it matches the default.
 - **Behavior-Specific Tests**: Pinning a different SDK is ONLY permitted when testing logic that branches based on `Build.VERSION`. In such cases, accompany the `@Config` with a comment: `// behavior-specific SDK`.
 - **Pure Logic**: Tests for classes that do not depend on Android framework (no `android.*` imports) must use the standard JUnit runner, not `RobolectricTestRunner`.
-
-## Screenshot Testing Guidelines
-
-- **Screen-level tests**: Test each screen in 9 different sizes (Compact, Medium, Expanded combinations).
-- **Theme variations**: Mobile size (400x500) for all alternative themes.
-- **Font scales**: Mobile size (400x500) with font scale 1.5.
-- **Component-level tests**: Test reusable components in isolation with different themes and font scales.
 
 ## Continuous Integration
 

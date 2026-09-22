@@ -30,6 +30,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * Also manages legacy data migrations.
  *
  * Safe to call from any coroutine context.
+ *
+ * NOTE: TooManyFunctions is suppressed: read/write/migration operations over
+ * identity records target one DataStore schema and are reviewed as a single
+ * persistence surface.
  */
 @Suppress("TooManyFunctions")
 @Singleton

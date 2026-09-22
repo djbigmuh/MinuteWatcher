@@ -37,7 +37,6 @@ appsearch = "1.1.0"
 kotlinxCoroutines = "1.11.0"
 kotlinxCoroutinesTest = "1.11.0"
 detekt = "2.0.0-alpha.6"
-screenshot = "0.0.1-alpha16"
 
 [libraries]
 # DI - Hilt
@@ -106,7 +105,6 @@ kotlinxCoroutinesGuava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coro
 kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 androidxMaterialIconsCore = { group = "androidx.compose.material", name = "material-icons-core" }
 androidxMaterialIconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
-screenshot-validation-api = { group = "com.android.tools.screenshot", name = "screenshot-validation-api", version.ref = "screenshot" }
 
 
 
@@ -122,4 +120,3 @@ kotlinKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidxBaselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "14.2.0" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
-screenshot = { id = "com.android.compose.screenshot", version.ref = "screenshot" }

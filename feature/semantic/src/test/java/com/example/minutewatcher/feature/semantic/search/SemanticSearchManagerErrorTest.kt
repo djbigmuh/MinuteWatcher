@@ -20,7 +20,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `tryLock failure does not reset or update lastSnapshotHash`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Initial successful indexing to set hash
             val snapshot1 = createSnapshotWithOneSim()
@@ -50,7 +50,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `recover finishes within timeout even if indexMutex is stuck`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             manager.indexMutex.lock()
             try {
@@ -71,7 +71,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `putDocuments failure sets error status and does not update hash`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot = createTestSnapshot(100L)
 
             manager.indexSnapshot(snapshot)
@@ -99,7 +99,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `ensureSession closes session on generic exception`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failNextWithGenericError = true
 
             val snapshot = createSnapshotWithOneSim()
@@ -113,7 +113,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `logs error on RESULT_UNKNOWN_ERROR`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot = createSnapshotWithOneSim()
 
             // 1. Setup session with UNKNOWN_ERROR
@@ -131,7 +131,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `putDocuments failure prevents removeByDocumentId and reports only put error`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Initial indexing to have something to remove
             manager.indexSnapshot(createSnapshotWithOneSim())
@@ -183,7 +183,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `after failures status becomes Error but not permanently suppressed`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
             fakeWrapper.failAllPutDocuments = true
 
@@ -220,7 +220,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `handleIndexFailure is not idempotent and continues to increment failures`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val errorHandler = getErrorHandler(manager)
             val status = MutableStateFlow<TrackingStatus>(TrackingStatus.Ready(0L))
 
@@ -240,7 +240,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `concurrent handleIndexFailure calls are thread safe`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val errorHandler = getErrorHandler(manager)
 
             val count = 100
@@ -262,7 +262,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `mutex timeout does not increment failure count and does not set error status`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val errorHandler = getErrorHandler(manager)
 
             // 1. Manually lock the indexMutex to cause timeout
@@ -293,7 +293,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `consecutiveMutexTimeouts is reset after successful acquisition`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Manually lock the indexMutex to cause timeout
             manager.indexMutex.lock()
@@ -320,7 +320,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `indexSnapshot returns MutexTimeout and increments counter when lock cannot be acquired`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Manually lock the indexMutex to cause timeout
             manager.indexMutex.lock()

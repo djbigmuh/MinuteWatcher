@@ -86,7 +86,7 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
         val workRequest =
             OneTimeWorkRequestBuilder<CallEventWorker>()
                 .setInputData(data)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, CALL_EVENT_BACKOFF_SECONDS, TimeUnit.SECONDS)
                 .build()
 
         WorkManager
@@ -102,5 +102,6 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
 
     companion object {
         private const val UNIQUE_WORK_NAME = "CALL_EVENT_CHAIN"
+        private const val CALL_EVENT_BACKOFF_SECONDS = 30L
     }
 }

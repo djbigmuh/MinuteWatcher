@@ -6,8 +6,8 @@ import androidx.appsearch.app.PutDocumentsRequest
 import androidx.appsearch.app.RemoveByDocumentIdRequest
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.example.minutewatcher.core.android.testing.SingletonResetRule
+import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.model.DataSourceType
@@ -26,22 +26,25 @@ import kotlinx.coroutines.test.TestCoroutineScheduler
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
-import org.junit.rules.TemporaryFolder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class SemanticSearchManagerTestFixtures {
     @get:Rule
     val singletonResetRule = SingletonResetRule()
 
-    @get:Rule
-    val tmpFolder = TemporaryFolder()
-
     protected val testScheduler = TestCoroutineScheduler()
     protected val testDispatcher = StandardTestDispatcher(testScheduler)
-    protected val backgroundScope = CoroutineScope(testDispatcher + Job())
+
+    /**
+     * Test double for the application scope.
+     *
+     * The property name must not be `backgroundScope`: inside a `runTest { }` block that identifier
+     * resolves to `TestScope.backgroundScope`, whose scheduled tasks are skipped by
+     * `TestCoroutineScheduler.advanceUntilIdle()`, making observation-based assertions untestable.
+     */
+    protected val appScope = CoroutineScope(testDispatcher + Job())
 
     protected lateinit var context: Context
     protected val timeProvider: TimeProvider = mock()
@@ -59,17 +62,12 @@ abstract class SemanticSearchManagerTestFixtures {
         whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime + testScheduler.currentTime }
 
         fakeWrapper = FakeAppSearchWrapper()
-        val testFile = File(tmpFolder.root, "test_app_settings.preferences_pb")
-        dataStore =
-            PreferenceDataStoreFactory.create(
-                scope = backgroundScope,
-                produceFile = { testFile },
-            )
+        dataStore = InMemoryPreferencesDataStore()
     }
 
     @After
     fun tearDown() {
-        backgroundScope.cancel()
+        appScope.cancel()
     }
 
     protected fun createManager(scope: CoroutineScope) =

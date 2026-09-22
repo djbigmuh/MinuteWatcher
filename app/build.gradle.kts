@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.kotlinCompose)
     alias(libs.plugins.androidxBaselineprofile)
-    alias(libs.plugins.screenshot)
 }
 
 java {
@@ -26,7 +25,6 @@ configure<ApplicationExtension> {
             useSupportLibrary = true
         }
         testInstrumentationRunner = "com.example.minutewatcher.HiltTestRunner"
-        experimentalProperties["android.experimental.enableScreenshotTest"] = true
     }
 
     buildTypes {
@@ -167,6 +165,4 @@ dependencies {
     debugImplementation(platform(libs.androidxComposeBom))
     debugImplementation(libs.androidxUiTooling)
     debugImplementation(libs.androidxUiTestManifest)
-
-    screenshotTestImplementation(libs.screenshot.validation.api)
 }

@@ -46,6 +46,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * **Error Handling:** Propagates [CancellationException].
  * Handles [UnsupportedOperationException] for devices not supporting shortcuts.
  *
+ * NOTE: TooManyFunctions is suppressed: shortcut build/apply/observe
+ * lifecycle is one cohesive flow sharing internal state.
+ *
  * @property context Application context.
  * @property navigationProvider Provider for main activity class name.
  * @property ioDispatcher Dispatcher for I/O bound operations.

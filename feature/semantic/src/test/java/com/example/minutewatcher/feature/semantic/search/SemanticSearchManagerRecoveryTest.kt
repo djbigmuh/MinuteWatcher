@@ -16,7 +16,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `recover after error reinitializes session`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot = createSnapshotWithOneSim()
 
             // 1. Initial indexing
@@ -39,7 +39,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `recreates session on RESULT_INVALID_SCHEMA`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot = createSnapshotWithOneSim()
 
             // 1. Initial indexing
@@ -62,7 +62,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `recover resets failure counters`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Force failures manually to reach the limit
             fakeWrapper.failAllPutDocuments = true
@@ -87,7 +87,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `after recover counter is reset and next error starts from 1`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
             fakeWrapper.failAllPutDocuments = true
 
@@ -120,7 +120,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `concurrent initialize and recover does not crash and maintains consistency`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
 
             // Start multiple concurrent operations
@@ -135,6 +135,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
                     }
                 }
             jobs.joinAll()
+            testScheduler.advanceUntilIdle()
 
             assertTrue(manager.status.value is TrackingStatus.Ready)
             // Even with many calls, we should have at least one session created
@@ -144,7 +145,7 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `recover followed by empty snapshot correctly triggers stale document removal`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Index snapshot with one SIM
             manager.indexSnapshot(createSnapshotWithOneSim())

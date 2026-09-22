@@ -29,6 +29,10 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * UsageCheckWorker encapsulates a single background check cycle
  * for limit usage across all active SIM cards.
+ *
+ * NOTE: TooManyFunctions is suppressed: the worker is a single sequential
+ * pipeline (permission checks, usage reads, notifications); decomposition
+ * would fragment its execution contract.
  */
 @HiltWorker
 @Suppress("TooManyFunctions")

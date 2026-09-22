@@ -8,9 +8,12 @@ The ultimate goal is to have zero issues in baselines, ensuring that all new cod
 ## Strategy
 
 ### 1. Stricter "No Growth" Policy
-- **Zero Tolerance in CI**: Detekt and Lint checks in CI must use existing baselines. Regeneration of baselines (`detektBaseline`, `lintUpdateBaseline`) is strictly prohibited in CI environments.
+
+- **Zero Tolerance in VERIFY**: Detekt and Lint checks run by `VERIFY.bat`/`verify.ps1` must use existing baselines.
+  Regeneration of baselines (`detektBaseline`, `lintUpdateBaseline`) as part of a regular fix is strictly prohibited.
 - **Fail on New Issues**: Any issue not present in the current baseline will cause the build to fail.
-- **Merge Blockers**: Pull requests that increase the number of issues in a baseline file should not be merged.
+- **Baseline Growth Blocker**: An increase in the number of entries in any baseline file is a reason to reject the
+  change.
 
 ### 2. Gradual Cleanup
 - **Legacy Only**: Baselines must ONLY capture pre-existing issues. Adding issues from new files to any baseline is strictly prohibited.

@@ -1,7 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import android.telephony.SubscriptionInfo
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
@@ -17,6 +17,7 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -27,9 +28,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.clearInvocations
@@ -42,9 +41,6 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficOvercountTest {
-    @get:Rule
-    val tmpFolder = TemporaryFolder()
-
     private val networkStatsProvider: NetworkStatsProvider = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val callSessionRepository: CallSessionRepository = mock()
@@ -61,13 +57,12 @@ class TrafficOvercountTest {
     private val sim2Identity = "sim_2"
     private val lastResetDate = 1000000000000L
 
+    private val appScope = CoroutineScope(testDispatcher + Job())
+
     @Before
     fun setup() {
         initTestLogger()
-        val ds =
-            PreferenceDataStoreFactory.create(scope = CoroutineScope(testDispatcher)) {
-                tmpFolder.newFile("test_sim_usage_${System.nanoTime()}.preferences_pb")
-            }
+        val ds = InMemoryPreferencesDataStore()
         val repo = SimUsageRepositoryImpl(ds, timeProvider, SimUsageMapper(), SimUsageResetLogic())
         simUsageResetRepository = repo
         simUsageRepository = repo
@@ -163,13 +158,12 @@ class TrafficOvercountTest {
             permissionStateNotifier,
             dataChangeNotifier,
             timeProvider,
-            backgroundScope,
+            appScope,
         )
     }
 
     private fun TestScope.startTracker(): TrafficTracker {
         val t = createTracker()
-        t.status.value // Trigger lazy initialization
         advanceUntilIdle()
         clearInvocations(
             simIdentityRepository,

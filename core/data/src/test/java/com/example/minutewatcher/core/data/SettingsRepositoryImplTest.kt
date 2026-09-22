@@ -1,9 +1,9 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.AppSettings
@@ -22,7 +22,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -32,19 +31,13 @@ class SettingsRepositoryImplTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    @get:Rule
-    val tmpFolder = TemporaryFolder()
-
     private val testScope = TestScope(mainDispatcherRule.testDispatcher)
 
     private lateinit var dataStore: DataStore<Preferences>
 
     @Before
     fun setup() {
-        dataStore =
-            PreferenceDataStoreFactory.create(
-                scope = testScope,
-            ) { tmpFolder.newFile("test_settings.preferences_pb") }
+        dataStore = InMemoryPreferencesDataStore()
     }
 
     @Test

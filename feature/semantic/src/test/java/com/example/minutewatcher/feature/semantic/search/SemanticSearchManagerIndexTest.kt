@@ -19,7 +19,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `indexSnapshot hash check skips identical data`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val s = createTestSnapshot(100)
 
             manager.indexSnapshot(s)
@@ -37,7 +37,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `indexSnapshot works with slot 1`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot =
                 createSnapshot(
                     listOf(
@@ -62,7 +62,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `indexSnapshot with empty snapshot ignores update and does not clear index`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Initial indexing
             manager.indexSnapshot(createSnapshotWithOneSim())
@@ -84,7 +84,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `empty snapshot triggers stale document removal`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Index snapshot with one SIM
             manager.indexSnapshot(createSnapshotWithOneSim())
@@ -112,7 +112,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `empty snapshot resets hash and allows re-indexing`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot = createSnapshotWithOneSim()
 
             // 1. Index snapshot
@@ -136,7 +136,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `indexSnapshot performs put but skips remove if put fails`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot = createSnapshotWithOneSim()
 
             // Setup failure for putDocuments
@@ -161,7 +161,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `stale documents are NOT removed if putDocuments fails`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Initial indexing
             manager.indexSnapshot(createSnapshotWithOneSim())
@@ -203,7 +203,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `indexSnapshot concurrent calls with same data results in single indexing`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot = createSnapshotWithOneSim()
 
             // Launch 5 concurrent indexing calls
@@ -224,7 +224,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `indexSnapshot concurrent calls with invalid schema results in single session recreation`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val snapshot = createSnapshotWithOneSim()
 
             // 1. Initial indexing success
@@ -252,7 +252,7 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `continues operation on RESULT_INTERNAL_ERROR`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
 
             // 1. Initialize

@@ -21,7 +21,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `successful initialization sets status to Ready`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
 
             manager.initialize(flow)
@@ -39,7 +39,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `schema mismatch triggers force override`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failNextWithInvalidSchema = true
 
             val flow = MutableStateFlow(createSnapshotWithOneSim())
@@ -54,7 +54,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `fatal error during init sets status to Error`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failNextWithFatalError = true
 
             val flow = MutableStateFlow(createSnapshotWithOneSim())
@@ -73,7 +73,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `initialization with INTERNAL_ERROR sets NOT_SUPPORTED status`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failNextWithFatalError = true
 
             val flow = MutableStateFlow(createSnapshotWithOneSim())
@@ -91,7 +91,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `initialization with IllegalStateException containing not supported now sets DATABASE_ERROR status`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failSessionCreationWith = IllegalStateException("AppSearch is not supported on this device")
 
             val flow = MutableStateFlow(createSnapshotWithOneSim())
@@ -111,7 +111,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `initialization with generic IllegalStateException sets DATABASE_ERROR status due to indexing wrap`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failSessionCreationWith = IllegalStateException("Something went wrong")
 
             val flow = MutableStateFlow(createSnapshotWithOneSim())
@@ -131,7 +131,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `initialization on first run saves current package types`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
 
             manager.initialize(flow)
@@ -150,7 +150,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
                 prefs[stringSetPreferencesKey("appsearch_package_types")] = setOf("OLD_TYPE", "MINUTES")
             }
 
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val flow = MutableStateFlow(createSnapshotWithOneSim())
 
             // 2. Initialize

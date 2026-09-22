@@ -3,24 +3,26 @@ package com.example.minutewatcher.core.data
 import android.content.Context
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
@@ -31,9 +33,6 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimRepositoryImplTest {
-    @get:Rule
-    val tmpFolder = TemporaryFolder()
-
     private lateinit var context: Context
     private lateinit var subscriptionManager: SubscriptionManager
     private lateinit var dataStore: DataStore<Preferences>
@@ -48,6 +47,10 @@ class SimRepositoryImplTest {
             on { getMockSims(any()) }.thenReturn(null)
         }
     private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
+
+    private val testScheduler = TestCoroutineScheduler()
+    private val testDispatcher = StandardTestDispatcher(testScheduler)
+    private val appScope = CoroutineScope(testDispatcher + Job())
 
     @Before
     fun setup() {
@@ -84,20 +87,10 @@ class SimRepositoryImplTest {
                 permissionStateNotifier = permissionStateNotifier,
             )
 
-        dataStore =
-            PreferenceDataStoreFactory.create(
-                scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
-            ) {
-                tmpFolder.newFile("test_sim_settings.preferences_pb")
-            }
+        dataStore = InMemoryPreferencesDataStore()
     }
 
-    private fun createTestDataStore(scope: kotlinx.coroutines.CoroutineScope): DataStore<Preferences> =
-        PreferenceDataStoreFactory.create(
-            scope = scope,
-        ) {
-            tmpFolder.newFile("test_sim_settings_${System.nanoTime()}.preferences_pb")
-        }
+    private fun createTestDataStore(): DataStore<Preferences> = InMemoryPreferencesDataStore()
 
     @Test
     fun testInitialization() {
@@ -106,8 +99,8 @@ class SimRepositoryImplTest {
 
     @Test
     fun testUpdateSimLimitsAndGetUsage() =
-        runTest {
-            val ds = createTestDataStore(backgroundScope)
+        runTest(testDispatcher) {
+            val ds = createTestDataStore()
             val limitsRepo = SimLimitsRepositoryImpl(ds)
             val usageRepo = SimUsageRepositoryImpl(ds, timeProvider, SimUsageMapper(), SimUsageResetLogic())
             val identity = "test_sim"
@@ -121,8 +114,8 @@ class SimRepositoryImplTest {
 
     @Test
     fun testActiveSimInSlot1_ReturnsCorrectSlotIndexInUsage() =
-        runTest {
-            val ds = createTestDataStore(backgroundScope)
+        runTest(testDispatcher) {
+            val ds = createTestDataStore()
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
@@ -132,7 +125,7 @@ class SimRepositoryImplTest {
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = backgroundScope,
+                    scope = appScope,
                 )
             val usageRepo = SimUsageRepositoryImpl(ds, timeProvider, SimUsageMapper(), SimUsageResetLogic())
 
@@ -161,8 +154,8 @@ class SimRepositoryImplTest {
 
     @Test
     fun testGetIdentity_DoesNotTriggerEditWhenUnchanged() =
-        runTest {
-            val ds = createTestDataStore(backgroundScope)
+        runTest(testDispatcher) {
+            val ds = createTestDataStore()
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
@@ -172,7 +165,7 @@ class SimRepositoryImplTest {
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = backgroundScope,
+                    scope = appScope,
                 )
 
             val mockInfo = mock<android.telephony.SubscriptionInfo>()
@@ -194,8 +187,8 @@ class SimRepositoryImplTest {
 
     @Test
     fun testRolloverLogic_AccumulatesRemainingMinutes() =
-        runTest {
-            val ds = createTestDataStore(backgroundScope)
+        runTest(testDispatcher) {
+            val ds = createTestDataStore()
             val limitsRepo = SimLimitsRepositoryImpl(ds)
             val usageRepo = SimUsageRepositoryImpl(ds, timeProvider, SimUsageMapper(), SimUsageResetLogic())
             val identity = "test_sim"
@@ -216,8 +209,8 @@ class SimRepositoryImplTest {
 
     @Test
     fun testRolloverLogic_AccumulatesRemainingTraffic() =
-        runTest {
-            val ds = createTestDataStore(backgroundScope)
+        runTest(testDispatcher) {
+            val ds = createTestDataStore()
             val limitsRepo = SimLimitsRepositoryImpl(ds)
             val usageRepo = SimUsageRepositoryImpl(ds, timeProvider, SimUsageMapper(), SimUsageResetLogic())
             val identity = "test_sim"
@@ -238,8 +231,8 @@ class SimRepositoryImplTest {
 
     @Test
     fun testManualReset_ClearsEverythingEvenWithRollover() =
-        runTest {
-            val ds = createTestDataStore(backgroundScope)
+        runTest(testDispatcher) {
+            val ds = createTestDataStore()
             val limitsRepo = SimLimitsRepositoryImpl(ds)
             val usageRepo = SimUsageRepositoryImpl(ds, timeProvider, SimUsageMapper(), SimUsageResetLogic())
             val identity = "test_sim"
@@ -262,8 +255,8 @@ class SimRepositoryImplTest {
 
     @Test(expected = IllegalStateException::class)
     fun testGetSimIdentity_Throws_WhenPermissionsMissing() =
-        runTest {
-            val ds = createTestDataStore(backgroundScope)
+        runTest(testDispatcher) {
+            val ds = createTestDataStore()
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
@@ -273,7 +266,7 @@ class SimRepositoryImplTest {
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = backgroundScope,
+                    scope = appScope,
                 )
 
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
@@ -284,7 +277,7 @@ class SimRepositoryImplTest {
 
     @Test
     fun testObserveActiveSims_HandlesSaveIdentityError() =
-        runTest {
+        runTest(testDispatcher) {
             val mockDataStore: DataStore<Preferences> = mock()
             whenever(mockDataStore.data)
                 .thenReturn(flowOf(emptyPreferences()))
@@ -300,7 +293,7 @@ class SimRepositoryImplTest {
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = backgroundScope,
+                    scope = appScope,
                 )
 
             val mockInfo = mock<android.telephony.SubscriptionInfo>()
@@ -320,8 +313,8 @@ class SimRepositoryImplTest {
 
     @Test(expected = com.example.minutewatcher.core.domain.InvalidSlotException::class)
     fun `getSimIdentity with invalid slot throws InvalidSlotException`() =
-        runTest {
-            val ds = createTestDataStore(backgroundScope)
+        runTest(testDispatcher) {
+            val ds = createTestDataStore()
             val identityRepo =
                 SimIdentityRepositoryTestHelper.createRepository(
                     discoveryDeps = discoveryDeps,
@@ -331,7 +324,7 @@ class SimRepositoryImplTest {
                     migrationService = migrationService,
                     mockSimProvider = mockSimProvider,
                     timeProvider = timeProvider,
-                    scope = backgroundScope,
+                    scope = appScope,
                 )
 
             identityRepo.getSimIdentity(-1)

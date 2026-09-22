@@ -50,6 +50,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Observer for SIM identities.
+ *
+ * NOTE: TooManyFunctions is suppressed: registration, debouncing and conflict
+ * resolution form one observer state machine; extraction would split its
+ * invariants across classes.
+ */
 @Singleton
 @Suppress("TooManyFunctions")
 internal class SimIdentityObserver

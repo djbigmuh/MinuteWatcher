@@ -35,6 +35,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * This implementation is AOSP DataStore compliant and follows strict consistency rules
  * for atomic updates.
  * Safe to call from any coroutine context.
+ *
+ * NOTE: TooManyFunctions is suppressed: migration steps form a single ordered
+ * sequence that must be reviewable in one place.
  */
 @Singleton
 @Suppress("TooManyFunctions")

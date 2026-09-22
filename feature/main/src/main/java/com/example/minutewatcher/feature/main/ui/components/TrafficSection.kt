@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -158,12 +159,7 @@ private fun TrafficRemainingRow(
 @Composable
 private fun TrafficAdjustment(model: SimCardUiModel) {
     if (model.trafficAdjustmentGb != 0f) {
-        val context = LocalContext.current
-        val locale =
-            context.resources
-                .configuration
-                .locales
-                .get(0)
+        val locale = LocalConfiguration.current.locales.get(0)
         AdjustmentLabel(
             value = FormatUtils.formatTrafficGb(locale, model.trafficAdjustmentGb),
             unit = stringResource(R.string.gb_abbr),

@@ -70,7 +70,6 @@ class UpdateCoordinatorTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
-            coordinator.status
             testScheduler.runCurrent()
 
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
@@ -104,7 +103,6 @@ class UpdateCoordinatorTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, supervisorScope)
-            coordinator.status
             testScheduler.runCurrent()
 
             snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "RestartTest"))
@@ -145,7 +143,6 @@ class UpdateCoordinatorTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, supervisorScope)
-            coordinator.status
             testScheduler.runCurrent()
 
             snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "PersistentFail"))
@@ -184,7 +181,6 @@ class UpdateCoordinatorTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, supervisorScope)
-            coordinator.status
             testScheduler.runCurrent()
 
             snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "InfiniteFail"))
@@ -230,7 +226,6 @@ class UpdateCoordinatorTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, supervisorScope)
-            coordinator.status
             testScheduler.runCurrent()
 
             // 1. Fail 4 times (Initial + 3 restarts)
@@ -274,7 +269,6 @@ class UpdateCoordinatorTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
-            coordinator.status
             testScheduler.runCurrent()
             val s1 = createSnapshot(timestamp = 1000L, content = "Manual", isManual = true)
             snapshotFlow.emit(s1)
@@ -291,7 +285,6 @@ class UpdateCoordinatorTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
-            coordinator.status
             testScheduler.runCurrent()
             val s1 = createSnapshot(timestamp = 1000L, content = "A")
             snapshotFlow.emit(s1)
@@ -320,7 +313,6 @@ class UpdateCoordinatorTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
-            coordinator.status
             testScheduler.runCurrent()
 
             for (i in 1..5) {
@@ -403,7 +395,6 @@ class UpdateCoordinatorTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
-            coordinator.status
             repeat(10) { backgroundScope.launch { coordinator.recover() } }
             testScheduler.advanceUntilIdle()
             snapshotFlow.emit(createSnapshot(timestamp = 1000L, content = "LeakTest"))

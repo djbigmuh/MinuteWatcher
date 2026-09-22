@@ -9,7 +9,6 @@ import java.io.IOException
  * All methods are safe to call from any coroutine context.
  * Implementation must comply with AOSP DataStore best practices.
  */
-@Suppress("TooManyFunctions")
 interface CallSessionRepository {
     /**
      * Returns a flow of the last data subscription ID.

@@ -58,6 +58,9 @@ data class WidgetSettingsUiState(
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via [WidgetSettingsLoader]
  * and [WidgetSettingsSaver].
  *
+ * NOTE: TooManyFunctions is suppressed: methods map 1:1 to settings screen
+ * UI actions and form the screen's command surface.
+ *
  * @property loader Loader for widget settings.
  * @property saver Saver for widget settings.
  * @param usageStateRepository Repository for observed usage state snapshots.

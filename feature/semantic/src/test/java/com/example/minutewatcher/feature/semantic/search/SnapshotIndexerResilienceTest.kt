@@ -45,7 +45,7 @@ class SnapshotIndexerResilienceTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `performIndexUpdate reorders operations and handles partial remove failure`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // 1. Initial index to have some "stale" documents later
             manager.indexSnapshot(createSnapshotWithOneSim())
@@ -89,7 +89,7 @@ class SnapshotIndexerResilienceTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `performIndexUpdate fails if putDocuments fails`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
 
             // Setup put failure
             fakeWrapper.failAllPutDocuments = true

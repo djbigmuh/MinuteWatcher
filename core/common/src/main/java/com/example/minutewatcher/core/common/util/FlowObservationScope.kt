@@ -76,10 +76,10 @@ class FlowObservationScope<T>(
         }
 
     private fun startObservationLocked(): Job {
-        _currentJob?.cancel()
-        val flow = lastFlow!!
+        val flow = requireNotNull(lastFlow) { "FlowObservationScope($tag): no flow registered for observation" }
+        val collector = requireNotNull(lastCollector) { "FlowObservationScope($tag): no collector registered" }
         val context = lastContext ?: EmptyCoroutineContext
-        val collector = lastCollector!!
+        _currentJob?.cancel()
         val newJob =
             scope.launch(context) {
                 flow.collectLatest { collector(it) }

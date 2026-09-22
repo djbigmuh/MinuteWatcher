@@ -32,6 +32,11 @@ import javax.inject.Inject
  * **Error Handling:** Propagates [IOException] and [CancellationException] from underlying repositories.
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics for atomic updates and persistence.
  *
+ * NOTE: TooManyFunctions is suppressed: the ViewModel is a facade whose
+ * methods are one-line delegations to controllers, forming the single
+ * UI-facing command surface; decomposition would move ViewModel internals
+ * into the UI layer.
+ *
  * @param controllers Container for various controllers.
  * @param savedStateHandle Handle for state preservation across process death.
  */

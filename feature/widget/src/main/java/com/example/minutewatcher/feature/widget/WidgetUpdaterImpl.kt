@@ -34,7 +34,6 @@ import kotlin.time.Duration.Companion.milliseconds
  *    If PROBE succeeds, it switches back to FULL and clears the flag.
  */
 @Singleton
-@Suppress("TooManyFunctions")
 class WidgetUpdaterImpl
     @Inject
     constructor(

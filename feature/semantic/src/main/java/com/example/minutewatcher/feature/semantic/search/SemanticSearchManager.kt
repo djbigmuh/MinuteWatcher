@@ -46,6 +46,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * - [AppSearchErrorHandler] for error classification and status management.
  *
  * Safe to call from any coroutine context.
+ *
+ * NOTE: TooManyFunctions is suppressed: session management, indexing and
+ * error handling are delegated to dedicated collaborators; the remaining
+ * functions are the coordination API of the orchestrator.
  */
 @Singleton
 @Suppress("TooManyFunctions")

@@ -16,7 +16,7 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `putDocuments failure transitions to Error state and clears Indexing`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failAllPutDocuments = true
             val snapshot = createTestSnapshot(100)
             val flow = MutableStateFlow(snapshot)
@@ -31,7 +31,7 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `removeDocuments failure transitions to Error state`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failAllRemoveByDocumentId = true
             val snapshot = createTestSnapshot(100)
             val flow = MutableStateFlow(snapshot)
@@ -46,7 +46,7 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `schema update failure transitions to Error state`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failNextWithFatalError = true
             val snapshot = createTestSnapshot(100)
             val flow = MutableStateFlow(snapshot)
@@ -61,7 +61,7 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `successful index after error restores Ready status`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failAllPutDocuments = true
             val flow = MutableStateFlow(createTestSnapshot(100))
 
@@ -91,7 +91,7 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `query during indexing or error returns controlled failure result`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             fakeWrapper.failSessionCreationWith = AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR)
 
             val result = manager.query("test")
@@ -103,7 +103,7 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `concurrent index requests do not break state machine`() =
         runTest(testDispatcher) {
-            val manager = createManager(backgroundScope)
+            val manager = createManager(appScope)
             val flow = MutableStateFlow(createTestSnapshot(100))
 
             manager.initialize(flow)

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Создаёт единый дамп проекта для AI-ассистента (исходники + ТЕСТЫ + отчёты статического анализа).
 
@@ -15,11 +15,14 @@
    deps_ksp.txt, ktlint_output.txt, verify_output.txt, verify_status.txt, *.log, *.apk, *.aab, *.jks,
    а также сам инструментарий аудита (make_audit_dump.ps1, VERIFY.bat и пр.).
 5. Рекурсивно парсятся XML отчёты: ktlint (Checkstyle), detekt, lint-results-debug.xml, unit-test результаты.
-6. Проверяется свежесть (staleness) отчётов относительно последнего коммита.
+6. Проверяется свежесть (staleness) отчётов относительно времени последнего изменения
+   исходников (git-история для этого не используется).
 7. Всё собирается в ОДИН файл ProjectDump_Combined.txt.
 8. Корректная UTF-8 (без BOM) кодировка при чтении и записи.
 9. Устойчивость к не-ASCII путям: git вызывается с core.quotepath=false; сопоставление путей
    не зависит от разделителя (\ или /).
+10. Git-контекст (ветка, состояние рабочего дерева, история коммитов) в дамп НЕ включается:
+    дамп содержит только последнюю версию отслеживаемых файлов.
 
 .PARAMETER ExcludeTests
 Не включать тестовые исходники в дамп (секция 32 будет помечена как пропущенная).
@@ -33,7 +36,8 @@
 свеженаписанных, ещё не закоммиченных тестов/исходников. По умолчанию выключено (дамп = tracked-only).
 
 .PARAMETER Blind
-Не включать git-контекст (branch/status/log) в дамп.
+Устаревший флаг обратной совместимости: git-контекст в дамп больше не включается никогда,
+поэтому флаг принимается, но игнорируется.
 
 .NOTES
 Запуск: .\make_audit_dump.ps1 [-ExcludeTests] [-IncludeUntracked] [-Blind]
@@ -51,6 +55,11 @@ $ErrorActionPreference = "Continue"
 # -IncludeTests устарел: тесты теперь по умолчанию включены.
 if ($IncludeTests) {
     Write-Host "NOTE: -IncludeTests is now the default and is ignored. Use -ExcludeTests to omit test sources." -ForegroundColor Yellow
+}
+
+# -Blind устарел: git-контекст в дамп не включается никогда.
+if ($Blind) {
+    Write-Host "NOTE: -Blind is now the default behavior (git context is never included) and is ignored." -ForegroundColor Yellow
 }
 
 # Включать ли тестовые исходники в дамп.
@@ -243,25 +252,27 @@ function Append-FileSection {
 # ============================================================================
 
 $script:ProcessedReports = @()
-$script:LastCommitTime = $null
-$script:LastCommitResolved = $false
+$script:LatestSourceChange = $null
+$script:LatestSourceResolved = $false
+# Список файлов, включаемых в дамп; заполняется на этапе сбора файлов.
+$script:DumpSourceFiles = @()
 
-function Resolve-LastCommitTime {
-    if ($script:LastCommitResolved) { return $script:LastCommitTime }
-    $script:LastCommitResolved = $true
-    $lastCommitEpoch = git log -1 --format=%ct 2>&1
-    if ($lastCommitEpoch -match '^\d+$') {
-        $script:LastCommitTime = [DateTimeOffset]::FromUnixTimeSeconds([long]$lastCommitEpoch).LocalDateTime
+function Resolve-LatestSourceChange {
+    if ($script:LatestSourceResolved) { return $script:LatestSourceChange }
+    $script:LatestSourceResolved = $true
+    $sourceFiles = @($script:DumpSourceFiles)
+    if ($sourceFiles.Count -gt 0) {
+        $script:LatestSourceChange = ($sourceFiles | Measure-Object -Property LastWriteTime -Maximum).Maximum
     }
-    return $script:LastCommitTime
+    return $script:LatestSourceChange
 }
 
 function Get-StaleWarning {
     param([DateTime]$ReportTime)
-    $lastCommitTime = Resolve-LastCommitTime
-    if ($null -ne $lastCommitTime) {
-        if ($ReportTime -lt $lastCommitTime) {
-            return " [STALE: report is older than last commit ($($lastCommitTime.ToString('yyyy-MM-dd HH:mm:ss')))]"
+    $latestChange = Resolve-LatestSourceChange
+    if ($null -ne $latestChange) {
+        if ($ReportTime -lt $latestChange) {
+            return " [STALE: report is older than latest source change ($($latestChange.ToString('yyyy-MM-dd HH:mm:ss')))]"
         }
     }
     return ""
@@ -561,6 +572,9 @@ if ($IncludeUntracked) {
     }
 }
 
+# База проверки свежести отчётов: все файлы, попадающие в дамп.
+$script:DumpSourceFiles = @($allFiles) + @($untrackedFiles)
+
 Write-Host "Parsing reports..." -ForegroundColor Yellow
 $testRows = Parse-TestResults $OutDirFull
 $detektRows = Parse-DetektReport $OutDirFull
@@ -613,13 +627,6 @@ Save-Text (Join-Path $OutDirFull '00_overview.txt') $overview.ToString()
 # ============================================================================
 # Sections
 # ============================================================================
-$gitSb = New-Object System.Text.StringBuilder
-if ($Blind) {
-    [void]$gitSb.AppendLine('(git context omitted)')
-} else {
-    [void]$gitSb.AppendLine("branch: $(git branch --show-current 2>&1)`n`n- git status --short -`n$((git status --short 2>&1) -join [Environment]::NewLine)`n`n- git log -20 -`n$((git log -20 --oneline 2>&1) -join [Environment]::NewLine)")
-}
-Save-Text (Join-Path $OutDirFull '20_git.txt') $gitSb.ToString()
 
 # --- KEY FILES (всегда FULL) ---
 $keyPatterns = @('build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'libs.versions.toml', 'AndroidManifest.xml', 'detekt.yml', '.editorconfig', '.gitignore')
@@ -670,7 +677,6 @@ $combinedSb = New-Object System.Text.StringBuilder
 
 $sections = New-Object System.Collections.ArrayList
 [void]$sections.Add(@{ File = '00_overview.txt';             Title = '00 OVERVIEW' })
-[void]$sections.Add(@{ File = '20_git.txt';                  Title = '20 GIT' })
 [void]$sections.Add(@{ File = '20_key_files.txt';            Title = '20 KEY FILES' })
 [void]$sections.Add(@{ File = '30_sources_full.txt';         Title = '30 SOURCES FULL' })
 [void]$sections.Add(@{ File = '32_test_sources_full.txt';    Title = '32 TEST SOURCES FULL' })

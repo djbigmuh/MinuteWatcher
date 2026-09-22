@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data.util
 
 import android.os.Build
 import android.telephony.SubscriptionInfo
+import androidx.annotation.RequiresApi
 import com.example.minutewatcher.core.common.util.mccStringCompat
 import com.example.minutewatcher.core.common.util.mncStringCompat
 import com.example.minutewatcher.core.model.ActiveSimInfo
@@ -29,6 +30,7 @@ object SimIdentityUtils {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun mccMncModern(
         mcc: String,
         info: SubscriptionInfo,
