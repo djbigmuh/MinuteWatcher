@@ -22,7 +22,6 @@ import com.example.minutewatcher.core.model.TrackingStatusMachine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -32,7 +31,6 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -646,17 +644,25 @@ class TrafficTracker
             statsResult: StatsResult,
         ) {
             if (statsResult is StatsResult.Success) {
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    withContext(NonCancellable) {
+                val completed =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                         simUsageResetRepository.setLastTotalBytes(targetIdentity, statsResult.bytes)
                         simChangeHandler.updateLastDataSubId(target.dataSubId)
                         dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
-                    }
-                } ?: AppLogger.e("TrafficTracker: retry action baseline write timed out")
-                baselineManager.removeRetry(targetIdentity)
-                lastSuccessElapsed.set(timeProvider.elapsedRealtime())
-                transitionStatus(TrackingStatus.Active, force = true)
-                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
+                        true
+                    } ?: false
+                if (completed) {
+                    baselineManager.removeRetry(targetIdentity)
+                    lastSuccessElapsed.set(timeProvider.elapsedRealtime())
+                    transitionStatus(TrackingStatus.Active, force = true)
+                    AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
+                } else {
+                    updateStatusOnError(
+                        startElapsed,
+                        "Baseline write timeout on retry",
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    )
+                }
             } else {
                 val nextRetry = currentPending + 1
                 if (nextRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
