@@ -25,7 +25,7 @@ data class TrackingBannerState(
 )
 
 @Stable
-// Используем @Stable вместо @Immutable для гарантированной стабильности лямбд в Compose.
+// Using @Stable instead of @Immutable to guarantee lambda stability in Compose.
 data class TrackingBannerCallbacks(
     val onGrantPhonePermission: () -> Unit,
     val onShowUsageAccessDialog: () -> Unit,

@@ -26,8 +26,8 @@ class MigrationFlagsRepositoryImpl
         @AppDataStore dataStore: DataStore<Preferences>,
     ) : BaseDataStoreRepository(dataStore),
         MigrationFlagsRepository {
-        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
-        // Это соответствует принципу Dependency Inversion.
+        // DataStore keys are an implementation detail. The public repository API must not expose them.
+        // This complies with the Dependency Inversion Principle.
 
         /**
          * Returns a flow indicating if V1 migration is completed.

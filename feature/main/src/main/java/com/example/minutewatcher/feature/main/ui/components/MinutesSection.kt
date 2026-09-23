@@ -22,13 +22,13 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.resources.R
 
 /**
- * Рендерит секцию минут SIM-карты.
- * Содержит использованные минуты, лимит минут и остаток минут.
- * Остаток минут редактируемый (EditableValueBox).
+ * Renders minutes section of a SIM card.
+ * Contains minutes used, minutes limit, and minutes remaining.
+ * Minutes remaining is editable (EditableValueBox).
  *
- * @param model Модель SIM-карты.
- * @param statusColor Цвет статуса (нормальный/низкий/критический).
- * @param onAdjustMinutes Колбэк для корректировки минут.
+ * @param model SIM card model.
+ * @param statusColor Status color (normal/low/critical).
+ * @param onAdjustMinutes Callback for adjusting minutes.
  */
 @Composable
 fun MinutesSection(

@@ -34,7 +34,7 @@ object SnapshotUtils {
                             sim.entities.values
                                 .sortedBy { it.packageType }
                                 .map { entity ->
-                                    // Исключаем operatorName и lastUpdateTime для стабильности хэша
+                                    // Exclude operatorName and lastUpdateTime for hash stability
                                     listOf(
                                         entity.id,
                                         entity.simSlot,

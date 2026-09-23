@@ -10,8 +10,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Группировка зависимостей для UsageStateRepositoryImpl.
- * Позволяет избежать LongParameterList и упростить конструктор репозитория.
+ * Grouping of dependencies for UsageStateRepositoryImpl.
+ * Avoids LongParameterList and simplifies the repository constructor.
  */
 @Singleton
 class UsageRepositoryDependencies

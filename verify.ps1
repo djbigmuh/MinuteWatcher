@@ -1,4 +1,4 @@
-# Локальная верификация перед коммитом (замена CI: GitHub не используется).
+# Local pre-commit verification (CI replacement: GitHub is not used).
 param([switch]$Quick)
 
 $ErrorActionPreference = "Stop"

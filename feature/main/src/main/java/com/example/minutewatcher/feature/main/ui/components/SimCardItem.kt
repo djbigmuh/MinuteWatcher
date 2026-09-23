@@ -41,18 +41,18 @@ import com.example.minutewatcher.feature.main.ui.theme.usageColor
 private fun getStatusColor(status: UsageStatus): Color = MaterialTheme.colorScheme.usageColor(status)
 
 /**
- * Рендерит карточку SIM-карт.
- * Содержит иконку, имя оператора, состояние минут и трафика,
- * кнопки установки лимитов и сброса.
+ * Renders SIM card item.
+ * Contains icon, operator name, minutes and traffic state,
+ * limit setting and reset buttons.
  *
- * @param model Модель SIM-карты.
- * @param onSetLimits Колбэк для установки лимитов.
- * @param onResetCounters Колбэк для сброса счётчиков.
- * @param onToggleAutoReset Колбэк для переключения автосброса.
- * @param onEditAutoResetDay Колбэк для редактирования дня автосброса.
- * @param onAdjustMinutes Колбэк для корректировки минут.
- * @param onAdjustTraffic Колбэк для корректировки трафика.
- * @param onShowTrafficInfo Колбэк для показа информации о трафике.
+ * @param model SIM card model.
+ * @param onSetLimits Callback for setting limits.
+ * @param onResetCounters Callback for resetting counters.
+ * @param onToggleAutoReset Callback for toggling auto-reset.
+ * @param onEditAutoResetDay Callback for editing auto-reset day.
+ * @param onAdjustMinutes Callback for adjusting minutes.
+ * @param onAdjustTraffic Callback for adjusting traffic.
+ * @param onShowTrafficInfo Callback for showing traffic info.
  */
 @Composable
 fun SimCardItem(
@@ -131,11 +131,11 @@ private fun SimCardContent(
 }
 
 /**
- * Рендерит заголовок карточки SIM-карты.
- * Содержит иконку оператора, имя оператора и кнопку установки лимитов.
+ * Renders SIM card item header.
+ * Contains operator icon, operator name, and set limits button.
  *
- * @param model Модель SIM-карты.
- * @param onSetLimits Колбэк для установки лимитов.
+ * @param model SIM card model.
+ * @param onSetLimits Callback for setting limits.
  */
 @Composable
 private fun SimCardHeader(
@@ -171,12 +171,12 @@ private fun SimCardHeader(
 }
 
 /**
- * Рендерит секцию автосброса SIM-карты.
- * Содержит переключатель автосброса и редактируемый день автосброса.
+ * Renders auto-reset section for SIM card.
+ * Contains auto-reset toggle switch and editable auto-reset day.
  *
- * @param model Модель SIM-карты.
- * @param onToggleAutoReset Колбэк для переключения автосброса.
- * @param onEditAutoResetDay Колбэк для редактирования дня автосброса.
+ * @param model SIM card model.
+ * @param onToggleAutoReset Callback for toggling auto-reset.
+ * @param onEditAutoResetDay Callback for editing auto-reset day.
  */
 @Composable
 private fun AutoResetSection(

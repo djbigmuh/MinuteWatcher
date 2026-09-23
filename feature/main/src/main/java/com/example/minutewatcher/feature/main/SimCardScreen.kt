@@ -15,19 +15,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
- * Основной экран SIM-карт.
- * Является центральным экраном приложения, отображающим текущее состояние
- * потребления минут и мобильного трафика для всех активных SIM-карт.
+ * Main SIM cards screen.
+ * Acts as the central screen of the application, displaying the current state
+ * of minutes and mobile traffic consumption for all active SIM cards.
  *
- * Структура экрана:
- * - TopAppBar: Управление темой, языком и переход к настройкам виджета.
- * - Content: Список SIM-карт с детальной статистикой и баннерами статуса.
- * - FloatingActionButton: Быстрый доступ к инструкции по добавлению виджета.
- * - SnackbarHost: Отображение ошибок выполнения операций.
+ * Screen structure:
+ * - TopAppBar: Theme and language management, navigation to widget settings.
+ * - Content: List of SIM cards with detailed statistics and status banners.
+ * - FloatingActionButton: Quick access to widget adding instructions.
+ * - SnackbarHost: Displays operation execution errors.
  *
- * @param viewModel ViewModel для управления состоянием экрана. Обеспечивает
- *   реактивное обновление данных и управление состоянием диалогов.
- * @param actions Контейнер стабильных колбэков для обработки действий пользователя.
+ * @param viewModel ViewModel for screen state management. Provides
+ *   reactive data updates and dialog state management.
+ * @param actions Container of stable callbacks for handling user actions.
  */
 @Composable
 fun SimCardScreen(

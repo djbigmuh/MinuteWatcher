@@ -2,7 +2,6 @@ package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
-import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
@@ -36,7 +35,6 @@ class MainBannerControllerTest {
     private val trackingStatusRepository: TrackingStatusRepository = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository = mock()
-    private val migrationFlagsRepository: MigrationFlagsRepository = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
 
     private val phonePermissionFlow = MutableStateFlow(value = true)
@@ -56,7 +54,6 @@ class MainBannerControllerTest {
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(appSettingsFlow)
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(trackingStatusFlow)
         whenever(seedRepository.isEphemeralSeedActive).thenReturn(isEphemeralSeedActiveFlow.asStateFlow())
-        whenever(migrationFlagsRepository.isInitialSetupCompleted()).thenReturn(kotlinx.coroutines.flow.flowOf(true))
     }
 
     private fun createController(scope: CoroutineScope) =
@@ -106,6 +103,15 @@ class MainBannerControllerTest {
 
             // Should still be 1 (old cancelled, new started)
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
+            // Verify reaction after recover
+            trackingStatusFlow
+                .tryEmit(
+                    mapOf(
+                        TrackingKey.CALLS to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Fail"),
+                    ),
+                )
+            advanceUntilIdle()
+            assertTrue("Status should be Error after recover", controller.status.value is TrackingStatus.Error)
 
             // Second recover call
             controller.recover()
@@ -113,6 +119,38 @@ class MainBannerControllerTest {
 
             // Should still be 1
             assertEquals(1, trackingStatusFlow.subscriptionCount.value)
+            // Verify reaction again
+            trackingStatusFlow
+                .tryEmit(
+                    mapOf(
+                        TrackingKey.CALLS to TrackingStatus.Active,
+                    ),
+                )
+            advanceUntilIdle()
+            assertEquals(TrackingStatus.Active, controller.status.value)
+        }
+
+    @Test
+    fun `status reacts to changes after recover`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val controller = createController(backgroundScope)
+            advanceUntilIdle()
+
+            // 1. Initial recover
+            controller.recover()
+            advanceUntilIdle()
+
+            // 2. Emit error from another provider
+            trackingStatusFlow.tryEmit(
+                mapOf(TrackingKey.CALLS to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Test error")),
+            )
+            advanceUntilIdle()
+
+            // 3. Status should be Error
+            assertTrue(
+                "Controller status should react to errors after recover()",
+                controller.status.value is TrackingStatus.Error,
+            )
         }
 
     @Test

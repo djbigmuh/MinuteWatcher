@@ -108,13 +108,14 @@ open class IdentityMigrationService
             }
 
         /**
-         * Определяет, является ли ключ legacy-форматом, требующим миграции.
+         * Determines if a key is in legacy format requiring migration.
          *
-         * Современные identity имеют форму icc_<hex>/sub_<id>/sim_<n>; их ключи структурно неотличимы
-         * от legacy-суффиксов. Защита:
-         * 1. Проверка activeIdentities выполняется ПЕРВОЙ. Если identity активна, ключ НЕ считается legacy.
-         * 2. Неоднозначность допустима только пока schema version < CURRENT.
-         * Ключи НЕактивных современных identity считаются orphaned-legacy — это штатно: они мигрируются/очищаются.
+         * Modern identities have the form icc_<hex>/sub_<id>/sim_<n>;
+         * their keys are structurally indistinguishable from legacy suffixes. Protection:
+         * 1. activeIdentities check is performed FIRST. If the identity is active, the key is NOT considered legacy.
+         * 2. Ambiguity is acceptable only while schema version < CURRENT.
+         * Keys of INACTIVE modern identities are treated as orphaned-legacy —
+         * this is expected: they are migrated/cleaned up.
          */
         private fun Preferences.Key<*>.isLegacyKey(activeIdentities: Set<String>): Boolean {
             val name = this.name

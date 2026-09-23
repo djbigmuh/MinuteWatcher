@@ -19,12 +19,12 @@ import com.example.minutewatcher.feature.main.ui.components.ResetConfirmationDia
 import com.example.minutewatcher.feature.main.ui.components.SimCardItem
 
 /**
- * Рендерит список SIM-карт.
- * Каждая SIM-карта рендерится через SimCardListRow.
+ * Renders SIM card list.
+ * Each SIM card is rendered via SimCardListRow.
  *
- * @param simCards Список SIM-карт.
- * @param listState Состояние списка для прокрутки.
- * @param viewModel ViewModel для управления состоянием.
+ * @param simCards List of SIM cards.
+ * @param listState Scroll list state.
+ * @param viewModel ViewModel for state management.
  */
 @Composable
 fun SimCardList(
@@ -62,13 +62,13 @@ fun SimCardList(
 }
 
 /**
- * Рендерит одну SIM-карту в списке.
- * Содержит иконку, имя оператора, состояние минут и трафика,
- * кнопки установки лимитов и сброса.
+ * Renders a single SIM card item in the list.
+ * Contains icon, operator name, minutes and traffic state,
+ * limit setting and reset buttons.
  *
- * @param model Модель SIM-карты.
- * @param viewModel ViewModel для управления состоянием.
- * @param onReset Колбэк для сброса SIM-карты.
+ * @param model SIM card model.
+ * @param viewModel ViewModel for state management.
+ * @param onReset Callback for SIM card reset.
  */
 @Composable
 private fun SimCardListRow(

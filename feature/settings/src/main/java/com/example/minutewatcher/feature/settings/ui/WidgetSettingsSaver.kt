@@ -25,22 +25,22 @@ open class WidgetSettingsSaver
         private val saveMutex = Mutex()
 
         /**
-         * Сохраняет настройки виджета.
+         * Saves widget settings.
          *
-         * **Строгое соблюдение API:** Метод выполняет защитную валидацию
-         * входного состояния через [WidgetSettingsState.validate].
-         * Это гарантирует консистентность данных при сохранении, даже
-         * если метод вызван напрямую.
+         * **Strict API compliance:** Method performs defensive validation
+         * of input state via [WidgetSettingsState.validate].
+         * This guarantees data consistency on save even
+         * if method is called directly.
          *
-         * **Строгое соблюдение API:** на AOSP сохранение настроек завершается за миллисекунды.
-         * Сбой на этапе SIM-настроек указывает на деградацию DataStore или недоступность
-         * seed (проблема кастомной прошивки). Общие настройки не зависят от seed и
-         * сохраняются всегда.
+         * **Strict API compliance:** on AOSP settings saving completes in milliseconds.
+         * Failure during SIM settings phase indicates DataStore degradation or seed
+         * unavailability (custom firmware issue). General settings do not depend on seed
+         * and are always saved.
          *
-         * @param state Состояние настроек.
-         * @param skipSimSettings Если true, SIM-специфичные настройки не
-         *   сохраняются (используется при simListLoadFailed).
-         * @return [SaveResult] результат операции.
+         * @param state Settings state.
+         * @param skipSimSettings If true, SIM-specific settings are not
+         *   saved (used when simListLoadFailed).
+         * @return [SaveResult] operation result.
          */
         open suspend fun save(
             state: WidgetSettingsState,
@@ -69,7 +69,7 @@ open class WidgetSettingsSaver
                 return SaveResult.Failed("Settings were not loaded")
             }
 
-            // Выполняем защитную валидацию.
+            // Perform defensive validation.
             val validatedState = WidgetSettingsState.validate(state)
 
             return try {

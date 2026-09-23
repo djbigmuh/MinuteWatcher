@@ -23,12 +23,12 @@ import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.resources.R
 
 /**
- * Рендерит метку корректировки (например, "+10 мин." или "-0.5 ГБ").
- * Показывается при ненулевой корректировке.
+ * Renders adjustment label (e.g., "+10 min." or "-0.5 GB").
+ * Displayed when adjustment is non-zero.
  *
- * @param value Значение корректировки.
- * @param unit Единица измерения ("мин." или "ГБ").
- * @param isPositive true если корректировка положительная.
+ * @param value Adjustment value.
+ * @param unit Unit of measurement ("min." or "GB").
+ * @param isPositive true if adjustment is positive.
  */
 @Composable
 internal fun AdjustmentLabel(
@@ -45,14 +45,14 @@ internal fun AdjustmentLabel(
 }
 
 /**
- * Рендерит редактируемое значение (остаток минут или трафика).
- * При нажатии вызывает onClick для открытия диалога корректировки.
+ * Renders editable value box (remaining minutes or traffic).
+ * Triggers onClick on click to open adjustment dialog.
  *
- * @param value Отображаемое значение.
- * @param color Цвет значения (статус).
- * @param onClick Колбэк при нажатии.
- * @param horizontalPadding Горизонтальный отступ.
- * @param contentDescription Описание для доступности.
+ * @param value Displayed value.
+ * @param color Value color (status).
+ * @param onClick Callback on click.
+ * @param horizontalPadding Horizontal padding.
+ * @param contentDescription Accessibility description.
  */
 @Composable
 internal fun EditableValueBox(

@@ -136,7 +136,7 @@ class TrafficTracker
             try {
                 oldJob?.join()
             } catch (_: Exception) {
-                // job уже завершён или отменён
+                // job is already completed or cancelled
             }
             currentCoroutineContext().ensureActive()
             performInitializeWithRetry()

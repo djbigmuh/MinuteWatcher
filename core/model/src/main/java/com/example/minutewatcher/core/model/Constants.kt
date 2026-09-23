@@ -9,8 +9,8 @@ package com.example.minutewatcher.core.model
  */
 object Constants {
     /**
-     * Имя SharedPreferences для миграции в DataStore.
-     * Используется в SharedPreferencesMigration при инициализации DataStore.
+     * SharedPreferences name for DataStore migration.
+     * Used in SharedPreferencesMigration during DataStore initialization.
      */
     const val PREFS_NAME = "app_prefs"
 
@@ -20,9 +20,9 @@ object Constants {
     const val LEGACY_SIM_PREFS_NAME = "secret_usage_prefs"
 
     /**
-     * Константы уведомлений.
+     * Notification constants.
      *
-     * CHANNEL_ID — ID канала уведомлений.
+     * CHANNEL_ID — Notification channel ID.
      */
     object Notifications {
         const val CHANNEL_ID = "usage_monitor_channel"
@@ -36,30 +36,30 @@ object Constants {
     }
 
     /**
-     * Константы виджета.
+     * Widget constants.
      *
-     * FONT_SIZE_MEDIUM — стандартный размер шрифта для виджета (sp).
-     * DEBOUNCE_MS — задержка debounce для реактивного обновления виджета (мс).
-     *   Предотвращает множественные обновления при быстрых изменениях данных.
-     * SIM_ARRANGEMENT_HORIZONTAL — константа горизонтального расположения SIM.
-     * TRANSPARENCY_SYSTEM_COLORS_THRESHOLD — порог прозрачности (0-100),
-     *   выше которого используются системные цвета.
-     *   Выбран как компромисс между читаемостью и эстетикой.
-     * PREEMPTIVE_LAYOUT_LIMIT_SIMS — количество SIM, при котором превентивно
-     *   ограничивается layout. На AOSP RemoteViews-лимит ~1 МБ.
-     *   3 SIM × 6 строк × ~500 Б ≈ 9 кБ — безопасно.
-     *   Упрощённый layout применяется при widgetLimitExceeded = true.
-     * MIN_SIMS_FOR_SEPARATOR — минимальное количество SIM для отображения разделителя.
-     * PERCENT_MAX_FLOAT — максимальное значение прозрачности (100%).
-     * SEPARATOR_ALPHA — прозрачность разделителя (0.5).
-     * PADDING_DEFAULT — стандартный отступ виджета (dp).
-     * PADDING_SIM_ITEM — отступ SIM-карты в виджете (dp).
-     * CORNER_RADIUS — радиус скругления углов виджета (dp).
-     * SEPARATOR_THICKNESS — толщина разделителя (dp).
-     * ALPHA_FULL — полная непрозрачность (1.0).
-     * RETRY_BACKOFF_MS — начальная задержка повторной попытки обновления виджета (мс).
-     * MAX_RETRY_DELAY_MS — максимальная задержка между повторными попытками (мс).
-     * MAX_UPDATE_ATTEMPTS — максимальное количество попыток обновления виджета.
+     * FONT_SIZE_MEDIUM — default widget font size (sp).
+     * DEBOUNCE_MS — debounce delay for reactive widget updates (ms).
+     *   Prevents multiple updates during rapid data changes.
+     * SIM_ARRANGEMENT_HORIZONTAL — horizontal SIM arrangement constant.
+     * TRANSPARENCY_SYSTEM_COLORS_THRESHOLD — transparency threshold (0-100),
+     *   above which system colors are used.
+     *   Chosen as a balance between legibility and aesthetics.
+     * PREEMPTIVE_LAYOUT_LIMIT_SIMS — number of SIMs at which layout is preemptively
+     *   restricted. On AOSP RemoteViews limit is ~1 MB.
+     *   3 SIMs × 6 lines × ~500 B ≈ 9 KB — safe.
+     *   Simplified layout is applied when widgetLimitExceeded = true.
+     * MIN_SIMS_FOR_SEPARATOR — minimum number of SIMs to show separator.
+     * PERCENT_MAX_FLOAT — maximum transparency value (100%).
+     * SEPARATOR_ALPHA — separator alpha transparency (0.5).
+     * PADDING_DEFAULT — default widget padding (dp).
+     * PADDING_SIM_ITEM — SIM item padding in widget (dp).
+     * CORNER_RADIUS — widget corner radius (dp).
+     * SEPARATOR_THICKNESS — separator thickness (dp).
+     * ALPHA_FULL — full opacity (1.0).
+     * RETRY_BACKOFF_MS — initial widget update retry backoff delay (ms).
+     * MAX_RETRY_DELAY_MS — maximum delay between retries (ms).
+     * MAX_UPDATE_ATTEMPTS — maximum number of widget update attempts.
      */
     object Widget {
         const val FONT_SIZE_MEDIUM = 14f
@@ -80,7 +80,7 @@ object Constants {
         const val MAX_UPDATE_ATTEMPTS = 3
         // RACE_DELAY_MS removed: synchronization is provided by synchronous semantics of StateFlow.value
 
-        /** Максимальное количество последовательных неудач обновления виджета до блокировки. */
+        /** Maximum number of consecutive widget update failures before locking. */
         const val MAX_CONSECUTIVE_UPDATE_FAILURES = 5
 
         const val MIN_LAYOUT_MODE = 0
@@ -94,26 +94,26 @@ object Constants {
     }
 
     /**
-     * Константы трафика.
+     * Traffic constants.
      *
-     * MIN_DELTA_MB — минимальное изменение трафика (МБ) для обновления.
-     *   Предотвращает обновление при незначительных изменениях
-     *   (например, фоновые keep-alive пакеты).
-     *   Эвристика в пределах критерия надёжности: 0.01 МБ ≈ 10 КБ.
+     * MIN_DELTA_MB — minimum traffic change (MB) for an update.
+     *   Prevents updates on minor changes
+     *   (e.g., background keep-alive packets).
+     *   Heuristic within reliability criteria: 0.01 MB ≈ 10 KB.
      */
     object Traffic {
         const val MIN_DELTA_MB = 0.01f
     }
 
     /**
-     * Константы данных.
+     * Data constants.
      *
-     * SNAPSHOT_TIMEOUT_MS — таймаут обновления snapshot (мс).
-     * STALE_SNAPSHOT_THRESHOLD_MS — порог устаревания snapshot (мс).
-     *   Если snapshot старше этого порога, виджет показывает индикатор
-     *   устаревших данных.
-     * EMPTY_TIMESTAMP — пустая метка времени (0). Используется для
-     *   обозначения отсутствия данных.
+     * SNAPSHOT_TIMEOUT_MS — snapshot update timeout (ms).
+     * STALE_SNAPSHOT_THRESHOLD_MS — snapshot staleness threshold (ms).
+     *   If snapshot is older than this threshold, widget displays a stale
+     *   data indicator.
+     * EMPTY_TIMESTAMP — empty timestamp (0). Used to indicate
+     *   missing data.
      */
     object Data {
         const val SNAPSHOT_TIMEOUT_MS = 2000L
@@ -122,13 +122,13 @@ object Constants {
     }
 
     /**
-     * Константы семантики.
+     * Semantic constants.
      *
-     * THROTTLE_MS — задержка throttle для семантических обновлений (мс).
-     *   Предотвращает множественные обновления при быстрых изменениях данных.
-     * SEARCH_INDEX_TIMEOUT_MS — таймаут индексации поиска (мс).
-     *   Строгое соблюдение API: на AOSP индексация завершается за миллисекунды.
-     *   Таймаут указывает на деградацию на кастомной прошивке.
+     * THROTTLE_MS — throttle delay for semantic updates (ms).
+     *   Prevents multiple updates during rapid data changes.
+     * SEARCH_INDEX_TIMEOUT_MS — search indexing timeout (ms).
+     *   Strict API compliance: on AOSP indexing finishes in milliseconds.
+     *   Timeout indicates degradation on custom firmware.
      */
     object Semantic {
         const val THROTTLE_MS = 30_000L
@@ -136,37 +136,36 @@ object Constants {
     }
 
     /**
-     * Константы времени.
+     * Time constants.
      */
     object Time {
-        /** Количество миллисекунд в одной секунде. */
+        /** Number of milliseconds in one second. */
         const val MILLIS_IN_SECOND = 1000L
 
-        /** Количество секунд в одной минуте. */
+        /** Number of seconds in one minute. */
         const val SECONDS_IN_MINUTE = 60
 
-        /** Таймаут обновления виджета (мс). */
+        /** Widget update timeout (ms). */
         const val WIDGET_UPDATE_TIMEOUT_MS = 10_000L
     }
 
     /**
-     * Константы потоков.
+     * Flow constants.
      *
-     * WHILE_SUBSCRIBED_STOP_TIMEOUT_MS — таймаут остановки WhileSubscribed (мс).
-     *   Достаточно для кратковременных поворотов экрана без перезапуска Flow.
-     * DEBOUNCE_MS — общий debounce для UI-потоков (мс).
-     * SHORT_TIMEOUT_MS — таймаут для "быстрых" операций (мс).
-     * LONG_TIMEOUT_MS — таймаут для "тяжёлых" операций (мс).
-     * CALL_SESSION_READ_TIMEOUT_MS — таймаут чтения сессии звонка из DataStore.
-     *   2000 мс выбран как компромисс: достаточно для чтения 4 ключей
-     *   (callStartTime, bootTime, uptime, callIdentity) из DataStore
-     *   на AOSP, но не настолько велик, чтобы блокировать обработчик
-     *   звонков на длительное время. На AOSP чтение DataStore занимает
-     *   < 100 мс; таймаут срабатывает только при деградации хранилища.
-     * RETRY_DELAY_MS — задержка перед повторной попыткой при сетевых/дисковых сбоях (мс).
-     * SEED_GENERATION_TIMEOUT_MS — таймаут первичной генерации seed identity (мс).
-     * SEED_TOTAL_TIMEOUT_EXTRA_MS — дополнительное время ожидания для завершения
-     *   всех фоновых задач при генерации seed.
+     * WHILE_SUBSCRIBED_STOP_TIMEOUT_MS — WhileSubscribed stop timeout (ms).
+     *   Sufficient for brief screen rotations without restarting Flow.
+     * DEBOUNCE_MS — general debounce for UI flows (ms).
+     * SHORT_TIMEOUT_MS — timeout for "fast" operations (ms).
+     * LONG_TIMEOUT_MS — timeout for "heavy" operations (ms).
+     * CALL_SESSION_READ_TIMEOUT_MS — timeout for reading call session from DataStore.
+     *   2000 ms is chosen as a compromise: sufficient for reading 4 keys
+     *   (callStartTime, bootTime, uptime, callIdentity) from DataStore
+     *   on AOSP, but not large enough to block the call handler for long.
+     *   On AOSP DataStore reads take < 100 ms; timeout triggers only on storage degradation.
+     * RETRY_DELAY_MS — retry delay on network/disk failures (ms).
+     * SEED_GENERATION_TIMEOUT_MS — primary seed identity generation timeout (ms).
+     * SEED_TOTAL_TIMEOUT_EXTRA_MS — additional wait time for completing
+     *   all background tasks during seed generation.
      */
     object Flow {
         const val WHILE_SUBSCRIBED_STOP_TIMEOUT_MS = 5_000L
@@ -188,13 +187,13 @@ object Constants {
     }
 
     /**
-     * Константы звонков.
+     * Call constants.
      *
-     * MAX_CALL_DURATION_MS — максимальная длительность звонка (мс).
-     *   Если звонок длится дольше, он считается "зависшим" и сессия
-     *   очищается. Это предотвращает бесконечное накопление минут.
-     *   Эвристика в пределах критерия надёжности: 12 часов — разумный
-     *   максимум для одного звонка.
+     * MAX_CALL_DURATION_MS — maximum call duration (ms).
+     *   If a call lasts longer, it is considered "hung" and the session
+     *   is cleared. This prevents endless minute accumulation.
+     *   Heuristic within reliability criteria: 12 hours is a reasonable
+     *   maximum for a single call.
      */
     object Calls {
         const val MAX_CALL_DURATION_MS =
@@ -209,21 +208,21 @@ object Constants {
     }
 
     /**
-     * Константы intent extras.
+     * Intent extras constants.
      *
-     * SIM_SLOT — ключ для передачи индекса слота SIM в intent.
+     * SIM_SLOT — key for passing SIM slot index in intent.
      */
     object IntentExtras {
         const val SIM_SLOT = "sim_slot"
     }
 
     /**
-     * Константы SIM.
+     * SIM constants.
      *
-     * MAX_SUPPORTED_SIM_SLOTS — максимальное количество поддерживаемых SIM-слотов.
-     * SUPPORTED_SLOT_INDICES — диапазон поддерживаемых индексов слотов.
-     * INVALID_SLOT_IDENTITY_PREFIX — префикс невалидной identity слота.
-     *   Используется когда SIM не может быть идентифицирована.
+     * MAX_SUPPORTED_SIM_SLOTS — maximum number of supported SIM slots.
+     * SUPPORTED_SLOT_INDICES — range of supported slot indices.
+     * INVALID_SLOT_IDENTITY_PREFIX — invalid slot identity prefix.
+     *   Used when SIM cannot be identified.
      */
     object SimConstants {
         const val MAX_SUPPORTED_SIM_SLOTS = 10
@@ -231,55 +230,55 @@ object Constants {
         const val INVALID_SLOT_IDENTITY_PREFIX = "invalid_slot_"
 
         /**
-         * Проверяет, является ли identity невалидной (сгенерированной для пустого слота).
+         * Checks if identity is invalid (generated for an empty slot).
          */
         fun isInvalid(identity: String): Boolean = identity.startsWith(INVALID_SLOT_IDENTITY_PREFIX)
     }
 
     /**
-     * Количество байт в мегабайте (1024 × 1024 = 1048576).
+     * Number of bytes in a megabyte (1024 × 1024 = 1048576).
      */
     const val BYTES_PER_MB = 1024L * 1024L
 
     /**
-     * Количество байт в гигабайте (1024 × 1024 × 1024 = 1073741824).
+     * Number of bytes in a gigabyte (1024 × 1024 × 1024 = 1073741824).
      */
     const val BYTES_PER_GB = 1024L * 1024L * 1024L
 
     /**
-     * Количество мегабайт в гигабайте (1024.0).
-     * Float для использования в делении.
+     * Number of megabytes in a gigabyte (1024.0).
+     * Float for use in division.
      */
     const val MB_PER_GB = 1024.0f
 
     /**
-     * Порог низкого остатка (20%).
-     * При остатке ниже этого порога показывается уведомление.
+     * Low remaining threshold (20%).
+     * Notification is shown when remaining is below this threshold.
      */
     const val LOW_REMAINING_THRESHOLD_PERCENT = 0.20f
 
     /**
-     * Порог критического остатка (10%).
-     * При остатке ниже этого порога показывается критическое уведомление.
+     * Critical remaining threshold (10%).
+     * Critical notification is shown when remaining is below this threshold.
      */
     const val CRITICAL_REMAINING_THRESHOLD_PERCENT = 0.10f
 
-    /** Порог критического остатка в процентах (целое число). */
+    /** Critical remaining threshold in percent (integer). */
     const val CRITICAL_THRESHOLD_PERCENT_INT = 10
 
-    /** Порог низкого остатка в процентах (целое число). */
+    /** Low remaining threshold in percent (integer). */
     const val LOW_THRESHOLD_PERCENT_INT = 20
 
     /**
-     * Максимальный лимит минут (44640 = 31 день × 24 часа × 60 минут).
-     * Выбран как разумный максимум для месячного лимита минут.
+     * Maximum minutes limit (44640 = 31 days × 24 hours × 60 minutes).
+     * Chosen as a reasonable maximum for monthly minutes limit.
      */
     const val MAX_MINUTES_LIMIT = 44640
 
     /**
-     * Максимальный лимит трафика в ГБ (10240 = 10 ТБ).
-     * Выбран как разумный максимум для месячного лимита трафика.
-     * При значениях выше этого Float теряет точность до 1 МБ.
+     * Maximum traffic limit in GB (10240 = 10 TB).
+     * Chosen as a reasonable maximum for monthly traffic limit.
+     * At values above this, Float loses precision below 1 MB.
      */
     const val MAX_TRAFFIC_LIMIT_GB = 10240f
 }

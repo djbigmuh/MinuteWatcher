@@ -159,12 +159,11 @@ object TrackingBannerMapper {
     }
 
     /**
-     * Максимальное количество попыток восстановления AppSearch, инициированных пользователем,
-     * после которых баннер ошибки скрывается. Счётчик увеличивается при каждом запросе
-     * повторной попытки из пользовательского интерфейса. После достижения предела баннер
-     * скрывается, чтобы не раздражать пользователя неустранимой системной ошибкой.
+     * Maximum number of user-initiated AppSearch recovery attempts before the error banner is hidden.
+     * The counter increments on each retry request from the UI. After reaching the limit, the banner
+     * is hidden to avoid annoying the user with an unrecoverable system error.
      *
-     * Счётчик сбрасывается при изменении типа ошибки AppSearch и при перезапуске приложения.
+     * The counter is reset when the AppSearch error type changes and upon app restart.
      */
     private const val MAX_APPSEARCH_RETRY_COUNT = 3
 

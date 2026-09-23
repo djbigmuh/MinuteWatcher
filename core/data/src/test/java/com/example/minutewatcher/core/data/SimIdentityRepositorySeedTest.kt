@@ -287,7 +287,7 @@ class SimIdentityRepositorySeedTest {
             testScheduler.advanceUntilIdle()
 
             // 4. Trigger identity observation to initiate migration (if needed by implementation)
-            // или просто верифицируем вызов, если переход на реальный сид триггерит его автоматически.
+            // or simply verify the call if transition to real seed triggers it automatically.
             identityRepo.getSimIdentity(0)
 
             // 5. Verify migration was called for the new identity

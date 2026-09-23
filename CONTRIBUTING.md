@@ -67,13 +67,13 @@ For AI-assisted development and auditing, we use `.\MAKE_AUDIT_DUMP.bat`.
 - **Dependency Inversion:** Feature modules must never depend directly on `:core:data`. Use interfaces defined in `:core:domain`.
 - **Modularity:** Keep `:core:model` free of Android dependencies to ensure high-speed testing.
 - **DI:** Use Hilt for dependency injection and provide specific qualifiers (`@IoDispatcher`, etc.) instead of hardcoded dispatchers.
-- **Dispatchers:** Все компоненты должны использовать инжектированные диспетчеры через Hilt-квалификаторы (`@IoDispatcher`, `@MainImmediateDispatcher`). Прямое использование `Dispatchers.IO` или `Dispatchers.Default` ЗАПРЕЩЕНО везде, кроме `DispatchersModule` и инфраструктурного класса `AppLogger`.
-- **Machine-readable Errors:** При классификации ошибок в `TrackingStatus.Error` обязательно используйте `type` и `code`. Ветвление логики по тексту сообщения (`message`) СТРОГО ЗАПРЕЩЕНО, так как сообщения предназначены только для логов и пользователя.
+- **Dispatchers:** All components must use injected dispatchers via Hilt qualifiers (`@IoDispatcher`, `@MainImmediateDispatcher`). Direct usage of `Dispatchers.IO` or `Dispatchers.Default` is STRICTLY FORBIDDEN everywhere except in `DispatchersModule` and the infrastructure class `AppLogger`.
+- **Machine-readable Errors:** When classifying errors in `TrackingStatus.Error`, always use `type` and `code`. Branching logic based on message text (`message`) is STRICTLY FORBIDDEN, as messages are intended only for logs and the user.
 
 ---
 
 ### AppSearch Note
-На устройствах без AppSearch (LineageOS, CalyxOS без GMS) семантический поиск автоматически отключается. Баннер ошибки не отображается для ошибок типа `NOT_SUPPORTED`.
+On devices without AppSearch (LineageOS, CalyxOS without GMS), semantic search is automatically disabled. An error banner is not displayed for errors of type `NOT_SUPPORTED`.
 
 ## Non-Stable Dependencies
 As a general rule, we prefer stable releases. However, some non-stable versions (Beta/Alpha) are currently used for specific reasons:

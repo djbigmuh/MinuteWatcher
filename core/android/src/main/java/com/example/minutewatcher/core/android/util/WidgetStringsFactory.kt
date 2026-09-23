@@ -16,7 +16,7 @@ import java.util.Locale
  * AppCompatDelegate.setApplicationLocales() triggers configuration
  * recreation. On custom firmwares where this doesn't happen,
  * strings will update on the next Activity recreation —
- * это проблема кастомной прошивки.
+ * this is a custom ROM limitation.
  */
 object WidgetStringsFactory {
     fun create(context: Context): WidgetStrings {

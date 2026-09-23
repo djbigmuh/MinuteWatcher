@@ -30,8 +30,8 @@ class CallSessionRepositoryImpl
     constructor(
         @AppDataStore private val dataStore: DataStore<Preferences>,
     ) : CallSessionRepository {
-        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
-        // Это соответствует принципу Dependency Inversion.
+        // DataStore keys are an implementation detail. The public repository API must not expose them.
+        // This complies with the Dependency Inversion Principle.
 
         private fun <T> get(
             key: Preferences.Key<T>,
@@ -49,7 +49,7 @@ class CallSessionRepositoryImpl
          * Updates the subId of the last used data SIM.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
+         * @throws IOException if DataStore write fails (thrown from dataStore.edit).
          */
         override suspend fun setLastDataSubId(subId: Int) {
             dataStore.edit { it[DataStoreKeys.LAST_DATA_SUB_ID] = subId }
@@ -58,7 +58,7 @@ class CallSessionRepositoryImpl
         /**
          * Atomically saves all call session data for the given subId.
          *
-         * @throws IOException если DataStore не может выполнить запись.
+         * @throws IOException if DataStore write fails.
          */
         override suspend fun saveCallSession(
             subId: Int,
@@ -83,7 +83,7 @@ class CallSessionRepositoryImpl
         /**
          * Atomically clears all call session keys for the given subId.
          *
-         * @throws IOException если DataStore не может выполнить запись.
+         * @throws IOException if DataStore write fails.
          */
         override suspend fun clearCallSession(subId: Int) {
             dataStore.edit { prefs ->
@@ -129,7 +129,7 @@ class CallSessionRepositoryImpl
          * Clears all recorded call session data.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException если DataStore не может выполнить запись (пробрасывается из dataStore.edit).
+         * @throws IOException if DataStore write fails (thrown from dataStore.edit).
          */
         override suspend fun clearAllCallSessions() {
             dataStore.edit { prefs ->

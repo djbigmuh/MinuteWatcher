@@ -12,12 +12,12 @@ object NavigationIntentFactory {
         }
 
     /**
-     * Возвращает Intent для открытия настроек доступа к данным об использовании.
+     * Returns an Intent to open usage access settings.
      *
-     * Передача package URI обязательна для открытия настроек конкретного приложения
-     * на актуальных Android/OEM; без URI ряд оболочек блокирует implicit-intent.
-     * Поведение при отсутствии разрешения на конкретном устройстве — проблема OEM-оболочки,
-     * приложение обязано предоставить fallback.
+     * Passing package URI is required to open settings for a specific app
+     * on modern Android/OEMs; without a URI, several shells block implicit intents.
+     * Behavior when permission is missing on a specific device is an OEM shell issue;
+     * the app must provide a fallback.
      */
     fun getUsageAccessSettingsIntent(context: Context): Intent =
         Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {

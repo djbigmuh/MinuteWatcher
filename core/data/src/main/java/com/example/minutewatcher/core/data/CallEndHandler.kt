@@ -70,7 +70,7 @@ internal class CallEndHandler
             } catch (e: SecurityException) {
                 handlePerformCallEndFatalError(e, TrackingStatus.ErrorType.PERMISSION_MISSING, context)
             } catch (e: Exception) {
-                shouldRefreshStatus = false // Не обновляем статус при неизвестной ошибке
+                shouldRefreshStatus = false // Do not update status on unknown error
                 handlePerformCallEndError(subId, e, context)
             } finally {
                 finalizeCallEnd(shouldRefreshStatus, context)

@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Обязательные разрешения -->
+    <!-- Required permissions -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -60,7 +60,7 @@
             android:enabled="true"
             android:exported="false" />
 
-        <!-- Главная активность -->
+        <!-- Main activity -->
         <activity
             android:name=".MainActivity"
             android:theme="@style/Theme.MinuteWatcher.NoActionBar"
@@ -81,7 +81,7 @@
             android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
-        <!-- Виджет -->
+        <!-- Widget -->
         <receiver
             android:name="com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver"
             android:exported="true">

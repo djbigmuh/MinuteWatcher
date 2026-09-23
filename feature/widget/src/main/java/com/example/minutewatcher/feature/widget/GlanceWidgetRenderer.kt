@@ -4,9 +4,9 @@ import android.content.Context
 import androidx.glance.appwidget.updateAll
 import javax.inject.Inject
 
-// Единственная реализация WidgetRenderer. Создаётся через Hilt.
-// Ручное создание WidgetUpdaterImpl с другим renderer запрещено:
-// это приведёт к расхождению реализаций рендера виджета.
+// The sole implementation of WidgetRenderer. Created via Hilt.
+// Manual creation of WidgetUpdaterImpl with a different renderer is forbidden:
+// this would lead to divergence in widget rendering implementations.
 class GlanceWidgetRenderer
     @Inject
     constructor() : WidgetRenderer {

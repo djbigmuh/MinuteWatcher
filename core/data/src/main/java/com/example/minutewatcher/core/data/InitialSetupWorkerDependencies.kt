@@ -11,9 +11,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-// Подавление LongParameterList оправдано: InitialSetupWorkerDependencies является вспомогательным классом
-// для инъекции зависимостей (Dependency Aggregator). Это позволяет избежать раздувания списка параметров
-// конструктора UsageCheckWorker, сохраняя при этом удобство тестирования и разделение ответственности.
+// Suppressing LongParameterList is justified: InitialSetupWorkerDependencies is a helper class
+// for dependency injection (Dependency Aggregator). This avoids inflating the parameter list
+// of UsageCheckWorker constructor while preserving testability and separation of concerns.
 @Suppress("LongParameterList")
 class InitialSetupWorkerDependencies
     @Inject

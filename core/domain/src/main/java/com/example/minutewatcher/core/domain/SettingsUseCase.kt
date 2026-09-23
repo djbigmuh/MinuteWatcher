@@ -23,12 +23,12 @@ class SettingsUseCase
         /**
          * Flow of the current application theme.
          */
-        val appTheme: Flow<AppTheme> = appSettingsRepository.getAppSettings().map { it.theme }
+        val appTheme: Flow<AppTheme> = appSettingsRepository.observeAppSettings().map { it.theme }
 
         /**
          * Flow of the current application language code.
          */
-        val appLanguage: Flow<String?> = appSettingsRepository.getAppSettings().map { it.language }
+        val appLanguage: Flow<String?> = appSettingsRepository.observeAppSettings().map { it.language }
 
         /**
          * Sets the application theme.

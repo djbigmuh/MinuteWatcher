@@ -3,8 +3,8 @@ package com.example.minutewatcher.core.domain
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -21,7 +21,7 @@ class SettingsUseCaseTest {
 
     @Before
     fun setUp() {
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
+        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         settingsUseCase = SettingsUseCase(appSettingsRepository)
     }
 
@@ -29,7 +29,9 @@ class SettingsUseCaseTest {
     fun `appTheme flow maps correct value from repository`() =
         runTest {
             val expectedTheme = AppTheme.DARK
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings(theme = expectedTheme)))
+            whenever(
+                appSettingsRepository.observeAppSettings(),
+            ).thenReturn(MutableStateFlow(AppSettings(theme = expectedTheme)))
             settingsUseCase = SettingsUseCase(appSettingsRepository)
 
             val actualTheme = settingsUseCase.appTheme.first()
@@ -42,8 +44,8 @@ class SettingsUseCaseTest {
         runTest {
             val expectedLanguage = "ru"
             whenever(
-                appSettingsRepository.getAppSettings(),
-            ).thenReturn(flowOf(AppSettings(language = expectedLanguage)))
+                appSettingsRepository.observeAppSettings(),
+            ).thenReturn(MutableStateFlow(AppSettings(language = expectedLanguage)))
             settingsUseCase = SettingsUseCase(appSettingsRepository)
 
             val actualLanguage = settingsUseCase.appLanguage.first()

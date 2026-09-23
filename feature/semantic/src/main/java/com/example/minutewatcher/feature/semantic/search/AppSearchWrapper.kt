@@ -97,12 +97,12 @@ internal class AppSearchSessionWrapperImpl(
     }
 
     /**
-     * Сохраняет документы в AppSearch.
+     * Saves documents in AppSearch.
      *
-     * В случае частичного успеха (некоторые документы не удалось добавить) бросает [AppSearchException].
-     * Это намеренное поведение: в [SemanticSearchManager] это приведет к сбросу `lastSnapshotHash`,
-     * что гарантирует полную переиндексацию снапшота при следующем вызове и предотвращает
-     * рассинхронизацию индекса с реальным состоянием пакетов.
+     * In case of partial success (some documents failed to add), throws [AppSearchException].
+     * This is intentional behavior: in [SemanticSearchManager] it leads to a reset of `lastSnapshotHash`,
+     * guaranteeing full re-indexing of the snapshot on the next call and preventing
+     * index desynchronization with the actual package state.
      */
     override suspend fun putDocuments(request: PutDocumentsRequest) {
         val result = session.putAsync(request).await()

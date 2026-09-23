@@ -74,10 +74,10 @@ object SimCardMapper {
         val safeTrafficUsedMb = ClampingUtils.clamp(usage.trafficUsedMb, 0f, maxTrafficMb.toFloat())
         val safeTrafficLimitMb = ClampingUtils.clamp(usage.trafficLimitMb, 0, maxTrafficMb)
 
-        // manualAdjustment и trafficAdjustmentGb передаются в calculate()
-        // без предварительного clamp. Отрицательные значения допустимы
-        // (корректировка в меньшую сторону). MinutesModel.calculate и
-        // TrafficModel.calculate гарантируют effectiveLimit >= 0 через ClampingUtils.clamp.
+        // manualAdjustment and trafficAdjustmentGb are passed to calculate()
+        // without preliminary clamping. Negative values are allowed
+        // (adjustment downwards). MinutesModel.calculate and
+        // TrafficModel.calculate guarantee effectiveLimit >= 0 via ClampingUtils.clamp.
         val minutesModel =
             MinutesModel.calculate(
                 used = safeMinutesUsed,

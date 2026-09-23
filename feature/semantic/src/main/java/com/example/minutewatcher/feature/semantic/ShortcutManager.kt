@@ -180,7 +180,7 @@ class ShortcutManager
             }
 
         /**
-         * Классифицирует ошибку работы с ярлыками.
+         * Classifies a shortcut operation error.
          */
         private fun classifyShortcutError(e: Exception): TrackingStatus.ErrorType =
             when (e) {

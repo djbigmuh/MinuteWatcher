@@ -105,7 +105,7 @@ internal class ActiveSimsFetcher
         companion object {
             private const val MAX_DELAY_MULTIPLIER = 3
 
-            /** Количество повторных попыток (не считая исходной). Итого попыток = значение + 1 */
+            /** Number of retry attempts (excluding the initial attempt). Total attempts = value + 1 */
             private const val MAX_FETCH_ATTEMPTS = 4
 
             private const val RETRY_DELAY_MULTIPLIER = 2

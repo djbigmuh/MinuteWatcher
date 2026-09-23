@@ -22,4 +22,4 @@ To ensure a high-quality experience for users of RTL languages (like Arabic), fo
 | Settings/Palette | No | Fixed semantic meaning |
 
 > [!NOTE]
-> Icons with semantic directionality (стрелки, chevron) — autoMirror=true. Логотипы — false.
+> Icons with semantic directionality (arrows, chevron) — autoMirror=true. Logos — false.

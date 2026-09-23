@@ -1,21 +1,21 @@
 package com.example.minutewatcher.core.model
 
 /**
- * Состояние настроек виджета.
- * Содержит общие настройки (layout, transparency, fontSize)
- * и SIM-специфичные настройки (simStates).
+ * Widget settings state.
+ * Contains general settings (layout, transparency, fontSize)
+ * and SIM-specific settings (simStates).
  *
- * @property layoutMode Режим компоновки виджета.
- * @property simArrangement Расположение SIM (горизонтальное/вертикальное).
- * @property transparency Прозрачность фона (0-100).
- * @property fontSize Размер шрифта (0-4).
- * @property backgroundColor Цвет фона.
- * @property notifyLowMinutes Уведомление о низком остатке минут.
- * @property notifyLowTraffic Уведомление о низком остатке трафика.
- * @property simStates SIM-специфичные настройки (ключ: индекс слота).
- * @property widgetLimitExceeded Флаг превышения лимита виджета.
- * @property settingsLoadFailed Флаг ошибки загрузки настроек.
- * @property simListLoadFailed Флаг ошибки загрузки списка SIM.
+ * @property layoutMode Widget layout mode.
+ * @property simArrangement SIM arrangement (horizontal/vertical).
+ * @property transparency Background transparency (0-100).
+ * @property fontSize Font size (0-4).
+ * @property backgroundColor Background color.
+ * @property notifyLowMinutes Low minutes notification.
+ * @property notifyLowTraffic Low traffic notification.
+ * @property simStates SIM-specific settings (key: slot index).
+ * @property widgetLimitExceeded Widget limit exceeded flag.
+ * @property settingsLoadFailed General settings load failure flag.
+ * @property simListLoadFailed SIM list load failure flag.
  */
 data class WidgetSettingsState(
     val layoutMode: Int = 2,
@@ -40,13 +40,13 @@ data class WidgetSettingsState(
 ) {
     companion object {
         /**
-         * Валидирует настройки перед сохранением.
+         * Validates settings before saving.
          *
-         * Строгое соблюдение API: значения coerceIn гарантируют, что виджет
-         * получит корректные параметры даже если UI передал некорректные данные.
+         * Strict API compliance: coerceIn values guarantee that the widget
+         * receives valid parameters even if the UI passed invalid data.
          *
-         * @param state Исходное состояние.
-         * @return Валидированное состояние.
+         * @param state Initial state.
+         * @return Validated state.
          */
         fun validate(state: WidgetSettingsState): WidgetSettingsState {
             val validated =
@@ -80,15 +80,15 @@ data class WidgetSettingsState(
 }
 
 /**
- * Настройки одной SIM-карты в виджете.
+ * Settings for a single SIM card in the widget.
  *
- * @property showSim Показывать SIM-карту.
- * @property showIcon Показывать иконку.
- * @property showName Показывать имя.
- * @property showMinutes Показывать минуты.
- * @property showMinutesLimit Показывать лимит минут.
- * @property showTraffic Показывать трафик.
- * @property showTrafficLimit Показывать лимит трафика.
+ * @property showSim Show SIM card.
+ * @property showIcon Show icon.
+ * @property showName Show name.
+ * @property showMinutes Show minutes.
+ * @property showMinutesLimit Show minutes limit.
+ * @property showTraffic Show traffic.
+ * @property showTrafficLimit Show traffic limit.
  */
 data class SimSettingsState(
     val showSim: Boolean = true,

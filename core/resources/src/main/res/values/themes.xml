@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Базовая тема -->
+    <!-- Base theme -->
     <style name="Base.Theme.MinuteWatcher" parent="Theme.Material3.DayNight">
-        <!-- Material3 цвета для светлой темы -->
+        <!-- Material3 colors for light theme -->
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/onPrimary</item>
         <item name="colorSurface">@color/surface</item>
@@ -15,27 +15,27 @@
         <item name="android:alertDialogTheme">@style/ThemeOverlay.Material3.Dialog.Alert</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.Material3.Dialog.Alert</item>
 
-        <!-- Стили компонентов -->
+        <!-- Component styles -->
         <item name="materialButtonStyle">@style/Widget.Material3.Button</item>
         <item name="materialButtonOutlinedStyle">@style/Widget.Material3.Button.OutlinedButton</item>
         <item name="checkboxStyle">@style/Widget.Material3.CompoundButton.CheckBox</item>
 
-        <!-- Системные цвета -->
+        <!-- System colors -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <!-- Основная тема приложения -->
+    <!-- Main application theme -->
     <style name="Theme.MinuteWatcher" parent="Base.Theme.MinuteWatcher">
     </style>
 
-    <!-- Тема без ActionBar -->
+    <!-- Theme without ActionBar -->
     <style name="Theme.MinuteWatcher.NoActionBar" parent="Theme.MinuteWatcher">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
 
-    <!-- Тема для настроек виджета -->
+    <!-- Theme for widget settings -->
     <style name="Theme.MinuteWatcher.WidgetSettings" parent="Theme.MinuteWatcher">
         <item name="android:statusBarColor">?attr/colorSurface</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>

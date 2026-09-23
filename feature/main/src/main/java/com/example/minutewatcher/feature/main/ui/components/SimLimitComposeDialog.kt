@@ -84,7 +84,7 @@ fun SimLimitComposeDialog(
                         }
 
                         is SimLimitValidationResult.Invalid -> {
-                            // Ошибки уже установлены в state внутри validate()
+                            // Errors are already set in state inside validate()
                         }
                     }
                 },

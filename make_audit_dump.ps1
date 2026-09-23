@@ -1,47 +1,46 @@
 ﻿<#
 .SYNOPSIS
-Создаёт единый дамп проекта для AI-ассистента (исходники + ТЕСТЫ + отчёты статического анализа).
+Creates a single project dump for AI assistant (sources + TESTS + static analysis reports).
 
 .DESCRIPTION
-Гарантии:
-1. Используются файлы под версионным контролем (git ls-files). Опционально (-IncludeUntracked)
-   добавляются неотслеживаемые файлы рабочего дерева (новые тесты/исходники ещё не в коммите).
-2. ТЕСТОВЫЕ исходники (src/test, src/androidTest, src/testFixtures) включаются В ДАМП ПО УМОЛЧАНИЮ
-   и выносятся в отдельную секцию "32 TEST SOURCES FULL", чтобы их можно было аудировать наравне
-   с основным кодом. Для облегчённого дампа без тестов используйте -ExcludeTests.
-3. Исключаются каталоги: .artifacts/, .gradle_home/, .gradle/, build/, .idea/, .kotlin/, .cxx/,
+Guarantees:
+1. Uses version-controlled files (git ls-files). Optionally (-IncludeUntracked)
+   adds untracked working tree files (new tests/sources not yet committed).
+2. TEST sources (src/test, src/androidTest, src/testFixtures) are included IN DUMP BY DEFAULT
+   and placed in a separate section "32 TEST SOURCES FULL" so they can be audited alongside
+   the main code. For lightweight dump without tests, use -ExcludeTests.
+3. Excluded directories: .artifacts/, .gradle_home/, .gradle/, build/, .idea/, .kotlin/, .cxx/,
    intermediates/, generated/, tmp/, captures/, screenshots/, reports/, audit_dump/, .git/, node_modules/.
-4. Исключаются файлы: local.properties, benchmark-config.txt, detekt_output.txt, diag_result.txt,
+4. Excluded files: local.properties, benchmark-config.txt, detekt_output.txt, diag_result.txt,
    deps_ksp.txt, ktlint_output.txt, verify_output.txt, verify_status.txt, *.log, *.apk, *.aab, *.jks,
-   а также сам инструментарий аудита (make_audit_dump.ps1, VERIFY.bat и пр.).
-5. Рекурсивно парсятся XML отчёты: ktlint (Checkstyle), detekt, lint-results-debug.xml, unit-test результаты.
-6. Проверяется свежесть (staleness) отчётов относительно времени последнего изменения
-   исходников (git-история для этого не используется).
-7. Всё собирается в ОДИН файл ProjectDump_Combined.txt.
-8. Корректная UTF-8 (без BOM) кодировка при чтении и записи.
-9. Устойчивость к не-ASCII путям: git вызывается с core.quotepath=false; сопоставление путей
-   не зависит от разделителя (\ или /).
-10. Git-контекст (ветка, состояние рабочего дерева, история коммитов) в дамп НЕ включается:
-    дамп содержит только последнюю версию отслеживаемых файлов.
+   and audit tooling itself (make_audit_dump.ps1, VERIFY.bat, etc.).
+5. Recursively parses XML reports: ktlint (Checkstyle), detekt, lint-results-debug.xml, unit-test results.
+6. Checks freshness (staleness) of reports relative to the last modified time of source files.
+7. Combines everything into ONE file ProjectDump_Combined.txt.
+8. Correct UTF-8 (without BOM) encoding when reading and writing.
+9. Resilience to non-ASCII paths: git is called with core.quotepath=false; path matching
+   does not depend on separator (\ or /).
+10. Git context (branch, working tree state, commit history) is NOT included in dump:
+    dump contains only the latest version of tracked files.
 
 .PARAMETER ExcludeTests
-Не включать тестовые исходники в дамп (секция 32 будет помечена как пропущенная).
+Do not include test sources in dump (section 32 will be marked as skipped).
 
 .PARAMETER IncludeTests
-Устаревший флаг обратной совместимости. Тесты теперь включены ПО УМОЛЧАНИЮ, поэтому флаг
-принимается, но игнорируется (о чём выводится сообщение).
+Legacy backward compatibility flag. Tests are now included BY DEFAULT, so the flag
+is accepted but ignored (a message is output).
 
 .PARAMETER IncludeUntracked
-Дополнительно включать НЕотслеживаемые git файлы рабочего дерева (секция 34). Полезно для аудита
-свеженаписанных, ещё не закоммиченных тестов/исходников. По умолчанию выключено (дамп = tracked-only).
+Additionally include UNtracked git working tree files (section 34). Useful for auditing
+newly written, uncommitted tests/sources. Off by default (dump = tracked-only).
 
 .PARAMETER Blind
-Устаревший флаг обратной совместимости: git-контекст в дамп больше не включается никогда,
-поэтому флаг принимается, но игнорируется.
+Legacy backward compatibility flag: git context is never included in dump,
+so the flag is accepted but ignored.
 
 .NOTES
-Запуск: .\make_audit_dump.ps1 [-ExcludeTests] [-IncludeUntracked] [-Blind]
-Совместимость: Windows PowerShell 5.1+ и PowerShell 7+ (синтаксис ограничен 5.1).
+Execution: .\make_audit_dump.ps1 [-ExcludeTests] [-IncludeUntracked] [-Blind]
+Compatibility: Windows PowerShell 5.1+ and PowerShell 7+ (syntax limited to 5.1).
 #>
 param(
     [switch]$ExcludeTests,
@@ -52,17 +51,17 @@ param(
 
 $ErrorActionPreference = "Continue"
 
-# -IncludeTests устарел: тесты теперь по умолчанию включены.
+# -IncludeTests is deprecated: tests are now included by default.
 if ($IncludeTests) {
     Write-Host "NOTE: -IncludeTests is now the default and is ignored. Use -ExcludeTests to omit test sources." -ForegroundColor Yellow
 }
 
-# -Blind устарел: git-контекст в дамп не включается никогда.
+# -Blind is deprecated: git context is never included in dump.
 if ($Blind) {
     Write-Host "NOTE: -Blind is now the default behavior (git context is never included) and is ignored." -ForegroundColor Yellow
 }
 
-# Включать ли тестовые исходники в дамп.
+# Whether to include test sources in the dump.
 $IncludeTestSources = -not $ExcludeTests
 
 # ============================================================================
@@ -71,11 +70,11 @@ $IncludeTestSources = -not $ExcludeTests
 
 $RootFull = (Get-Location).Path.TrimEnd('\', '/')
 
-# Глобальная установка UTF-8 для всех cmdlet'ов PowerShell
+# Global UTF-8 setting for all PowerShell cmdlets
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
-# Флаги наличия отчётов
+# Flags for report presence
 $script:ReportsFound = @{
     Tests  = $false
     Detekt = $false
@@ -83,14 +82,14 @@ $script:ReportsFound = @{
     Ktlint = $false
 }
 
-# Директории, которые ВСЕГДА исключаются
+# Directories that are ALWAYS excluded
 $SkipSegments = @(
     '.artifacts', '.gradle_home', '.gradle', 'build', '.idea', '.kotlin',
     '.cxx', 'intermediates', 'generated', 'tmp', 'captures', 'screenshots',
     'reports', 'audit_dump', '.git', 'node_modules'
 )
 
-# Файлы, которые ВСЕГДА исключаются (по имени)
+# Files that are ALWAYS excluded (by name)
 $SkipFileNames = @(
     'local.properties', 'benchmark-config.txt', 'detekt_output.txt',
     'diag_result.txt', 'deps_ksp.txt', 'ktlint_output.txt',
@@ -116,7 +115,7 @@ $FullDumpExtensions = @(
 # Helper Functions
 # ============================================================================
 
-# Нормализует разделители пути к '/' для платформо-независимого сопоставления.
+# Normalizes path separators to '/' for platform-independent matching.
 function Normalize-Slashes {
     param([string]$Path)
     if ([string]::IsNullOrEmpty($Path)) { return "" }
@@ -179,8 +178,8 @@ function Test-SkipSourceFile {
     return $false
 }
 
-# Определяет, является ли файл "дампируемым содержимым" (тип/размер/res-правила).
-# НЕ фильтрует тесты — разделение на исходники/тесты делает вызывающий код.
+# Determines if a file is "dumpable content" (type/size/res rules).
+# Does NOT filter tests — main vs test separation is done by caller.
 function Test-IncludeForFullDump {
     param([System.IO.FileInfo]$File)
     $ext = $File.Extension.ToLower()
@@ -254,7 +253,7 @@ function Append-FileSection {
 $script:ProcessedReports = @()
 $script:LatestSourceChange = $null
 $script:LatestSourceResolved = $false
-# Список файлов, включаемых в дамп; заполняется на этапе сбора файлов.
+# List of files included in the dump; populated during file collection phase.
 $script:DumpSourceFiles = @()
 
 function Resolve-LatestSourceChange {
@@ -544,7 +543,7 @@ if (Test-Path -LiteralPath $OutDir) {
 New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 $OutDirFull = (Resolve-Path -LiteralPath $OutDir).Path.TrimEnd('\', '/')
 
-# --- Collect TRACKED files (core.quotepath=false надёжно обрабатывает не-ASCII пути) ---
+# --- Collect TRACKED files (core.quotepath=false reliably handles non-ASCII paths) ---
 Write-Host "Collecting files..." -ForegroundColor Yellow
 $gitFiles = git -c core.quotepath=false ls-files 2>&1 | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) }
 $allFiles = @()
@@ -572,7 +571,7 @@ if ($IncludeUntracked) {
     }
 }
 
-# База проверки свежести отчётов: все файлы, попадающие в дамп.
+# Report freshness base: all files included in the dump.
 $script:DumpSourceFiles = @($allFiles) + @($untrackedFiles)
 
 Write-Host "Parsing reports..." -ForegroundColor Yellow
@@ -582,7 +581,7 @@ $lintRows = Parse-LintReport $OutDirFull
 $ktlintRows = Parse-KtlintReport $OutDirFull
 $missingRows = Analyze-MissingTranslations $OutDirFull $allFiles
 
-# Suspicious scan: учитываем тесты согласно флагу (тесты — тоже аудитируемый код).
+# Suspicious scan: account for tests per flag (tests are also audited code).
 $suspiciousScanFiles = @($allFiles | Where-Object {
     if ($IncludeTestSources) { $true } else { -not (Test-IsTestRelPath (Get-Rel $_.FullName)) }
 })
@@ -628,24 +627,24 @@ Save-Text (Join-Path $OutDirFull '00_overview.txt') $overview.ToString()
 # Sections
 # ============================================================================
 
-# --- KEY FILES (всегда FULL) ---
+# --- KEY FILES (always FULL) ---
 $keyPatterns = @('build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'libs.versions.toml', 'AndroidManifest.xml', 'detekt.yml', '.editorconfig', '.gitignore')
 $keyFilesSb = New-Object System.Text.StringBuilder
 $keyFileObjs = @($allFiles | Where-Object { $name = $_.Name; ($keyPatterns | Where-Object { $name -like "*$_*" }) } | Sort-Object FullName)
 foreach ($f in $keyFileObjs) { Add-FileDump $keyFilesSb $f -ForceFull }
 Save-Text (Join-Path $OutDirFull '20_key_files.txt') $keyFilesSb.ToString()
 
-# --- Разделение tracked-файлов на ОСНОВНЫЕ исходники и ТЕСТЫ ---
+# --- Separate tracked files into MAIN sources and TESTS ---
 $dumpable = @($allFiles | Where-Object { Test-IncludeForFullDump $_ })
 $mainFiles = @($dumpable | Where-Object { -not (Test-IsTestRelPath (Get-Rel $_.FullName)) } | Sort-Object FullName)
 $testFiles = @($dumpable | Where-Object { (Test-IsTestRelPath (Get-Rel $_.FullName)) } | Sort-Object FullName)
 
-# --- 30 SOURCES FULL (основные исходники, БЕЗ тестов) ---
+# --- 30 SOURCES FULL (main sources, WITHOUT tests) ---
 $sourcesSb = New-Object System.Text.StringBuilder
 foreach ($f in $mainFiles) { Add-FileDump $sourcesSb $f }
 Save-Text (Join-Path $OutDirFull '30_sources_full.txt') $sourcesSb.ToString()
 
-# --- 32 TEST SOURCES FULL (тесты) ---
+# --- 32 TEST SOURCES FULL (tests) ---
 $testSourcesSb = New-Object System.Text.StringBuilder
 if ($IncludeTestSources) {
     foreach ($f in $testFiles) { Add-FileDump $testSourcesSb $f }
@@ -657,7 +656,7 @@ if ($IncludeTestSources) {
 }
 Save-Text (Join-Path $OutDirFull '32_test_sources_full.txt') $testSourcesSb.ToString()
 
-# --- 34 UNTRACKED FILES (опционально) ---
+# --- 34 UNTRACKED FILES (optional) ---
 if ($IncludeUntracked) {
     $untrackedSb = New-Object System.Text.StringBuilder
     foreach ($f in ($untrackedFiles | Sort-Object FullName)) {
@@ -696,7 +695,7 @@ foreach ($sec in $sections) {
 }
 Save-Text $combined $combinedSb.ToString()
 
-# --- Краткая сводка в консоль ---
+# --- Brief console summary ---
 Write-Host ""
 Write-Host "Dump completed: $combined ($([math]::Round((Get-Item -LiteralPath $combined).Length / 1MB, 2)) MB)" -ForegroundColor Green
 Write-Host ("  Main sources : {0} file(s)" -f $mainFiles.Count)

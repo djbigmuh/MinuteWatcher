@@ -47,8 +47,8 @@ class SimUsageRepositoryImpl
         SimUsageRepository,
         SimUsageAdjustmentRepository,
         SimUsageResetRepository {
-        // Ключи DataStore — деталь реализации. Публичный API репозитория не должен их раскрывать.
-        // Это соответствует принципу Dependency Inversion.
+        // DataStore keys are an implementation detail. The public repository API must not expose them.
+        // This complies with the Dependency Inversion Principle.
 
         private val resetMutex = Mutex()
 
@@ -425,12 +425,12 @@ class SimUsageRepositoryImpl
 
         companion object {
             /**
-             * Максимальное значение трафика в МБ, при котором Float сохраняет
-             * точность до 1 МБ. Выше этого значения Float теряет точность.
-             * На практике трафик не достигает таких значений за один расчётный
-             * период, но защита предотвращает переполнение при ошибке.
+             * Maximum traffic value in MB at which Float retains
+             * precision up to 1 MB. Above this value Float loses precision.
+             * In practice traffic does not reach such values in a single billing
+             * period, but the check guards against overflow on error.
              */
-            private const val MAX_TRAFFIC_MB = 10_000_000f // ~10 ТБ
+            private const val MAX_TRAFFIC_MB = 10_000_000f // ~10 TB
 
             private const val TRAFFIC_ROUNDING_FACTOR = 100.0
         }

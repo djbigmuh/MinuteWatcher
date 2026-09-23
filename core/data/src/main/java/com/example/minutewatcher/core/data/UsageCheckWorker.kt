@@ -433,11 +433,11 @@ class UsageCheckWorker
             private const val NOTIFICATION_TYPE_TRAFFIC = 1
 
             /**
-             * Общий таймаут воркера. Превышение означает зависание
-             * на кастомной прошивке. На AOSP все операции завершаются
-             * в пределах нескольких секунд.
+             * Overall worker timeout. Exceeding means a hang
+             * on custom firmware. On AOSP all operations complete
+             * within a few seconds.
              */
-            private const val WORKER_TIMEOUT_MS = 120_000L // 2 минуты
+            private const val WORKER_TIMEOUT_MS = 120_000L // 2 minutes
 
             private const val WORKER_REFRESH_TIMEOUT_MS = 30_000L
         }

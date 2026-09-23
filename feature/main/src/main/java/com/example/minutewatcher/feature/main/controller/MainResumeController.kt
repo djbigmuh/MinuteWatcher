@@ -64,8 +64,8 @@ class MainResumeController
                             initController.initializeApp(scope, lastRefreshElapsedBefore, onUpdateLastRefreshAt)
                         }
 
-                        // Если инициализация ещё в процессе (включая только что запущенную из Failed),
-                        // ждём её завершения с LONG_TIMEOUT_MS.
+                        // If initialization is still in progress (including one just launched from Failed),
+                        // wait for its completion with LONG_TIMEOUT_MS.
                         val state =
                             withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                                 initController.initializationState.first {

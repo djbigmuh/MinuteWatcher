@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Тёмная тема Material 3 -->
+    <!-- Material 3 dark theme -->
     <color name="primary">#D0BCFF</color>
     <color name="onPrimary">#381E72</color>
-    
+
     <color name="surface">#141218</color>
     <color name="onSurface">#E6E1E5</color>
-    
+
     <color name="surfaceVariant">#49454F</color>
     <color name="onSurfaceVariant">#CAC4D0</color>
     <color name="outline">#938F99</color>
 
-    <!-- Цвета для прозрачности -->
+    <!-- Colors for transparency -->
     <color name="surface_container">#211F26</color>
 </resources>

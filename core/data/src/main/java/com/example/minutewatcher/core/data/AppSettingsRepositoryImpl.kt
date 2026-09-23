@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -121,17 +120,18 @@ class AppSettingsRepositoryImpl
             )
 
         /**
-         * Returns a flow of application settings.
+         * Returns a cold flow of application settings reading directly from DataStore.
          *
-         * The flow emits only when settings are successfully loaded from DataStore (isLoaded = true).
-         * It does not emit the default initial state.
-         * Consumers performing one-time reads (e.g., using `first()`) should use timeouts
-         * and handle potential lack of emission.
+         * Each subscription reads fresh data directly from DataStore. Emits only values
+         * loaded from DataStore (isLoaded = true). IOException from DataStore is propagated
+         * to the collector. Single reads should be limited by a timeout on the caller's side.
          *
          * Safe to call from any coroutine context.
-         * @throws IOException if DataStore reading fails.
          */
-        override fun getAppSettings(): Flow<AppSettings> = appSettingsState.filter { it.isLoaded }
+        override fun getAppSettings(): Flow<AppSettings> =
+            dataStore.data
+                .map { prefs -> prefs.toAppSettings() }
+                .distinctUntilChanged()
 
         /**
          * Returns a state flow of application settings.

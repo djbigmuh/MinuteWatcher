@@ -43,8 +43,8 @@ internal class CallAttributionResolver
                 if (matched != null) {
                     targetIdentity = matched.identity.stableId
                 } else if (activeSims.isNotEmpty()) {
-                    // Fallback допустим только когда слот не идентифицирован.
-                    // Берём первую активную, но фиксируем неточность.
+                    // Fallback is allowed only when the slot is not identified.
+                    // Take the first active SIM, but record the inaccuracy.
                     targetIdentity = activeSims.first().identity.stableId
                     isFallbackUsed = true
                     AppLogger.w("CallTracker: no SIM matched subId=$subId, using first active as fallback")

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Базовые цвета Material 3 -->
+    <!-- Material 3 base colors -->
     <color name="primary">#6750A4</color>
     <color name="onPrimary">#FFFFFF</color>
 
@@ -11,7 +11,7 @@
     <color name="onSurfaceVariant">#49454F</color>
     <color name="outline">#79747E</color>
 
-    <!-- Новые семантические цвета -->
+    <!-- New semantic colors -->
     <color name="surface_container">#F3EDF7</color>
 
     <color name="white">#FFFFFFFF</color>

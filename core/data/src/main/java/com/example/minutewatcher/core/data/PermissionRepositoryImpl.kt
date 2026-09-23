@@ -66,7 +66,7 @@ class PermissionRepositoryImpl
                 .map { check() }
                 .stateIn(
                     scope = scope,
-                    // Eagerly: поток критичен для корректности UI, остановка недопустима.
+                    // Eagerly: flow is critical for UI correctness, stopping is unacceptable.
                     started = SharingStarted.Eagerly,
                     initialValue = initialValue,
                 )

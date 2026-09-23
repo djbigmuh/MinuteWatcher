@@ -32,25 +32,25 @@ import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
 
 /**
- * Два раздельных DataStore-инстанса для разделения ответственности:
+ * Two separate DataStore instances for separation of concerns:
  *
  * **app_settings** (`appDataStore`):
- * - Общие настройки приложения (тема, язык, уведомления)
- * - Настройки виджета (layout, прозрачность, размер шрифта)
- * - Флаги миграции и onboarding
- * - Строгое соблюдение API: на AOSP DataStore отвечает < 100 мс.
+ * - General application settings (theme, language, notifications)
+ * - Widget settings (layout, transparency, font size)
+ * - Migration and onboarding flags
+ * - Strict API compliance: on AOSP DataStore responds in < 100 ms.
  *
  * **sim_settings** (`simDataStore`):
- * - SIM-специфичные данные (лимиты, расход, корректировки)
- * - Ключи генерируются на основе identity SIM (icc_<hash>, sub_<id>, sim_<slot>)
- * - Разделение от app_settings предотвращает конфликты ключей
- *   и позволяет независимо мигрировать SIM-данные.
+ * - SIM-specific data (limits, usage, adjustments)
+ * - Keys generated based on SIM identity (icc_<hash>, sub_<id>, sim_<slot>)
+ * - Separation from app_settings prevents key collisions
+ *   and allows independent migration of SIM data.
  *
- * Оба инстанса создаются через делегат `by preferencesDataStore`,
- * что гарантирует ленивую инициализацию и потокобезопасность.
- * На AOSP DataStore гарантирует атомарность edit-операций.
- * Если кастомная прошивка не обеспечивает атомарность —
- * это проблема кастомной прошивки.
+ * Both instances are created via `by preferencesDataStore` delegate,
+ * guaranteeing lazy initialization and thread safety.
+ * On AOSP DataStore guarantees atomicity of edit operations.
+ * If custom firmware does not guarantee atomicity —
+ * this is a custom firmware issue.
  */
 private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "app_settings",

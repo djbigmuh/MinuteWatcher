@@ -160,14 +160,14 @@ class WidgetSettingsViewModel
         }
 
         /**
-         * Обновляет текущее состояние настроек виджета.
+         * Updates current widget settings state.
          */
         fun updateSettings(transform: (WidgetSettingsState) -> WidgetSettingsState) {
             applySettingsUpdate("settings", transform)
         }
 
         /**
-         * Обновляет настройки конкретной SIM-карты.
+         * Updates settings for a specific SIM card.
          */
         fun updateSimSettings(
             slot: Int,
@@ -253,14 +253,14 @@ class WidgetSettingsViewModel
         }
 
         /**
-         * Сбрасывает результат сохранения.
+         * Consumes and resets save result.
          */
         fun consumeSaveResult() {
             reduce { copy(saveResult = null) }
         }
 
         /**
-         * Сохраняет текущие настройки и уведомляет систему об изменениях.
+         * Saves current settings and notifies system of changes.
          */
         suspend fun saveAndNotify() {
             saveMutex.withLock {
@@ -303,8 +303,8 @@ class WidgetSettingsViewModel
         }
 
         private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult {
-            // Используем настройки из currentState, захваченного при входе в режим сохранения,
-            // чтобы обеспечить консистентность данных.
+            // Use settings from currentState captured at save entry point
+            // to ensure data consistency.
             val currentSettings = currentState.settings
             return when {
                 currentState.isLoadError || (currentSettings?.settingsLoadFailed == true) -> {

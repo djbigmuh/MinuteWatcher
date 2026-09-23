@@ -5,9 +5,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Владелец мьютекса для сериализации операций звонков.
- * Единая точка владения предотвращает передачу мьютекса как параметра
- * и гарантирует консистентность между всеми компонентами.
+ * Owner of the mutex for serializing call operations.
+ * A single point of ownership prevents passing the mutex as a parameter
+ * and guarantees consistency across all components.
  */
 @Singleton
 class CallMutexHolder

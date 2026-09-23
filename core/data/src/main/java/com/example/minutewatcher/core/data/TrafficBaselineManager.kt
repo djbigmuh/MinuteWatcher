@@ -98,7 +98,7 @@ class TrafficBaselineManager
                 }
                 val statsResult = getCurrentMobileBytes(usage.lastResetDate)
 
-                // Синхронизируем data subId независимо от результата
+                // Synchronize data subId regardless of result
                 syncLastDataSubIdIfNeeded(identity, onSuccess)
 
                 if (statsResult is StatsResult.Success) {

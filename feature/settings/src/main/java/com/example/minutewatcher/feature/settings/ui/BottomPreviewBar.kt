@@ -27,19 +27,19 @@ fun BottomPreviewBar(uiState: WidgetUiState?) {
                 .navigationBarsPadding()
                 .padding(16.dp),
     ) {
-        // Text используется для заголовков и меток настроек.
-        // style = MaterialTheme.typography.titleSmall для заголовков секций.
-        // style = MaterialTheme.typography.bodyMedium для меток.
+        // Text is used for headers and setting labels.
+        // style = MaterialTheme.typography.titleSmall for section headers.
+        // style = MaterialTheme.typography.bodyMedium for labels.
         Text(
             text = stringResource(id = R.string.preview),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 8.dp),
         )
 
-        // Box обеспечивает центрирование превью виджета.
-        // contentAlignment = Alignment.Center центрирует содержимое.
-        // Динамическая высота с ограничением до 350.dp позволяет вместить 6-строчный режим.
-        // background(MaterialTheme.colorScheme.surface) обеспечивает фон превью.
+        // Box provides widget preview centering.
+        // contentAlignment = Alignment.Center centers content.
+        // Dynamic height capped at 350.dp allows fitting 6-line mode.
+        // background(MaterialTheme.colorScheme.surface) provides preview background.
         Box(
             modifier =
                 Modifier

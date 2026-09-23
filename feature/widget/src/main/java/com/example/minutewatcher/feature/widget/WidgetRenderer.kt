@@ -3,16 +3,16 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 
 /**
- * Контракт рендера виджетов.
+ * Widget renderer contract.
  *
- * Строгое соблюдение API: режим рендера (упрощённый / полный)
- * определяется внутри MinutesGlanceWidget.provideGlance на основе
+ * Strict API compliance: rendering mode (simplified / full)
+ * is determined inside MinutesGlanceWidget.provideGlance based on
  * WidgetSettingsState.widgetLimitExceeded.
  *
- * Для исключения race condition при параллельных обновлениях (например,
- * форсированное ручное обновление во время фонового probe), режим
- * передаётся через экземпляр MinutesGlanceWidget(forceFullRender = ...).
- * Каждый рендер-проход использует свой изолированный экземпляр виджета.
+ * To eliminate race conditions during concurrent updates (e.g.,
+ * forced manual update during background probe), mode is passed
+ * via MinutesGlanceWidget(forceFullRender = ...) instance.
+ * Each render pass uses its isolated widget instance.
  */
 interface WidgetRenderer {
     /**

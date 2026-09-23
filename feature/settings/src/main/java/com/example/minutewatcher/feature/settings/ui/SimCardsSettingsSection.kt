@@ -26,10 +26,10 @@ fun SimCardsSettingsSection(
     SettingLabel(stringResource(id = R.string.sim_cards_title))
 
     if (!enabled) {
-        // Строгое соблюдение API: observeActiveSims() на AOSP завершается за миллисекунды.
-        // Таймаут здесь указывает на деградацию хранилища на кастомной прошивке.
-        // Блокировка редактирования предотвращает молчаливую потерю данных.
-        // Это проблема кастомной прошивки, не проекта.
+        // Strict API compliance: observeActiveSims() on AOSP completes in milliseconds.
+        // Timeout here indicates storage degradation on custom firmware.
+        // Editing lock prevents silent data loss.
+        // This is a custom firmware issue, not a project issue.
         Text(
             text = stringResource(id = R.string.sim_list_unavailable_error),
             style = MaterialTheme.typography.bodyMedium,

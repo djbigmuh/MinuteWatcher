@@ -331,17 +331,17 @@ object OperatorResolver {
             ?.let { operatorResourceMap[it.value] }
 
     /**
-     * Проверяет, содержит ли строка [targetToken] как отдельный токен.
+     * Checks if the string contains [targetToken] as an isolated token.
      *
-     * **Строгое соблюдение API:** сравнение выполняется в нижнем регистре
-     * ([Locale.ROOT]), что гарантирует независимость от регистра входных данных.
-     * Токены извлекаются сплитом по не-алфавитно-цифровым символам,
-     * что исключает частичное совпадение (например, "Timor" не совпадёт с "TIM").
+     * **Strict API Compliance:** comparison is performed in lower case
+     * ([Locale.ROOT]), guaranteeing case insensitivity of input data.
+     * Tokens are extracted by splitting on non-alphanumeric characters,
+     * which prevents partial matches (for example, "Timor" will not match "TIM").
      *
-     * **Эвристика в пределах критерия надёжности:** сплит по `[^a-z0-9&-]+`
-     * (или `[^a-z0-9&]+` если токен содержит дефис) — стандартный подход
-     * для токенизации имён операторов. Дефис сохраняется как разделитель
-     * только если сам токен его содержит (например, "t-mobile").
+     * **Heuristics within reliability criteria:** split by `[^a-z0-9&-]+`
+     * (or `[^a-z0-9&]+` if the token contains a hyphen) is the standard approach
+     * for tokenizing operator names. Hyphen is preserved as a delimiter
+     * only if the token itself contains it (for example, "t-mobile").
      */
     private fun String.hasToken(targetToken: String): Boolean {
         val normalized = lowercase(Locale.ROOT)

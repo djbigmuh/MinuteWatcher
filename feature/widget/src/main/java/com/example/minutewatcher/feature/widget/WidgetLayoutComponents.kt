@@ -36,11 +36,11 @@ import kotlinx.coroutines.CancellationException
 import androidx.glance.unit.ColorProvider as IColorProvider
 
 /**
- * Рендерит содержимое виджета.
- * Содержит фон, список SIM-карт и индикатор устаревших данных.
+ * Renders widget content.
+ * Contains background, SIM card list, and stale data indicator.
  *
- * @param uiState Состояние виджета.
- * @param navigationProvider Провайдер навигации для клика по виджету.
+ * @param uiState Widget state.
+ * @param navigationProvider Navigation provider for widget clicks.
  */
 @Composable
 internal fun WidgetContent(
@@ -62,12 +62,12 @@ internal fun WidgetContent(
 }
 
 /**
- * Рендерит основное содержимое виджета.
- * Показывает сообщение об ошибке, сообщение об отсутствии SIM
- * или список SIM-карт в зависимости от состояния.
+ * Renders main widget content.
+ * Displays error message, no-SIM message,
+ * or SIM card list depending on state.
  *
- * @param uiState Состояние виджета.
- * @param noDataColor Цвет для сообщения "Нет данных".
+ * @param uiState Widget state.
+ * @param noDataColor Color for "No data" message.
  */
 @Composable
 internal fun WidgetMainContent(
@@ -97,13 +97,13 @@ internal fun WidgetMainContent(
 }
 
 /**
- * Рендерит список SIM-карт в виджете.
- * Показывает индикатор устаревших данных при refreshFailed.
- * Содержит список SIM-карт через MultiSimLayout.
+ * Renders SIM card list in widget.
+ * Shows stale data indicator on refreshFailed.
+ * Contains SIM card list via MultiSimLayout.
  *
- * @param simUiStates Список состояний SIM-карт.
- * @param uiState Состояние виджета.
- * @param noDataColor Цвет для сообщения "Нет данных".
+ * @param simUiStates List of SIM card states.
+ * @param uiState Widget state.
+ * @param noDataColor Color for "No data" message.
  */
 @Composable
 internal fun SimCardsLayout(
@@ -129,12 +129,12 @@ internal fun SimCardsLayout(
 }
 
 /**
- * Рендерит несколько SIM-карт в виджете.
- * Использует HorizontalSimLayout или VerticalSimLayout
- * в зависимости от isHorizontal.
+ * Renders multiple SIM cards in widget.
+ * Uses HorizontalSimLayout or VerticalSimLayout
+ * depending on isHorizontal.
  *
- * @param sims Список состояний SIM-карт.
- * @param uiState Состояние виджета.
+ * @param sims List of SIM card states.
+ * @param uiState Widget state.
  */
 @Composable
 internal fun MultiSimLayout(
@@ -149,12 +149,12 @@ internal fun MultiSimLayout(
 }
 
 /**
- * Рендерит SIM-карты горизонтально (в ряд).
- * Каждая SIM-карта занимает равную ширину (defaultWeight).
- * Разделитель показывается между SIM-картами при showSeparator.
+ * Renders SIM cards horizontally (in a row).
+ * Each SIM card takes equal width (defaultWeight).
+ * Separator is displayed between SIM cards when showSeparator is true.
  *
- * @param sims Список состояний SIM-карт.
- * @param uiState Состояние виджета.
+ * @param sims List of SIM card states.
+ * @param uiState Widget state.
  */
 @Composable
 internal fun HorizontalSimLayout(
@@ -182,12 +182,12 @@ internal fun HorizontalSimLayout(
 }
 
 /**
- * Рендерит SIM-карты вертикально (в столбец).
- * Каждая SIM-карта занимает равную высоту (defaultWeight).
- * Разделитель показывается между SIM-картами при showSeparator.
+ * Renders SIM cards vertically (in a column).
+ * Each SIM card takes equal height (defaultWeight).
+ * Separator is displayed between SIM cards when showSeparator is true.
  *
- * @param sims Список состояний SIM-карт.
- * @param uiState Состояние виджета.
+ * @param sims List of SIM card states.
+ * @param uiState Widget state.
  */
 @Composable
 internal fun VerticalSimLayout(
@@ -215,11 +215,11 @@ internal fun VerticalSimLayout(
 }
 
 /**
- * Рендерит разделитель между SIM-картами в виджете.
- * Показывается при showSeparator = true и наличии нескольких SIM.
+ * Renders separator between SIM cards in widget.
+ * Displayed when showSeparator = true and multiple SIMs are present.
  *
- * @param uiState Состояние виджета.
- * @param isHorizontal true если разделитель вертикальный (для горизонтального расположения).
+ * @param uiState Widget state.
+ * @param isHorizontal true if separator is vertical (for horizontal layout).
  */
 @Composable
 internal fun SimSeparator(
@@ -251,12 +251,12 @@ internal fun SimSeparator(
 }
 
 /**
- * Возвращает цвет для сообщения "Нет данных".
- * При useSystemColors возвращает GlanceTheme.colors.onSurface.
- * Иначе возвращает цвет, вычисленный через WidgetColorResolver.
+ * Returns color for "No data" message.
+ * When useSystemColors is true, returns GlanceTheme.colors.onSurface.
+ * Otherwise returns color computed via WidgetColorResolver.
  *
- * @param uiState Состояние виджета.
- * @return Цвет для сообщения "Нет данных".
+ * @param uiState Widget state.
+ * @return Color for "No data" message.
  */
 @Composable
 internal fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
@@ -270,13 +270,13 @@ internal fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
 }
 
 /**
- * Создаёт модификатор для виджета.
- * Содержит фон, appWidgetBackground и clickable для клика по виджету.
+ * Creates modifier for widget.
+ * Contains background, appWidgetBackground, and clickable for widget clicks.
  *
- * @param context Контекст.
- * @param navigationProvider Провайдер навигации для клика по виджету.
- * @param bgColor Цвет фона.
- * @return Модификатор для виджета.
+ * @param context Context.
+ * @param navigationProvider Navigation provider for widget clicks.
+ * @param bgColor Background color.
+ * @return Modifier for widget.
  */
 internal fun getWidgetModifier(
     context: Context,

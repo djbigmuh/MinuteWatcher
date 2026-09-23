@@ -4,19 +4,19 @@ import androidx.compose.runtime.Stable
 import com.example.minutewatcher.core.model.AppTheme
 
 /**
- * Контейнер колбэков для экрана SIM-карт.
- * Аннотация @Stable гарантирует стабильность для Compose.
- * Все колбэки стабильны (не изменяются при рекомпозиции).
+ * Callback container for SIM card screen.
+ * @Stable annotation guarantees Compose stability.
+ * All callbacks are stable (do not change across recompositions).
  *
- * @property onOpenSettings Открыть экран настроек виджета.
- * @property onAddWidget Показать инструкцию по добавлению виджета.
- * @property onThemeChange Изменить тему приложения.
- * @property onLanguageChange Изменить язык приложения.
- * @property onGrantPhonePermission Запросить разрешение на телефон (READ_PHONE_STATE).
- * @property onShowUsageAccessDialog Показать диалог доступа к использованию.
- * @property onOpenUsageAccessSettings Открыть системные настройки доступа к использованию.
- * @property onOpenAppSettings Открыть системные настройки приложения.
- * @property onGrantNotificationPermission Запросить разрешение на уведомления.
+ * @property onOpenSettings Open widget settings screen.
+ * @property onAddWidget Show widget addition instructions.
+ * @property onThemeChange Change application theme.
+ * @property onLanguageChange Change application language.
+ * @property onGrantPhonePermission Request phone state permission (READ_PHONE_STATE).
+ * @property onShowUsageAccessDialog Show usage access dialog.
+ * @property onOpenUsageAccessSettings Open system usage access settings.
+ * @property onOpenAppSettings Open system app settings.
+ * @property onGrantNotificationPermission Request notification permission.
  */
 @Stable
 data class SimCardScreenActions(

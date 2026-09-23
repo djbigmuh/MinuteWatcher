@@ -3,8 +3,8 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Упрощенная версия иконки - только основные элементы -->
+
+    <!-- Simplified icon version - main elements only -->
     <path
         android:fillColor="#008DD2"
         android:pathData="M54,20a34,34 0 1,1 0,68a34,34 0 1,1 0,-68z"/>

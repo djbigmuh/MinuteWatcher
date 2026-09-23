@@ -118,7 +118,7 @@ class InvalidSlotException(
 ) : IllegalArgumentException("Invalid SIM slot index: $slot")
 
 /**
- * Исключение, выбрасываемое при недоступности identity seed (сбой хранилища).
+ * Exception thrown when identity seed is unavailable (storage failure).
  */
 class SeedUnavailableException(
     val slot: Int? = null,

@@ -9,23 +9,23 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
- * Планировщик автоматического сброса лимитов.
+ * Scheduler for automatic limit reset.
  *
- * **Поведение при гибели процесса:**
- * - [KEY_LAST_AUTO_RESET_CHECK] персистентен в SavedStateHandle.
- * - При гибели процесса и восстановлении ViewModel checkOnStart() выполнится повторно.
- * - Если с момента последней проверки прошло меньше интервала — сброс не выполняется.
- * - Если прошло больше — сброс выполняется.
+ * **Behavior on process death:**
+ * - [KEY_LAST_AUTO_RESET_CHECK] is persistent in SavedStateHandle.
+ * - On process death and ViewModel restoration, checkOnStart() executes again.
+ * - If less than the interval has elapsed since the last check — reset is not performed.
+ * - If more has elapsed — reset is performed.
  *
- * **Строгое соблюдение API:** SavedStateHandle гарантированно восстанавливается
- * Android Framework при воссоздании ViewModel. Атомарность [isCheckStarted]
- * предотвращает конкуренцию при нескольких вызовах в рамках одного экземпляра ViewModel.
+ * **Strict API compliance:** SavedStateHandle is guaranteed to be restored
+ * by Android Framework during ViewModel recreation. Atomicity of [isCheckStarted]
+ * prevents race conditions during multiple calls within a single ViewModel instance.
  *
- * **Эвристика в пределах критерия надёжности:** при гибели процесса во время
- * проверки сброса, повторная проверка при восстановлении может выполнить
- * сброс дважды (если первый сброс завершился, но флаг не был сохранён).
- * Это допустимо: повторный сброс идемпотентен (сброс уже сброшенных данных
- * не изменяет данные).
+ * **Heuristic within reliability criteria:** on process death during
+ * reset check, repeat check upon restoration may perform
+ * reset twice (if first reset completed but flag was not saved).
+ * This is acceptable: repeat reset is idempotent (resetting already reset data
+ * does not alter data).
  */
 class AutoResetScheduler
     @Inject
@@ -35,17 +35,17 @@ class AutoResetScheduler
         private val timeProvider: TimeProvider,
     ) {
         /**
-         * Флаг однократного запуска проверки авто-сброса.
+         * Flag for single execution of auto-reset check.
          *
-         * **Намеренно не сбрасывается при успехе:** проверка авто-сброса
-         * должна выполняться ровно один раз за время жизни ViewModel. Повторный вызов
-         * `checkOnStart()` после завершения немедленно возвращает управление.
+         * **Intentionally not reset on success:** auto-reset check
+         * must run exactly once during ViewModel lifetime. Repeated calls to
+         * `checkOnStart()` after completion immediately return.
          *
-         * Флаг сбрасывается при [CancellationException] или любой неожиданной ошибке (Exception),
-         * чтобы позволить повторную попытку при следующей инициализации, так как в этих случаях
-         * проверка не была доведена до конца (записи в SavedStateHandle не обновлены).
-         * При частичном отказе (`performAutoReset` вернул `false`) флаг НЕ сбрасывается, так как
-         * логика ретраев внутри `executeAutoResetWithRetry` уже учла этот сбой.
+         * The flag is reset on [CancellationException] or any unexpected Exception
+         * to allow retrying on next initialization, as in those cases
+         * the check was not completed (SavedStateHandle entries not updated).
+         * On partial failure (`performAutoReset` returned `false`), the flag is NOT reset,
+         * because retry logic inside `executeAutoResetWithRetry` already accounted for the failure.
          */
         private val isCheckStarted = AtomicBoolean(false)
 
@@ -56,18 +56,18 @@ class AutoResetScheduler
         }
 
         /**
-         * Проверяет необходимость авто-сброса при старте.
+         * Checks necessity of auto-reset on start.
          *
-         * **Строгое соблюдение API:** используется монотонное время
-         * (elapsedRealtime), а не wall-clock (System.currentTimeMillis).
-         * Это гарантирует, что перевод системных часов пользователем
-         * не приведёт к ложным срабатываниям или пропуску проверок.
+         * **Strict API compliance:** monotonic time is used
+         * (elapsedRealtime), rather than wall-clock (System.currentTimeMillis).
+         * This guarantees that changing system clock does not lead
+         * to false triggers or missed checks.
          *
-         * **Поведение при перезагрузке:** `elapsedRealtime()` монотонен только в пределах
-         * одной загрузки устройства и сбрасывается в ноль при перезагрузке.
-         * Если сохранённое значение `lastResetCheck` больше текущего `now` (отрицательная разность),
-         * это означает, что устройство было перезагружено с момента последней проверки.
-         * В этом случае проверка выполняется немедленно для обеспечения целостности данных.
+         * **Behavior on reboot:** `elapsedRealtime()` is monotonic only within
+         * a single device boot and resets to zero on reboot.
+         * If saved `lastResetCheck` is greater than current `now` (negative difference),
+         * it means device was rebooted since last check.
+         * In this case check executes immediately to ensure data integrity.
          */
         suspend fun checkOnStart() {
             if (!isCheckStarted.compareAndSet(false, true)) return

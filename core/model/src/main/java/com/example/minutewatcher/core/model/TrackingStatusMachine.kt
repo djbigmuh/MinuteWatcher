@@ -6,15 +6,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Единая машина переходов TrackingStatus.
- * Приоритет: PERMISSION_MISSING > DATABASE_ERROR > TRANSIENT(UNKNOWN/NOT_SUPPORTED/
+ * Unified TrackingStatus state machine.
+ * Priority: PERMISSION_MISSING > DATABASE_ERROR > TRANSIENT(UNKNOWN/NOT_SUPPORTED/
  * INACCURATE_ATTRIBUTION) > HEALTHY(Active/Idle/Ready).
  *
- * Правила:
- * 1. force — безусловная установка.
- * 2. newPrio >= currentPrio — установка.
- * 3. Recovery: HEALTHY снимает TRANSIENT-ошибку (не снимает sticky DATABASE/PERMISSION).
- * 4. Иначе текущий статус сохраняется.
+ * Rules:
+ * 1. force — unconditional transition.
+ * 2. newPrio >= currentPrio — transition.
+ * 3. Recovery: HEALTHY clears TRANSIENT errors (does not clear sticky DATABASE/PERMISSION).
+ * 4. Otherwise current status is preserved.
  */
 class TrackingStatusMachine(
     initial: TrackingStatus = TrackingStatus.Idle,

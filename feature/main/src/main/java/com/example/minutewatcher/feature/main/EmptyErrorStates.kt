@@ -16,16 +16,16 @@ import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.resources.R
 
 /**
- * Отображается при отсутствии обнаруженных SIM-карт или отсутствии разрешений.
- * Информирует пользователя о том, что приложению не удалось получить доступ к данным SIM,
- * и предлагает перейти к предоставлению необходимых разрешений (READ_PHONE_STATE).
+ * Displayed when no SIM cards are detected or permissions are missing.
+ * Informs the user that the app could not access SIM data,
+ * and suggests navigating to grant the necessary permission (READ_PHONE_STATE).
  *
- * Состав экрана:
- * - Заголовок: Сообщение о том, что SIM-карты не найдены.
- * - Описание: Пояснение необходимости проверки разрешений.
- * - Кнопка действия: Инициирует процесс запроса разрешений.
+ * Screen layout:
+ * - Header: Message indicating no SIM cards found.
+ * - Description: Explanation of permission check requirement.
+ * - Action button: Initiates permission request process.
  *
- * @param onGrantPermission Колбэк для запроса разрешений на доступ к состоянию телефона.
+ * @param onGrantPermission Callback to request phone state permission.
  */
 @Composable
 fun EmptyState(onGrantPermission: () -> Unit) {
@@ -52,16 +52,16 @@ fun EmptyState(onGrantPermission: () -> Unit) {
 }
 
 /**
- * Отображается при возникновении критической ошибки загрузки данных или сбоя репозитория.
- * Позволяет пользователю увидеть описание ошибки и предпринять попытку повторного получения данных.
+ * Displayed when a critical data loading error or repository failure occurs.
+ * Allows the user to view the error description and attempt to reload the data.
  *
- * Состав экрана:
- * - Заголовок: Стандартное сообщение об ошибке.
- * - Описание: Детализированный текст ошибки, переданный через параметр [message].
- * - Кнопка действия: Повторный запуск процесса загрузки данных через [onRetry].
+ * Screen layout:
+ * - Header: Standard error message.
+ * - Description: Detailed error text passed via [message] parameter.
+ * - Action button: Triggers data reload process via [onRetry].
  *
- * @param message Текстовое описание возникшей ошибки для пользователя.
- * @param onRetry Колбэк для повторной попытки загрузки данных или сброса состояния ошибки.
+ * @param message Text description of the error for the user.
+ * @param onRetry Callback to retry data loading or reset error state.
  */
 @Composable
 fun ErrorState(

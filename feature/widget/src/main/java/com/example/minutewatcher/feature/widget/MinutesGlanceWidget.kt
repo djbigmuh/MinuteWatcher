@@ -33,8 +33,8 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
 
 /**
- * Основной класс виджета MinuteWatcher.
- * Рендерит состояние SIM-карт на домашнем экране.
+ * Main class of MinuteWatcher widget.
+ * Renders SIM card state on the home screen.
  *
  * @param forceFullRender If true, forces the full layout rendering by ignoring
  * the global `widgetLimitExceeded` flag during this specific render pass.
@@ -44,16 +44,16 @@ import kotlinx.coroutines.CancellationException
  * calling it with a specific `forceFullRender` value will affect all
  * currently placed widgets on the home screen for that render pass.
  *
- * Строгое соблюдение API: все компоненты используют Glance API
- * в соответствии с документацией. На AOSP Glance обеспечивает
- * стабильный рендер; отклонения возможны только на кастомных прошивках.
+ * Strict API compliance: all components use Glance API
+ * according to documentation. On AOSP Glance ensures
+ * stable rendering; deviations are possible only on custom firmwares.
  */
 class MinutesGlanceWidget(
     internal val forceFullRender: Boolean = false,
 ) : GlanceAppWidget() {
     /**
-     * Hilt EntryPoint для виджета.
-     * Позволяет получать зависимости в виджете через EntryPointAccessors.
+     * Hilt EntryPoint for widget.
+     * Allows obtaining dependencies in widget via EntryPointAccessors.
      */
     @EntryPoint
     @InstallIn(SingletonComponent::class)
@@ -68,9 +68,9 @@ class MinutesGlanceWidget(
     }
 
     /**
-     * Рендерит виджет.
-     * Вызывается системой при обновлении виджета.
-     * При любом исключении показывает FallbackContent.
+     * Renders widget.
+     * Called by system on widget update.
+     * Shows FallbackContent on any exception.
      */
     override suspend fun provideGlance(
         context: Context,
@@ -106,7 +106,7 @@ class MinutesGlanceWidget(
     }
 
     /**
-     * Рендерит fallback-содержимое виджета.
+     * Renders fallback widget content.
      */
     @Composable
     private fun FallbackContent(context: Context) {
@@ -139,7 +139,7 @@ class MinutesGlanceWidget(
     }
 
     /**
-     * Получает состояние виджета.
+     * Gets widget state.
      */
     private suspend fun getUiState(context: Context): WidgetUiState {
         val entryPoint =
@@ -183,7 +183,7 @@ class MinutesGlanceWidget(
     }
 
     /**
-     * Получает snapshot для виджета.
+     * Gets snapshot for widget.
      */
     private suspend fun getSnapshot(
         usageRepository: UsageStateRepository,

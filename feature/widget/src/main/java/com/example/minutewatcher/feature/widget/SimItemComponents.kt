@@ -33,12 +33,12 @@ import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
 
 /**
- * Рендерит одну SIM-карту в виджете.
- * Содержит иконку, имя оператора, состояние минут и трафика.
- * Использует SimLayoutRenderV2 для рендера.
+ * Renders a single SIM card in widget.
+ * Contains icon, operator name, minutes and traffic state.
+ * Uses SimLayoutRenderV2 for rendering.
  *
- * @param sim Состояние SIM-карты.
- * @param uiState Состояние виджета.
+ * @param sim SIM card state.
+ * @param uiState Widget state.
  */
 @Composable
 internal fun SimItem(
@@ -68,11 +68,11 @@ internal fun SimItem(
 }
 
 /**
- * Рендерит layout SIM-карты через SimLayoutRenderV2.
- * Передаёт рендереры для иконки, текста и spacer.
+ * Renders SIM card layout via SimLayoutRenderV2.
+ * Passes renderers for icon, text, and spacer.
  *
- * @param sim Состояние SIM-карты.
- * @param uiState Состояние виджета.
+ * @param sim SIM card state.
+ * @param uiState Widget state.
  */
 @Composable
 internal fun SimItemLayout(
@@ -103,10 +103,10 @@ internal fun SimItemLayout(
 }
 
 /**
- * Рендерит иконку SIM-карт в виджете.
- * Используется в SimLayoutRenderV2.
+ * Renders SIM card icon in widget.
+ * Used in SimLayoutRenderV2.
  *
- * @param component Компонент иконки (iconRes, sizeDp).
+ * @param component Icon component (iconRes, sizeDp).
  */
 @Composable
 internal fun SimItemIcon(component: SimLayoutComponent.Icon) {
@@ -118,13 +118,13 @@ internal fun SimItemIcon(component: SimLayoutComponent.Icon) {
 }
 
 /**
- * Рендерит текст SIM-карты в виджете.
- * Используется в SimLayoutRenderV2.
- * Цвет текста определяется в зависимости от useSystemColors.
+ * Renders SIM card text in widget.
+ * Used in SimLayoutRenderV2.
+ * Text color is resolved depending on useSystemColors.
  *
- * @param component Компонент текста (text, color, fontSizeSp, isBold).
- * @param sim Состояние SIM-карты.
- * @param uiState Состояние виджета.
+ * @param component Text component (text, color, fontSizeSp, isBold).
+ * @param sim SIM card state.
+ * @param uiState Widget state.
  */
 @Composable
 internal fun SimItemText(
@@ -163,10 +163,10 @@ private fun resolveTextColor(
     }
 
 /**
- * Рендерит spacer в виджете.
- * Используется в SimLayoutRenderV2.
+ * Renders spacer in widget.
+ * Used in SimLayoutRenderV2.
  *
- * @param component Компонент spacer (widthDp, heightDp).
+ * @param component Spacer component (widthDp, heightDp).
  */
 @Composable
 internal fun SimItemSpacer(component: SimLayoutComponent.Spacer) {

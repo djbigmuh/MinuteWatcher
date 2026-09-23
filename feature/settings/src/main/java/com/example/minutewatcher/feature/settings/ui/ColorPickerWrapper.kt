@@ -8,17 +8,17 @@ import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 
 /**
- * Обёртка для ColorPickerDialog, использующая DisposableEffect для управления
- * жизненным циклом диалога.
+ * Wrapper for ColorPickerDialog using DisposableEffect to manage
+ * dialog lifecycle.
  *
- * Поведение при изменении конфигурации (поворот экрана):
- * DisposableEffect(Unit) выполняется один раз при входе в композицию.
- * При изменении конфигурации композиция пересоздаётся, cleanup вызывает
- * dialog.dismiss(), и диалог исчезает. Это допустимое поведение:
- * пользователь может открыть диалог повторно.
+ * Behavior on configuration change (screen rotation):
+ * DisposableEffect(Unit) executes once upon entering composition.
+ * On configuration change composition is recreated, cleanup calls
+ * dialog.dismiss(), and dialog disappears. This is acceptable behavior:
+ * user can reopen dialog.
  *
- * onColorSelected вызывается перед onDismiss, что гарантирует сохранение
- * выбранного цвета перед закрытием диалога.
+ * onColorSelected is called before onDismiss, guaranteeing save of
+ * selected color before closing dialog.
  */
 @Composable
 fun ColorPickerWrapper(

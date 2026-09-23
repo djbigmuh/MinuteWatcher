@@ -115,8 +115,8 @@ class MainSimDataController
             )
 
         /**
-         * Ошибка последней операции, если она завершилась неудачей.
-         * UI должен отобразить эту ошибку и очистить её после показа.
+         * Error of the last operation if it failed.
+         * The UI should display this error and clear it after showing.
          */
         data class OperationError(
             @StringRes val messageRes: Int,
@@ -143,8 +143,6 @@ class MainSimDataController
         private var highlightJob: Job? = null
 
         /**
-         * Подсвечивает карточку SIM в указанном слоте на короткое время.
-         *
          * Highlights the SIM card in the specified slot for a short duration.
          *
          * @param slot SIM slot index.
@@ -154,9 +152,9 @@ class MainSimDataController
         fun highlightSlot(slot: Int) {
             scope.launch {
                 highlightMutex.withLock {
-                    // Повторный вызов для того же слота не перезапускает таймер.
-                    // Это предотвращает «вечную» подсветку при быстрых повторных нажатиях.
-                    // Длительность подсветки фиксирована: HIGHLIGHT_DELAY_MS от первого вызова.
+                    // Repeated calls for the same slot do not restart the timer.
+                    // This prevents "endless" highlighting during rapid repeated taps.
+                    // Highlight duration is fixed: HIGHLIGHT_DELAY_MS from the first call.
                     if ((_highlightedSlot.value == slot) && (highlightJob?.isActive == true)) {
                         return@withLock
                     }
@@ -180,9 +178,9 @@ class MainSimDataController
          * Errors in notification are logged and do not affect the operation result.
          * [CancellationException] is always propagated.
          *
-         * @param slot Индекс слота SIM.
-         * @param operationName Название операции для логирования.
-         * @param block Блок операции для выполнения.
+         * @param slot SIM slot index.
+         * @param operationName Operation name for logging.
+         * @param block Operation block to execute.
          * @return [OperationError] if the operation or notification failed, null otherwise.
          */
         private suspend fun executeSimOperation(
@@ -314,9 +312,7 @@ class MainSimDataController
         }
 
         /**
-         * Повторяет поиск установленных приложений (для AppFunctions).
-         *
-         * Retries app search indexing recovery.
+         * Retries installed apps search indexing (for AppFunctions).
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          */
@@ -327,8 +323,6 @@ class MainSimDataController
         }
 
         /**
-         * Повторяет попытку восстановления отслеживания звонков.
-         *
          * Retries call tracking recovery.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
@@ -340,8 +334,6 @@ class MainSimDataController
         }
 
         /**
-         * Повторяет попытку создания ярлыков.
-         *
          * Retries shortcut creation recovery.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
@@ -353,8 +345,6 @@ class MainSimDataController
         }
 
         /**
-         * Повторяет попытку восстановления отслеживания трафика.
-         *
          * Retries traffic tracking recovery.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
@@ -367,9 +357,7 @@ class MainSimDataController
         }
 
         /**
-         * Повторяет попытку разрешения seed и обнаружения SIM.
-         *
-         * Retries SIM discovery recovery.
+         * Retries seed resolution and SIM discovery.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          */
@@ -448,9 +436,7 @@ class MainSimDataController
             }
 
         /**
-         * Уведомляет систему об изменении данных для обновления виджетов и UI.
-         *
-         * Notifies the system that SIM data has changed.
+         * Notifies the system that SIM data has changed for widget and UI updates.
          *
          * @param updateWidget Whether to trigger a widget update.
          * @param force Whether to force notification even if data hasn't changed.

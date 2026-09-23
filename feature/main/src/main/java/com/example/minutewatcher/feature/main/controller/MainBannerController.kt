@@ -47,13 +47,13 @@ import kotlin.time.Duration.Companion.milliseconds
  * **Error Handling:** Propagates [CancellationException].
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via observed flows.
  *
- * Строгое соблюдение API: на AOSP combine из StateFlow не бросает исключений.
+ * Strict API compliance: on AOSP combine from StateFlow does not throw exceptions.
  *
- * Примечание к конструктору: параметры trackingStatusRepository, permissionRepository,
- * appSettingsRepository и seedRepository используются только в инициализаторах свойств
- * (внутри лямбда-выражений combine/stateIn). Поскольку они захватываются лямбдами
- * как значения параметров конструктора и не используются в методах класса после инициализации,
- * модификатор 'val' удален для предотвращения создания ненужных backing fields и экономии памяти.
+ * Constructor note: trackingStatusRepository, permissionRepository,
+ * appSettingsRepository, and seedRepository parameters are only used in property initializers
+ * (inside combine/stateIn lambda expressions). Since they are captured by lambdas
+ * as constructor parameter values and not used in class methods after initialization,
+ * the 'val' modifier is removed to prevent creating unnecessary backing fields and save memory.
  */
 @Singleton
 class MainBannerController
@@ -254,7 +254,6 @@ class MainBannerController
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                 observationScope.currentJob?.cancelAndJoin()
             }
-            observationScope.shutdown()
             isObservationStarted.set(false)
             appSearchRetryCount.value = 0
             appSearchBannerDismissed.value = false

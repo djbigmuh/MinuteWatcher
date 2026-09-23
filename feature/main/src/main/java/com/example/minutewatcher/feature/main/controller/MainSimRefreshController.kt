@@ -106,7 +106,7 @@ class MainSimRefreshController
         ): Boolean {
             val outcome = refreshSimCardsInternal()
             if (outcome is RefreshOutcome.SkippedAlreadyInProgress) {
-                // Обновление уже выполняется другим вызовом — не дублируем
+                // Refresh is already in progress by another call — do not duplicate
                 return false
             }
             return if ((outcome is RefreshOutcome.Completed) && (outcome.result is RefreshResult.Success)) {

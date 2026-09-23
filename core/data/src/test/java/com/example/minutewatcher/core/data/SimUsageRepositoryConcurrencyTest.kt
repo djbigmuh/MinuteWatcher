@@ -55,11 +55,11 @@ class SimUsageRepositoryConcurrencyTest {
             val autoResetDay = 1
             val now = 1000000000000L
 
-            // Подготовка данных
+            // Data preparation
             repository.setLastResetDate(identity, 1L)
             repository.setMinutesUsed(identity, 50)
 
-            // 3. Запускаем конкурентные вызовы на ОДНОМ И ТОМ ЖЕ экземпляре репозитория
+            // 3. Launch concurrent calls on the VERY SAME repository instance
             val concurrentCalls = 10
             val results =
                 (1..concurrentCalls)
@@ -69,7 +69,7 @@ class SimUsageRepositoryConcurrencyTest {
                         }
                     }.awaitAll()
 
-            // Даем время DataStore завершить фоновые операции переименования файлов
+            // Give DataStore time to complete background file renaming operations
             testScheduler.advanceUntilIdle()
 
             val resetCount = results.count { it }

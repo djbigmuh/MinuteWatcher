@@ -32,12 +32,12 @@ open class BaseViewModel<S>(
     protected fun reduce(reducer: S.() -> S) = _state.update { it.reducer() }
 
     /**
-     * Атомарно обновляет состояние и возвращает результат.
+     * Atomically updates the state and returns the result.
      */
     protected fun updateAndGet(reducer: S.() -> S): S = _state.updateAndGet { it.reducer() }
 
     override fun onCleared() {
-        // Хук для очистки ресурсов в подклассах.
-        // Вызывается автоматически при уничтожении ViewModel.
+        // Hook for resource cleanup in subclasses.
+        // Called automatically when the ViewModel is destroyed.
     }
 }

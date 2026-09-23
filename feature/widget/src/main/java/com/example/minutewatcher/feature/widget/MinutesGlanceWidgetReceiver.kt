@@ -4,9 +4,9 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 
 /**
- * Receiver для виджета MinuteWatcher.
- * Наследует GlanceAppWidgetReceiver.
- * Возвращает MinutesGlanceWidget как glanceAppWidget.
+ * Receiver for MinuteWatcher widget.
+ * Inherits GlanceAppWidgetReceiver.
+ * Returns MinutesGlanceWidget as glanceAppWidget.
  */
 class MinutesGlanceWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = MinutesGlanceWidget()

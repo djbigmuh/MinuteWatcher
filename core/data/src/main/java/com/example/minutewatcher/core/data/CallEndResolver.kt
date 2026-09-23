@@ -11,8 +11,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Вспомогательный класс для разрешения завершения звонков в неопределенных ситуациях.
- * Вынесен из [CallTracker] для уменьшения сложности.
+ * Helper class for resolving call completion in ambiguous situations.
+ * Extracted from [CallTracker] to reduce complexity.
  */
 @Singleton
 internal class CallEndResolver

@@ -4,14 +4,14 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
 /**
- * Данные диалога установки лимитов.
- * Parcelable для сохранения в SavedStateHandle.
+ * Limit setting dialog data.
+ * Parcelable for SavedStateHandle persistence.
  *
- * @property slot Индекс слота SIM.
- * @property name Имя оператора.
- * @property minutes Текущий лимит минут.
- * @property traffic Текущий лимит трафика (МБ).
- * @property rolloverEnabled Включён ли перенос остатков.
+ * @property slot SIM slot index.
+ * @property name Operator name.
+ * @property minutes Current minutes limit.
+ * @property traffic Current traffic limit (MB).
+ * @property rolloverEnabled Whether rollover is enabled.
  */
 @Parcelize
 // Using Parcelable instead of Serializable for Android IPC/Bundle transport.
@@ -26,11 +26,11 @@ data class LimitDialogData(
 ) : Parcelable
 
 /**
- * Данные диалога выбора дня автосброса.
- * Parcelable для сохранения в SavedStateHandle.
+ * Auto-reset day picker dialog data.
+ * Parcelable for SavedStateHandle persistence.
  *
- * @property slot Индекс слота SIM.
- * @property day Текущий день автосброса.
+ * @property slot SIM slot index.
+ * @property day Current auto-reset day.
  */
 @Parcelize
 // Using Parcelable instead of Serializable for Android IPC/Bundle transport.
@@ -42,12 +42,12 @@ data class DayDialogData(
 ) : Parcelable
 
 /**
- * Данные диалога корректировки остатка.
- * Parcelable для сохранения в SavedStateHandle.
+ * Remaining usage adjustment dialog data.
+ * Parcelable for SavedStateHandle persistence.
  *
- * @property slot Индекс слота SIM.
- * @property currentValue Текущее значение остатка.
- * @property isMinutes true если корректировка минут, false если трафика.
+ * @property slot SIM slot index.
+ * @property currentValue Current remaining value.
+ * @property isMinutes true for minutes adjustment, false for traffic.
  */
 @Parcelize
 // Using Parcelable instead of Serializable for Android IPC/Bundle transport.
@@ -60,11 +60,11 @@ data class AdjustDialogData(
 ) : Parcelable
 
 /**
- * Опция языка для LanguageMenu.
+ * Language option for LanguageMenu.
  *
- * @property code Код языка (null для системного).
- * @property name Название языка.
- * @property flag Флаг/эмодзи языка.
+ * @property code Language code (null for system default).
+ * @property name Language name.
+ * @property flag Language flag/emoji.
  */
 data class LanguageOption(
     val code: String?,

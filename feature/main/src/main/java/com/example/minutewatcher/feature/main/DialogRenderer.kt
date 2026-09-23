@@ -14,24 +14,24 @@ import com.example.minutewatcher.feature.main.ui.components.SimpleMessageDialog
 import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
 
 /**
- * Рендерит диалоги для экрана SIM-карт.
- * Является центральным компонентом управления модальными окнами экрана.
- * Показывает диалоги в зависимости от состояния [MainViewModel], обеспечивая
- * единую точку входа для рендеринга всех пользовательских взаимодействий
- * через диалоги.
+ * Renders dialogs for the SIM card screen.
+ * Acts as the central component for managing screen modal windows.
+ * Displays dialogs depending on [MainViewModel] state, providing
+ * a unified entry point for rendering all user interactions
+ * via dialogs.
  *
- * Обрабатываемые диалоги:
- * - [SimLimitComposeDialog]: Установка лимитов минут и трафика.
- * - [DayPickerComposeDialog]: Выбор дня автоматического сброса статистики.
- * - [AdjustmentComposeDialog]: Ручная корректировка текущего остатка.
- * - [SimpleMessageDialog]: Информационные сообщения (например, об ограничениях трафика).
- * - [UsageAccessDialog]: Запрос системного доступа к статистике использования.
- * - [OnboardingDialog]: Ознакомительный экран для новых пользователей.
+ * Handled dialogs:
+ * - [SimLimitComposeDialog]: Setting minutes and traffic limits.
+ * - [DayPickerComposeDialog]: Selecting the day for automatic statistics reset.
+ * - [AdjustmentComposeDialog]: Manual adjustment of current remaining usage.
+ * - [SimpleMessageDialog]: Informational messages (e.g., about traffic limitations).
+ * - [UsageAccessDialog]: Requesting system access to usage statistics.
+ * - [OnboardingDialog]: Onboarding screen for new users.
  *
- * @param viewModel ViewModel для управления состоянием диалогов и выполнения бизнес-логики подтверждения.
- * @param showUsageAccessDialog Флаг показа диалога доступа к использованию (контролируется внешней логикой разрешений).
- * @param showOnboardingDialog Флаг показа диалога онбординга.
- * @param onOpenUsageAccessSettings Колбэк для открытия системных настроек доступа.
+ * @param viewModel ViewModel for managing dialog state and executing confirmation business logic.
+ * @param showUsageAccessDialog Flag for showing usage access dialog (controlled by external permission logic).
+ * @param showOnboardingDialog Flag for showing onboarding dialog.
+ * @param onOpenUsageAccessSettings Callback to open system access settings.
  */
 @Composable
 fun DialogRenderer(
@@ -73,11 +73,11 @@ fun DialogRenderer(
 }
 
 /**
- * Рендерит диалог установки лимитов для SIM-карты.
- * Показывается при showLimitDialog != null.
+ * Renders limit setting dialog for a SIM card.
+ * Displayed when showLimitDialog != null.
  *
- * @param data Данные диалога (slot, имя оператора, текущие лимиты).
- * @param viewModel ViewModel для управления состоянием.
+ * @param data Dialog data (slot, operator name, current limits).
+ * @param viewModel ViewModel for state management.
  */
 @Composable
 private fun LimitDialog(
@@ -107,11 +107,11 @@ private fun LimitDialog(
 }
 
 /**
- * Рендерит диалог выбора дня автоматического сброса.
- * Показывается при showDayDialog != null.
+ * Renders automatic reset day selection dialog.
+ * Displayed when showDayDialog != null.
  *
- * @param data Данные диалога (slot, текущий день).
- * @param viewModel ViewModel для управления состоянием.
+ * @param data Dialog data (slot, current day).
+ * @param viewModel ViewModel for state management.
  */
 @Composable
 private fun DayDialog(
@@ -133,11 +133,11 @@ private fun DayDialog(
 }
 
 /**
- * Рендерит диалог корректировки остатка минут или трафика.
- * Показывается при showAdjustDialog != null.
+ * Renders adjustment dialog for minutes or traffic remaining.
+ * Displayed when showAdjustDialog != null.
  *
- * @param data Данные диалога (slot, текущее значение, тип: минуты/трафик).
- * @param viewModel ViewModel для управления состоянием.
+ * @param data Dialog data (slot, current value, type: minutes/traffic).
+ * @param viewModel ViewModel for state management.
  */
 @Composable
 private fun AdjustDialog(

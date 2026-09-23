@@ -176,7 +176,7 @@ private fun Separator(
                 .height(Constants.Widget.SEPARATOR_THICKNESS.dp)
                 .padding(horizontal = 24.dp)
         }
-    // Используем Box с минимальным размером через padding для имитации "содержимого" без fillMax*
+    // Use Box with minimum size via padding to imitate "content" without fillMax*
     Box(
         modifier =
             modifier

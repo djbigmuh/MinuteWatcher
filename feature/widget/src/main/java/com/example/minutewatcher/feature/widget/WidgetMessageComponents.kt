@@ -21,11 +21,11 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
 
 /**
- * Рендерит индикатор устаревших данных.
- * Показывается при refreshFailed = true.
- * Содержит иконку предупреждения и текст "Данные могут быть устаревшими".
+ * Renders stale data indicator.
+ * Shown when refreshFailed = true.
+ * Contains warning icon and text "Data may be stale".
  *
- * @param color Цвет индикатора.
+ * @param color Indicator color.
  */
 @Composable
 internal fun StaleDataIndicator(color: ColorProvider) {
@@ -53,11 +53,11 @@ internal fun StaleDataIndicator(color: ColorProvider) {
 }
 
 /**
- * Рендерит сообщение в виджете.
- * Используется для сообщений об ошибке, отсутствии SIM и т. д.
+ * Renders a message in widget.
+ * Used for error messages, no SIM messages, etc.
  *
- * @param text Текст сообщения.
- * @param color Цвет текста.
+ * @param text Message text.
+ * @param color Text color.
  */
 @Composable
 internal fun WidgetMessage(

@@ -315,7 +315,7 @@ class UsageStateRepositoryImpl
             val startRevision = snapshotFlow.value.revision
             val timeout = Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds
 
-            // Вызываем уведомление.
+            // Trigger notification.
             try {
                 deps.dataRefreshNotifier.notifyRefresh(isManual = true)
             } catch (e: CancellationException) {
