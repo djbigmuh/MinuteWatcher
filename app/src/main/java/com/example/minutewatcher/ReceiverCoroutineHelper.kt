@@ -11,6 +11,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
+
+/**
+ * AOSP limits goAsync() receiver execution to ~10 seconds.
+ * 8 seconds provides a safety margin to call finish() before forced system termination.
+ */
+private const val RECEIVER_ASYNC_TIMEOUT_MS = 8_000L
 
 /**
  * Executes a coroutine block within a [BroadcastReceiver.goAsync] context.
@@ -19,17 +27,9 @@ import kotlinx.coroutines.launch
  * This is required for asynchronous operations (like WorkManager enqueuing) because
  * without it, the system may kill the receiver process prematurely.
  *
- * **Строгое соблюдение API:** BroadcastReceiver с goAsync() должен вызвать
- * PendingResult.finish() до завершения. SupervisorJob гарантирует, что
- * отмена одной корутины не повлияет на другие. finish() вызывается в
- * finally, поэтому even if the coroutine is cancelled, it will be called.
- *
- * На AOSP BroadcastReceiver с goAsync() живёт до вызова finish().
- * Если кастомная прошивка убивает процесс до вызова finish() —
- * это проблема кастомной прошивки.
- *
  * @param context The context provided to [BroadcastReceiver.onReceive].
  * @param pendingResult The [BroadcastReceiver.PendingResult] obtained from [BroadcastReceiver.goAsync].
+ * @param dispatcher Optional dispatcher override for testing.
  * @param block The suspend block to execute. Receives application context.
  */
 fun goAsyncWithScope(
@@ -54,7 +54,14 @@ fun goAsyncWithScope(
 
     CoroutineScope(finalDispatcher + SupervisorJob()).launch {
         try {
-            block(appContext)
+            val completed =
+                withTimeoutOrNull(RECEIVER_ASYNC_TIMEOUT_MS.milliseconds) {
+                    block(appContext)
+                    true
+                } ?: false
+            if (!completed) {
+                AppLogger.e("ReceiverCoroutineHelper: Async block timed out after ${RECEIVER_ASYNC_TIMEOUT_MS}ms")
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
