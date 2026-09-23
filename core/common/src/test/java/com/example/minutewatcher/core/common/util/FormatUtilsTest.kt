@@ -1,17 +1,19 @@
-package com.example.minutewatcher.core.android.util
+package com.example.minutewatcher.core.common.util
 
 import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.LocaleList
-import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
 import java.util.Locale
 
+@RunWith(RobolectricTestRunner::class)
 class FormatUtilsTest {
     @Test
     fun testFormatTrafficGb() {
