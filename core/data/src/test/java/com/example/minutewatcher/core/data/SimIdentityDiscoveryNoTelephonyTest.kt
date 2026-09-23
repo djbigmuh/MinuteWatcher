@@ -3,6 +3,8 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.SimDiscoveryResult
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.kotlin.mock
@@ -28,4 +30,24 @@ class SimIdentityDiscoveryNoTelephonyTest {
 
         assertEquals(SimDiscoveryResult.Unsupported, result)
     }
+
+    @Test
+    fun `observeSubscriptionChanges emits Unit once and completes when subscriptionManager is null`() =
+        runTest {
+            val permissionManager: PermissionManager = mock()
+            val notifier: PermissionStateNotifier = mock()
+
+            val deps =
+                SimDiscoveryDependencies(
+                    context = mock(),
+                    subscriptionManager = null,
+                    permissionManager = permissionManager,
+                    permissionStateNotifier = notifier,
+                )
+
+            val discovery = SimIdentityDiscovery(deps)
+            val emissions = discovery.observeSubscriptionChanges().toList()
+
+            assertEquals(listOf(Unit), emissions)
+        }
 }

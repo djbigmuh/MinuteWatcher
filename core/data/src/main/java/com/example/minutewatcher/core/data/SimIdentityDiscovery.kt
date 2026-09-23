@@ -40,12 +40,13 @@ open class SimIdentityDiscovery
          */
         open fun observeSubscriptionChanges(): Flow<Unit> =
             callbackFlow {
-                val manager =
-                    subscriptionManager ?: run {
-                        trySend(Unit)
-                        close()
-                        return@callbackFlow
-                    }
+                val manager = subscriptionManager
+                if (manager == null) {
+                    trySend(Unit)
+                    close()
+                    awaitClose { }
+                    return@callbackFlow
+                }
 
                 val listener =
                     object : SubscriptionManager.OnSubscriptionsChangedListener() {
