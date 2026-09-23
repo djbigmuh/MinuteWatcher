@@ -63,7 +63,7 @@ private val Context.simDataStore: DataStore<Preferences> by preferencesDataStore
     name = "sim_settings",
     produceMigrations = { context ->
         listOf(
-            SharedPreferencesMigration(context, "secret_usage_prefs"),
+            SharedPreferencesMigration(context, Constants.LEGACY_SIM_PREFS_NAME),
         )
     },
 )

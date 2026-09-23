@@ -15,6 +15,11 @@ object Constants {
     const val PREFS_NAME = "app_prefs"
 
     /**
+     * Legacy SharedPreferences name for SIM data, migrated to the SIM DataStore.
+     */
+    const val LEGACY_SIM_PREFS_NAME = "secret_usage_prefs"
+
+    /**
      * Константы уведомлений.
      *
      * CHANNEL_ID — ID канала уведомлений.

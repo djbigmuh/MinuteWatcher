@@ -121,7 +121,7 @@ class SimLimitsRepositoryImpl
         /**
          * Updates automatic reset settings for the given identity.
          *
-         * @param day Day of the month (1-31).
+         * @param day Day of the month (coerced to range 1..31).
          * @param enabled True if automatic reset is enabled.
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if write fails.
@@ -135,8 +135,9 @@ class SimLimitsRepositoryImpl
                 AppLogger.w("setAutoReset called with invalid identity: $identity")
                 return
             }
+            val safeDay = day.coerceIn(1, 31)
             dataStore.edit {
-                it[DataStoreKeys.autoResetDayKey(identity)] = day
+                it[DataStoreKeys.autoResetDayKey(identity)] = safeDay
                 it[DataStoreKeys.autoResetKey(identity)] = enabled
             }
         }

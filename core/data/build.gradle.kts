@@ -26,7 +26,6 @@ android {
                 "proguard-rules.pro",
             )
         }
-        getByName("debug") { }
         create("benchmark") {
             initWith(getByName("release"))
             matchingFallbacks += listOf("release")
@@ -35,8 +34,12 @@ android {
 
     sourceSets {
         getByName("debug") {
-            java.directories.add("src/mockDebug/java")
-            kotlin.directories.add("src/mockDebug/java")
+            java.directories.add("src/noop/java")
+            kotlin.directories.add("src/noop/java")
+        }
+        getByName("release") {
+            java.directories.add("src/noop/java")
+            kotlin.directories.add("src/noop/java")
         }
         getByName("benchmark") {
             java.directories.add("src/mockBenchmark/java")
