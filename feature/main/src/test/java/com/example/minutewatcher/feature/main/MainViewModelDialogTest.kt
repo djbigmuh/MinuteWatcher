@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main
 
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.feature.main.controller.MainDialogController
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -97,5 +98,20 @@ class MainViewModelDialogTest : MainViewModelTestFixtures() {
             settingsFlow.value = AppSettings(onboardingCompleted = false, isLoaded = true)
 
             assertEquals(true, viewModel.showOnboardingDialog.value)
+        }
+
+    @Test
+    fun `onboarding dialog is not shown while usage access dialog is open`() =
+        testScope.runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = false, isLoaded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val dialogController =
+                MainDialogController(savedStateHandle)
+            dialogController.setUsageAccessDialog(true)
+
+            val viewModel = createViewModel(backgroundScope, dialogController)
+
+            assertEquals(false, viewModel.showOnboardingDialog.value)
         }
 }

@@ -101,17 +101,13 @@ class MainViewModel
 
             viewModelScope.launch {
                 combine(
-                    uiState,
                     appSettings,
                     showUsageAccessDialog,
-                    showLimitDialog,
                     showOnboardingDialog,
-                ) { state, settings, usageDialog, limitDialog, onboardingDialog ->
+                ) { settings, usageDialog, onboardingDialog ->
                     DataForPrompt(
-                        state = state,
                         settings = settings,
                         usageAccess = usageDialog,
-                        limitDialog = limitDialog,
                         onboardingDialogShowing = onboardingDialog,
                     )
                 }.collect { data ->
@@ -131,10 +127,8 @@ class MainViewModel
         }
 
         private data class DataForPrompt(
-            val state: SimCardListState,
             val settings: AppSettings,
             val usageAccess: Boolean,
-            val limitDialog: LimitDialogData?,
             val onboardingDialogShowing: Boolean,
         )
 

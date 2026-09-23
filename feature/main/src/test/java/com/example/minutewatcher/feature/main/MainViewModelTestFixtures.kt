@@ -150,8 +150,10 @@ abstract class MainViewModelTestFixtures {
         // MainDispatcherRule handles resetMain()
     }
 
-    protected fun createViewModel(scope: CoroutineScope): MainViewModel {
-        val dialogController = MainDialogController(savedStateHandle)
+    protected fun createViewModel(
+        scope: CoroutineScope,
+        dialogController: MainDialogController = MainDialogController(savedStateHandle),
+    ): MainViewModel {
         val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
         val refreshController =
             MainSimRefreshController(
