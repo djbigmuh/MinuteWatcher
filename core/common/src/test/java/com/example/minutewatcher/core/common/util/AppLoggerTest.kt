@@ -41,8 +41,8 @@ class AppLoggerTest {
             AppLogger.d(largeMessage)
         }
 
-        // Wait for worker to finish processing the channel
-        waitForWorker()
+        val rotationMarker = "ROTATION_MARKER_TEST_1"
+        waitForLogMarker(rotationMarker)
 
         val logFile = File(logDir, "logs.txt")
         val oldFile = File(logDir, "logs.old.txt")
@@ -54,8 +54,7 @@ class AppLoggerTest {
         assertTrue("logs.txt should be smaller than logs.old.txt", logFile.length() < oldFile.length())
 
         val uniqueTag = "UNIQUE_LOG_TAG_12345"
-        AppLogger.d(uniqueTag)
-        waitForWorker()
+        waitForLogMarker(uniqueTag)
 
         assertTrue("New logs should be in logs.txt", logFile.readText().contains(uniqueTag))
         assertFalse("New logs should NOT be in logs.old.txt", oldFile.readText().contains(uniqueTag))
@@ -75,8 +74,7 @@ class AppLoggerTest {
     @Test
     fun `shutdown prevents file logging`() {
         val marker = "LOG_BEFORE_SHUTDOWN"
-        AppLogger.d(marker)
-        waitForWorker()
+        waitForLogMarker(marker)
 
         val logFile = File(logDir, "logs.txt")
         assertTrue(logFile.readText().contains(marker))
@@ -85,18 +83,33 @@ class AppLoggerTest {
 
         val markerAfter = "LOG_AFTER_SHUTDOWN"
         AppLogger.d(markerAfter)
-        waitForWorker()
+        waitForLogMarker(marker = null)
 
         assertFalse("Should not contain log after shutdown", logFile.readText().contains(markerAfter))
     }
 
-    private fun waitForWorker(timeoutMs: Long = 10000) {
-        val start = System.currentTimeMillis()
-        // Wait for channel to be empty
-        while (AppLogger.hasPendingLogsForTest() && System.currentTimeMillis() - start < timeoutMs) {
-            Thread.sleep(100)
+    private fun waitForLogMarker(
+        marker: String? = null,
+        timeoutMs: Long = 10000L,
+    ) {
+        if (marker != null) {
+            AppLogger.d(marker)
         }
-        // Give it more time to finish the last write operation (slow on Windows)
-        Thread.sleep(1000)
+        val start = System.currentTimeMillis()
+        while (AppLogger.hasPendingLogsForTest() && System.currentTimeMillis() - start < timeoutMs) {
+            Thread.sleep(20)
+        }
+        if (marker == null) return
+
+        val logFile = File(logDir, "logs.txt")
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            if (logFile.exists()) {
+                val content = runCatching { logFile.readText() }.getOrDefault("")
+                if (content.contains(marker)) {
+                    return
+                }
+            }
+            Thread.sleep(20)
+        }
     }
 }

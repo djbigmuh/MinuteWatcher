@@ -32,14 +32,29 @@ class AppLoggerRaceTest {
         AppLogger.resetForTest()
     }
 
-    private fun waitForWorker(timeoutMs: Long = 10000) {
-        val start = System.currentTimeMillis()
-        // Wait for channel to be empty
-        while (AppLogger.hasPendingLogsForTest() && System.currentTimeMillis() - start < timeoutMs) {
-            Thread.sleep(50)
+    private fun waitForLogMarker(
+        marker: String? = null,
+        timeoutMs: Long = 10000L,
+    ) {
+        if (marker != null) {
+            AppLogger.d(marker)
         }
-        // Give it a bit more time to finish the last write operation
-        Thread.sleep(500)
+        val start = System.currentTimeMillis()
+        while (AppLogger.hasPendingLogsForTest() && System.currentTimeMillis() - start < timeoutMs) {
+            Thread.sleep(20)
+        }
+        if (marker == null) return
+
+        val logFile = File(logDir, "logs.txt")
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            if (logFile.exists()) {
+                val content = runCatching { logFile.readText() }.getOrDefault("")
+                if (content.contains(marker)) {
+                    return
+                }
+            }
+            Thread.sleep(20)
+        }
     }
 
     @Test
@@ -65,8 +80,8 @@ class AppLoggerRaceTest {
         latch.countDown() // Start all threads at once
         assertTrue("Logging should complete", completedLatch.await(10, TimeUnit.SECONDS))
 
-        // Wait for channel to be processed
-        waitForWorker()
+        val raceCompletionMarker = "RACE_TEST_COMPLETED_MARKER"
+        waitForLogMarker(raceCompletionMarker)
 
         val logFile = File(logDir, "logs.txt")
         assertTrue("Log file should exist", logFile.exists())
