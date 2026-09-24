@@ -32,17 +32,17 @@ internal class AdjustmentInputState(
     initialText: String,
 ) {
     var text by
-    mutableStateOf(
-        TextFieldValue(
-            text = initialText,
-            selection =
-                if (initialText == "0" || initialText == "0.0") {
-                    TextRange(0, initialText.length)
-                } else {
-                    TextRange.Zero
-                },
-        ),
-    )
+        mutableStateOf(
+            TextFieldValue(
+                text = initialText,
+                selection =
+                    if (initialText == "0" || initialText == "0.0") {
+                        TextRange(0, initialText.length)
+                    } else {
+                        TextRange.Zero
+                    },
+            ),
+        )
     var errorText by mutableStateOf<String?>(null)
     var selectAllPending = false
 
