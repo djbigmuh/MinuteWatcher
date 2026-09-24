@@ -61,7 +61,7 @@ class AppSearchSessionManager
         ): Result<Unit> {
             var newSession: AppSearchSessionWrapper? = null
             return try {
-                newSession = appSearchWrapper.createSearchSession(context, DATABASE_NAME)
+                newSession = appSearchWrapper.createSearchSession(context, AppSearchConstants.DATABASE_NAME)
                 newSession.setSchema(appSearchWrapper.createSchemaRequest(forceOverride))
                 session = newSession
                 updateStatus(TrackingStatus.Active)
@@ -85,9 +85,5 @@ class AppSearchSessionManager
                 session?.close()
                 session = null
             }
-        }
-
-        companion object {
-            private const val DATABASE_NAME = "usage"
         }
     }

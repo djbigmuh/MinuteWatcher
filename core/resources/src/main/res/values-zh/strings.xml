@@ -167,4 +167,6 @@
     <string name="set_limits_content_desc">为 %1$s 设置限额</string>
     <string name="change_auto_reset_day_content_desc">更改自动重置日期</string>
     <string name="toggle_auto_reset_content_desc">启用或禁用自动重置</string>
+    <string name="menu_language_content_desc">更改语言</string>
+    <string name="menu_theme_content_desc">更改主题</string>
 </resources>

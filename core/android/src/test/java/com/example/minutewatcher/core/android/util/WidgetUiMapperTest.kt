@@ -459,4 +459,118 @@ class WidgetUiMapperTest {
             )
         assertTrue("showSim should be true when config missing and load failed", uiStateFailed.simUiStates[0].showSim)
     }
+
+    @Test
+    fun testMinutesText_DisplaysDashWhenLimitIsZeroAndUsedIsNonZero() {
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(
+                            slot = 0,
+                            identity = "sim_0",
+                            operatorName = "Operator",
+                            entities =
+                                mapOf(
+                                    PackageType.MINUTES to
+                                        SemanticEntity(
+                                            id = "entity_0",
+                                            simSlot = 0,
+                                            operatorName = "Operator",
+                                            packageType = PackageType.MINUTES,
+                                            limit = 0L,
+                                            used = 120L,
+                                            remaining = 0L,
+                                            unit = MeasurementUnit.MINUTES,
+                                            periodStart = 0,
+                                            periodEnd = 0,
+                                            lastUpdateTime = 0,
+                                            sourceType = DataSourceType.SYSTEM,
+                                        ),
+                                ),
+                            autoResetDay = 1,
+                        ),
+                    ),
+                capabilities = emptyList(),
+            )
+
+        val settings =
+            WidgetSettingsState(
+                simStates =
+                    mapOf(
+                        0 to SimSettingsState(showMinutes = true),
+                    ),
+            )
+
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
+
+        val simUiState = uiState.simUiStates[0]
+        assertTrue("showMinutes should be true when used > 0", simUiState.showMinutes)
+        assertEquals("-", simUiState.minutesText)
+    }
+
+    @Test
+    fun testMinutesText_DisplaysRemainingValueWhenLimitIsSet() {
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = System.currentTimeMillis(),
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(
+                            slot = 0,
+                            identity = "sim_0",
+                            operatorName = "Operator",
+                            entities =
+                                mapOf(
+                                    PackageType.MINUTES to
+                                        SemanticEntity(
+                                            id = "entity_0",
+                                            simSlot = 0,
+                                            operatorName = "Operator",
+                                            packageType = PackageType.MINUTES,
+                                            limit = 500L,
+                                            used = 120L,
+                                            remaining = 380L,
+                                            unit = MeasurementUnit.MINUTES,
+                                            periodStart = 0,
+                                            periodEnd = 0,
+                                            lastUpdateTime = 0,
+                                            sourceType = DataSourceType.SYSTEM,
+                                        ),
+                                ),
+                            autoResetDay = 1,
+                        ),
+                    ),
+                capabilities = emptyList(),
+            )
+
+        val settings =
+            WidgetSettingsState(
+                simStates =
+                    mapOf(
+                        0 to SimSettingsState(showMinutes = true),
+                    ),
+            )
+
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = settings,
+                operatorNames = mapOf(0 to "MTS"),
+            )
+
+        val simUiState = uiState.simUiStates[0]
+        assertTrue("showMinutes should be true", simUiState.showMinutes)
+        assertEquals("380", simUiState.minutesText)
+    }
 }

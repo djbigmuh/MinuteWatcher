@@ -1,6 +1,5 @@
 package com.example.minutewatcher.feature.main
 
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -10,9 +9,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.minutewatcher.core.android.ui.HorizontalSwipeDirection
+import com.example.minutewatcher.core.android.ui.onHorizontalSwipe
+import com.example.minutewatcher.core.model.Constants
 
 /**
  * Main SIM cards screen.
@@ -61,7 +63,10 @@ fun SimCardScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .settingsDragInput { actions.onOpenSettings() },
+                .onHorizontalSwipe(
+                    HorizontalSwipeDirection.RIGHT_TO_LEFT,
+                    Constants.UI.SWIPE_NAVIGATION_THRESHOLD_DP.dp,
+                ) { actions.onOpenSettings() },
         topBar = {
             SimCardTopBar(
                 currentTheme = appTheme,
@@ -91,20 +96,3 @@ fun SimCardScreen(
         )
     }
 }
-
-private fun Modifier.settingsDragInput(onOpenSettings: () -> Unit): Modifier =
-    this.pointerInput(Unit) {
-        var totalDrag = 0f
-        detectHorizontalDragGestures(
-            onDragStart = { totalDrag = 0f },
-            onDragEnd = {
-                if (totalDrag < -200f) {
-                    onOpenSettings()
-                }
-            },
-            onDragCancel = { totalDrag = 0f },
-            onHorizontalDrag = { _, dragAmount ->
-                totalDrag += dragAmount
-            },
-        )
-    }

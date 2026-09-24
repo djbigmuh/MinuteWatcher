@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.core.app.ApplicationProvider
@@ -157,5 +158,28 @@ class SimLimitComposeDialogTest {
         // Max 6 chars for minutes. Try to type 7th.
         state.onMinutesChange(TextFieldValue("1234567", selection = TextRange(7)))
         assertEquals("0", state.minutesText.text)
+    }
+
+    @Test
+    fun `click traffic field then typing 7 replaces value instead of appending`() {
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 10240, // 10 GB ("10.0")
+                onDismiss = {},
+                onConfirm = { _, _, _ -> },
+                onReset = {},
+            )
+        }
+
+        // Click traffic field "10.0"
+        composeTestRule.onNodeWithText("10.0").performClick()
+        // Type "7"
+        composeTestRule.onNodeWithText("10.0").performTextInput("7")
+
+        // Traffic text should be "7", not "10.07"
+        composeTestRule.onNodeWithText("7").assertIsDisplayed()
     }
 }

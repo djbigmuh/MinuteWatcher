@@ -47,7 +47,10 @@ fun LanguageMenu(
 
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.Language, contentDescription = "Change Language")
+            Icon(
+                Icons.Default.Language,
+                contentDescription = stringResource(R.string.menu_language_content_desc),
+            )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             languages.forEach { option ->
@@ -89,7 +92,10 @@ fun ThemeMenu(
 
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.Palette, contentDescription = "Change Theme")
+            Icon(
+                Icons.Default.Palette,
+                contentDescription = stringResource(R.string.menu_theme_content_desc),
+            )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             themes.forEach { (theme, name, icon) ->

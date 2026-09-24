@@ -181,4 +181,6 @@
     <string name="set_limits_content_desc">تعيين حدود لـ %1$s</string>
     <string name="change_auto_reset_day_content_desc">تغيير يوم إعادة الضبط التلقائي</string>
     <string name="toggle_auto_reset_content_desc">تفعيل أو تعطيل إعادة الضبط التلقائي</string>
+    <string name="menu_language_content_desc">تغيير اللغة</string>
+    <string name="menu_theme_content_desc">تغيير السمة</string>
 </resources>

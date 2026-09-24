@@ -4,9 +4,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -110,12 +111,15 @@ private fun HorizontalSimPreviewLayout(
         Row(
             modifier =
                 Modifier
-                    .wrapContentSize()
-                    .padding(Constants.Widget.PADDING_DEFAULT.dp),
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             sims.forEachIndexed { index, sim ->
-                Box(modifier = Modifier.wrapContentSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
                     SimItemPreview(sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
@@ -136,14 +140,14 @@ private fun VerticalSimPreviewLayout(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier =
-                Modifier
-                    .wrapContentSize()
-                    .padding(Constants.Widget.PADDING_DEFAULT.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             sims.forEachIndexed { index, sim ->
-                Box(modifier = Modifier.wrapContentSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.wrapContentSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
                     SimItemPreview(sim, uiState)
                 }
                 if (uiState.showSeparator && index < sims.size - 1) {
@@ -170,22 +174,15 @@ private fun Separator(
         if (isHorizontal) {
             Modifier
                 .width(Constants.Widget.SEPARATOR_THICKNESS.dp)
-                .padding(vertical = 8.dp)
+                .fillMaxHeight()
+                .background(separatorColor)
         } else {
             Modifier
                 .height(Constants.Widget.SEPARATOR_THICKNESS.dp)
-                .padding(horizontal = 24.dp)
-        }
-    // Use Box with minimum size via padding to imitate "content" without fillMax*
-    Box(
-        modifier =
-            modifier
+                .fillMaxWidth()
                 .background(separatorColor)
-                .defaultMinSize(
-                    minWidth = if (isHorizontal) Constants.Widget.SEPARATOR_THICKNESS.dp else 48.dp,
-                    minHeight = if (isHorizontal) 32.dp else Constants.Widget.SEPARATOR_THICKNESS.dp,
-                ),
-    )
+        }
+    Box(modifier = modifier)
 }
 
 @Composable
@@ -198,7 +195,8 @@ private fun SimItemPreview(
     Column(
         modifier =
             Modifier
-                .wrapContentSize()
+                .fillMaxWidth()
+                .padding(Constants.Widget.PADDING_SIM_ITEM.dp)
                 .semantics(mergeDescendants = true) {
                     contentDescription = summary
                 },

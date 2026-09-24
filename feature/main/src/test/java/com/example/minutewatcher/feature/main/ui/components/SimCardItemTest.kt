@@ -51,11 +51,35 @@ class SimCardItemTest {
         composeTestRule.onNodeWithText("+0.5", substring = true).assertIsDisplayed()
     }
 
+    @Test
+    fun `negative minutes adjustment label displays minus sign without plus`() {
+        val model = createMockSimCard(manualAdjustment = -30)
+
+        composeTestRule.setContent {
+            SimCardItem(model = model)
+        }
+
+        composeTestRule.onNodeWithText("-30", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("+-", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `positive minutes adjustment label displays plus sign`() {
+        val model = createMockSimCard(manualAdjustment = 30)
+
+        composeTestRule.setContent {
+            SimCardItem(model = model)
+        }
+
+        composeTestRule.onNodeWithText("+30", substring = true).assertIsDisplayed()
+    }
+
     private fun createMockSimCard(
         trafficLimitMb: Int = 0,
         trafficAdjustmentGb: Float = 0f,
         effectiveTrafficLimitGb: Float = 0f,
         isTrafficLimitSet: Boolean = false,
+        manualAdjustment: Int = 0,
     ) = SimCardUiModel(
         slot = 0,
         identity = "sim1",
@@ -63,7 +87,7 @@ class SimCardItemTest {
         iconRes = coreR.drawable.ic_unknown,
         minutesUsed = 0,
         minutesLimit = 0,
-        manualAdjustment = 0,
+        manualAdjustment = manualAdjustment,
         minutesRemaining = 0,
         effectiveMinutesLimit = 0,
         isMinutesLimitSet = false,

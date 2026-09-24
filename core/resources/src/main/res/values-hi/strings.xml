@@ -169,4 +169,6 @@
     <string name="set_limits_content_desc">%1$s के लिए सीमाएँ निर्धारित करें</string>
     <string name="change_auto_reset_day_content_desc">स्वचालित रीसेट दिन बदलें</string>
     <string name="toggle_auto_reset_content_desc">स्वचालित रीसेट सक्षम या अक्षम करें</string>
+    <string name="menu_language_content_desc">भाषा बदलें</string>
+    <string name="menu_theme_content_desc">थीम बदलें</string>
 </resources>

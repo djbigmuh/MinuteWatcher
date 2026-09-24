@@ -32,6 +32,7 @@ open class DataStoreRetryHelper
          * @param label A label for logging purposes.
          * @param attempts Number of retry attempts.
          * @param retryDelayMs Initial delay between retries.
+         * @param attemptTimeoutMillis Timeout for each read attempt.
          * @param reader Lambda that returns a Flow to read from.
          * @return Result containing the value or the last exception.
          */
@@ -39,6 +40,7 @@ open class DataStoreRetryHelper
             label: String,
             attempts: Int = DEFAULT_RETRY_ATTEMPTS,
             retryDelayMs: Long = DEFAULT_RETRY_DELAY_MS,
+            attemptTimeoutMillis: Long = Constants.Flow.RETRY_READ_ATTEMPT_TIMEOUT_MS,
             reader: () -> Flow<T>,
         ): Result<T> {
             var lastException: Exception? = null
@@ -47,7 +49,7 @@ open class DataStoreRetryHelper
             for (attempt in 1..attempts) {
                 try {
                     val emission =
-                        withTimeoutOrNull(Constants.Flow.CALL_SESSION_READ_TIMEOUT_MS.milliseconds) {
+                        withTimeoutOrNull(attemptTimeoutMillis.milliseconds) {
                             reader().map { Emission(it) }.firstOrNull()
                         }
                     if (emission != null) return Result.success(emission.value)

@@ -125,13 +125,22 @@ class PermissionManager
             val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
             val mode =
                 try {
-                    // API 31+: checkOpNoThrow remains the standard for local UID checks.
-                    // Fail-closed fallback: custom ROMs or unexpected failures default to denied.
-                    appOps.checkOpNoThrow(
-                        AppOpsManager.OPSTR_GET_USAGE_STATS,
-                        Process.myUid(),
-                        context.packageName,
-                    )
+                    // @Suppress("DEPRECATION") handles API 29+ unsafeCheckOpNoThrow deprecation warnings
+                    // and API < 29 checkOpNoThrow.
+                    @Suppress("DEPRECATION")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        appOps.unsafeCheckOpNoThrow(
+                            AppOpsManager.OPSTR_GET_USAGE_STATS,
+                            Process.myUid(),
+                            context.packageName,
+                        )
+                    } else {
+                        appOps.checkOpNoThrow(
+                            AppOpsManager.OPSTR_GET_USAGE_STATS,
+                            Process.myUid(),
+                            context.packageName,
+                        )
+                    }
                 } catch (e: Exception) {
                     AppLogger.e("PermissionManager: Failed to check GET_USAGE_STATS op", e)
                     AppOpsManager.MODE_IGNORED

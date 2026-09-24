@@ -81,7 +81,11 @@ class UsageUseCaseImpl
         }
 
         /**
-         * Adjusts the manual minutes correction to match the specified remaining minutes.
+         * Adjusts manual minutes correction to match remaining minutes for current billing period.
+         * Used for one-time balance synchronization following events that do not change the tariff plan
+         * (e.g. minute purchases/sales, bonuses, SIM usage in another device).
+         * Permanent plan changes must be made via limits instead of adjustments.
+         * See [com.example.minutewatcher.core.model.SimUsage.manualAdjustment].
          *
          * @param slot SIM slot index.
          * @param remainingMinutes User-specified remaining minutes.
@@ -117,7 +121,11 @@ class UsageUseCaseImpl
         }
 
         /**
-         * Adjusts the manual traffic correction in GB to match the specified remaining traffic.
+         * Adjusts manual traffic correction in GB to match remaining traffic for current billing period.
+         * Used for one-time balance synchronization following events that do not change the tariff plan
+         * (e.g. traffic purchases/sales, bonuses, SIM usage in another device).
+         * Permanent plan changes must be made via limits instead of adjustments.
+         * See [com.example.minutewatcher.core.model.SimUsage.manualAdjustment].
          *
          * @param slot SIM slot index.
          * @param remainingGb User-specified remaining traffic in GB.

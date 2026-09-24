@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data.util
 import com.example.minutewatcher.core.common.util.initTestLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -95,7 +96,50 @@ class DataStoreRetryHelperTest {
             assertTrue("Should be failure", result.isFailure)
             assertEquals("Should attempt max times", 3, attempts)
             // Delays are 100, 200. Total 300ms.
-            // Plus 3 * CALL_SESSION_READ_TIMEOUT_MS (usually 1000ms each)
+            // Plus 3 * RETRY_READ_ATTEMPT_TIMEOUT_MS (usually 2000ms each)
             assertTrue("Virtual time should have elapsed", testScheduler.currentTime >= 300)
+        }
+
+    @Test
+    fun `readWithRetry fails when attemptTimeoutMillis is exceeded`() =
+        runTest {
+            var attempts = 0
+            val result =
+                helper.readWithRetry<String>(
+                    label = "test_timeout",
+                    attempts = 3,
+                    retryDelayMs = 10,
+                    attemptTimeoutMillis = 100,
+                ) {
+                    attempts++
+                    flow {
+                        delay(200)
+                        emit("delayed value")
+                    }
+                }
+            assertTrue("Should fail on attempt timeout", result.isFailure)
+            assertEquals("Should attempt max times", 3, attempts)
+        }
+
+    @Test
+    fun `readWithRetry succeeds when attemptTimeoutMillis exceeds flow delay`() =
+        runTest {
+            var attempts = 0
+            val result =
+                helper.readWithRetry<String>(
+                    label = "test_timeout_success",
+                    attempts = 3,
+                    retryDelayMs = 10,
+                    attemptTimeoutMillis = 300,
+                ) {
+                    attempts++
+                    flow {
+                        delay(100)
+                        emit("timely value")
+                    }
+                }
+            assertTrue("Should succeed when emission is within attempt timeout", result.isSuccess)
+            assertEquals("timely value", result.getOrNull())
+            assertEquals("Should succeed on first attempt", 1, attempts)
         }
 }

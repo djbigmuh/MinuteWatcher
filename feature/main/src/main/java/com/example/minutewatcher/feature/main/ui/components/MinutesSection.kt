@@ -37,36 +37,7 @@ fun MinutesSection(
     onAdjustMinutes: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                text =
-                    stringResource(
-                        R.string.label_value_format,
-                        stringResource(R.string.used_text),
-                        stringResource(
-                            R.string.value_unit_format,
-                            model.minutesUsed.toString(),
-                            stringResource(R.string.minutes_abbr),
-                        ),
-                    ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            if (model.isMinutesLimitSet) {
-                Text(
-                    text =
-                        stringResource(
-                            R.string.label_value_format,
-                            stringResource(R.string.limit_text),
-                            stringResource(
-                                R.string.value_unit_format,
-                                model.effectiveMinutesLimit.toString(),
-                                stringResource(R.string.minutes_abbr),
-                            ),
-                        ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
+        MinutesUsageAndLimitRow(model = model)
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -90,7 +61,45 @@ fun MinutesSection(
             )
         }
         if (model.manualAdjustment != 0) {
-            AdjustmentLabel(value = model.manualAdjustment.toString(), unit = stringResource(R.string.minutes_abbr))
+            AdjustmentLabel(
+                value = model.manualAdjustment.toString(),
+                unit = stringResource(R.string.minutes_abbr),
+                isPositive = model.manualAdjustment > 0,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MinutesUsageAndLimitRow(model: SimCardUiModel) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(
+            text =
+                stringResource(
+                    R.string.label_value_format,
+                    stringResource(R.string.used_text),
+                    stringResource(
+                        R.string.value_unit_format,
+                        model.minutesUsed.toString(),
+                        stringResource(R.string.minutes_abbr),
+                    ),
+                ),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (model.isMinutesLimitSet) {
+            Text(
+                text =
+                    stringResource(
+                        R.string.label_value_format,
+                        stringResource(R.string.limit_text),
+                        stringResource(
+                            R.string.value_unit_format,
+                            model.effectiveMinutesLimit.toString(),
+                            stringResource(R.string.minutes_abbr),
+                        ),
+                    ),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }

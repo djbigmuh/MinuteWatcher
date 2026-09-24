@@ -182,12 +182,33 @@ internal class SimLimitState(
     var minutesError by mutableStateOf<String?>(null)
     var trafficError by mutableStateOf<String?>(null)
 
+    var minutesSelectAllPending = false
+    var trafficSelectAllPending = false
+
     fun selectAllMinutes() {
         minutesText = minutesText.copy(selection = TextRange(0, minutesText.text.length))
     }
 
     fun selectAllTraffic() {
         trafficText = trafficText.copy(selection = TextRange(0, trafficText.text.length))
+    }
+
+    fun onMinutesFocusChanged(isFocused: Boolean) {
+        if (isFocused) {
+            minutesSelectAllPending = true
+            selectAllMinutes()
+        } else {
+            minutesSelectAllPending = false
+        }
+    }
+
+    fun onTrafficFocusChanged(isFocused: Boolean) {
+        if (isFocused) {
+            trafficSelectAllPending = true
+            selectAllTraffic()
+        } else {
+            trafficSelectAllPending = false
+        }
     }
 
     companion object {
@@ -252,6 +273,14 @@ internal class SimLimitState(
      * 3. All other cases: normalizes the input using [NumberInputNormalizer] and strips leading zeros.
      */
     fun onMinutesChange(newValue: TextFieldValue) {
+        if (minutesSelectAllPending) {
+            minutesSelectAllPending = false
+            if (newValue.text == minutesText.text) {
+                selectAllMinutes()
+                return
+            }
+        }
+
         if (newValue.text.length > MAX_MINUTES_CHARS) return
 
         val old = minutesText
@@ -274,7 +303,17 @@ internal class SimLimitState(
             text = text.dropWhile { it == '0' }.ifEmpty { "0" }
         }
 
-        minutesText = processed.copy(text = text, selection = TextRange(text.length))
+        val selection =
+            if (text == processed.text) {
+                TextRange(
+                    processed.selection.min.coerceIn(0, text.length),
+                    processed.selection.max.coerceIn(0, text.length),
+                )
+            } else {
+                TextRange(text.length)
+            }
+
+        minutesText = processed.copy(text = text, selection = selection)
         minutesError = null
     }
 
@@ -294,6 +333,14 @@ internal class SimLimitState(
      *    if not a decimal.
      */
     fun onTrafficChange(newValue: TextFieldValue) {
+        if (trafficSelectAllPending) {
+            trafficSelectAllPending = false
+            if (newValue.text == trafficText.text) {
+                selectAllTraffic()
+                return
+            }
+        }
+
         if (newValue.text.length > MAX_TRAFFIC_CHARS) return
 
         val old = trafficText
@@ -314,7 +361,17 @@ internal class SimLimitState(
             text = text.dropWhile { it == '0' }.ifEmpty { "0" }
         }
 
-        trafficText = processed.copy(text = text, selection = TextRange(text.length))
+        val selection =
+            if (text == processed.text) {
+                TextRange(
+                    processed.selection.min.coerceIn(0, text.length),
+                    processed.selection.max.coerceIn(0, text.length),
+                )
+            } else {
+                TextRange(text.length)
+            }
+
+        trafficText = processed.copy(text = text, selection = selection)
         trafficError = null
     }
 
@@ -349,7 +406,7 @@ private fun DialogFields(state: SimLimitState) {
                 Modifier
                     .fillMaxWidth()
                     .focusRequester(minutesFocusRequester)
-                    .onFocusChanged { if (it.isFocused) state.selectAllMinutes() },
+                    .onFocusChanged { state.onMinutesFocusChanged(it.isFocused) },
         )
         OutlinedTextField(
             value = state.trafficText,
@@ -363,7 +420,7 @@ private fun DialogFields(state: SimLimitState) {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .onFocusChanged { if (it.isFocused) state.selectAllTraffic() },
+                    .onFocusChanged { state.onTrafficFocusChanged(it.isFocused) },
         )
         Row(
             modifier = Modifier.fillMaxWidth(),

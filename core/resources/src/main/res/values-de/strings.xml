@@ -169,4 +169,6 @@
     <string name="set_limits_content_desc">Limits für %1$s festlegen</string>
     <string name="change_auto_reset_day_content_desc">Auto-Reset-Tag ändern</string>
     <string name="toggle_auto_reset_content_desc">Auto-Reset aktivieren oder deaktivieren</string>
+    <string name="menu_language_content_desc">Sprache ändern</string>
+    <string name="menu_theme_content_desc">Design ändern</string>
 </resources>

@@ -239,7 +239,8 @@ class SimUsageRepositoryImpl
         }
 
         /**
-         * Manually resets SIM usage stats to zero without rollover.
+         * Manually resets SIM usage stats to zero without rollover, zeroing manual adjustments as well.
+         * See [SimUsage.manualAdjustment].
          *
          * Guaranteed to be atomic via [resetMutex].
          * Safe to call from any coroutine context.
@@ -265,7 +266,8 @@ class SimUsageRepositoryImpl
         }
 
         /**
-         * Resets SIM usage if the billing period has passed.
+         * Resets SIM usage if the billing period has passed, consuming adjustments according to the rollover setting.
+         * See [SimUsage.manualAdjustment].
          *
          * If the last reset date is not recorded ([Constants.Data.EMPTY_TIMESTAMP]),
          * the current billing window is opened at [nowMillis] without clearing usage.

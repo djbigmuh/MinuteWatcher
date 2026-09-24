@@ -169,4 +169,6 @@
     <string name="set_limits_content_desc">Establecer límites para %1$s</string>
     <string name="change_auto_reset_day_content_desc">Cambiar día de reinicio automático</string>
     <string name="toggle_auto_reset_content_desc">Activar o desactivar reinicio automático</string>
+    <string name="menu_language_content_desc">Cambiar idioma</string>
+    <string name="menu_theme_content_desc">Cambiar tema</string>
 </resources>

@@ -171,4 +171,6 @@
     <string name="set_limits_content_desc">Set limits for %1$s</string>
     <string name="change_auto_reset_day_content_desc">Change auto-reset day</string>
     <string name="toggle_auto_reset_content_desc">Enable or disable auto-reset</string>
+    <string name="menu_language_content_desc">Change language</string>
+    <string name="menu_theme_content_desc">Change theme</string>
 </resources>

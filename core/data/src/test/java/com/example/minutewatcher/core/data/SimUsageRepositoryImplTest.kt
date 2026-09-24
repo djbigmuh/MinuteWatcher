@@ -170,4 +170,56 @@ class SimUsageRepositoryImplTest {
             assertEquals(0, usage.minutesUsed)
             assertEquals("Rollover minutes should be 50 (100 - 50)", 50, usage.manualAdjustment)
         }
+
+    @Test
+    fun `resetSimUsageIfDue discards manual adjustment in next period when rollover is disabled`() =
+        runTest {
+            val identity = "test_sim"
+            val now = 1000000L
+            repository.setMinutesUsed(identity, 50)
+
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.monthlyLimitKey(identity)] = 100
+                prefs[DataStoreKeys.manualAdjustmentKey(identity)] = 30
+                prefs[DataStoreKeys.rolloverEnabledKey(identity)] = false
+            }
+
+            // 1. Initialize window
+            repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = now)
+
+            // 2. Next month
+            val nextMonth = now + 32 * 24 * 3600 * 1000L
+            val result = repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = nextMonth)
+
+            assertTrue(result)
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(0, usage.minutesUsed)
+            assertEquals("Manual adjustment should be discarded without rollover", 0, usage.manualAdjustment)
+        }
+
+    @Test
+    fun `resetSimUsageIfDue includes manual adjustment in carried over balance when rollover is enabled`() =
+        runTest {
+            val identity = "test_sim"
+            val now = 1000000L
+            repository.setMinutesUsed(identity, 50)
+
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.monthlyLimitKey(identity)] = 100
+                prefs[DataStoreKeys.manualAdjustmentKey(identity)] = 30
+                prefs[DataStoreKeys.rolloverEnabledKey(identity)] = true
+            }
+
+            // 1. Initialize window
+            repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = now)
+
+            // 2. Next month
+            val nextMonth = now + 32 * 24 * 3600 * 1000L
+            val result = repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = nextMonth)
+
+            assertTrue(result)
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(0, usage.minutesUsed)
+            assertEquals("Rollover should include adjustment (100 + 30 - 50 = 80)", 80, usage.manualAdjustment)
+        }
 }

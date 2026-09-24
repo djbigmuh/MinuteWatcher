@@ -3,6 +3,8 @@ package com.example.minutewatcher.feature.main.ui.components
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -104,5 +106,136 @@ class SimLimitInputTest {
         // Max 6 chars for minutes. Try to type 7th.
         state.onMinutesChange(TextFieldValue("1234567", selection = TextRange(7)))
         assertEquals("0", state.minutesText.text)
+    }
+
+    @Test
+    fun `minutes focus gained sets pending flag and selects all text`() {
+        val state = SimLimitState("500", "10.0", false)
+        state.onMinutesFocusChanged(true)
+
+        assertTrue(state.minutesSelectAllPending)
+        assertEquals(0, state.minutesText.selection.min)
+        assertEquals(3, state.minutesText.selection.max)
+    }
+
+    @Test
+    fun `minutes selection only event on focus absorbs click and restores full selection`() {
+        val state = SimLimitState("500", "10.0", false)
+        state.onMinutesFocusChanged(true)
+
+        // Click-driven selection change (same text "500", collapsed cursor at position 1)
+        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)))
+
+        assertFalse(state.minutesSelectAllPending)
+        assertEquals(0, state.minutesText.selection.min)
+        assertEquals(3, state.minutesText.selection.max)
+    }
+
+    @Test
+    fun `minutes typing 7 after focus absorption replaces initial text completely`() {
+        val state = SimLimitState("500", "10.0", false)
+        state.onMinutesFocusChanged(true)
+        // Absorb click
+        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)))
+
+        // User types '7' replacing selection
+        state.onMinutesChange(TextFieldValue("7", selection = TextRange(1)))
+
+        assertEquals("7", state.minutesText.text)
+    }
+
+    @Test
+    fun `minutes text change while pending flag set processes input and resets flag`() {
+        val state = SimLimitState("500", "10.0", false)
+        state.onMinutesFocusChanged(true)
+
+        // Direct typing/pasting without preceding selection-only event
+        state.onMinutesChange(TextFieldValue("700", selection = TextRange(3)))
+
+        assertFalse(state.minutesSelectAllPending)
+        assertEquals("700", state.minutesText.text)
+    }
+
+    @Test
+    fun `minutes selection only event after flag cleared respects requested cursor position`() {
+        val state = SimLimitState("500", "10.0", false)
+        state.onMinutesFocusChanged(true)
+        // Absorb click
+        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)))
+
+        // Second click / selection change after flag is cleared
+        state.onMinutesChange(TextFieldValue("500", selection = TextRange(2)))
+
+        assertEquals(2, state.minutesText.selection.start)
+        assertEquals(2, state.minutesText.selection.end)
+    }
+
+    @Test
+    fun `minutes insertion in middle preserves cursor position when unchanged by normalization`() {
+        val state = SimLimitState("1234", "0.0", false)
+        state.onMinutesChange(TextFieldValue("12934", selection = TextRange(3)))
+        assertEquals("12934", state.minutesText.text)
+        assertEquals(3, state.minutesText.selection.start)
+        assertEquals(3, state.minutesText.selection.end)
+    }
+
+    @Test
+    fun `minutes deletion in middle preserves cursor position when unchanged by normalization`() {
+        val state = SimLimitState("1234", "0.0", false)
+        state.onMinutesChange(TextFieldValue("134", selection = TextRange(1)))
+        assertEquals("134", state.minutesText.text)
+        assertEquals(1, state.minutesText.selection.start)
+    }
+
+    @Test
+    fun `traffic focus gained sets pending flag and selects all text`() {
+        val state = SimLimitState("500", "10.0", false)
+        state.onTrafficFocusChanged(true)
+
+        assertTrue(state.trafficSelectAllPending)
+        assertEquals(0, state.trafficText.selection.min)
+        assertEquals(4, state.trafficText.selection.max)
+    }
+
+    @Test
+    fun `traffic selection only event on focus absorbs click and restores full selection`() {
+        val state = SimLimitState("500", "10.0", false)
+        state.onTrafficFocusChanged(true)
+
+        // Click-driven selection change
+        state.onTrafficChange(TextFieldValue("10.0", selection = TextRange(2)))
+
+        assertFalse(state.trafficSelectAllPending)
+        assertEquals(0, state.trafficText.selection.min)
+        assertEquals(4, state.trafficText.selection.max)
+    }
+
+    @Test
+    fun `traffic typing 7 after focus absorption replaces initial text completely`() {
+        val state = SimLimitState("500", "10.0", false)
+        state.onTrafficFocusChanged(true)
+        // Absorb click
+        state.onTrafficChange(TextFieldValue("10.0", selection = TextRange(2)))
+
+        // User types '7' replacing selection
+        state.onTrafficChange(TextFieldValue("7", selection = TextRange(1)))
+
+        assertEquals("7", state.trafficText.text)
+    }
+
+    @Test
+    fun `traffic editing in middle preserves cursor position when unchanged by normalization`() {
+        val state = SimLimitState("0", "12.5", false)
+        state.onTrafficChange(TextFieldValue("13.5", selection = TextRange(1)))
+        assertEquals("13.5", state.trafficText.text)
+        assertEquals(1, state.trafficText.selection.start)
+    }
+
+    @Test
+    fun `traffic comma normalization moves cursor to end of normalized text`() {
+        val state = SimLimitState("0", "0.0", false)
+        state.onTrafficChange(TextFieldValue("1,5", selection = TextRange(3)))
+        assertEquals("1.5", state.trafficText.text)
+        assertEquals(state.trafficText.text.length, state.trafficText.selection.start)
     }
 }

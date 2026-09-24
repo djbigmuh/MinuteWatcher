@@ -167,4 +167,6 @@
     <string name="set_limits_content_desc">%1$s の上限を設定</string>
     <string name="change_auto_reset_day_content_desc">自動リセット日を変更</string>
     <string name="toggle_auto_reset_content_desc">自動リセットを有効または無効にする</string>
+    <string name="menu_language_content_desc">言語を変更</string>
+    <string name="menu_theme_content_desc">テーマを変更</string>
 </resources>

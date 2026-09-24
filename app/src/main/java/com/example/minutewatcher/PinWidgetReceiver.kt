@@ -5,14 +5,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.annotation.VisibleForTesting
 import androidx.glance.appwidget.GlanceAppWidgetManager
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidget
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineDispatcher
 
-class PinWidgetReceiver : BroadcastReceiver() {
+open class PinWidgetReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -36,18 +35,23 @@ class PinWidgetReceiver : BroadcastReceiver() {
             ).show()
 
         // Trigger an immediate update for the newly added widget
-        val pendingResult = goAsync()
-        context.applicationScope.launch {
-            try {
-                val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
-                MinutesGlanceWidget().update(context, glanceId)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to update widget after pinning", e)
-            } finally {
-                pendingResult.finish()
-            }
+        goAsyncWithScope(context, acquirePendingResult(), dispatcher = asyncDispatcher()) { appContext ->
+            updateWidget(appContext, appWidgetId)
         }
+    }
+
+    @VisibleForTesting
+    protected open fun acquirePendingResult(): PendingResult = goAsync()
+
+    @VisibleForTesting
+    protected open fun asyncDispatcher(): CoroutineDispatcher? = null
+
+    @VisibleForTesting
+    protected open suspend fun updateWidget(
+        appContext: Context,
+        appWidgetId: Int,
+    ) {
+        val glanceId = GlanceAppWidgetManager(appContext).getGlanceIdBy(appWidgetId)
+        MinutesGlanceWidget().update(appContext, glanceId)
     }
 }

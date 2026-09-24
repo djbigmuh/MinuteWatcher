@@ -1,19 +1,17 @@
 package com.example.minutewatcher
 
 import android.app.Application
+import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.TrafficTracker
-import com.example.minutewatcher.service.worker.SemanticInitializerWorker
+import com.example.minutewatcher.service.worker.SemanticInitScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -47,32 +45,18 @@ class MinuteWatcherApp :
         // Eagerly start trackers to ensure they are ready for events and UI observation.
         callTracker.ensureStarted()
 
-        // Defer semantic layer initialization to improve cold start performance.
-        // Using WorkManager ensures that initialization is attempted reliably even if the
-        // initial application process is short-lived, while providing a grace period for UI.
-        val initRequest =
-            OneTimeWorkRequestBuilder<SemanticInitializerWorker>()
-                .setInitialDelay(INITIALIZATION_DELAY_SECONDS, TimeUnit.SECONDS)
-                .build()
-
-        // REPLACE policy ensures that semantic layer initialization is restarted
-        // with the latest app process lifetime if a previous attempt was pending.
-        WorkManager.getInstance(this).enqueueUniqueWork(
-            SEMANTIC_INIT_WORK_NAME,
-            ExistingWorkPolicy.REPLACE,
-            initRequest,
-        )
+        SemanticInitScheduler.schedule(WorkManager.getInstance(this))
 
         if (BuildConfig.DEBUG) {
-            android.os.StrictMode.setThreadPolicy(
-                android.os.StrictMode.ThreadPolicy
+            StrictMode.setThreadPolicy(
+                StrictMode.ThreadPolicy
                     .Builder()
                     .detectAll()
                     .penaltyLog()
                     .build(),
             )
-            android.os.StrictMode.setVmPolicy(
-                android.os.StrictMode.VmPolicy
+            StrictMode.setVmPolicy(
+                StrictMode.VmPolicy
                     .Builder()
                     .detectAll()
                     .penaltyLog()
@@ -87,9 +71,4 @@ class MinuteWatcherApp :
                 .Builder()
                 .setWorkerFactory(workerFactory)
                 .build()
-
-    companion object {
-        private const val SEMANTIC_INIT_WORK_NAME = "semantic_init"
-        private const val INITIALIZATION_DELAY_SECONDS = 5L
-    }
 }

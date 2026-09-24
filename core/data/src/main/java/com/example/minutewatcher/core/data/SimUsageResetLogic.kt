@@ -16,6 +16,15 @@ import javax.inject.Singleton
 class SimUsageResetLogic
     @Inject
     constructor() {
+    /**
+     * Applies billing period reset for the given SIM identity.
+     *
+     * Without rollover, adjustments (`manualAdjustment` and `trafficAdjustmentGb`) are reset to 0
+     * so the new period starts strictly from base limits.
+     * With rollover enabled, the remaining balance (`limit + adjustment - used`) is carried over
+     * and recorded as the new period's adjustment.
+     * See [com.example.minutewatcher.core.model.SimUsage.manualAdjustment].
+     */
         fun applyResetWithRollover(
             prefs: MutablePreferences,
             identity: String,

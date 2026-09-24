@@ -33,6 +33,12 @@ object Constants {
         const val LUMINANCE_THRESHOLD = 0.5f
         const val SWITCH_SCALE = 0.8f
         const val HIGHLIGHT_DELAY_MS = 3000L
+
+        /**
+         * Minimum total horizontal drag distance (in dp) to trigger navigation swipe gesture.
+         * Density-independent threshold.
+         */
+        const val SWIPE_NAVIGATION_THRESHOLD_DP = 72
     }
 
     /**
@@ -157,10 +163,7 @@ object Constants {
      * DEBOUNCE_MS — general debounce for UI flows (ms).
      * SHORT_TIMEOUT_MS — timeout for "fast" operations (ms).
      * LONG_TIMEOUT_MS — timeout for "heavy" operations (ms).
-     * CALL_SESSION_READ_TIMEOUT_MS — timeout for reading call session from DataStore.
-     *   2000 ms is chosen as a compromise: sufficient for reading 4 keys
-     *   (callStartTime, bootTime, uptime, callIdentity) from DataStore
-     *   on AOSP, but not large enough to block the call handler for long.
+     * RETRY_READ_ATTEMPT_TIMEOUT_MS — timeout for a single DataStore retry read attempt (ms).
      *   On AOSP DataStore reads take < 100 ms; timeout triggers only on storage degradation.
      * RETRY_DELAY_MS — retry delay on network/disk failures (ms).
      * SEED_GENERATION_TIMEOUT_MS — primary seed identity generation timeout (ms).
@@ -174,7 +177,7 @@ object Constants {
         const val SHORT_TIMEOUT_MS = 5_000L
         const val LONG_TIMEOUT_MS = 10_000L
         const val INITIAL_SETUP_RETRY_TIMEOUT_MS = 15_000L
-        const val CALL_SESSION_READ_TIMEOUT_MS = 2000L
+        const val RETRY_READ_ATTEMPT_TIMEOUT_MS = 2_000L
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L
 

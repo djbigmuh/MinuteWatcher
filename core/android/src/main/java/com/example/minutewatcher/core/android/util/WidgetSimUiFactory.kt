@@ -101,7 +101,7 @@ object WidgetSimUiFactory {
 
         return PackageUiData(
             show = showMinutes,
-            text = rem.toString(),
+            text = if (entity == null || limit <= 0) "-" else rem.toString(),
             suffix = strings.minutesAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,

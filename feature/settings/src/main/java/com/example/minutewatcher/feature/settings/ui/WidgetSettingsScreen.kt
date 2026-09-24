@@ -1,6 +1,5 @@
 package com.example.minutewatcher.feature.settings.ui
 
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -30,14 +29,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.minutewatcher.core.android.ui.HorizontalSwipeDirection
+import com.example.minutewatcher.core.android.ui.onHorizontalSwipe
 import com.example.minutewatcher.core.android.util.WidgetStringsFactory
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
@@ -70,21 +71,10 @@ fun WidgetSettingsScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    var totalDrag = 0f
-                    detectHorizontalDragGestures(
-                        onDragStart = { totalDrag = 0f },
-                        onDragEnd = {
-                            if (totalDrag > 200f) {
-                                onBack()
-                            }
-                        },
-                        onDragCancel = { totalDrag = 0f },
-                        onHorizontalDrag = { _, dragAmount ->
-                            totalDrag += dragAmount
-                        },
-                    )
-                },
+                .onHorizontalSwipe(
+                    HorizontalSwipeDirection.LEFT_TO_RIGHT,
+                    Constants.UI.SWIPE_NAVIGATION_THRESHOLD_DP.dp,
+                ) { onBack() },
     ) {
         if (uiState.isLoadError) {
             ErrorState(
