@@ -314,7 +314,8 @@ internal class CallEndHandler
          *
          * @return [CallEndResult.CONTINUE] if validation passed.
          *         [CallEndResult.CLEANUP_AND_REFRESH] if session was cleaned up (no bootTime) and refresh is needed.
-         *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up with error (duration exceeded).
+         *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up due to stale boot time
+         *         or exceeded max duration.
          */
         private suspend fun validateCallDuration(
             subId: Int,
@@ -323,11 +324,15 @@ internal class CallEndHandler
         ): CallEndResult {
             val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
             return when {
-                (savedBootTime > data.currentBootTime) ||
-                    (
-                        (savedBootTime > 0L) &&
-                            ((data.currentBootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS)
-                    ) -> {
+                savedBootTime > data.currentBootTime -> {
+                    val message = "Stale call session from a previous boot for subId $subId"
+                    AppLogger.w("CallTracker: $message, clearing session")
+                    context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
+                    CallEndResult.CLEANUP_ONLY
+                }
+
+                (savedBootTime > 0L) &&
+                    ((data.currentBootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS) -> {
                     val message = "Call duration exceeded max limit for subId $subId"
                     AppLogger.w("CallTracker: $message, clearing session")
                     context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))

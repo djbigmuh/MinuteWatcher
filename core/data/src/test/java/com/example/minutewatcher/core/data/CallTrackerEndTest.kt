@@ -244,6 +244,11 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
             // Verify session WAS cleared
             verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
+
+            val status = callTracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+            assertEquals("Stale call session from a previous boot for subId 1", status.message)
         }
 
     @Test
