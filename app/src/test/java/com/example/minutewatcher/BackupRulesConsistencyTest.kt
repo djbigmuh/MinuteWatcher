@@ -92,88 +92,89 @@ class BackupRulesConsistencyTest {
         val includes: Set<BackupRule>,
     )
 
-    private fun parseDataExtractionRules(parser: XmlResourceParser): DataExtractionRules {
+    private class DataExtractionRulesBuilder {
         val cloudExcludes = mutableSetOf<BackupRule>()
         val cloudIncludes = mutableSetOf<BackupRule>()
         val deviceExcludes = mutableSetOf<BackupRule>()
         val deviceIncludes = mutableSetOf<BackupRule>()
 
+        fun addRule(
+            tagName: String,
+            currentSection: String?,
+            rule: BackupRule,
+        ) {
+            val isCloud = currentSection == "cloud-backup"
+            val targetExcludes = if (isCloud) cloudExcludes else deviceExcludes
+            val targetIncludes = if (isCloud) cloudIncludes else deviceIncludes
+            if (tagName == "exclude") {
+                targetExcludes.add(rule)
+            } else {
+                targetIncludes.add(rule)
+            }
+        }
+
+        fun build() =
+            DataExtractionRules(
+                cloudBackupExcludes = cloudExcludes,
+                cloudBackupIncludes = cloudIncludes,
+                deviceTransferExcludes = deviceExcludes,
+                deviceTransferIncludes = deviceIncludes,
+            )
+    }
+
+    private fun parseDataExtractionRules(parser: XmlResourceParser): DataExtractionRules {
+        val builder = DataExtractionRulesBuilder()
         var currentSection: String? = null
         var eventType = parser.eventType
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
-            when (eventType) {
-                XmlPullParser.START_TAG -> {
-                    when (val tagName = parser.name) {
-                        "cloud-backup", "device-transfer" -> {
-                            currentSection = tagName
-                        }
-
-                        "exclude", "include" -> {
-                            val domain = parser.getAttribute("domain")
-                            val path = parser.getAttribute("path")
-                            if ((domain != null) && (path != null)) {
-                                val rule = BackupRule(domain, path)
-                                val targetExcludes =
-                                    if (currentSection ==
-                                        "cloud-backup"
-                                    ) {
-                                        cloudExcludes
-                                    } else {
-                                        deviceExcludes
-                                    }
-                                val targetIncludes =
-                                    if (currentSection ==
-                                        "cloud-backup"
-                                    ) {
-                                        cloudIncludes
-                                    } else {
-                                        deviceIncludes
-                                    }
-                                if (tagName == "exclude") {
-                                    targetExcludes.add(rule)
-                                } else {
-                                    targetIncludes.add(rule)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                XmlPullParser.END_TAG -> {
-                    if ((parser.name == "cloud-backup") || (parser.name == "device-transfer")) {
-                        currentSection = null
-                    }
-                }
-            }
+            currentSection = processDataExtractionEvent(parser, eventType, currentSection, builder)
             eventType = parser.next()
         }
 
-        return DataExtractionRules(
-            cloudBackupExcludes = cloudExcludes,
-            cloudBackupIncludes = cloudIncludes,
-            deviceTransferExcludes = deviceExcludes,
-            deviceTransferIncludes = deviceIncludes,
-        )
+        return builder.build()
+    }
+
+    private fun processDataExtractionEvent(
+        parser: XmlResourceParser,
+        eventType: Int,
+        currentSection: String?,
+        builder: DataExtractionRulesBuilder,
+    ): String? =
+        when (eventType) {
+            XmlPullParser.START_TAG -> handleDataExtractionStartTag(parser, currentSection, builder)
+            XmlPullParser.END_TAG -> {
+                if (parser.name == "cloud-backup" || parser.name == "device-transfer") null else currentSection
+            }
+            else -> currentSection
+        }
+
+    private fun handleDataExtractionStartTag(
+        parser: XmlResourceParser,
+        currentSection: String?,
+        builder: DataExtractionRulesBuilder,
+    ): String? {
+        val tagName = parser.name
+        return when (tagName) {
+            "cloud-backup", "device-transfer" -> tagName
+            "exclude", "include" -> {
+                parser.readBackupRule()?.let { rule ->
+                    builder.addRule(tagName, currentSection, rule)
+                }
+                currentSection
+            }
+            else -> currentSection
+        }
     }
 
     private fun parseFullBackupContent(parser: XmlResourceParser): FullBackupContent {
         val excludes = mutableSetOf<BackupRule>()
         val includes = mutableSetOf<BackupRule>()
-
         var eventType = parser.eventType
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG) {
-                val tagName = parser.name
-                if ((tagName == "exclude") || (tagName == "include")) {
-                    val domain = parser.getAttribute("domain")
-                    val path = parser.getAttribute("path")
-                    if ((domain != null) && (path != null)) {
-                        val rule = BackupRule(domain, path)
-                        if (tagName == "exclude") excludes.add(rule) else includes.add(rule)
-                    }
-                }
+                processFullBackupStartTag(parser, excludes, includes)
             }
             eventType = parser.next()
         }
@@ -181,18 +182,30 @@ class BackupRulesConsistencyTest {
         return FullBackupContent(excludes = excludes, includes = includes)
     }
 
-    private fun XmlResourceParser.getAttribute(name: String): String? {
-        val valueFromNullNs = getAttributeValue(null, name)
-        if (valueFromNullNs != null) return valueFromNullNs
-
-        val valueFromEmptyNs = getAttributeValue("", name)
-        if (valueFromEmptyNs != null) return valueFromEmptyNs
-
-        for (i in 0 until attributeCount) {
-            if (getAttributeName(i) == name) {
-                return getAttributeValue(i)
+    private fun processFullBackupStartTag(
+        parser: XmlResourceParser,
+        excludes: MutableSet<BackupRule>,
+        includes: MutableSet<BackupRule>,
+    ) {
+        val tagName = parser.name
+        if (tagName == "exclude" || tagName == "include") {
+            parser.readBackupRule()?.let { rule ->
+                if (tagName == "exclude") excludes.add(rule) else includes.add(rule)
             }
         }
-        return null
     }
+
+    private fun XmlResourceParser.readBackupRule(): BackupRule? =
+        getAttribute("domain")?.let { domain ->
+            getAttribute("path")?.let { path ->
+                BackupRule(domain, path)
+            }
+        }
+
+    private fun XmlResourceParser.getAttribute(name: String): String? =
+        getAttributeValue(null, name)
+            ?: getAttributeValue("", name)
+            ?: (0 until attributeCount)
+                .firstOrNull { getAttributeName(it) == name }
+                ?.let { getAttributeValue(it) }
 }
