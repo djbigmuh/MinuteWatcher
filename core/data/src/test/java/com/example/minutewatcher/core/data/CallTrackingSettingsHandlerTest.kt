@@ -12,7 +12,11 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
 
@@ -55,5 +59,59 @@ class CallTrackingSettingsHandlerTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
 
             handler.isCallTrackingEnabled()
+        }
+
+    @Test
+    fun `writeCallDuration with notify and fallback increments inaccurate count and notifies data changed`() =
+        runTest {
+            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, 1000L))
+                .thenReturn(true)
+
+            handler.writeCallDuration(
+                identity = "id_1",
+                durationMinutes = 5,
+                isFallbackUsed = true,
+                notify = true,
+                callMarker = 1000L,
+            )
+
+            verify(dataChangeNotifier, times(1)).notifyDataChanged()
+            verify(appSettingsRepository, times(1)).updateAppSettings(any())
+        }
+
+    @Test
+    fun `writeCallDuration without notify and without fallback does not notify or update settings`() =
+        runTest {
+            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, 1000L))
+                .thenReturn(true)
+
+            handler.writeCallDuration(
+                identity = "id_1",
+                durationMinutes = 5,
+                isFallbackUsed = false,
+                notify = false,
+                callMarker = 1000L,
+            )
+
+            verify(dataChangeNotifier, never()).notifyDataChanged()
+            verify(appSettingsRepository, never()).updateAppSettings(any())
+        }
+
+    @Test
+    fun `writeCallDuration for duplicate marker returns early without notifying or updating settings`() =
+        runTest {
+            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, 1000L))
+                .thenReturn(false)
+
+            handler.writeCallDuration(
+                identity = "id_1",
+                durationMinutes = 5,
+                isFallbackUsed = true,
+                notify = true,
+                callMarker = 1000L,
+            )
+
+            verify(dataChangeNotifier, never()).notifyDataChanged()
+            verify(appSettingsRepository, never()).updateAppSettings(any())
         }
 }
