@@ -14,6 +14,12 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Handles the initialization and recording of call start events.
+ *
+ * @throws IOException If a database or storage error occurs during call start recording.
+ * @throws SecurityException If required permissions are missing during call start recording.
+ */
 @Singleton
 internal class CallStartHandler
     @Inject
@@ -26,6 +32,12 @@ internal class CallStartHandler
         private val sessionCleaner: CallSessionCleaner,
         private val settingsHandler: CallTrackingSettingsHandler,
     ) {
+        /**
+         * Executes the call start process for the given subscription ID.
+         *
+         * @throws IOException If a database or storage error occurs during call start recording.
+         * @throws SecurityException If required permissions are missing during call start recording.
+         */
         suspend fun executeCallStart(
             subId: Int,
             eventElapsedRealtime: Long,
@@ -56,20 +68,30 @@ internal class CallStartHandler
                     val startData = fetchCallStartData(targetSubId, eventElapsedRealtime)
                     shouldRefreshStatus = processCallStartLocked(targetSubId, startData, context)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: IOException) {
-                shouldRefreshStatus = false
-                context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message))
-            } catch (e: SecurityException) {
-                shouldRefreshStatus = false
-                AppLogger.e("SecurityException in onCallStarted", e)
-                context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
             } catch (e: Exception) {
+                if (e is CancellationException) {
+                    throw e
+                }
                 shouldRefreshStatus = false
-                AppLogger.e("Error in onCallStarted", e)
-                val error = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
-                context.updateStatus(error)
+                when (e) {
+                    is IOException -> {
+                        context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message))
+                    }
+                    is SecurityException -> {
+                        AppLogger.e("SecurityException in onCallStarted", e)
+                        context.updateStatus(
+                            TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message),
+                        )
+                    }
+                    else -> {
+                        AppLogger.e("Error in onCallStarted", e)
+                        val error = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
+                        context.updateStatus(error)
+                    }
+                }
+                if (e is IOException || e is SecurityException) {
+                    throw e
+                }
             } finally {
                 finalizeCallStart(shouldRefreshStatus, context)
             }

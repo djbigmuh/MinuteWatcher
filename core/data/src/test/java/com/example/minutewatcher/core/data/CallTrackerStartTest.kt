@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -26,6 +27,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -381,5 +383,52 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
 
             // Assert: verify no new session was saved
             verify(callSessionRepository, never()).saveCallSession(eq(1), eq(2000L), any(), any(), anyOrNull())
+        }
+
+    @Test
+    fun `onCallStarted rethrows IOException when saveCallSession fails and sets DATABASE_ERROR status`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            whenever(callSessionRepository.saveCallSession(any(), any(), any(), any(), anyOrNull()))
+                .thenAnswer { throw IOException("Save session failed") }
+
+            try {
+                callTracker.onCallStarted(subId = 1)
+                Assert.fail("Expected IOException to be thrown")
+            } catch (e: IOException) {
+                assertEquals("Save session failed", e.message)
+            }
+
+            val status = callTracker.status.first()
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
+        }
+
+    @Test
+    fun `onCallStarted rethrows SecurityException when saveCallSession fails and sets PERMISSION_MISSING status`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            whenever(callSessionRepository.saveCallSession(any(), any(), any(), any(), anyOrNull()))
+                .thenAnswer { throw SecurityException("Permission denied") }
+
+            try {
+                callTracker.onCallStarted(subId = 1)
+                Assert.fail("Expected SecurityException to be thrown")
+            } catch (e: SecurityException) {
+                assertEquals("Permission denied", e.message)
+            }
+
+            val status = callTracker.status.first()
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (status as TrackingStatus.Error).type)
         }
 }
