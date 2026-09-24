@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.observeWithRetry
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -17,12 +18,10 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.TrackingStatusMachine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
@@ -30,7 +29,6 @@ import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of [AppSettingsRepository] using [DataStore].
@@ -64,60 +62,29 @@ class AppSettingsRepositoryImpl
         }
 
         private val appSettingsState: StateFlow<AppSettings> =
-            flow {
-                var consecutiveErrors = 0
-                while (true) {
-                    try {
-                        dataStore.data
-                            .map { prefs ->
-                                if (consecutiveErrors > 0) {
-                                    AppLogger.d(
-                                        "DataStore observation for appSettingsState recovered " +
-                                            "after $consecutiveErrors errors",
-                                    )
-                                    consecutiveErrors = 0
-                                    transitionStatus(TrackingStatus.Active, force = true)
-                                }
-                                prefs.toAppSettings()
-                            }.distinctUntilChanged()
-                            .collect { emit(it) }
-
-                        AppLogger.w("DataStore flow for appSettingsState completed normally (unexpected)")
-                        break
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        consecutiveErrors++
-                        val delayMs =
-                            (INITIAL_RETRY_DELAY_MS * (1 shl (consecutiveErrors - 1)))
-                                .coerceAtMost(MAX_RETRY_DELAY_MS)
-
-                        val isTerminalLike = consecutiveErrors >= LOG_THRESHOLD
-                        val logMessage =
-                            "DataStore error in appSettingsState (attempt $consecutiveErrors), " +
-                                "restarting in ${delayMs}ms"
-
-                        if (isTerminalLike) {
-                            if (consecutiveErrors % LOG_THRESHOLD == 0) {
-                                AppLogger.e(logMessage, e)
-                            }
-                            transitionStatus(
-                                TrackingStatus.Error(
-                                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                                    "Persistent DataStore error: settings observation degraded",
-                                ),
-                            )
-                        } else {
-                            AppLogger.w(logMessage)
-                        }
-                        delay(delayMs.milliseconds)
-                    }
-                }
-            }.stateIn(
-                scope,
-                SharingStarted.Eagerly, // Starts collection immediately to minimize time with default values.
-                AppSettings(),
-            )
+            dataStore.data
+                .map { prefs -> prefs.toAppSettings() }
+                .distinctUntilChanged()
+                .observeWithRetry(
+                    label = "DataStore observation for appSettingsState",
+                    logThreshold = LOG_THRESHOLD,
+                    onPersistentFailure = {
+                        transitionStatus(
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                "Persistent DataStore error: settings observation degraded",
+                            ),
+                        )
+                    },
+                    onRecovered = {
+                        transitionStatus(TrackingStatus.Active, force = true)
+                    },
+                    onSourceCompleted = {},
+                ).stateIn(
+                    scope,
+                    SharingStarted.Eagerly, // Starts collection immediately to minimize time with default values.
+                    AppSettings(),
+                )
 
         /**
          * Returns a cold flow of application settings reading directly from DataStore.
@@ -282,7 +249,5 @@ class AppSettingsRepositoryImpl
 
         companion object {
             private const val LOG_THRESHOLD = 5
-            private const val INITIAL_RETRY_DELAY_MS = 1000L
-            private const val MAX_RETRY_DELAY_MS = 30000L
         }
     }

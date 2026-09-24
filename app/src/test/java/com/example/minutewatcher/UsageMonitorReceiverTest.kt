@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.telephony.TelephonyManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
@@ -34,6 +36,7 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
+import java.util.concurrent.TimeUnit
 
 /**
  * Tests verify that goAsync() contract is respected:
@@ -57,10 +60,10 @@ class UsageMonitorReceiverTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
 
-        val lifecycle = ProcessLifecycleOwner.get().lifecycle as androidx.lifecycle.LifecycleRegistry
-        lifecycle.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_CREATE)
-        lifecycle.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_START)
-        lifecycle.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_RESUME)
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
+        lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         val config =
             Configuration
                 .Builder()
@@ -81,7 +84,8 @@ class UsageMonitorReceiverTest {
         context: Context,
         workerParams: WorkerParameters,
     ) : ListenableWorker(context, workerParams) {
-        override fun startWork(): ListenableFuture<Result> = SettableFuture.create()
+        override fun startWork(): ListenableFuture<Result> =
+            SettableFuture.create<Result>().apply { set(Result.success()) }
     }
 
     @After
@@ -113,7 +117,7 @@ class UsageMonitorReceiverTest {
             val workInfos =
                 workManager
                     .getWorkInfosForUniqueWork("CALL_EVENT_CHAIN")
-                    .get()
+                    .get(WAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
             assertTrue("Work CALL_EVENT_CHAIN should be enqueued", workInfos.isNotEmpty())
             verify(mockPendingResult, Mockito.times(1)).finish()
@@ -142,7 +146,7 @@ class UsageMonitorReceiverTest {
             val workInfos =
                 workManager
                     .getWorkInfosForUniqueWork("CALL_EVENT_CHAIN")
-                    .get()
+                    .get(WAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
             assertTrue("Work CALL_EVENT_CHAIN should be enqueued", workInfos.isNotEmpty())
             verify(mockPendingResult, Mockito.times(1)).finish()
@@ -171,7 +175,7 @@ class UsageMonitorReceiverTest {
             val workInfos =
                 workManager
                     .getWorkInfosByTag(CallEventWorker::class.java.name)
-                    .get()
+                    .get(WAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
             assertTrue("No work should be enqueued when state is RINGING", workInfos.isEmpty())
             verify(mockPendingResult, Mockito.times(1)).finish()
@@ -215,7 +219,7 @@ class UsageMonitorReceiverTest {
             val workInfos =
                 workManager
                     .getWorkInfosForUniqueWork("CALL_EVENT_CHAIN")
-                    .get()
+                    .get(WAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
             Assert.assertEquals("Should have exactly 2 workers enqueued in the unique chain", 2, workInfos.size)
             verify(mockPendingResult1, Mockito.times(1)).finish()
@@ -244,7 +248,7 @@ class UsageMonitorReceiverTest {
             val workInfos =
                 workManager
                     .getWorkInfosByTag(CallEventWorker::class.java.name)
-                    .get()
+                    .get(WAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
             assertTrue("No work should be enqueued when state is null", workInfos.isEmpty())
             verify(mockPendingResult, Mockito.times(1)).finish()
@@ -300,4 +304,8 @@ class UsageMonitorReceiverTest {
 
             verify(mockPendingResult, Mockito.times(1)).finish()
         }
+
+    private companion object {
+        private const val WAIT_TIMEOUT_SECONDS = 10L
+    }
 }

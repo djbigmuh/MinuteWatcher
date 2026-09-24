@@ -151,6 +151,9 @@ object Constants {
         /** Number of seconds in one minute. */
         const val SECONDS_IN_MINUTE = 60
 
+        /** Number of minutes in one hour. */
+        const val MINUTES_IN_HOUR = 60
+
         /** Widget update timeout (ms). */
         const val WIDGET_UPDATE_TIMEOUT_MS = 10_000L
     }
@@ -199,8 +202,10 @@ object Constants {
      *   maximum for a single call.
      */
     object Calls {
+        private const val MAX_CALL_DURATION_HOURS = 12L
+
         const val MAX_CALL_DURATION_MS =
-            12 * Time.SECONDS_IN_MINUTE.toLong() * Time.SECONDS_IN_MINUTE.toLong() * Time.MILLIS_IN_SECOND
+            MAX_CALL_DURATION_HOURS * Time.MINUTES_IN_HOUR * Time.SECONDS_IN_MINUTE * Time.MILLIS_IN_SECOND
 
         /**
          * Threshold for showing inaccurate attribution banner.

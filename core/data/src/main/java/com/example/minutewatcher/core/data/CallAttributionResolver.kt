@@ -58,8 +58,7 @@ internal class CallAttributionResolver
             updateStatus: (TrackingStatus) -> Unit,
             cleanupAction: suspend (Int) -> Unit,
         ): Boolean {
-            val failures = (attributionFailures[subId] ?: 0) + 1
-            attributionFailures[subId] = failures
+            val failures = attributionFailures.merge(subId, 1) { current, _ -> current + 1 } ?: 1
             if (failures >= MAX_ATTRIBUTION_FAILURES) {
                 AppLogger.e("CallTracker: max attribution failures reached for subId $subId, clearing session")
                 cleanupAction(subId)

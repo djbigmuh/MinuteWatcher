@@ -5,13 +5,11 @@ import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
-import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.service.worker.SemanticInitScheduler
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -32,9 +30,6 @@ class MinuteWatcherApp :
      */
     @Inject
     lateinit var trafficTracker: TrafficTracker
-
-    @Inject @ApplicationScope
-    lateinit var applicationScope: CoroutineScope
 
     override fun onCreate() {
         super.onCreate()

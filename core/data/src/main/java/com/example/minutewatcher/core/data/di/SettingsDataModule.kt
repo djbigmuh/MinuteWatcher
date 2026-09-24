@@ -6,8 +6,6 @@ import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.minutewatcher.core.common.di.AppDataStore
-import com.example.minutewatcher.core.common.di.ApplicationScope
-import com.example.minutewatcher.core.common.di.DefaultDispatcher
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.data.AppSettingsRepositoryImpl
 import com.example.minutewatcher.core.data.BenchmarkUseCaseImpl
@@ -26,9 +24,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
 
 /**
@@ -115,12 +110,5 @@ interface SettingsDataModule {
         fun provideSimDataStore(
             @ApplicationContext context: Context,
         ): DataStore<Preferences> = context.simDataStore
-
-        @Provides
-        @Singleton
-        @ApplicationScope
-        fun provideApplicationScope(
-            @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
-        ): CoroutineScope = CoroutineScope(SupervisorJob() + defaultDispatcher)
     }
 }

@@ -74,6 +74,7 @@ class CallTrackerRaceTest {
                     label: String,
                     attempts: Int,
                     retryDelayMs: Long,
+                    attemptTimeoutMillis: Long,
                     reader: () -> Flow<T>,
                 ): Result<T> =
                     try {

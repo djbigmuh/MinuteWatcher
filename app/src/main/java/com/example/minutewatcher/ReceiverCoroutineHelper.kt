@@ -3,12 +3,12 @@ package com.example.minutewatcher
 import android.content.BroadcastReceiver
 import android.content.Context
 import com.example.minutewatcher.core.common.di.CommonEntryPoint
+import com.example.minutewatcher.core.common.di.MainDispatcherFallback
 import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -49,7 +49,7 @@ fun goAsyncWithScope(
         } catch (e: Exception) {
             // Fallback for tests not using Hilt or missing CommonEntryPoint
             AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using Main.immediate", e)
-            Dispatchers.Main.immediate
+            MainDispatcherFallback.mainImmediate
         }
 
     CoroutineScope(finalDispatcher + SupervisorJob()).launch {

@@ -13,7 +13,6 @@ espressoCore = "3.6.1"
 # Robolectric 4.17-beta-2: required for Android SDK 37 support.
 # Update to stable when available.
 robolectric = "4.17-beta-2"
-lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
 composeBom = "2026.06.01"
 appcompat = "1.7.1"
@@ -29,7 +28,6 @@ benchmarkMacroJunit4 = "1.4.1"
 uiautomator = "2.4.0"
 leakcanary = "2.14"
 hiltWork = "1.4.0"
-hiltAndroidTesting = "2.60.1"
 mockito = "5.23.0"
 mockitoKotlin = "6.3.0"
 colorpickerview = "2.4.0"
@@ -41,7 +39,7 @@ detekt = "2.0.0-alpha.6"
 [libraries]
 # DI - Hilt
 daggerHiltAndroid = { group = "com.google.dagger", name = "hilt-android", version.ref = "hiltVersion" }
-daggerHiltAndroidTesting = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hiltAndroidTesting" }
+daggerHiltAndroidTesting = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hiltVersion" }
 daggerHiltCompiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hiltVersion" }
 
 # Lifecycle
@@ -73,7 +71,7 @@ androidxJunit = { group = "androidx.test.ext", name = "junit", version.ref = "ju
 androidxEspressoCore = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
 # Compose
-androidxLifecycleRuntimeKtx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidxLifecycleRuntimeKtx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidxComposeRuntime = { group = "androidx.compose.runtime", name = "runtime" }
 androidxUi = { group = "androidx.compose.ui", name = "ui" }
 androidxUiGraphics = { group = "androidx.compose.ui", name = "ui-graphics" }

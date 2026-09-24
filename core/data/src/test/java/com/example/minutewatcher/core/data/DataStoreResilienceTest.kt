@@ -16,7 +16,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -28,6 +30,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.IOException
 import java.util.UUID
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -65,10 +68,10 @@ class DataStoreResilienceTest {
                     }
                 }
 
-            jobs.joinAll()
-            advanceUntilIdle()
+            withTimeout(30.seconds) { jobs.joinAll() }
+            runCurrent()
 
-            val finalSettings = repository.getAppSettings().first()
+            val finalSettings = withTimeout(10.seconds) { repository.getAppSettings().first() }
             assertEquals(updateCount, finalSettings.inaccurateCallAttributionsCount)
         }
 

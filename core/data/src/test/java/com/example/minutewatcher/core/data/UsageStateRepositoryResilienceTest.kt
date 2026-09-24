@@ -31,6 +31,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UsageStateRepositoryResilienceTest {
@@ -117,6 +118,37 @@ class UsageStateRepositoryResilienceTest {
             runCurrent()
 
             assertEquals(TrackingStatus.Active, repo.status.value)
+        }
+
+    @Test
+    fun `retry delay remains bounded at maximum delay during long persistent failures`() =
+        runTest(testDispatcher) {
+            var attemptCount = 0
+            val failingFlow =
+                flow<List<ActiveSimInfo>> {
+                    attemptCount++
+                    throw IOException("Simulated persistent failure")
+                }
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(failingFlow)
+
+            val repo = UsageStateRepositoryImpl(context, deps, backgroundScope)
+            runCurrent()
+
+            var stepCount = 0
+            while ((attemptCount < 31) && (stepCount < 1000)) {
+                advanceTimeBy(1.seconds)
+                runCurrent()
+                stepCount++
+            }
+            assertEquals(31, attemptCount)
+
+            val attemptsBeforeWindow = attemptCount
+            advanceTimeBy(61.seconds)
+            runCurrent()
+
+            val newAttempts = attemptCount - attemptsBeforeWindow
+            assertEquals(2, newAttempts)
+            assertTrue(repo.status.value is TrackingStatus.Error)
         }
 
     private fun createSimInfo(identity: String) =

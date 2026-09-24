@@ -131,4 +131,42 @@ class AppSettingsRepositoryResilienceTest {
             // Status should recover to Active
             assertEquals(TrackingStatus.Active, repository.status.value)
         }
+
+    @Test
+    fun `retry delay remains bounded at maximum delay during long persistent failures`() =
+        runTest {
+            val realDataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                ) { tmpFolder.newFile("test_settings_3.preferences_pb") }
+
+            var attemptCount = 0
+            val failingDataStore =
+                object : DataStore<Preferences> by realDataStore {
+                    override val data =
+                        flow<Preferences> {
+                            attemptCount++
+                            throw IOException("Simulated persistent DataStore error")
+                        }
+                }
+
+            val repository = AppSettingsRepositoryImpl(failingDataStore, backgroundScope)
+            repository.observeAppSettings()
+            runCurrent()
+
+            var stepCount = 0
+            while ((attemptCount < 31) && (stepCount < 1000)) {
+                advanceTimeBy(1.seconds)
+                runCurrent()
+                stepCount++
+            }
+            assertEquals(31, attemptCount)
+
+            val attemptsBeforeWindow = attemptCount
+            advanceTimeBy(61.seconds)
+            runCurrent()
+
+            val newAttempts = attemptCount - attemptsBeforeWindow
+            assertEquals(2, newAttempts)
+        }
 }
