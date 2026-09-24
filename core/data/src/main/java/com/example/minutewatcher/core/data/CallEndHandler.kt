@@ -124,6 +124,12 @@ internal class CallEndHandler
                 }
             }
 
+        /**
+         * Processes ending calls for a list of resolved subscription IDs.
+         *
+         * @throws IOException If a database or storage error occurs while ending any of the call sessions.
+         * @throws SecurityException If required permissions are missing while ending any of the call sessions.
+         */
         private suspend fun processResolvedSubIds(
             subIdsToEnd: List<Int>,
             eventElapsedRealtime: Long,
@@ -132,11 +138,23 @@ internal class CallEndHandler
             if (subIdsToEnd.isEmpty()) return
 
             val notifyEach = subIdsToEnd.size == 1
+            var firstStorageOrPermissionException: Exception? = null
+
             subIdsToEnd.forEach { id ->
                 try {
                     endCall(id, eventElapsedRealtime, notifyEach, context)
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: IOException) {
+                    AppLogger.e("Failed to end call for subId $id during resolution (IOException)", e)
+                    if (firstStorageOrPermissionException == null) {
+                        firstStorageOrPermissionException = e
+                    }
+                } catch (e: SecurityException) {
+                    AppLogger.e("Failed to end call for subId $id during resolution (SecurityException)", e)
+                    if (firstStorageOrPermissionException == null) {
+                        firstStorageOrPermissionException = e
+                    }
                 } catch (e: Exception) {
                     AppLogger.e("Failed to end call for subId $id during resolution", e)
                 }
@@ -144,6 +162,7 @@ internal class CallEndHandler
             if (!notifyEach) {
                 dataChangeNotifier.notifyDataChanged()
             }
+            firstStorageOrPermissionException?.let { throw it }
         }
 
         private suspend fun handlePerformCallEndError(
