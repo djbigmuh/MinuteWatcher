@@ -15,7 +15,7 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 - **Plan**: Transition to the stable `1.5.0` version once released and verified.
 
 ### 3. Android Gradle Plugin (Alpha/Beta)
-- **Version**: `9.4.0`
+- **Version**: `9.4.1`
 - **Reason**: The project requires the latest build system features to support SDK 37 and experimental Gradle 9.x integrations.
 - **Plan**: Continue using the latest preview versions until a stable branch for the 9.x series is established.
 
@@ -23,6 +23,11 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 - **Version**: `2.4.10`
 - **Reason**: Required for compatibility with the advanced AGP and Compose features targeted by this project.
 - **Plan**: Monitor Kotlin release cycles and align with stable 2.4.x releases once they reach general availability.
+
+### 5. Detekt (Alpha)
+- **Version**: `2.0.0-alpha.6`
+- **Reason**: Required for compatibility with Gradle 9.x and modern JDKs until the stable 2.x branch is released.
+- **Plan**: Upgrade to the stable 2.x release once available; revise `config/detekt/detekt.yml` for new and deprecated rules; verify `buildUponDefaultConfig` behavior; remove related `@Suppress("UnstableApiUsage")` annotations if the affected APIs stabilize.
 
 ---
 
