@@ -62,11 +62,10 @@ object SimUtils {
             default
         }
 
-    // Custom language switcher in the app uses AppCompatDelegate.setApplicationLocales(),
-    // which does not require android:localeConfig in the manifest. This strictly complies with API 33+.
-    // @Suppress("AppBundleLocaleChanges") is required because we handle locales manually
-    // via AppCompatDelegate and don't need the automated App Bundle locale generation.
-    @Suppress("AppBundleLocaleChanges")
+    // Localized context is constructed from AppCompatDelegate.getApplicationLocales(),
+    // which on API 33+ are provided by the platform per-app languages mechanism
+    // (declared via android:localeConfig in the manifest), and on older versions
+    // by the AppCompat storage mechanism.
     private fun getLocalizedContext(context: Context): Context {
         val appLocales =
             androidx.appcompat.app.AppCompatDelegate

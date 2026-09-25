@@ -1,5 +1,6 @@
 package com.example.minutewatcher
 
+import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.Lifecycle
@@ -33,14 +34,26 @@ object MainActivityThemeObserver {
                 }
                 launch {
                     viewModel.appLanguage.collect { lang ->
-                        val appLocale: LocaleListCompat =
-                            if (lang == null) {
-                                LocaleListCompat.getEmptyLocaleList()
-                            } else {
-                                LocaleListCompat.forLanguageTags(lang)
+                        val appLocales = AppCompatDelegate.getApplicationLocales()
+                        val currentTags = if (appLocales.isEmpty) null else appLocales.toLanguageTags().ifEmpty { null }
+                        val supportsPerApp = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+
+                        val action =
+                            resolveLocaleSyncAction(
+                                currentTags = currentTags,
+                                savedLanguage = lang,
+                                supportsSystemPerAppLanguages = supportsPerApp,
+                            )
+
+                        when (action) {
+                            is LocaleSyncAction.None -> {}
+                            is LocaleSyncAction.AdoptSystem -> viewModel.setLanguage(action.tags)
+                            is LocaleSyncAction.FollowSystem -> viewModel.setLanguage(null)
+                            is LocaleSyncAction.RestoreSaved -> {
+                                AppCompatDelegate.setApplicationLocales(
+                                    LocaleListCompat.forLanguageTags(action.language),
+                                )
                             }
-                        if (AppCompatDelegate.getApplicationLocales() != appLocale) {
-                            AppCompatDelegate.setApplicationLocales(appLocale)
                         }
                     }
                 }
