@@ -84,12 +84,11 @@
     <string name="onboarding_button">知道了</string>
 
     <!-- Operation Errors -->
-    <!-- TODO: Translate to Chinese -->
-    <string name="error_invalid_sim_slot">Invalid SIM slot index: %1$d</string>
-    <string name="error_storage_unavailable">Storage unavailable for slot %1$d. Retry later.</string>
-    <string name="error_sim_removed">SIM was removed from slot %1$d</string>
-    <string name="error_operation_failed_retry">Operation failed after retry.</string>
-    <string name="error_unknown">Unknown error: %1$s</string>
+    <string name="error_invalid_sim_slot">无效的SIM卡槽索引：%1$d</string>
+    <string name="error_storage_unavailable">卡槽 %1$d 的存储空间不可用，请稍后重试。</string>
+    <string name="error_sim_removed">SIM卡已从卡槽 %1$d 中移除</string>
+    <string name="error_operation_failed_retry">重试后操作仍然失败。</string>
+    <string name="error_unknown">未知错误：%1$s</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">取消</string>

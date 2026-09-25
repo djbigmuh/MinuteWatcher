@@ -84,12 +84,11 @@
     <string name="onboarding_button">J\'ai compris</string>
 
     <!-- Operation Errors -->
-    <!-- TODO: Translate to French -->
-    <string name="error_invalid_sim_slot">Invalid SIM slot index: %1$d</string>
-    <string name="error_storage_unavailable">Storage unavailable for slot %1$d. Retry later.</string>
-    <string name="error_sim_removed">SIM was removed from slot %1$d</string>
-    <string name="error_operation_failed_retry">Operation failed after retry.</string>
-    <string name="error_unknown">Unknown error: %1$s</string>
+    <string name="error_invalid_sim_slot">Index d\'emplacement SIM invalide : %1$d</string>
+    <string name="error_storage_unavailable">Stockage indisponible pour l\'emplacement %1$d. Réessayez plus tard.</string>
+    <string name="error_sim_removed">La carte SIM a été retirée de l\'emplacement %1$d</string>
+    <string name="error_operation_failed_retry">L\'opération a échoué après une nouvelle tentative.</string>
+    <string name="error_unknown">Erreur inconnue : %1$s</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">Annuler</string>

@@ -84,12 +84,11 @@
     <string name="onboarding_button">समझ गया</string>
 
     <!-- Operation Errors -->
-    <!-- TODO: Translate to Hindi -->
-    <string name="error_invalid_sim_slot">Invalid SIM slot index: %1$d</string>
-    <string name="error_storage_unavailable">Storage unavailable for slot %1$d. Retry later.</string>
-    <string name="error_sim_removed">SIM was removed from slot %1$d</string>
-    <string name="error_operation_failed_retry">Operation failed after retry.</string>
-    <string name="error_unknown">Unknown error: %1$s</string>
+    <string name="error_invalid_sim_slot">अमान्य SIM स्लॉट अनुक्रमणिका: %1$d</string>
+    <string name="error_storage_unavailable">स्लॉट %1$d के लिए संग्रहण अनुपलब्ध है। बाद में पुनः प्रयास करें।</string>
+    <string name="error_sim_removed">स्लॉट %1$d से SIM हटा दिया गया</string>
+    <string name="error_operation_failed_retry">पुनः प्रयास के बाद भी संचालन विफल रहा।</string>
+    <string name="error_unknown">अज्ञात त्रुटि: %1$s</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">रद्द करें</string>

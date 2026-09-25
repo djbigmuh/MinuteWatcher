@@ -84,12 +84,11 @@
     <string name="onboarding_button">了解</string>
 
     <!-- Operation Errors -->
-    <!-- TODO: Translate to Japanese -->
-    <string name="error_invalid_sim_slot">Invalid SIM slot index: %1$d</string>
-    <string name="error_storage_unavailable">Storage unavailable for slot %1$d. Retry later.</string>
-    <string name="error_sim_removed">SIM was removed from slot %1$d</string>
-    <string name="error_operation_failed_retry">Operation failed after retry.</string>
-    <string name="error_unknown">Unknown error: %1$s</string>
+    <string name="error_invalid_sim_slot">無効なSIMスロット番号: %1$d</string>
+    <string name="error_storage_unavailable">スロット %1$d のストレージを利用できません。後でもう一度お試しください。</string>
+    <string name="error_sim_removed">SIMカードがスロット %1$d から取り外されました</string>
+    <string name="error_operation_failed_retry">再試行しましたが、操作に失敗しました。</string>
+    <string name="error_unknown">不明なエラー: %1$s</string>
 
     <!-- Dialogs -->
     <string name="cancel_button">キャンセル</string>
