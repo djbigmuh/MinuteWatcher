@@ -53,6 +53,8 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Observer for SIM identities.
  *
+ * **Security:** Seed values are secrets and must never be output to logs.
+ *
  * NOTE: TooManyFunctions is suppressed: registration, debouncing and conflict
  * resolution form one observer state machine; extraction would split its
  * invariants across classes.
@@ -450,9 +452,7 @@ internal class SimIdentityObserver
                         return
                     }
 
-                    AppLogger.d(
-                        "SimIdentityObserver: triggering migration from $fallbackSeedValue to persistent seed",
-                    )
+                    AppLogger.d("SimIdentityObserver: triggering migration from ephemeral seed to persistent seed")
                     scope.launch {
                         try {
                             val outcome = migrationService.migrateFromEphemeralSeed(fallbackSeedValue, sims)
