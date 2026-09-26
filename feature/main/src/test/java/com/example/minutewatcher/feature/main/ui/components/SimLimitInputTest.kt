@@ -9,15 +9,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35]) // behavior-specific SDK
 class SimLimitInputTest {
+    private val defaultLocale = Locale.US
+
     @Test
     fun `minutes - old 0, types 5 - results in 5`() {
         val state = SimLimitState("0", "0.0", false)
         // Simulate typing '5' at the end of "0"
-        state.onMinutesChange(TextFieldValue("05", selection = TextRange(2)))
+        state.onMinutesChange(TextFieldValue("05", selection = TextRange(2)), defaultLocale)
         assertEquals("5", state.minutesText.text)
     }
 
@@ -25,7 +28,7 @@ class SimLimitInputTest {
     fun `minutes - old 0, types 0 - results in 0`() {
         val state = SimLimitState("0", "0.0", false)
         // Simulate typing '0' at the end of "0"
-        state.onMinutesChange(TextFieldValue("00", selection = TextRange(2)))
+        state.onMinutesChange(TextFieldValue("00", selection = TextRange(2)), defaultLocale)
         assertEquals("0", state.minutesText.text)
     }
 
@@ -34,7 +37,7 @@ class SimLimitInputTest {
         val state = SimLimitState("0", "0.0", false)
         state.selectAllMinutes()
         // Simulate replacing selection "0" with "7"
-        state.onMinutesChange(TextFieldValue("7", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("7", selection = TextRange(1)), defaultLocale)
         assertEquals("7", state.minutesText.text)
     }
 
@@ -43,7 +46,7 @@ class SimLimitInputTest {
         val state = SimLimitState("12", "0.0", false)
         state.selectAllMinutes()
         // Simulate replacing selection "12" with "5"
-        state.onMinutesChange(TextFieldValue("5", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("5", selection = TextRange(1)), defaultLocale)
         assertEquals("5", state.minutesText.text)
     }
 
@@ -51,7 +54,7 @@ class SimLimitInputTest {
     fun `minutes - old 0, paste 100 - results in 100`() {
         val state = SimLimitState("0", "0.0", false)
         // Paste "100" at the end: "0100"
-        state.onMinutesChange(TextFieldValue("0100", selection = TextRange(4)))
+        state.onMinutesChange(TextFieldValue("0100", selection = TextRange(4)), defaultLocale)
         // 0100 normalized to 100 (if it doesn't use the single-char heuristic)
         assertEquals("100", state.minutesText.text)
     }
@@ -61,7 +64,7 @@ class SimLimitInputTest {
         val state = SimLimitState("500", "0.0", false)
         state.selectAllMinutes()
         // Replace "500" with "100"
-        state.onMinutesChange(TextFieldValue("100", selection = TextRange(3)))
+        state.onMinutesChange(TextFieldValue("100", selection = TextRange(3)), defaultLocale)
         assertEquals("100", state.minutesText.text)
     }
 
@@ -69,7 +72,7 @@ class SimLimitInputTest {
     fun `traffic - old 0_0, types 5 - results in 5`() {
         val state = SimLimitState("0", "0.0", false)
         // Simulate typing '5' at the end: "0.05"
-        state.onTrafficChange(TextFieldValue("0.05", selection = TextRange(4)))
+        state.onTrafficChange(TextFieldValue("0.05", selection = TextRange(4)), defaultLocale)
         assertEquals("5", state.trafficText.text)
     }
 
@@ -78,7 +81,7 @@ class SimLimitInputTest {
         val state = SimLimitState("0", "0.0", false)
         state.selectAllTraffic()
         // Replace "0.0" with "15.5"
-        state.onTrafficChange(TextFieldValue("15.5", selection = TextRange(4)))
+        state.onTrafficChange(TextFieldValue("15.5", selection = TextRange(4)), defaultLocale)
         assertEquals("15.5", state.trafficText.text)
     }
 
@@ -87,7 +90,7 @@ class SimLimitInputTest {
         val state = SimLimitState("0", "5", false)
         state.selectAllTraffic()
         // Replace "5" with "500"
-        state.onTrafficChange(TextFieldValue("500", selection = TextRange(3)))
+        state.onTrafficChange(TextFieldValue("500", selection = TextRange(3)), defaultLocale)
         assertEquals("500", state.trafficText.text)
     }
 
@@ -95,7 +98,7 @@ class SimLimitInputTest {
     fun `traffic - old 0, paste 10_5 - results in 10_5`() {
         val state = SimLimitState("0", "0", false)
         // Paste "10.5" at the end: "010.5"
-        state.onTrafficChange(TextFieldValue("010.5", selection = TextRange(5)))
+        state.onTrafficChange(TextFieldValue("010.5", selection = TextRange(5)), defaultLocale)
         // Normalized: 010.5 -> 10.5
         assertEquals("10.5", state.trafficText.text)
     }
@@ -104,7 +107,7 @@ class SimLimitInputTest {
     fun `limit exceeded - ignores input`() {
         val state = SimLimitState("0", "0", false)
         // Max 6 chars for minutes. Try to type 7th.
-        state.onMinutesChange(TextFieldValue("1234567", selection = TextRange(7)))
+        state.onMinutesChange(TextFieldValue("1234567", selection = TextRange(7)), defaultLocale)
         assertEquals("0", state.minutesText.text)
     }
 
@@ -124,7 +127,7 @@ class SimLimitInputTest {
         state.onMinutesFocusChanged(true)
 
         // Click-driven selection change (same text "500", collapsed cursor at position 1)
-        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)), defaultLocale)
 
         assertFalse(state.minutesSelectAllPending)
         assertEquals(0, state.minutesText.selection.min)
@@ -136,10 +139,10 @@ class SimLimitInputTest {
         val state = SimLimitState("500", "10.0", false)
         state.onMinutesFocusChanged(true)
         // Absorb click
-        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)), defaultLocale)
 
         // User types '7' replacing selection
-        state.onMinutesChange(TextFieldValue("7", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("7", selection = TextRange(1)), defaultLocale)
 
         assertEquals("7", state.minutesText.text)
     }
@@ -150,7 +153,7 @@ class SimLimitInputTest {
         state.onMinutesFocusChanged(true)
 
         // Direct typing/pasting without preceding selection-only event
-        state.onMinutesChange(TextFieldValue("700", selection = TextRange(3)))
+        state.onMinutesChange(TextFieldValue("700", selection = TextRange(3)), defaultLocale)
 
         assertFalse(state.minutesSelectAllPending)
         assertEquals("700", state.minutesText.text)
@@ -161,10 +164,10 @@ class SimLimitInputTest {
         val state = SimLimitState("500", "10.0", false)
         state.onMinutesFocusChanged(true)
         // Absorb click
-        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("500", selection = TextRange(1)), defaultLocale)
 
         // Second click / selection change after flag is cleared
-        state.onMinutesChange(TextFieldValue("500", selection = TextRange(2)))
+        state.onMinutesChange(TextFieldValue("500", selection = TextRange(2)), defaultLocale)
 
         assertEquals(2, state.minutesText.selection.start)
         assertEquals(2, state.minutesText.selection.end)
@@ -173,7 +176,7 @@ class SimLimitInputTest {
     @Test
     fun `minutes insertion in middle preserves cursor position when unchanged by normalization`() {
         val state = SimLimitState("1234", "0.0", false)
-        state.onMinutesChange(TextFieldValue("12934", selection = TextRange(3)))
+        state.onMinutesChange(TextFieldValue("12934", selection = TextRange(3)), defaultLocale)
         assertEquals("12934", state.minutesText.text)
         assertEquals(3, state.minutesText.selection.start)
         assertEquals(3, state.minutesText.selection.end)
@@ -182,7 +185,7 @@ class SimLimitInputTest {
     @Test
     fun `minutes deletion in middle preserves cursor position when unchanged by normalization`() {
         val state = SimLimitState("1234", "0.0", false)
-        state.onMinutesChange(TextFieldValue("134", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("134", selection = TextRange(1)), defaultLocale)
         assertEquals("134", state.minutesText.text)
         assertEquals(1, state.minutesText.selection.start)
     }
@@ -203,7 +206,7 @@ class SimLimitInputTest {
         state.onTrafficFocusChanged(true)
 
         // Click-driven selection change
-        state.onTrafficChange(TextFieldValue("10.0", selection = TextRange(2)))
+        state.onTrafficChange(TextFieldValue("10.0", selection = TextRange(2)), defaultLocale)
 
         assertFalse(state.trafficSelectAllPending)
         assertEquals(0, state.trafficText.selection.min)
@@ -215,10 +218,10 @@ class SimLimitInputTest {
         val state = SimLimitState("500", "10.0", false)
         state.onTrafficFocusChanged(true)
         // Absorb click
-        state.onTrafficChange(TextFieldValue("10.0", selection = TextRange(2)))
+        state.onTrafficChange(TextFieldValue("10.0", selection = TextRange(2)), defaultLocale)
 
         // User types '7' replacing selection
-        state.onTrafficChange(TextFieldValue("7", selection = TextRange(1)))
+        state.onTrafficChange(TextFieldValue("7", selection = TextRange(1)), defaultLocale)
 
         assertEquals("7", state.trafficText.text)
     }
@@ -226,7 +229,7 @@ class SimLimitInputTest {
     @Test
     fun `traffic editing in middle preserves cursor position when unchanged by normalization`() {
         val state = SimLimitState("0", "12.5", false)
-        state.onTrafficChange(TextFieldValue("13.5", selection = TextRange(1)))
+        state.onTrafficChange(TextFieldValue("13.5", selection = TextRange(1)), defaultLocale)
         assertEquals("13.5", state.trafficText.text)
         assertEquals(1, state.trafficText.selection.start)
     }
@@ -234,7 +237,7 @@ class SimLimitInputTest {
     @Test
     fun `traffic comma normalization moves cursor to end of normalized text`() {
         val state = SimLimitState("0", "0.0", false)
-        state.onTrafficChange(TextFieldValue("1,5", selection = TextRange(3)))
+        state.onTrafficChange(TextFieldValue("1,5", selection = TextRange(3)), Locale.GERMANY)
         assertEquals("1.5", state.trafficText.text)
         assertEquals(state.trafficText.text.length, state.trafficText.selection.start)
     }

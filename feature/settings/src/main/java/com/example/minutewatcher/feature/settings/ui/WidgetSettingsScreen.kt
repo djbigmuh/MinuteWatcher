@@ -117,7 +117,10 @@ private fun ErrorState(
                 title = { Text(stringResource(id = R.string.settings_widget_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(id = R.string.navigate_up_content_desc),
+                        )
                     }
                 },
             )
@@ -185,7 +188,10 @@ private fun WidgetSettingsContent(
                 title = { Text(stringResource(id = R.string.settings_widget_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(id = R.string.navigate_up_content_desc),
+                        )
                     }
                 },
             )

@@ -8,10 +8,29 @@
         <exclude
             domain="sharedpref"
             path="." />
+
+        <!-- Diagnostic log files never leave the device -->
+        <exclude
+            domain="file"
+            path="logs.txt" />
+        <exclude
+            domain="file"
+            path="logs.old.txt" />
     </cloud-backup>
     <device-transfer>
         <!-- Allow data transfer between devices during explicit setup -->
         <include domain="sharedpref" path="."/>
+        <include
+            domain="file"
+            path="." />
         <include domain="file" path="datastore/"/>
+
+        <!-- Diagnostic log files never leave the device -->
+        <exclude
+            domain="file"
+            path="logs.txt" />
+        <exclude
+            domain="file"
+            path="logs.old.txt" />
     </device-transfer>
 </data-extraction-rules>

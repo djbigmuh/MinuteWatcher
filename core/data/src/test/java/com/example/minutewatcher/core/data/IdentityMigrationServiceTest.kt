@@ -6,8 +6,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -70,11 +72,11 @@ class IdentityMigrationServiceTest {
 
             val outcome =
                 service.migrateLegacyData(
-                    com.example.minutewatcher.core.model.SimIdentity(
+                    SimIdentity(
                         stableId = identityId,
                         subscriptionId = 1,
                         slotIndex = 0,
-                        source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        source = IdentitySource.SUBSCRIPTION_ID,
                         isStable = false,
                     ),
                 )
@@ -149,23 +151,23 @@ class IdentityMigrationServiceTest {
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 
-            assertFalse(service.hasLegacyData())
+            assertEquals(false, service.hasLegacyData())
 
             appDataStore.edit { it[intPreferencesKey("some_key_sim_0")] = 1 }
-            assertTrue(service.hasLegacyData())
+            assertEquals(true, service.hasLegacyData())
 
             val outcome =
                 service.migrateLegacyData(
-                    com.example.minutewatcher.core.model.SimIdentity(
+                    SimIdentity(
                         stableId = "some_id",
                         subscriptionId = 1,
                         slotIndex = 0,
-                        source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        source = IdentitySource.SUBSCRIPTION_ID,
                         isStable = false,
                     ),
                 )
             assertTrue(outcome.migrated > 0)
-            assertFalse(service.hasLegacyData(setOf("some_id")))
+            assertEquals(false, service.hasLegacyData(setOf("some_id")))
         }
 
     @Test
@@ -180,11 +182,11 @@ class IdentityMigrationServiceTest {
 
             val outcome =
                 service.migrateLegacyData(
-                    com.example.minutewatcher.core.model.SimIdentity(
+                    SimIdentity(
                         stableId = identityId,
                         subscriptionId = 1,
                         slotIndex = 1,
-                        source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        source = IdentitySource.SUBSCRIPTION_ID,
                         isStable = false,
                     ),
                 )
@@ -200,31 +202,31 @@ class IdentityMigrationServiceTest {
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 
-            assertFalse(service.hasLegacyData())
+            assertEquals(false, service.hasLegacyData())
 
             // V1
             appDataStore.edit { it[intPreferencesKey("key_sim_0")] = 1 }
-            assertTrue(service.hasLegacyData())
+            assertEquals(true, service.hasLegacyData())
             appDataStore.edit { it.clear() }
 
             // Sub pattern
             simDataStore.edit { it[intPreferencesKey("key_sub_123")] = 1 }
-            assertTrue(service.hasLegacyData())
+            assertEquals(true, service.hasLegacyData())
             simDataStore.edit { it.clear() }
 
             // ICC pattern
             appDataStore.edit { it[intPreferencesKey("key_icc_abc")] = 1 }
-            assertTrue(service.hasLegacyData())
+            assertEquals(true, service.hasLegacyData())
             appDataStore.edit { it.clear() }
 
             // Mapping marker
             simDataStore.edit { it[intPreferencesKey("subscription_id_icc_abc")] = 1 }
-            assertTrue(service.hasLegacyData())
+            assertEquals(true, service.hasLegacyData())
             simDataStore.edit { it.clear() }
 
             // Non-legacy
             appDataStore.edit { it[intPreferencesKey("app_theme")] = 1 }
-            assertFalse(service.hasLegacyData())
+            assertEquals(false, service.hasLegacyData())
         }
 
     @Test
@@ -236,11 +238,11 @@ class IdentityMigrationServiceTest {
             simDataStore.edit { it[intPreferencesKey("minutes_used_sub_123")] = 10 }
             appDataStore.edit { it[intPreferencesKey("traffic_used_icc_abc")] = 100 }
 
-            // If we don't know active identities, they might still look like legacy (for safety if schema is old)
-            assertTrue(service.hasLegacyData())
+            // If we don't know active identities, they might still look like legacy
+            assertEquals(true, service.hasLegacyData())
 
             // If they are known active, they are not legacy
-            assertFalse(service.hasLegacyData(setOf("sub_123", "icc_abc")))
+            assertEquals(false, service.hasLegacyData(setOf("sub_123", "icc_abc")))
         }
 
     @Test
@@ -251,13 +253,13 @@ class IdentityMigrationServiceTest {
             // Populate with legacy-looking data
             appDataStore.edit { it[intPreferencesKey("key_sub_123")] = 1 }
 
-            assertTrue(service.hasLegacyData())
+            assertEquals(true, service.hasLegacyData())
 
             // Mark schema as current
             service.markSchemaCurrent()
 
             // Now hasLegacyData should return false immediately regardless of keys
-            assertFalse(service.hasLegacyData())
+            assertEquals(false, service.hasLegacyData())
         }
 
     @Test
@@ -273,15 +275,15 @@ class IdentityMigrationServiceTest {
                 it[intPreferencesKey("data_$legacyStableId")] = 100
             }
 
-            assertTrue(service.hasLegacyData())
+            assertEquals(true, service.hasLegacyData())
 
             val outcome =
                 service.migrateLegacyData(
-                    com.example.minutewatcher.core.model.SimIdentity(
+                    SimIdentity(
                         stableId = "sub_$subId",
                         subscriptionId = subId,
                         slotIndex = 0,
-                        source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        source = IdentitySource.SUBSCRIPTION_ID,
                         isStable = false,
                     ),
                 )
@@ -294,11 +296,11 @@ class IdentityMigrationServiceTest {
             assertFalse(prefs.asMap().keys.any { it.name.startsWith("subscription_id_icc_") })
 
             // With active identity, should return false
-            assertFalse(service.hasLegacyData(setOf("sub_$subId")))
+            assertEquals(false, service.hasLegacyData(setOf("sub_$subId")))
 
             simDataStore.edit { it.clear() }
             simDataStore.edit { it[intPreferencesKey("app_theme")] = 1 }
-            assertFalse(service.hasLegacyData())
+            assertEquals(false, service.hasLegacyData())
         }
 
     @Test
@@ -319,11 +321,11 @@ class IdentityMigrationServiceTest {
             // 2. Migrate
             val outcome =
                 service.migrateLegacyData(
-                    com.example.minutewatcher.core.model.SimIdentity(
+                    SimIdentity(
                         stableId = identityId,
                         subscriptionId = 1,
                         slotIndex = 0,
-                        source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        source = IdentitySource.SUBSCRIPTION_ID,
                         isStable = false,
                     ),
                 )
@@ -341,7 +343,7 @@ class IdentityMigrationServiceTest {
             // 5. Original old key should be REMOVED (Policy Fix)
             assertNull("Legacy key must be removed after conflict resolution", prefs[legacyKey])
             // 6. hasLegacyData() should return false (Conflict resolved)
-            assertFalse(service.hasLegacyData())
+            assertEquals(false, service.hasLegacyData())
         }
 
     @Test
@@ -352,7 +354,7 @@ class IdentityMigrationServiceTest {
 
             simDataStore.edit { it[intPreferencesKey("minutes_used_sub_1")] = 10 }
 
-            assertFalse(service.hasLegacyData())
+            assertEquals(false, service.hasLegacyData())
         }
 
     @Test
@@ -363,40 +365,61 @@ class IdentityMigrationServiceTest {
 
             appDataStore.edit { it[intPreferencesKey("traffic_limit_icc_abc")] = 1000 }
 
-            assertFalse(service.hasLegacyData())
+            assertEquals(false, service.hasLegacyData())
         }
 
     @Test
     fun `legacy sim_0 keys are detected when schema is old`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
-            // schema version is 0 by default in tests
 
             appDataStore.edit { it[intPreferencesKey("some_key_sim_0")] = 1 }
 
-            assertTrue(service.hasLegacyData())
+            assertEquals(true, service.hasLegacyData())
         }
 
     @Test
     fun `active identity keys are excluded from legacy detection`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
-            // Even if schema is old, active identities should be safe
 
             val activeIdentity = "sub_5"
             simDataStore.edit { it[intPreferencesKey("minutes_used_$activeIdentity")] = 20 }
 
-            assertFalse(service.hasLegacyData(activeIdentities = setOf(activeIdentity)))
+            assertEquals(false, service.hasLegacyData(activeIdentities = setOf(activeIdentity)))
         }
 
-    @Test(expected = IOException::class)
-    fun `hasLegacyData throws IOException on DataStore error`() =
+    @Test
+    fun `hasLegacyData returns null on DataStore exception`() =
         testScope.runTest {
             val corruptedDataStore: DataStore<Preferences> = mock()
             whenever(corruptedDataStore.data).thenReturn(flow { throw IOException("Disk read error") })
 
             val service = IdentityMigrationService(corruptedDataStore, simDataStore)
+            val result = service.hasLegacyData()
+            assertNull(result)
+        }
+
+    @Test(expected = CancellationException::class)
+    fun `hasLegacyData rethrows CancellationException`() =
+        testScope.runTest {
+            val cancelledDataStore: DataStore<Preferences> = mock()
+            whenever(cancelledDataStore.data).thenReturn(flow { throw CancellationException("Cancelled") })
+
+            val service = IdentityMigrationService(cancelledDataStore, simDataStore)
             service.hasLegacyData()
+        }
+
+    @Test
+    fun `hasLegacyData returns false without reading sim DataStore when schema is current`() =
+        testScope.runTest {
+            appDataStore.edit { it[DataStoreKeys.DATA_SCHEMA_VERSION] = DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION }
+
+            val unreadSimDataStore: DataStore<Preferences> = mock()
+            val service = IdentityMigrationService(appDataStore, unreadSimDataStore)
+
+            val result = service.hasLegacyData()
+            assertEquals(false, result)
         }
 
     @Test
@@ -407,19 +430,18 @@ class IdentityMigrationServiceTest {
 
             val service = IdentityMigrationService(corruptedDataStore, simDataStore)
             val activeIdentity =
-                com.example.minutewatcher.core.model.SimIdentity(
+                SimIdentity(
                     stableId = "new_id",
                     subscriptionId = 1,
                     slotIndex = 0,
-                    source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                    source = IdentitySource.SUBSCRIPTION_ID,
                     isStable = false,
                 )
 
-            // Should catch the internal exception and log it, not throw
             try {
                 service.migrateLegacyData(activeIdentity)
             } catch (_: Exception) {
-                // Expected now
+                // Expected
             }
         }
 
@@ -431,20 +453,18 @@ class IdentityMigrationServiceTest {
             val identityId = "new_identity"
             val newKey = intPreferencesKey("test_key_$identityId")
 
-            // Setup legacy data
             appDataStore.edit { it[legacyKey] = 123 }
             advanceUntilIdle()
 
             val identity =
-                com.example.minutewatcher.core.model.SimIdentity(
+                SimIdentity(
                     stableId = identityId,
                     subscriptionId = 1,
                     slotIndex = 0,
-                    source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                    source = IdentitySource.SUBSCRIPTION_ID,
                     isStable = false,
                 )
 
-            // Launch multiple concurrent migrations
             val results = mutableListOf<IdentityMigrationService.MigrationOutcome>()
             val jobs =
                 List(5) {
@@ -457,14 +477,9 @@ class IdentityMigrationServiceTest {
             advanceUntilIdle()
 
             val prefs = appDataStore.data.first()
-            // Data successfully migrated to the new key
             assertEquals(123, prefs[newKey])
-            // Legacy key is removed
             assertNull(prefs[legacyKey])
-            // No conflict backup keys created
             assertFalse(prefs.asMap().keys.any { it.name.startsWith("conflict_") })
-
-            // Exactly one migration should have returned true (if they ran sequentially thanks to Mutex)
             assertEquals(1, results.count { it.hasChanges() })
         }
 
@@ -473,20 +488,18 @@ class IdentityMigrationServiceTest {
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 
-            // Actually, migrateTypedKey returns FAILURE if value is null or unknown type.
-
             val outcome =
                 service.migrateLegacyData(
-                    com.example.minutewatcher.core.model.SimIdentity(
+                    SimIdentity(
                         stableId = "id",
                         subscriptionId = 1,
                         slotIndex = 0,
-                        source = com.example.minutewatcher.core.model.IdentitySource.SUBSCRIPTION_ID,
+                        source = IdentitySource.SUBSCRIPTION_ID,
                         isStable = false,
                     ),
                 )
 
             assertEquals(0, outcome.migrated)
-            assertEquals(0, outcome.failures) // No keys to migrate
+            assertEquals(0, outcome.failures)
         }
 }

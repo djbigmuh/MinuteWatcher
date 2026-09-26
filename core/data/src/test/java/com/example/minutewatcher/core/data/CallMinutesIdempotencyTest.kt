@@ -24,15 +24,17 @@ class CallMinutesIdempotencyTest : CallTrackerTestFixtures() {
 
             val subId = 1
             val identity = "id_1"
+            val startTime = 1000L
             val bootTime = 5000L
+            val signature = "1000|5000"
             val durationMinutes = 5
 
-            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(startTime))
             whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(bootTime))
             whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(2000L))
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(identity))
 
-            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime)))
+            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(signature)))
                 .thenReturn(true)
 
             whenever(callSessionRepository.clearCallSession(eq(subId)))
@@ -47,9 +49,9 @@ class CallMinutesIdempotencyTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             verify(simUsageRepository, times(1))
-                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime))
+                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(signature))
 
-            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime)))
+            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(signature)))
                 .thenReturn(false)
             whenever(callSessionRepository.clearCallSession(eq(subId))).thenReturn(Unit)
 
@@ -57,7 +59,7 @@ class CallMinutesIdempotencyTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
 
             verify(simUsageRepository, times(2))
-                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime))
+                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(signature))
 
             verify(callSessionRepository, times(2)).clearCallSession(eq(subId))
         }

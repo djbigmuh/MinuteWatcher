@@ -1,3 +1,4 @@
+import dev.detekt.gradle.extensions.DetektExtension
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
@@ -18,7 +19,7 @@ plugins {
 subprojects {
     apply(plugin = "dev.detekt")
 
-    extensions.configure<dev.detekt.gradle.extensions.DetektExtension>("detekt") {
+    extensions.configure<DetektExtension>("detekt") {
         // Lint baseline captures ONLY pre-existing issues.
         // New code MUST NOT be added to the baseline — fix issues at the source.
         // When refactoring a file, remove its entries from the baseline first.
@@ -57,19 +58,21 @@ subprojects {
         systemProperty("robolectric.sdk", "37")
         // Redirect Robolectric dependencies and home to avoid paths containing spaces or non-ASCII characters.
         // This fixes java.nio.file.NoSuchFileException caused by URI encoding and native runtime loading issues.
-        val userHomeDir = rootProject.projectDir.resolve(".gradle/user-home")
-        val roboCacheDir = rootProject.projectDir.resolve(".gradle/robolectric-cache")
-        val tmpDir = rootProject.projectDir.resolve("build/tmp")
+        val roboUserHome = rootProject.layout.projectDirectory.dir(".gradle/user-home")
+        val roboCacheDir = rootProject.layout.projectDirectory.dir(".gradle/robolectric-cache")
+        val testTmpDir = project.layout.buildDirectory.dir("tmp")
 
-        userHomeDir.mkdirs()
-        roboCacheDir.mkdirs()
-        tmpDir.mkdirs()
+        doFirst {
+            roboUserHome.asFile.mkdirs()
+            roboCacheDir.asFile.mkdirs()
+            testTmpDir.get().asFile.mkdirs()
+        }
 
-        systemProperty("robolectric.dependency.repo.dir", roboCacheDir.absolutePath)
+        systemProperty("robolectric.dependency.repo.dir", roboCacheDir.asFile.absolutePath)
         systemProperty("robolectric.dependency.repo.id", "central")
         systemProperty("robolectric.dependency.repo.url", "https://repo1.maven.org/maven2/")
-        systemProperty("user.home", userHomeDir.absolutePath)
-        systemProperty("java.io.tmpdir", tmpDir.absolutePath)
+        systemProperty("user.home", roboUserHome.asFile.absolutePath)
+        systemProperty("java.io.tmpdir", testTmpDir.get().asFile.absolutePath)
         systemProperty("robolectric.logging.enabled", "true")
 
         // Policy: Reliability over speed.

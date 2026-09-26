@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import com.example.minutewatcher.core.android.util.SimCardMapper.negativeLogged
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MinutesModel
@@ -95,7 +96,7 @@ object SimCardMapper {
         return SimCardUiModel(
             slot = slot,
             identity = usage.identity,
-            operatorName = SimUtils.getShortOperatorName(context, usage.operator),
+            operatorName = SimUtils.getShortOperatorName(context, usage.operator, slot),
             iconRes = SimUtils.getOperatorIconResource(usage.operator),
             minutesUsed = safeMinutesUsed,
             minutesLimit = safeMinutesLimit,

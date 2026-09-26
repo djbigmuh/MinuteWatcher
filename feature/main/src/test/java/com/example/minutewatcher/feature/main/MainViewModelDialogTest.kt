@@ -6,6 +6,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.whenever
@@ -76,9 +78,6 @@ class MainViewModelDialogTest : MainViewModelTestFixtures() {
         testScope.runTest {
             val viewModel = createViewModel(backgroundScope)
 
-            // Initially it might be false or true depending on onboardingCompleted mock
-            // In setup we have onboardingCompleted = true, so it should be false
-
             viewModel.completeOnboarding()
             assertEquals(false, viewModel.showOnboardingDialog.value)
         }
@@ -91,10 +90,8 @@ class MainViewModelDialogTest : MainViewModelTestFixtures() {
 
             val viewModel = createViewModel(backgroundScope)
 
-            // Even if onboardingCompleted is false, dialog should not show because isLoaded is false
             assertEquals(false, viewModel.showOnboardingDialog.value)
 
-            // Now emit loaded settings
             settingsFlow.value = AppSettings(onboardingCompleted = false, isLoaded = true)
 
             assertEquals(true, viewModel.showOnboardingDialog.value)
@@ -113,5 +110,83 @@ class MainViewModelDialogTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope, dialogController)
 
             assertEquals(false, viewModel.showOnboardingDialog.value)
+        }
+
+    @Test
+    fun `claimOnboardingPrompt returns true on first call and false on subsequent calls`() =
+        testScope.runTest {
+            val controller = MainDialogController(savedStateHandle)
+            assertTrue(controller.claimOnboardingPrompt())
+            assertFalse(controller.claimOnboardingPrompt())
+            assertFalse(controller.claimOnboardingPrompt())
+        }
+
+    @Test
+    fun `after setShowOnboardingDialog false claimOnboardingPrompt returns false`() =
+        testScope.runTest {
+            val controller = MainDialogController(savedStateHandle)
+            controller.setShowOnboardingDialog(show = false)
+            assertFalse(controller.claimOnboardingPrompt())
+        }
+
+    @Test
+    fun `after completeOnboarding repeated settings emission does not show onboarding dialog`() =
+        testScope.runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = false, isLoaded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val viewModel = createViewModel(backgroundScope)
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+
+            viewModel.completeOnboarding()
+            assertEquals(false, viewModel.showOnboardingDialog.value)
+
+            settingsFlow.value =
+                AppSettings(
+                    onboardingCompleted = false,
+                    isLoaded = true,
+                    inaccurateCallAttributionsCount = 1,
+                )
+            assertEquals(false, viewModel.showOnboardingDialog.value)
+        }
+
+    @Test
+    fun `onboarding dialog is shown after usage access dialog closes`() =
+        testScope.runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = false, isLoaded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val dialogController = MainDialogController(savedStateHandle)
+            dialogController.setUsageAccessDialog(true)
+
+            val viewModel = createViewModel(backgroundScope, dialogController)
+            assertEquals(false, viewModel.showOnboardingDialog.value)
+
+            viewModel.setUsageAccessDialog(false)
+            settingsFlow.value =
+                AppSettings(
+                    onboardingCompleted = false,
+                    isLoaded = true,
+                    inaccurateCallAttributionsCount = 2,
+                )
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+        }
+
+    @Test
+    fun `repeated emissions do not retrigger onboarding dialog when already shown`() =
+        testScope.runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = false, isLoaded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val viewModel = createViewModel(backgroundScope)
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+
+            settingsFlow.value =
+                AppSettings(
+                    onboardingCompleted = false,
+                    isLoaded = true,
+                    inaccurateCallAttributionsCount = 3,
+                )
+            assertEquals(true, viewModel.showOnboardingDialog.value)
         }
 }

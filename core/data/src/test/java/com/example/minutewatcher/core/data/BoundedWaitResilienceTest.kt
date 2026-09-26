@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -38,16 +39,16 @@ class BoundedWaitResilienceTest {
             persistence.saveSimIdentitiesInfo(identities)
         }
 
-    @Test(expected = IOException::class)
-    fun `hasLegacyData throws IOException on DataStore hang`() =
+    @Test
+    fun `hasLegacyData returns null on DataStore hang`() =
         runTest {
             val hangingDataStore: DataStore<Preferences> = mock()
             whenever(hangingDataStore.data).thenReturn(MutableSharedFlow())
 
             val service = IdentityMigrationService(hangingDataStore, hangingDataStore)
 
-            // Act
-            service.hasLegacyData()
+            val result = service.hasLegacyData()
+            Assert.assertNull(result)
         }
 
     @Test(expected = IOException::class)

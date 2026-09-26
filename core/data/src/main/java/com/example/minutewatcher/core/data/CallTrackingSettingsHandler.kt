@@ -31,7 +31,7 @@ internal class CallTrackingSettingsHandler
         /**
          * Writes call duration for the specified SIM identity.
          *
-         * The call marker ensures idempotency; if a call with the given marker was already recorded,
+         * The call signature ensures idempotency; if a call with the given signature was already recorded,
          * no further updates or notifications are performed.
          */
         suspend fun writeCallDuration(
@@ -39,9 +39,9 @@ internal class CallTrackingSettingsHandler
             durationMinutes: Int,
             isFallbackUsed: Boolean,
             notify: Boolean,
-            callMarker: Long,
+            callSignature: String,
         ) {
-            val incremented = simUsageRepository.incrementMinutesUsedForCall(identity, durationMinutes, callMarker)
+            val incremented = simUsageRepository.incrementMinutesUsedForCall(identity, durationMinutes, callSignature)
             if (!incremented) return
 
             if (isFallbackUsed) {
@@ -54,7 +54,7 @@ internal class CallTrackingSettingsHandler
             }
             AppLogger.d(
                 "Call recorded: $durationMinutes min for $identity " +
-                    "(marker=$callMarker, fallback=$isFallbackUsed)",
+                    "(signature=$callSignature, fallback=$isFallbackUsed)",
             )
         }
     }

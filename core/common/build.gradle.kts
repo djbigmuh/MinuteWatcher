@@ -1,22 +1,16 @@
+import com.example.minutewatcher.buildlogic.SdkVersions
+
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.kotlinKsp)
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {
     namespace = "com.example.minutewatcher.core.common"
-
-    defaultConfig {
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
 
     @Suppress("UnstableApiUsage")
     testFixtures {
@@ -25,16 +19,6 @@ android {
 
     buildFeatures {
         buildConfig = true
-    }
-
-    testOptions {
-        unitTests.isReturnDefaultValues = true
-    }
-
-    tasks.withType<Test>().configureEach {
-        // Phase 2: Performance optimization.
-        // Shared state is handled by AppLoggerResetRule.
-        // forkEvery = 0 removed
     }
 }
 

@@ -8,15 +8,23 @@ Different languages have different rules for pluralizing nouns based on quantity
 
 ### Standard Requirements
 
-For languages with non-standard plural rules, ensure that the full set of required quantities is provided in `strings.xml`.
+The required cardinal plural categories for all supported app languages according to Unicode CLDR are listed below:
 
-- **Arabic (`ar`)**: `zero`, `one`, `two`, `few`, `many`, `other`.
-- **Russian (`ru`)**: `one`, `few`, `many`, `other`.
-- **Spanish (`es`)**: `one`, `many`, `other`.
-- **French (`fr`)**: `one`, `many`, `other`.
+| Language Tag | Language | Required Cardinal Plural Categories          | Notes                                                                             |
+|:-------------|:---------|:---------------------------------------------|:----------------------------------------------------------------------------------|
+| `en`         | English  | `one`, `other`                               |                                                                                   |
+| `ar`         | Arabic   | `zero`, `one`, `two`, `few`, `many`, `other` |                                                                                   |
+| `de`         | German   | `one`, `other`                               |                                                                                   |
+| `es`         | Spanish  | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
+| `fr`         | French   | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
+| `hi`         | Hindi    | `one`, `other`                               |                                                                                   |
+| `ja`         | Japanese | `other`                                      |                                                                                   |
+| `ru`         | Russian  | `one`, `few`, `many`, `other`                |                                                                                   |
+| `zh`         | Chinese  | `other`                                      |                                                                                   |
 
 > [!IMPORTANT]
-> Always use the full set of quantities according to CLDR/Lint requirements. Missing any quantity can cause Lint fatal errors or incorrect display at runtime.
+> Always use the full set of quantities according to CLDR/Lint requirements. Missing any quantity can cause Lint fatal
+> errors or incorrect display at runtime. Re-check this table whenever AGP, `compileSdk`, or CLDR versions are updated.
 
 ### Heuristics and Quality
 

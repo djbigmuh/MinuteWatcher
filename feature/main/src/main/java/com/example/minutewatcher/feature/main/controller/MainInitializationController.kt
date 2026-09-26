@@ -3,8 +3,6 @@ package com.example.minutewatcher.feature.main.controller
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.common.util.firstWithTimeout
-import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
@@ -26,9 +24,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainInitializationController
     @Inject
     constructor(
-        private val appSettingsRepository: AppSettingsRepository,
         private val refreshController: MainSimRefreshController,
-        private val dialogController: MainDialogController,
         private val autoResetScheduler: AutoResetScheduler,
         private val timeProvider: TimeProvider,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -42,8 +38,6 @@ class MainInitializationController
             onUpdateLastRefreshAt: (Long) -> Unit,
         ) {
             if (!claimInitialization()) return
-
-            autoResetScheduler.setup()
 
             scope.launch(ioDispatcher) {
                 val isSuccess = runInitializationLoop(lastRefreshAt, onUpdateLastRefreshAt)
@@ -142,10 +136,6 @@ class MainInitializationController
         }
 
         private suspend fun performInitializationTasks() {
-            val settings = appSettingsRepository.getAppSettings().firstWithTimeout()
-            if (settings?.onboardingCompleted == false) {
-                dialogController.setShowOnboardingDialog(show = true)
-            }
             autoResetScheduler.checkOnStart()
         }
 

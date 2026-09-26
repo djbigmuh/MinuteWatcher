@@ -4,6 +4,11 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.BuildConfig
+import com.example.minutewatcher.core.common.util.AppLogger.init
+import com.example.minutewatcher.core.common.util.AppLogger.initForTest
+import com.example.minutewatcher.core.common.util.AppLogger.resetForTest
+import com.example.minutewatcher.core.common.util.AppLogger.shutdown
+import com.example.minutewatcher.core.common.util.AppLogger.writer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,6 +30,13 @@ import java.time.format.DateTimeFormatter
  * Centralized logging utility.
  * Provides Logcat output and optional file logging (DEBUG only).
  * Guaranteed to be exception-safe for all public methods.
+ *
+ * **Invariants:**
+ * - The buffered file writer [writer] belongs exclusively to the single worker coroutines job.
+ * - Consumes the log channel sequentially in FIFO order.
+ * - Opened lazily on first log entry and closed on file rotation, file logging disablement,
+ *   [shutdown], or test state reset ([resetForTest], [initForTest], [init]).
+ * - Access from other threads is synchronized via `synchronized(this)`.
  *
  * NOTE: Suppressing TooManyFunctions as this component manages complex multi-threaded
  * logging lifecycle, including coroutine-based worker, file rotation and test utilities.
@@ -49,6 +61,9 @@ object AppLogger {
 
     @Volatile
     private var logger: Logger = AndroidLogger()
+
+    @Volatile
+    private var writer: BufferedWriter? = null
 
     private val logChannel =
         Channel<LogEntry>(
@@ -76,6 +91,7 @@ object AppLogger {
     ) {
         synchronized(this) {
             if (isShutdown) return
+            closeWriter()
             logDir = context.filesDir
             logger = customLogger
             ensureWorkerStarted()
@@ -149,40 +165,70 @@ object AppLogger {
     private var consecutiveWriteFailures = 0
     private const val MAX_WRITE_FAILURES = 3
 
-    private fun processLogEntry(entry: LogEntry) {
-        val dir = logDir ?: return
+    private fun openWriter(dir: File): BufferedWriter? =
         try {
-            writeEntryToFile(entry, dir)
-            consecutiveWriteFailures = 0
+            val logFile = File(dir, LOG_FILE_NAME)
+            val bw = BufferedWriter(OutputStreamWriter(FileOutputStream(logFile, true)), LOG_BUFFER_SIZE)
+            synchronized(this) {
+                writer = bw
+            }
+            bw
         } catch (e: Exception) {
-            consecutiveWriteFailures++
-            Log.e(TAG, "AppLogger: failed to write log to file (failure $consecutiveWriteFailures)", e)
-            if (consecutiveWriteFailures >= MAX_WRITE_FAILURES) {
-                Log.e(TAG, "AppLogger: too many failures, disabling file logging for this session")
-                isFileLoggingEnabled = false
-                // Drain the channel to Logcat
-                while (true) {
-                    val next = logChannel.tryReceive().getOrNull() ?: break
-                    Log.d(TAG, "[DRAIN] ${next.level}/$TAG: ${next.message}")
-                }
+            Log.e(TAG, "AppLogger: failed to open log file writer", e)
+            null
+        }
+
+    private fun closeWriter() {
+        synchronized(this) {
+            val currentWriter = writer
+            writer = null
+            if (currentWriter != null) {
+                runCatching { currentWriter.close() }
             }
         }
     }
 
-    private fun writeEntryToFile(
-        entry: LogEntry,
-        dir: File,
-    ) {
-        val logFile = File(dir, LOG_FILE_NAME)
-        if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
-            rotateLogFiles(dir, logFile)
-        }
+    private fun processLogEntry(entry: LogEntry) {
+        val dir = logDir ?: return
+        try {
+            val logFile = File(dir, LOG_FILE_NAME)
+            var activeWriter = writer
 
-        FileOutputStream(logFile, true).use { fos ->
-            BufferedWriter(OutputStreamWriter(fos), LOG_BUFFER_SIZE).use { writer ->
-                val timestamp = dateFormat.format(entry.timestamp)
-                writer.write("$timestamp ${entry.level}/$TAG: ${entry.message}\n")
-                writer.flush()
+            if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+                closeWriter()
+                rotateLogFiles(dir, logFile)
+                activeWriter = openWriter(dir)
+            } else if (activeWriter == null) {
+                activeWriter = openWriter(dir)
+            }
+
+            if (activeWriter == null) {
+                consecutiveWriteFailures++
+                handleWriteFailure("failed to open writer")
+                return
+            }
+
+            val timestamp = dateFormat.format(entry.timestamp)
+            activeWriter.write("$timestamp ${entry.level}/$TAG: ${entry.message}\n")
+            activeWriter.flush()
+            consecutiveWriteFailures = 0
+        } catch (e: Exception) {
+            closeWriter()
+            consecutiveWriteFailures++
+            Log.e(TAG, "AppLogger: failed to write log to file (failure $consecutiveWriteFailures)", e)
+            handleWriteFailure("write exception")
+        }
+    }
+
+    private fun handleWriteFailure(reason: String) {
+        if (consecutiveWriteFailures >= MAX_WRITE_FAILURES) {
+            Log.e(TAG, "AppLogger: too many failures ($reason), disabling file logging for this session")
+            isFileLoggingEnabled = false
+            closeWriter()
+            // Drain the channel to Logcat
+            while (true) {
+                val next = logChannel.tryReceive().getOrNull() ?: break
+                Log.d(TAG, "[DRAIN] ${next.level}/$TAG: ${next.message}")
             }
         }
     }
@@ -209,6 +255,7 @@ object AppLogger {
         synchronized(this) {
             isShutdown = true
             isFileLoggingEnabled = false
+            closeWriter()
             workerJob?.cancel()
             workerJob = null
             // We don't close the channel to avoid IllegalStateException on trySend
@@ -220,6 +267,7 @@ object AppLogger {
         synchronized(this) {
             isShutdown = false
             isFileLoggingEnabled = BuildConfig.DEBUG
+            closeWriter()
             logDir = null
             workerJob?.cancel()
             workerJob = null
@@ -239,6 +287,7 @@ object AppLogger {
         enabled: Boolean = true,
     ) {
         synchronized(this) {
+            closeWriter()
             logDir = dir
             isFileLoggingEnabled = enabled
             ensureWorkerStarted()

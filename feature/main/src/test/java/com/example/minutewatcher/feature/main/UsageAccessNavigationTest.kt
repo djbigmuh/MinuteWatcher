@@ -166,15 +166,13 @@ class UsageAccessNavigationTest {
 
         val autoResetScheduler =
             com.example.minutewatcher.feature.main.controller.AutoResetScheduler(
-                savedStateHandle,
+                mock(),
                 autoResetUseCase,
                 timeProvider,
             )
         val initController =
             com.example.minutewatcher.feature.main.controller.MainInitializationController(
-                appSettingsRepository = appSettingsRepository,
                 refreshController = refreshController,
-                dialogController = dialogController,
                 autoResetScheduler = autoResetScheduler,
                 timeProvider = timeProvider,
                 ioDispatcher = testDispatcher,

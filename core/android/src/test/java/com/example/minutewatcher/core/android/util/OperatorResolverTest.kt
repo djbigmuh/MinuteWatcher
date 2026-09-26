@@ -77,9 +77,16 @@ class OperatorResolverTest {
 
     @Test
     fun testResolve_ByMccMnc_Beeline() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "null", listOf("25099"), 1)
+        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("25099"), 1)
         assertEquals("Beeline", result.name)
         assertEquals("25099", result.matchedCode)
+    }
+
+    @Test
+    fun `resolveWithMatchedCode treats string literal null as specific display name`() {
+        val result = OperatorResolver.resolveWithMatchedCode(context, "null", listOf("25099"), 1)
+        assertEquals("null", result.name)
+        assertNull(result.matchedCode)
     }
 
     @Test
@@ -131,9 +138,12 @@ class OperatorResolverTest {
     }
 
     @Test
-    fun `isValidSpecificName rejects null string case-insensitively`() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "NULL", listOf("25001"), 0)
-        assertEquals("MTS", result.name)
+    fun `isValidSpecificName rejects generic sim pattern and empty string`() {
+        val genericResult = OperatorResolver.resolveWithMatchedCode(context, "SIM 1", listOf("25001"), 0)
+        assertEquals("MTS", genericResult.name)
+
+        val emptyResult = OperatorResolver.resolveWithMatchedCode(context, "", listOf("25001"), 0)
+        assertEquals("MTS", emptyResult.name)
     }
 
     @Test
@@ -153,8 +163,6 @@ class OperatorResolverTest {
 
     @Test
     fun `loadDbInternal loads all keys from the database`() {
-        // We use a real file if it's available in assets or just verify the logic with our json mock
-        // Since we're in a unit test with mocked assets, the 'json' field above is used.
         val candidates = listOf("25001", "25099", "21407", "25039", "23201", "23205")
         for (code in candidates) {
             val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf(code), 0)

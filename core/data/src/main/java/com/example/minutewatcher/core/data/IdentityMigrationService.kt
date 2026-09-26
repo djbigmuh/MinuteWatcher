@@ -76,16 +76,20 @@ open class IdentityMigrationService
          *
          * @param activeIdentities The set of currently active stable SIM identities to protect from being
          * treated as legacy. Defaults to an empty set.
-         * @return `true` if legacy keys are found and migration is required, `false` otherwise.
+         * @return `true` if legacy keys are found, `false` if schema is current or no legacy keys found,
+         * or `null` if the result could not be determined due to read timeout or exception.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * @throws CancellationException if the operation is cancelled.
          */
-        suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean =
+        suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean? =
             try {
                 val appPrefs =
                     appDataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-                        ?: throw IOException("App DataStore read timeout in hasLegacyData")
+                        ?: run {
+                            AppLogger.w("IdentityMigrationService: App DataStore read timeout in hasLegacyData")
+                            return null
+                        }
                 val currentSchema = appPrefs[DataStoreKeys.DATA_SCHEMA_VERSION] ?: 0
                 if (currentSchema >= DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION) {
                     false
@@ -93,18 +97,18 @@ open class IdentityMigrationService
                     val appHasLegacy = appPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
                     val simPrefs =
                         simDataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-                            ?: throw IOException("Sim DataStore read timeout in hasLegacyData")
+                            ?: run {
+                                AppLogger.w("IdentityMigrationService: Sim DataStore read timeout in hasLegacyData")
+                                return null
+                            }
                     val simHasLegacy = simPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
                     appHasLegacy || simHasLegacy
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: IOException) {
-                // Re-throw IOException to allow caller to retry upon transient failures.
-                throw e
             } catch (e: Exception) {
-                AppLogger.e("IdentityMigrationService: Permanent error checking for legacy data", e)
-                false
+                AppLogger.e("IdentityMigrationService: Error checking for legacy data", e)
+                null
             }
 
         /**

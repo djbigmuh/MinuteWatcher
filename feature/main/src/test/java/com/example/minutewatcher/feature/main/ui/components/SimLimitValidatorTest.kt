@@ -2,12 +2,15 @@ package com.example.minutewatcher.feature.main.ui.components
 
 import com.example.minutewatcher.core.model.Constants
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class SimLimitValidatorTest {
     private val required = "Required"
     private val invalid = "Invalid"
     private val range = "Range"
+    private val defaultLocale = Locale.US
 
     @Test
     fun `validate returns errors for empty strings`() {
@@ -19,9 +22,44 @@ class SimLimitValidatorTest {
                 invalid,
                 range,
                 range,
+                defaultLocale,
             ) as SimLimitValidationResult.Invalid
         assertEquals(required, result.minutesError)
         assertEquals(required, result.trafficError)
+    }
+
+    @Test
+    fun `validate returns required error for whitespace only strings`() {
+        val result =
+            SimLimitValidator.validate(
+                "   ",
+                "   ",
+                required,
+                invalid,
+                range,
+                range,
+                defaultLocale,
+            ) as SimLimitValidationResult.Invalid
+        assertEquals(required, result.minutesError)
+        assertEquals(required, result.trafficError)
+    }
+
+    @Test
+    fun `validate parses Germany grouping separator in minutes`() {
+        val result =
+            SimLimitValidator.validate(
+                "1.234",
+                "10",
+                required,
+                invalid,
+                range,
+                range,
+                Locale.GERMANY,
+            )
+        assertTrue("Result should be Valid", result is SimLimitValidationResult.Valid)
+        val valid = result as SimLimitValidationResult.Valid
+        assertEquals(1234, valid.minutes)
+        assertEquals(10f, valid.trafficGb)
     }
 
     @Test
@@ -34,6 +72,7 @@ class SimLimitValidatorTest {
                 invalid,
                 range,
                 range,
+                defaultLocale,
             ) as SimLimitValidationResult.Invalid
         assertEquals(invalid, result.minutesError)
         assertEquals(invalid, result.trafficError)
@@ -49,6 +88,7 @@ class SimLimitValidatorTest {
                 invalid,
                 range,
                 range,
+                defaultLocale,
             ) as SimLimitValidationResult.Invalid
         assertEquals(range, result.minutesError)
         assertEquals(range, result.trafficError)
@@ -56,7 +96,7 @@ class SimLimitValidatorTest {
 
     @Test
     fun `validate returns values for valid input`() {
-        val result = SimLimitValidator.validate("100", "1.5", required, invalid, range, range)
+        val result = SimLimitValidator.validate("100", "1.5", required, invalid, range, range, defaultLocale)
         val valid = result as SimLimitValidationResult.Valid
         assertEquals(100, valid.minutes)
         assertEquals(1.5f, valid.trafficGb)
@@ -72,6 +112,7 @@ class SimLimitValidatorTest {
                 invalid,
                 range,
                 range,
+                defaultLocale,
             ) as SimLimitValidationResult.Invalid
         assertEquals(invalid, result.trafficError)
     }
@@ -86,6 +127,7 @@ class SimLimitValidatorTest {
                 invalid,
                 range,
                 range,
+                defaultLocale,
             ) as SimLimitValidationResult.Invalid
         assertEquals(invalid, result.trafficError)
     }

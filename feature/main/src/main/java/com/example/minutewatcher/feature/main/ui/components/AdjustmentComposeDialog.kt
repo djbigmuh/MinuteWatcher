@@ -18,10 +18,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
@@ -59,7 +61,10 @@ internal class AdjustmentInputState(
         }
     }
 
-    fun onTextChange(newValue: TextFieldValue) {
+    fun onTextChange(
+        newValue: TextFieldValue,
+        locale: Locale,
+    ) {
         if (selectAllPending) {
             selectAllPending = false
             if (newValue.text == text.text) {
@@ -69,7 +74,7 @@ internal class AdjustmentInputState(
         }
 
         val processed = newValue
-        val normalized = NumberInputNormalizer.normalize(processed.text)
+        val normalized = NumberInputNormalizer.normalize(processed.text, locale)
 
         val selection =
             if (normalized == processed.text) {
@@ -93,15 +98,15 @@ fun AdjustmentComposeDialog(
     onDismiss: () -> Unit,
     onConfirm: (Float) -> Unit,
 ) {
+    val locale = FormatUtils.getLocale(LocalContext.current)
     val initialValue = maxOf(0f, currentValue)
     val initialText =
-        remember(currentValue, isMinutes) {
+        remember(currentValue, isMinutes, locale) {
             if (isMinutes) {
                 initialValue.toInt().toString()
             } else {
-                // Locale.getDefault() is used because the user should see their local decimal separator.
-                // The input is then normalized by NumberInputNormalizer.
-                String.format(Locale.getDefault(), "%.1f", initialValue)
+                // Format with the effective UI locale to display the user's localized decimal separator.
+                String.format(locale, "%.1f", initialValue)
             }
         }
 
@@ -128,11 +133,12 @@ fun AdjustmentComposeDialog(
             AdjustmentDialogContent(
                 state = state,
                 isMinutes = isMinutes,
+                locale = locale,
             )
         },
         confirmButton = {
             Button(onClick = {
-                val normalized = NumberInputNormalizer.normalize(state.text.text)
+                val normalized = NumberInputNormalizer.normalize(state.text.text, locale)
                 val value = normalized.toFloatOrNull()
                 if (value == null) {
                     state.errorText = invalidNumberMsg
@@ -157,11 +163,12 @@ fun AdjustmentComposeDialog(
 private fun AdjustmentDialogContent(
     state: AdjustmentInputState,
     isMinutes: Boolean,
+    locale: Locale,
 ) {
     Column {
         OutlinedTextField(
             value = state.text,
-            onValueChange = state::onTextChange,
+            onValueChange = { state.onTextChange(it, locale) },
             label = {
                 Text(
                     stringResource(

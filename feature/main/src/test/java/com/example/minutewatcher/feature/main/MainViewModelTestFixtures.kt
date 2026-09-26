@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
@@ -154,7 +155,8 @@ abstract class MainViewModelTestFixtures {
         scope: CoroutineScope,
         dialogController: MainDialogController = MainDialogController(savedStateHandle),
     ): MainViewModel {
-        val autoResetScheduler = AutoResetScheduler(savedStateHandle, autoResetUseCase, timeProvider)
+        val autoResetScheduleRepository: AutoResetScheduleRepository = mock()
+        val autoResetScheduler = AutoResetScheduler(autoResetScheduleRepository, autoResetUseCase, timeProvider)
         val refreshController =
             MainSimRefreshController(
                 usageUseCase = usageUseCase,
@@ -163,9 +165,7 @@ abstract class MainViewModelTestFixtures {
             )
         val initController =
             MainInitializationController(
-                appSettingsRepository = appSettingsRepository,
                 refreshController = refreshController,
-                dialogController = dialogController,
                 autoResetScheduler = autoResetScheduler,
                 timeProvider = timeProvider,
                 ioDispatcher = testDispatcher,

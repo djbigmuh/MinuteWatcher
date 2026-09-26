@@ -9,14 +9,12 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.kotlin.any
 import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import kotlin.time.Duration.Companion.minutes
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelRefreshTest : MainViewModelTestFixtures() {
@@ -224,68 +222,5 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
                 updateWidget = eq(value = true),
                 force = eq(value = false),
             )
-        }
-
-    @Test
-    fun `autoResetScheduler uses monotonic time and handles reboot`() =
-        testScope.runTest {
-            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
-            createViewModel(backgroundScope)
-            testScheduler.advanceUntilIdle()
-
-            verify(autoResetUseCase).performAutoReset(shouldNotify = eq(value = false))
-            clearInvocations(autoResetUseCase)
-
-            testScheduler.advanceTimeBy(30.minutes)
-
-            createViewModel(backgroundScope)
-            testScheduler.advanceUntilIdle()
-
-            verify(autoResetUseCase, never()).performAutoReset(shouldNotify = any())
-
-            savedStateHandle["last_auto_reset_check"] = 10_000_000L
-
-            createViewModel(backgroundScope)
-            testScheduler.advanceUntilIdle()
-
-            verify(autoResetUseCase).performAutoReset(shouldNotify = eq(value = false))
-        }
-
-    @Test
-    fun `autoResetScheduler can be retried after failure`() =
-        testScope.runTest {
-            org.mockito.kotlin
-                .doThrow(RuntimeException("First failure"))
-                .whenever(autoResetUseCase)
-                .performAutoReset(shouldNotify = eq(value = false))
-
-            createViewModel(backgroundScope)
-            testScheduler.advanceUntilIdle()
-
-            // AutoResetScheduler is private in MainViewModel but it's initialized in setup.
-            // For testing the scheduler specifically, we might need to use its own test class
-            // or reflectively access it. In MainViewModelTest, it was testing viaVM creation.
-            // Let's reuse the logic from MainViewModelTest.
-
-            val scheduler =
-                com.example.minutewatcher.feature.main.controller.AutoResetScheduler(
-                    savedStateHandle,
-                    autoResetUseCase,
-                    timeProvider,
-                )
-
-            kotlin.runCatching { scheduler.checkOnStart() }
-
-            verify(autoResetUseCase, times(2))
-                .performAutoReset(shouldNotify = eq(value = false)) // One from VM init, one from scheduler.checkOnStart
-
-            org.mockito.kotlin
-                .doReturn(true)
-                .whenever(autoResetUseCase)
-                .performAutoReset(shouldNotify = eq(value = false))
-
-            scheduler.checkOnStart()
-
-            verify(autoResetUseCase, times(3)).performAutoReset(shouldNotify = eq(value = false))
         }
 }

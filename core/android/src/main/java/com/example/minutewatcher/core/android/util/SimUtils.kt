@@ -21,22 +21,26 @@ object SimUtils {
     fun getShortOperatorName(
         context: Context,
         operatorName: String,
-    ): String {
-        val localizedContext = getLocalizedContext(context)
-        return try {
+        slot: Int,
+    ): String =
+        try {
             val resId = OperatorResolver.getOperatorResourceId(operatorName)
             when {
-                resId != null -> getStringSafe(localizedContext, resId, operatorName.uppercase(Locale.ROOT))
+                resId != null -> getStringSafe(context, resId, operatorName.uppercase(Locale.ROOT))
                 operatorName.isNotEmpty() -> truncateName(operatorName)
-                else -> localizedContext.getString(R.string.no_sim_found)
+                else -> genericOperatorName(context, slot)
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             AppLogger.e("Error resolving short operator name for: $operatorName", e)
-            if (operatorName.isNotEmpty()) truncateName(operatorName) else "SIM"
+            if (operatorName.isNotEmpty()) truncateName(operatorName) else genericOperatorName(context, slot)
         }
-    }
+
+    private fun genericOperatorName(
+        context: Context,
+        slot: Int,
+    ): String = context.getString(R.string.operator_generic, slot + 1)
 
     private fun truncateName(name: String): String =
         if (name.length > MAX_OPERATOR_NAME_LENGTH) {
@@ -62,32 +66,10 @@ object SimUtils {
             default
         }
 
-    // Localized context is constructed from AppCompatDelegate.getApplicationLocales(),
-    // which on API 33+ are provided by the platform per-app languages mechanism
-    // (declared via android:localeConfig in the manifest), and on older versions
-    // by the AppCompat storage mechanism.
-    private fun getLocalizedContext(context: Context): Context {
-        val appLocales =
-            androidx.appcompat.app.AppCompatDelegate
-                .getApplicationLocales()
-        if (!appLocales.isEmpty) {
-            val locale = appLocales.get(0)
-            if (locale != null) {
-                val config = android.content.res.Configuration(context.resources.configuration)
-                config.setLocale(locale)
-                return context.createConfigurationContext(config)
-            }
-        }
-        return context
-    }
-
     /**
      * Checks if the given operator name indicates an inactive or unidentifiable SIM.
      *
-     * **Reliability criteria:** some firmwares return the literal "null" string
-     * when a SIM is present but its metadata is not yet available, instead of
-     * returning a null or empty value as defined in AOSP.
+     * A SIM card is considered unidentifiable if its operator name is null or an empty string.
      */
-    fun isInactiveSim(operatorName: String?): Boolean =
-        operatorName.isNullOrEmpty() || operatorName.equals("null", ignoreCase = true)
+    fun isInactiveSim(operatorName: String?): Boolean = operatorName.isNullOrEmpty()
 }

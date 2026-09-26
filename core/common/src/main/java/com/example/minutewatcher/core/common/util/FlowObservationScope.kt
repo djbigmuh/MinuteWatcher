@@ -1,8 +1,9 @@
 package com.example.minutewatcher.core.common.util
 
-import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -11,6 +12,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Generalized class for managing a data stream observation cycle.
@@ -20,6 +22,10 @@ import kotlin.coroutines.EmptyCoroutineContext
  * **Thread Safety:** Safe to call from any context. All state modifications are protected by a [Mutex].
  * **Semantics:** Uses `collectLatest` which ensures only the latest value is processed,
  * cancelling previous value processing if a new one arrives.
+ * **Handover Invariant:** Handover between observers is performed sequentially.
+ * Waiting for the completion of the previous observer is bounded by [Constants.Flow.SHORT_TIMEOUT_MS].
+ * If the previous observer fails to complete within this timeout, the new observer launches
+ * without further waiting, logging the event.
  *
  * @param T The type of data being observed.
  * @param scope The [CoroutineScope] in which to launch observation jobs.
@@ -75,11 +81,26 @@ class FlowObservationScope<T>(
             startObservationLocked()
         }
 
-    private fun startObservationLocked(): Job {
+    private suspend fun startObservationLocked(): Job {
         val flow = requireNotNull(lastFlow) { "FlowObservationScope($tag): no flow registered for observation" }
         val collector = requireNotNull(lastCollector) { "FlowObservationScope($tag): no collector registered" }
         val context = lastContext ?: EmptyCoroutineContext
-        _currentJob?.cancel()
+
+        val previous = _currentJob
+        _currentJob = null
+        if (previous != null) {
+            val completed =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    previous.cancelAndJoin()
+                }
+            if (completed == null) {
+                AppLogger.w(
+                    "FlowObservationScope($tag): previous observer did not complete " +
+                        "within ${Constants.Flow.SHORT_TIMEOUT_MS}ms timeout; starting new observer without waiting",
+                )
+            }
+        }
+
         val newJob =
             scope.launch(context) {
                 flow.collectLatest { collector(it) }

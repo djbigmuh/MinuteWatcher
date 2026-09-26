@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -19,6 +20,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -34,16 +36,24 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
 
             // Act
-            callTracker.onCallStarted(subId = 1)
-            testScheduler.advanceTimeBy(3000.milliseconds)
+            var caughtException: IOException? = null
+            try {
+                callTracker.onCallStarted(subId = 1)
+            } catch (e: IOException) {
+                caughtException = e
+            }
+
             advanceUntilIdle()
 
             // Assert: verify that error status was set and call start state was NOT saved
+            assertNotNull("Expected IOException on settings timeout, but none was thrown", caughtException)
             val status = callTracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            val errorStatus = status as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, errorStatus.type)
             assertTrue(
-                "Expected timeout message, but was: ${(status as TrackingStatus.Error).message}",
-                status.message?.contains("Timeout") == true,
+                "Expected timeout message, but was: ${errorStatus.message}",
+                errorStatus.message?.contains("Timeout") == true,
             )
             verify(callSessionRepository, never()).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
         }
@@ -60,7 +70,7 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
             whenever(appSettingsRepository.getAppSettings()).thenAnswer {
                 attempts++
                 if (attempts < 3) {
-                    flow<AppSettings> { throw java.io.IOException("Transient error") }
+                    flow<AppSettings> { throw IOException("Transient error") }
                 } else {
                     flowOf(AppSettings(callTrackingEnabled = true))
                 }

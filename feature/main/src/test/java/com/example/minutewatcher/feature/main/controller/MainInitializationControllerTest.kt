@@ -1,13 +1,10 @@
 package com.example.minutewatcher.feature.main.controller
 
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.RefreshResult
-import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -25,9 +22,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainInitializationControllerTest {
-    private val appSettingsRepository: AppSettingsRepository = mock()
     private val refreshController: MainSimRefreshController = mock()
-    private val dialogController: MainDialogController = mock()
     private val autoResetScheduler: AutoResetScheduler = mock()
     private val timeProvider: TimeProvider = mock()
     private val testDispatcher = StandardTestDispatcher()
@@ -37,16 +32,9 @@ class MainInitializationControllerTest {
 
     @Before
     fun setup() {
-        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
-        whenever(
-            appSettingsRepository.getAppSettings(),
-        ).thenReturn(MutableStateFlow(AppSettings(onboardingCompleted = true)))
-
         controller =
             MainInitializationController(
-                appSettingsRepository = appSettingsRepository,
                 refreshController = refreshController,
-                dialogController = dialogController,
                 autoResetScheduler = autoResetScheduler,
                 timeProvider = timeProvider,
                 ioDispatcher = testDispatcher,

@@ -2,7 +2,6 @@ package com.example.minutewatcher
 
 import android.app.Application
 import android.os.StrictMode
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
@@ -34,7 +33,6 @@ class MinuteWatcherApp :
 
     override fun onCreate() {
         super.onCreate()
-        AppCompatDelegate.setAutoStoreLocales(true)
         AppLogger.init(this)
 
         WorkManager.initialize(this, workManagerConfiguration)
@@ -68,17 +66,4 @@ class MinuteWatcherApp :
                 .Builder()
                 .setWorkerFactory(workerFactory)
                 .build()
-
-    private companion object {
-        @Suppress("VariableName")
-        val AppCompatDelegate = AutoStoreLocalesDelegate
-    }
-
-    private object AutoStoreLocalesDelegate {
-        @Suppress("UNUSED_PARAMETER", "UNUSED_VARIABLE")
-        fun setAutoStoreLocales(autoStore: Boolean) {
-            // Auto-store locales for AppCompat is enabled via AppLocalesMetadataHolderService in AndroidManifest.xml
-            val delegateClass = AppCompatDelegate::class.java
-        }
-    }
 }

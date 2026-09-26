@@ -182,4 +182,5 @@
     <string name="toggle_auto_reset_content_desc">تفعيل أو تعطيل إعادة الضبط التلقائي</string>
     <string name="menu_language_content_desc">تغيير اللغة</string>
     <string name="menu_theme_content_desc">تغيير السمة</string>
+    <string name="navigate_up_content_desc">التنقل إلى الأعلى</string>
 </resources>

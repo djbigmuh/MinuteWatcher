@@ -467,19 +467,23 @@ class TrafficTracker
         ) {
             val result = targetResolver.resolve(activeSims)
 
-            if (result is TrafficTargetResolver.TargetResult.InconsistentFirmware) {
-                baselineManager.cleanupRetries(emptySet())
-                updateStatusOnError(
-                    startElapsed,
-                    "Inconsistent firmware state",
-                    type = TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                )
+            if (result is TrafficTargetResolver.TargetResult.StaleInput) {
+                AppLogger.w("TrafficTracker: stale SIM state during target resolution, skipping this cycle")
                 return
             }
 
             if (result is TrafficTargetResolver.TargetResult.NoDefaultData) {
                 AppLogger.d("TrafficTracker: no default data SIM, transitioning to Idle")
                 transitionStatus(TrackingStatus.Idle)
+                return
+            }
+
+            if (result is TrafficTargetResolver.TargetResult.Failed) {
+                updateStatusOnError(
+                    startElapsed,
+                    result.message ?: "Traffic target resolution failed",
+                    type = TrackingStatus.ErrorType.UNKNOWN,
+                )
                 return
             }
 

@@ -20,12 +20,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35]) // behavior-specific SDK
 class SimLimitComposeDialogTest {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    private val defaultLocale = Locale.US
 
     @Test
     fun resetLimits_showsConfirmationDialog() {
@@ -71,7 +74,7 @@ class SimLimitComposeDialogTest {
     fun `minutes - old 0, types 5 - results in 5`() {
         val state = SimLimitState("0", "0.0", false)
         // Simulate typing '5' at the end of "0"
-        state.onMinutesChange(TextFieldValue("05", selection = TextRange(2)))
+        state.onMinutesChange(TextFieldValue("05", selection = TextRange(2)), defaultLocale)
         assertEquals("5", state.minutesText.text)
     }
 
@@ -79,7 +82,7 @@ class SimLimitComposeDialogTest {
     fun `minutes - old 0, types 0 - results in 0`() {
         val state = SimLimitState("0", "0.0", false)
         // Simulate typing '0' at the end of "0"
-        state.onMinutesChange(TextFieldValue("00", selection = TextRange(2)))
+        state.onMinutesChange(TextFieldValue("00", selection = TextRange(2)), defaultLocale)
         assertEquals("0", state.minutesText.text)
     }
 
@@ -88,7 +91,7 @@ class SimLimitComposeDialogTest {
         val state = SimLimitState("0", "0.0", false)
         state.selectAllMinutes()
         // Simulate replacing selection "0" with "7"
-        state.onMinutesChange(TextFieldValue("7", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("7", selection = TextRange(1)), defaultLocale)
         assertEquals("7", state.minutesText.text)
     }
 
@@ -97,7 +100,7 @@ class SimLimitComposeDialogTest {
         val state = SimLimitState("12", "0.0", false)
         state.selectAllMinutes()
         // Simulate replacing selection "12" with "5"
-        state.onMinutesChange(TextFieldValue("5", selection = TextRange(1)))
+        state.onMinutesChange(TextFieldValue("5", selection = TextRange(1)), defaultLocale)
         assertEquals("5", state.minutesText.text)
     }
 
@@ -105,7 +108,7 @@ class SimLimitComposeDialogTest {
     fun `minutes - old 0, paste 100 - results in 100`() {
         val state = SimLimitState("0", "0.0", false)
         // Paste "100" at the end: "0100"
-        state.onMinutesChange(TextFieldValue("0100", selection = TextRange(4)))
+        state.onMinutesChange(TextFieldValue("0100", selection = TextRange(4)), defaultLocale)
         assertEquals("100", state.minutesText.text)
     }
 
@@ -114,7 +117,7 @@ class SimLimitComposeDialogTest {
         val state = SimLimitState("500", "0.0", false)
         state.selectAllMinutes()
         // Replace "500" with "100"
-        state.onMinutesChange(TextFieldValue("100", selection = TextRange(3)))
+        state.onMinutesChange(TextFieldValue("100", selection = TextRange(3)), defaultLocale)
         assertEquals("100", state.minutesText.text)
     }
 
@@ -122,7 +125,7 @@ class SimLimitComposeDialogTest {
     fun `traffic - old 0_0, types 5 - results in 5`() {
         val state = SimLimitState("0", "0.0", false)
         // Simulate typing '5' at the end: "0.05"
-        state.onTrafficChange(TextFieldValue("0.05", selection = TextRange(4)))
+        state.onTrafficChange(TextFieldValue("0.05", selection = TextRange(4)), defaultLocale)
         assertEquals("5", state.trafficText.text)
     }
 
@@ -131,7 +134,7 @@ class SimLimitComposeDialogTest {
         val state = SimLimitState("0", "0.0", false)
         state.selectAllTraffic()
         // Replace "0.0" with "15.5"
-        state.onTrafficChange(TextFieldValue("15.5", selection = TextRange(4)))
+        state.onTrafficChange(TextFieldValue("15.5", selection = TextRange(4)), defaultLocale)
         assertEquals("15.5", state.trafficText.text)
     }
 
@@ -140,7 +143,7 @@ class SimLimitComposeDialogTest {
         val state = SimLimitState("0", "5", false)
         state.selectAllTraffic()
         // Replace "5" with "500"
-        state.onTrafficChange(TextFieldValue("500", selection = TextRange(3)))
+        state.onTrafficChange(TextFieldValue("500", selection = TextRange(3)), defaultLocale)
         assertEquals("500", state.trafficText.text)
     }
 
@@ -148,7 +151,7 @@ class SimLimitComposeDialogTest {
     fun `traffic - old 0, paste 10_5 - results in 10_5`() {
         val state = SimLimitState("0", "0", false)
         // Paste "10.5" at the end: "010.5"
-        state.onTrafficChange(TextFieldValue("010.5", selection = TextRange(5)))
+        state.onTrafficChange(TextFieldValue("010.5", selection = TextRange(5)), defaultLocale)
         assertEquals("10.5", state.trafficText.text)
     }
 
@@ -156,7 +159,7 @@ class SimLimitComposeDialogTest {
     fun `limit exceeded - ignores input`() {
         val state = SimLimitState("0", "0", false)
         // Max 6 chars for minutes. Try to type 7th.
-        state.onMinutesChange(TextFieldValue("1234567", selection = TextRange(7)))
+        state.onMinutesChange(TextFieldValue("1234567", selection = TextRange(7)), defaultLocale)
         assertEquals("0", state.minutesText.text)
     }
 

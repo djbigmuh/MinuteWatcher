@@ -623,6 +623,50 @@ class TrafficTrackerTest {
         }
 
     @Test
+    fun `processActiveSimsTraffic when StaleInput does not change tracker status and does not cleanup retries`() =
+        runTest {
+            val tracker = startTracker()
+            val initialStatus = tracker.status.value // Active
+
+            // Simulate StaleInput: subId 99 not found in activeSims
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(99)
+
+            tracker.updateTrafficUsage()
+            runCurrent()
+
+            assertEquals(initialStatus, tracker.status.value)
+            verify(simUsageResetRepository, never()).cleanupBaselineRetries(eq(emptySet()))
+        }
+
+    @Test
+    fun `processActiveSimsTraffic when Failed sets Error status with UNKNOWN type`() =
+        runTest {
+            val tracker = startTracker()
+
+            val invalidSim =
+                ActiveSimInfo(
+                    identity = SimIdentity("sim_99", 1, 99, IdentitySource.ICCID, isStable = true),
+                    slotIndex = 99,
+                    subscriptionId = 1,
+                    iccId = "sim_99",
+                    displayName = "SIM 99",
+                    carrierName = "Carrier",
+                    mccMnc = "25001",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(invalidSim)))
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+
+            tracker.updateTrafficUsage()
+            runCurrent()
+
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
     fun `updateTrafficUsage sets Idle when no active SIM`() =
         runTest {
             val tracker = startTracker()

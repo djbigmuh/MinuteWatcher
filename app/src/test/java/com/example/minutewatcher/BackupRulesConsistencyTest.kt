@@ -58,6 +58,45 @@ class BackupRulesConsistencyTest {
     }
 
     @Test
+    fun `backup rules exclude log files from cloud backup and device transfer`() {
+        val dataExtractionParser = context.resources.getXml(R.xml.data_extraction_rules)
+        val dataExtractionRules = parseDataExtractionRules(dataExtractionParser)
+
+        val fullBackupParser = context.resources.getXml(R.xml.full_backup_content)
+        val fullBackupContent = parseFullBackupContent(fullBackupParser)
+
+        val expectedLog = BackupRule("file", "logs.txt")
+        val expectedOldLog = BackupRule("file", "logs.old.txt")
+
+        assertTrue(
+            "full_backup_content must exclude logs.txt",
+            fullBackupContent.excludes.contains(expectedLog),
+        )
+        assertTrue(
+            "full_backup_content must exclude logs.old.txt",
+            fullBackupContent.excludes.contains(expectedOldLog),
+        )
+
+        assertTrue(
+            "cloud-backup must exclude logs.txt",
+            dataExtractionRules.cloudBackupExcludes.contains(expectedLog),
+        )
+        assertTrue(
+            "cloud-backup must exclude logs.old.txt",
+            dataExtractionRules.cloudBackupExcludes.contains(expectedOldLog),
+        )
+
+        assertTrue(
+            "device-transfer must exclude logs.txt",
+            dataExtractionRules.deviceTransferExcludes.contains(expectedLog),
+        )
+        assertTrue(
+            "device-transfer must exclude logs.old.txt",
+            dataExtractionRules.deviceTransferExcludes.contains(expectedOldLog),
+        )
+    }
+
+    @Test
     fun `device transfer inclusions contain shared preferences and datastore`() {
         val parser = context.resources.getXml(R.xml.data_extraction_rules)
         val rules = parseDataExtractionRules(parser)

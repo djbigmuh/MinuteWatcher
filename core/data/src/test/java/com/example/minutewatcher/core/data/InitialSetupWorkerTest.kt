@@ -9,9 +9,13 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.Logger
+import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
@@ -23,11 +27,13 @@ import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -56,7 +62,7 @@ class InitialSetupWorkerTest {
     private val migrationService: IdentityMigrationService = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val workScheduler: WorkScheduler = mock()
-    private val permissionManager: com.example.minutewatcher.core.common.util.PermissionManager = mock()
+    private val permissionManager: PermissionManager = mock()
 
     private lateinit var deps: InitialSetupWorkerDependencies
     private lateinit var context: Context
@@ -64,8 +70,8 @@ class InitialSetupWorkerTest {
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext<Application>()
-        val logger: com.example.minutewatcher.core.common.util.Logger = mock()
-        com.example.minutewatcher.core.common.util.AppLogger
+        val logger: Logger = mock()
+        AppLogger
             .init(context, logger)
 
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -81,7 +87,7 @@ class InitialSetupWorkerTest {
                 capabilities = emptyList(),
             )
 
-        kotlinx.coroutines.runBlocking {
+        runBlocking {
             whenever(migrationFlagsRepository.setMigrationV1Completed(any())).thenReturn(Unit)
             whenever(migrationFlagsRepository.setMigrationV1Skipped(any())).thenReturn(Unit)
             whenever(migrationFlagsRepository.setMigrationIdentityStabilityCompleted(any())).thenReturn(Unit)
@@ -89,7 +95,7 @@ class InitialSetupWorkerTest {
             whenever(migrationService.hasLegacyData(any())).thenReturn(false)
             whenever(migrationService.hasLegacyData()).thenReturn(false)
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Success(emptySnapshot),
             )
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
@@ -116,11 +122,11 @@ class InitialSetupWorkerTest {
     private fun createWorker(): InitialSetupWorker =
         TestListenableWorkerBuilder<InitialSetupWorker>(context)
             .setWorkerFactory(
-                object : androidx.work.WorkerFactory() {
+                object : WorkerFactory() {
                     override fun createWorker(
                         appContext: Context,
                         workerClassName: String,
-                        workerParameters: androidx.work.WorkerParameters,
+                        workerParameters: WorkerParameters,
                     ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
                 },
             ).build()
@@ -147,11 +153,11 @@ class InitialSetupWorkerTest {
                 TestListenableWorkerBuilder<InitialSetupWorker>(context)
                     .setInputData(inputData)
                     .setWorkerFactory(
-                        object : androidx.work.WorkerFactory() {
+                        object : WorkerFactory() {
                             override fun createWorker(
                                 appContext: Context,
                                 workerClassName: String,
-                                workerParameters: androidx.work.WorkerParameters,
+                                workerParameters: WorkerParameters,
                             ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
                         },
                     ).build()
@@ -204,6 +210,64 @@ class InitialSetupWorkerTest {
         }
 
     @Test
+    fun `doWork retries when hasLegacyData returns null and runAttemptCount is under max`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
+            whenever(migrationService.hasLegacyData(any())).thenReturn(null)
+            whenever(migrationService.hasLegacyData()).thenReturn(null)
+
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setRunAttemptCount(0)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
+                        },
+                    ).build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(migrationFlagsRepository, never()).setMigrationV1Completed(completed = true)
+            verify(migrationService, never()).markSchemaCurrent()
+        }
+
+    @Test
+    fun `doWork skips migration permanently when hasLegacyData returns null after max attempts`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
+            whenever(migrationService.hasLegacyData(any())).thenReturn(null)
+            whenever(migrationService.hasLegacyData()).thenReturn(null)
+
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setRunAttemptCount(3)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
+                        },
+                    ).build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(migrationFlagsRepository).setMigrationV1Completed(completed = true)
+            verify(migrationFlagsRepository).setMigrationV1Skipped(MigrationSkipReason.LEGACY_DATA_CHECK_FAILED)
+            verify(migrationFlagsRepository).setMigrationIdentityStabilityCompleted(completed = true)
+            verify(migrationService, never()).markSchemaCurrent()
+        }
+
+    @Test
     fun `doWork defers migration when no permission but legacy data exists`() =
         runTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
@@ -250,7 +314,6 @@ class InitialSetupWorkerTest {
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
-            // Ensure suspending functions are mocked explicitly
             whenever(migrationService.hasLegacyData(any())).thenReturn(false)
             whenever(migrationService.migrateLegacyData(any())).thenReturn(
                 IdentityMigrationService.MigrationOutcome(
@@ -308,7 +371,6 @@ class InitialSetupWorkerTest {
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
-            // Mock failure
             whenever(migrationService.migrateLegacyData(any()))
                 .thenReturn(IdentityMigrationService.MigrationOutcome(failures = 1))
 
@@ -321,16 +383,15 @@ class InitialSetupWorkerTest {
     @Test
     fun `doWork completes migration after max retries even with failures`() =
         runTest {
-            // Setup worker with attempt count 3
             val worker =
                 TestListenableWorkerBuilder<InitialSetupWorker>(context)
                     .setRunAttemptCount(3)
                     .setWorkerFactory(
-                        object : androidx.work.WorkerFactory() {
+                        object : WorkerFactory() {
                             override fun createWorker(
                                 appContext: Context,
                                 workerClassName: String,
-                                workerParameters: androidx.work.WorkerParameters,
+                                workerParameters: WorkerParameters,
                             ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
                         },
                     ).build()
@@ -344,14 +405,13 @@ class InitialSetupWorkerTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult.Success(
+                RefreshResult.Success(
                     mock(),
                 ),
             )
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
-            // Mock failure
             whenever(migrationService.migrateLegacyData(any()))
                 .thenReturn(IdentityMigrationService.MigrationOutcome(failures = 1))
 
@@ -415,7 +475,7 @@ class InitialSetupWorkerTest {
                     usageUseCase =
                         object : FakeUsageUseCase() {
                             override suspend fun refreshOperatorInfo() {
-                                kotlinx.coroutines.delay(1000000L)
+                                delay(1000000L)
                             }
                         },
                     migrationService = deps.migrationService,
@@ -427,11 +487,11 @@ class InitialSetupWorkerTest {
             val worker =
                 TestListenableWorkerBuilder<InitialSetupWorker>(context)
                     .setWorkerFactory(
-                        object : androidx.work.WorkerFactory() {
+                        object : WorkerFactory() {
                             override fun createWorker(
                                 appContext: Context,
                                 workerClassName: String,
-                                workerParameters: androidx.work.WorkerParameters,
+                                workerParameters: WorkerParameters,
                             ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, testDeps)
                         },
                     ).build()
@@ -501,11 +561,9 @@ class InitialSetupWorkerTest {
 
             Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
-            // No emission within 15s timeout
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
-            // Migration deferred because list is empty and legacy data exists
             verify(migrationFlagsRepository, never()).setMigrationV1Completed(completed = true)
             verify(migrationService, never()).markSchemaCurrent()
         }
@@ -516,11 +574,10 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
 
-            // Flow that is NOT a StateFlow and hangs
             val nonStateFlow =
                 flow {
                     emit(emptyList<ActiveSimInfo>())
-                    kotlinx.coroutines.awaitCancellation()
+                    awaitCancellation()
                 }
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(nonStateFlow)
 

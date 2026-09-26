@@ -4,4 +4,12 @@
     <!-- Only device-to-device transfer is allowed for these files (configured in data_extraction_rules.xml) -->
     <exclude domain="file" path="datastore/" />
     <exclude domain="sharedpref" path="." />
+
+    <!-- Diagnostic log files never leave the device -->
+    <exclude
+        domain="file"
+        path="logs.txt" />
+    <exclude
+        domain="file"
+        path="logs.old.txt" />
 </full-backup-content>

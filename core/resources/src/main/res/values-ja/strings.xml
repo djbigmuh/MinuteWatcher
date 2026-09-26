@@ -168,4 +168,5 @@
     <string name="toggle_auto_reset_content_desc">自動リセットを有効または無効にする</string>
     <string name="menu_language_content_desc">言語を変更</string>
     <string name="menu_theme_content_desc">テーマを変更</string>
+    <string name="navigate_up_content_desc">上に移動</string>
 </resources>

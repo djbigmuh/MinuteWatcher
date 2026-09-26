@@ -1,3 +1,5 @@
+import com.example.minutewatcher.buildlogic.SdkVersions
+
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.hiltAndroid)
@@ -6,29 +8,14 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {
     namespace = "com.example.minutewatcher.feature.widget"
 
-    defaultConfig {
-    }
-
     buildFeatures {
         compose = true
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-            isReturnDefaultValues = true
-        }
     }
 }
 
@@ -50,8 +37,6 @@ dependencies {
     implementation(platform(libs.androidxComposeBom))
     implementation(libs.androidxComposeRuntime)
     implementation(libs.androidxUi)
-    implementation(libs.androidxMaterialIconsCore)
-    implementation(libs.androidxMaterialIconsExtended)
     implementation(libs.androidxGlanceAppwidget)
     implementation(libs.androidxGlanceMaterial3)
 

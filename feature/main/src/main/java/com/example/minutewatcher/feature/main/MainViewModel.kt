@@ -118,7 +118,7 @@ class MainViewModel
                     val isUiBlocked = data.onboardingDialogShowing || data.usageAccess
 
                     // Logic for showing Onboarding Dialog
-                    if (shouldShowOnboarding && !isUiBlocked) {
+                    if (shouldShowOnboarding && !isUiBlocked && dialogController.claimOnboardingPrompt()) {
                         AppLogger.d("MainViewModel: Triggering onboarding dialog")
                         dialogController.setShowOnboardingDialog(true)
                     }

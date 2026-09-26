@@ -1,33 +1,15 @@
+import com.example.minutewatcher.buildlogic.SdkVersions
+
 plugins {
     id("minutewatcher.android-library")
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {
     namespace = "com.example.minutewatcher.core.domain"
-
-    defaultConfig {
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-        }
-    }
-
-    tasks.withType<Test>().configureEach {
-        // Phase 2: Performance optimization.
-        // Module has some Robolectric tests but no complex global state.
-        // forkEvery = 0 removed
-    }
 }
 
 dependencies {

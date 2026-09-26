@@ -624,6 +624,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             val subId = 1
             val identity = "id_1"
             val bootTime = 5000L
+            val signature = "1000|5000"
             val durationMinutes = 5
 
             // Arrange: Setup active session
@@ -633,7 +634,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(identity))
 
             // Mock successful increment
-            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime)))
+            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(signature)))
                 .thenReturn(true)
 
             // Mock failure during session cleanup
@@ -651,11 +652,11 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
 
             // Verify increment happened once
             verify(simUsageRepository, times(1))
-                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime))
+                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(signature))
 
             // Act: Second attempt (Retry)
             // Now mock that it was already counted
-            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime)))
+            whenever(simUsageRepository.incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(signature)))
                 .thenReturn(false)
             // And cleanup now succeeds
             whenever(callSessionRepository.clearCallSession(eq(subId))).thenReturn(Unit)
@@ -665,7 +666,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
 
             // Verify increment called again but with false result (idempotency)
             verify(simUsageRepository, times(2))
-                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(bootTime))
+                .incrementMinutesUsedForCall(eq(identity), eq(durationMinutes), eq(signature))
 
             // Verify cleanup eventually succeeded
             verify(callSessionRepository, times(2)).clearCallSession(eq(subId))

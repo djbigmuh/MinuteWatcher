@@ -39,22 +39,28 @@ class AppLoggerRaceTest {
         if (marker != null) {
             AppLogger.d(marker)
         }
-        val start = System.currentTimeMillis()
-        while (AppLogger.hasPendingLogsForTest() && System.currentTimeMillis() - start < timeoutMs) {
-            Thread.sleep(20)
+        pollUntil(timeoutMs, "Pending logs channel drain") {
+            !AppLogger.hasPendingLogsForTest()
         }
         if (marker == null) return
 
         val logFile = File(logDir, "logs.txt")
-        while (System.currentTimeMillis() - start < timeoutMs) {
-            if (logFile.exists()) {
-                val content = runCatching { logFile.readText() }.getOrDefault("")
-                if (content.contains(marker)) {
-                    return
-                }
-            }
-            Thread.sleep(20)
+        pollUntil(timeoutMs, "Log marker '$marker' in logs.txt") {
+            logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
         }
+    }
+
+    private fun pollUntil(
+        timeoutMs: Long = 10000L,
+        message: String,
+        condition: () -> Boolean,
+    ) {
+        val maxIterations = (timeoutMs / 10).toInt().coerceAtLeast(1)
+        repeat(maxIterations) {
+            if (condition()) return
+            Thread.sleep(10)
+        }
+        assertTrue("Timeout waiting for condition: $message", condition())
     }
 
     @Test
@@ -87,8 +93,6 @@ class AppLoggerRaceTest {
         assertTrue("Log file should exist", logFile.exists())
 
         val content = logFile.readText()
-        // We might drop some logs if the channel capacity (8192) is exceeded,
-        // but 20 * 100 = 2000 which is well within capacity.
         assertTrue("Should contain logs from different threads", content.contains("Thread 0 log 0"))
         assertTrue("Should contain logs from different threads", content.contains("Thread 19 log 99"))
     }

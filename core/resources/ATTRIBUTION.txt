@@ -1,0 +1,10 @@
+Material Icons Attribution
+
+The following vector drawables in core/resources/src/main/res/drawable/ are derived from
+Google Material Icons and are licensed under the Apache License, Version 2.0
+(http://www.apache.org/licenses/LICENSE-2.0):
+
+- ic_language.xml (Language glyph)
+- ic_palette.xml (Palette glyph)
+
+Copyright (c) Google LLC.

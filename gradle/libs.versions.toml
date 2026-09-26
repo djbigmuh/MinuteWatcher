@@ -102,7 +102,6 @@ kotlinxCoroutinesCore = { group = "org.jetbrains.kotlinx", name = "kotlinx-corou
 kotlinxCoroutinesGuava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 androidxMaterialIconsCore = { group = "androidx.compose.material", name = "material-icons-core" }
-androidxMaterialIconsExtended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 
 

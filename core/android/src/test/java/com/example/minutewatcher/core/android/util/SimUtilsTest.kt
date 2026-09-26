@@ -7,10 +7,12 @@ import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -51,21 +53,68 @@ class SimUtilsTest {
     }
 
     @Test
-    fun `isInactiveSim returns true for empty or null or 'null' string`() {
+    fun `isInactiveSim returns true for empty or null and false for non empty strings`() {
         assertTrue(SimUtils.isInactiveSim(null))
         assertTrue(SimUtils.isInactiveSim(""))
-        assertTrue(SimUtils.isInactiveSim("null"))
-        assertTrue(SimUtils.isInactiveSim("NULL"))
         assertFalse(SimUtils.isInactiveSim("MTS"))
+        assertFalse(SimUtils.isInactiveSim("null"))
+        assertFalse(SimUtils.isInactiveSim("NULL"))
     }
 
     @Test
     fun `getShortOperatorName truncates long names`() {
         val longName = "This is a very long operator name that should be truncated"
-        val result = SimUtils.getShortOperatorName(context, longName)
+        val result = SimUtils.getShortOperatorName(context, longName, 0)
 
         assertEquals(20, result.length)
         assertTrue(result.endsWith("..."))
+    }
+
+    @Test
+    fun `getShortOperatorName returns generic operator name for empty operator name and slot 0`() {
+        whenever(context.getString(R.string.operator_generic, 1)).thenReturn("Operator 1")
+        val result = SimUtils.getShortOperatorName(context, "", 0)
+        assertEquals("Operator 1", result)
+    }
+
+    @Test
+    fun `getShortOperatorName returns generic operator name for empty operator name and slot 2`() {
+        whenever(context.getString(R.string.operator_generic, 3)).thenReturn("Operator 3")
+        val result = SimUtils.getShortOperatorName(context, "", 2)
+        assertEquals("Operator 3", result)
+    }
+
+    @Test
+    fun `getShortOperatorName for empty operator name does not return no_sim_found`() {
+        whenever(context.getString(R.string.operator_generic, 1)).thenReturn("Operator 1")
+        whenever(context.getString(R.string.no_sim_found)).thenReturn("No SIM found")
+        val result = SimUtils.getShortOperatorName(context, "", 0)
+        assertNotEquals("No SIM found", result)
+    }
+
+    @Test
+    fun `getShortOperatorName returns resource string for known brand operator name`() {
+        whenever(context.getString(R.string.operator_mts)).thenReturn("MTS")
+        val result = SimUtils.getShortOperatorName(context, "MTS RUS", 0)
+        assertEquals("MTS", result)
+    }
+
+    @Test
+    fun `getShortOperatorName returns truncated original name on exception when original name is non-empty`() {
+        whenever(context.getString(R.string.operator_mts)).thenThrow(RuntimeException("Resource error"))
+        val result = SimUtils.getShortOperatorName(context, "MTS RUS", 0)
+        assertEquals("MTS RUS", result)
+    }
+
+    @Test
+    fun `getShortOperatorName returns generic operator name on exception when original name is empty`() {
+        whenever(context.getString(eq(R.string.operator_generic), eq(1))).thenReturn("Operator 1")
+        whenever(context.getString(eq(R.string.operator_generic), any())).thenAnswer {
+            val arg1 = it.getArgument<Int>(1)
+            "Operator $arg1"
+        }
+        val result = SimUtils.getShortOperatorName(context, "", 0)
+        assertEquals("Operator 1", result)
     }
 
     @Test

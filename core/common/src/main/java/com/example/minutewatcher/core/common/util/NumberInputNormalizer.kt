@@ -1,43 +1,78 @@
 package com.example.minutewatcher.core.common.util
 
+import java.text.DecimalFormatSymbols
+import java.util.Locale
+
 object NumberInputNormalizer {
     /**
-     * Normalizes a numeric string input from various locales into a format
-     * that can be parsed by [toDoubleOrNull] or [toIntOrNull].
+     * Normalizes a numeric string input based on CLDR symbols of the specified [locale] into
+     * a canonical format suitable for [toDoubleOrNull] or [toIntOrNull].
      *
-     * Handles:
-     * - Unicode digits (Arabic-Indic, Persian, etc.) -> ASCII 0-9
-     * - Common decimal separators (comma, Arabic decimal separator) -> dot
-     * - Removes thousands separators (spaces, Arabic thousands separator)
+     * Rules:
+     * - Decimal separators set (`decimalChars`): [DecimalFormatSymbols.getDecimalSeparator] and `'\u066B'`.
+     *   If neither `'.'` nor `','` is in `decimalChars`, `'.'` is added to `decimalChars`.
+     * - Grouping separators set (`groupingChars`): [DecimalFormatSymbols.getGroupingSeparator], `'\u066C'`,
+     *   spaces (`' '`, `'\u00A0'`, `'\u202F'`, `'\u2009'`). Also includes `','` if `','` is not in `decimalChars`,
+     *   and `'.'` if `'.'` is not in `decimalChars`.
+     * - Processing order per character:
+     *   1. [Character.isDigit]: appended as base-10 ASCII digit.
+     *   2. `decimalChars` check: appended as `'.'`.
+     *   3. `groupingChars` check: skipped.
+     *   4. Other characters: appended unchanged.
      *
-     * @param raw The raw input string from user.
-     * @return Normalized string containing only ASCII digits and potentially one dot.
+     * Precedence: `decimalChars` check is performed strictly before `groupingChars` check.
+     *
+     * @param raw The raw numeric input string.
+     * @param locale Effective locale for determining CLDR decimal and grouping separators.
+     * @return Normalized string containing ASCII digits and canonical '.' decimal separator.
      */
-    fun normalize(raw: String): String {
+    fun normalize(
+        raw: String,
+        locale: Locale,
+    ): String {
         if (raw.isEmpty()) return ""
 
-        val sb = StringBuilder()
+        val symbols = DecimalFormatSymbols.getInstance(locale)
+        val decimalChars = mutableSetOf(symbols.decimalSeparator, '\u066B')
+        if ('.' !in decimalChars && ',' !in decimalChars) {
+            decimalChars.add('.')
+        }
 
+        val groupingChars =
+            mutableSetOf(
+                symbols.groupingSeparator,
+                '\u066C',
+                ' ',
+                '\u00A0',
+                '\u202F',
+                '\u2009',
+            )
+        if (',' !in decimalChars) {
+            groupingChars.add(',')
+        }
+        if ('.' !in decimalChars) {
+            groupingChars.add('.')
+        }
+
+        val sb = StringBuilder()
         for (c in raw) {
             when {
-                // 1. Convert Unicode digits to ASCII
                 Character.isDigit(c) -> {
                     val digit = Character.digit(c, 10)
                     if (digit != -1) sb.append(digit)
                 }
 
-                // 2. Normalize decimal separators
-                c == '.' || c == ',' || c == '\u066B' -> {
+                c in decimalChars -> {
                     sb.append('.')
                 }
 
-                // 3. Ignore thousands separators and other noise
-                c == ' ' || c == '\u00A0' || c == '\u202F' || c == '\u066C' -> {
-                    // Skip
+                c in groupingChars -> {
+                    // Skip grouping separator
                 }
 
-                // 4. Keep other characters (they will cause parse fail later, which is correct)
-                else -> sb.append(c)
+                else -> {
+                    sb.append(c)
+                }
             }
         }
         return sb.toString()

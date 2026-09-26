@@ -64,7 +64,7 @@ class CallTrackingSettingsHandlerTest {
     @Test
     fun `writeCallDuration with notify and fallback increments inaccurate count and notifies data changed`() =
         runTest {
-            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, 1000L))
+            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, "1000|2000"))
                 .thenReturn(true)
 
             handler.writeCallDuration(
@@ -72,7 +72,7 @@ class CallTrackingSettingsHandlerTest {
                 durationMinutes = 5,
                 isFallbackUsed = true,
                 notify = true,
-                callMarker = 1000L,
+                callSignature = "1000|2000",
             )
 
             verify(dataChangeNotifier, times(1)).notifyDataChanged()
@@ -82,7 +82,7 @@ class CallTrackingSettingsHandlerTest {
     @Test
     fun `writeCallDuration without notify and without fallback does not notify or update settings`() =
         runTest {
-            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, 1000L))
+            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, "1000|2000"))
                 .thenReturn(true)
 
             handler.writeCallDuration(
@@ -90,7 +90,7 @@ class CallTrackingSettingsHandlerTest {
                 durationMinutes = 5,
                 isFallbackUsed = false,
                 notify = false,
-                callMarker = 1000L,
+                callSignature = "1000|2000",
             )
 
             verify(dataChangeNotifier, never()).notifyDataChanged()
@@ -98,9 +98,9 @@ class CallTrackingSettingsHandlerTest {
         }
 
     @Test
-    fun `writeCallDuration for duplicate marker returns early without notifying or updating settings`() =
+    fun `writeCallDuration for duplicate signature returns early without notifying or updating settings`() =
         runTest {
-            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, 1000L))
+            whenever(simUsageRepository.incrementMinutesUsedForCall("id_1", 5, "1000|2000"))
                 .thenReturn(false)
 
             handler.writeCallDuration(
@@ -108,7 +108,7 @@ class CallTrackingSettingsHandlerTest {
                 durationMinutes = 5,
                 isFallbackUsed = true,
                 notify = true,
-                callMarker = 1000L,
+                callSignature = "1000|2000",
             )
 
             verify(dataChangeNotifier, never()).notifyDataChanged()

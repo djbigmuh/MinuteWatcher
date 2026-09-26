@@ -280,6 +280,7 @@ internal class CallEndHandler
             val durationResult =
                 processCallDurationLocked(
                     subId = subId,
+                    startTime = startTime,
                     durationSeconds = durationSeconds,
                     data = data,
                     notify = notify,
@@ -357,6 +358,7 @@ internal class CallEndHandler
          */
         private suspend fun processCallDurationLocked(
             subId: Int,
+            startTime: Long,
             durationSeconds: Int,
             data: CallEndData,
             notify: Boolean,
@@ -395,13 +397,13 @@ internal class CallEndHandler
                         CallEndResult.CLEANUP_AND_REFRESH
                     } else if (targetIdentity != null) {
                         val durationMinutes = calculateDurationMinutes(durationSeconds)
-                        val callMarker = data.savedBootTimeResult.getOrElse { 0L }
+                        val callSignature = buildCallSignature(startTime, data.savedBootTimeResult.getOrElse { 0L })
                         settingsHandler.writeCallDuration(
                             identity = targetIdentity,
                             durationMinutes = durationMinutes,
                             isFallbackUsed = isFallbackUsed,
                             notify = notify,
-                            callMarker = callMarker,
+                            callSignature = callSignature,
                         )
                         CallEndResult.CLEANUP_AND_REFRESH
                     } else {
@@ -413,6 +415,11 @@ internal class CallEndHandler
                     }
                 }
             }
+
+    private fun buildCallSignature(
+        startTimeMillis: Long,
+        startElapsedRealtime: Long,
+    ): String = "$startTimeMillis|$startElapsedRealtime"
 
         private suspend fun handleReadStartTimeFailure(
             subId: Int,

@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
+import com.example.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("minutewatcher.android-application")
@@ -10,7 +11,7 @@ plugins {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(SdkVersions.JAVA_TOOLCHAIN_VERSION))
     }
 }
 
@@ -51,8 +52,6 @@ configure<ApplicationExtension> {
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
@@ -75,12 +74,6 @@ configure<ApplicationExtension> {
         // When refactoring a file, remove its entries from the baseline first.
         baseline = file("lint-baseline.xml")
         disable += "AndroidGradlePluginVersion"
-    }
-
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-        }
     }
 
     packaging {
@@ -136,8 +129,6 @@ dependencies {
     implementation(libs.googleMaterial)
     implementation(libs.androidxMaterial3)
     implementation(libs.androidxMaterial3WindowSize)
-    implementation(libs.androidxMaterialIconsCore)
-    implementation(libs.androidxMaterialIconsExtended)
     implementation(libs.androidxCoreKtx)
     implementation(libs.androidxAppcompat)
     implementation(libs.androidxLifecycleRuntimeKtx)

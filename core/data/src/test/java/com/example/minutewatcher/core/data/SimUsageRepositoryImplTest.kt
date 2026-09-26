@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -47,28 +48,28 @@ class SimUsageRepositoryImplTest {
     }
 
     @Test
-    fun `incrementMinutesUsedForCall is idempotent based on marker`() =
+    fun `incrementMinutesUsedForCall is idempotent based on signature`() =
         runTest {
             val identity = "test_sim"
-            val marker = 5000L
+            val signature = "1000|5000"
 
             // 1. First call - should increment
-            val firstResult = repository.incrementMinutesUsedForCall(identity, 10, marker)
+            val firstResult = repository.incrementMinutesUsedForCall(identity, 10, signature)
             assertTrue("First call should succeed", firstResult)
 
             val usageAfterFirst = repository.getSimUsage(identity).first()
             assertEquals(10, usageAfterFirst.minutesUsed)
 
-            // 2. Second call with SAME marker - should NOT increment
-            val secondResult = repository.incrementMinutesUsedForCall(identity, 10, marker)
-            assertFalse("Second call with same marker should be ignored", secondResult)
+            // 2. Second call with SAME signature - should NOT increment
+            val secondResult = repository.incrementMinutesUsedForCall(identity, 10, signature)
+            assertFalse("Second call with same signature should be ignored", secondResult)
 
             val usageAfterSecond = repository.getSimUsage(identity).first()
             assertEquals(10, usageAfterSecond.minutesUsed) // Still 10
 
-            // 3. Third call with DIFFERENT marker - should increment
-            val thirdResult = repository.incrementMinutesUsedForCall(identity, 5, marker + 1)
-            assertTrue("Third call with different marker should succeed", thirdResult)
+            // 3. Third call with DIFFERENT signature - should increment
+            val thirdResult = repository.incrementMinutesUsedForCall(identity, 5, "1001|5000")
+            assertTrue("Third call with different signature should succeed", thirdResult)
 
             val usageAfterThird = repository.getSimUsage(identity).first()
             assertEquals(15, usageAfterThird.minutesUsed) // 10 + 5 = 15
@@ -78,11 +79,42 @@ class SimUsageRepositoryImplTest {
     fun `incrementMinutesUsedForCall returns false for invalid identity`() =
         runTest {
             val invalidIdentity = "invalid_slot_0"
-            val result = repository.incrementMinutesUsedForCall(invalidIdentity, 10, 1000L)
+            val result = repository.incrementMinutesUsedForCall(invalidIdentity, 10, "1000|5000")
             assertFalse(result)
 
             val usage = repository.getSimUsage(invalidIdentity).first()
             assertEquals(0, usage.minutesUsed)
+        }
+
+    @Test
+    fun `legacy numeric call marker is removed after successful call recording`() =
+        runTest {
+            val identity = "test_sim"
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.lastCountedCallMarkerKey(identity)] = 9999L
+            }
+
+            val result = repository.incrementMinutesUsedForCall(identity, 10, "1000|5000")
+            assertTrue(result)
+
+            val prefs = dataStore.data.first()
+            assertNull(prefs[DataStoreKeys.lastCountedCallMarkerKey(identity)])
+            assertEquals("1000|5000", prefs[DataStoreKeys.lastCountedCallSignatureKey(identity)])
+        }
+
+    @Test
+    fun `pre existing legacy numeric marker does not affect call recording with new string signature`() =
+        runTest {
+            val identity = "test_sim"
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.lastCountedCallMarkerKey(identity)] = 5000L
+            }
+
+            val result = repository.incrementMinutesUsedForCall(identity, 10, "1000|5000")
+            assertTrue("Call with new string signature should succeed despite legacy marker", result)
+
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(10, usage.minutesUsed)
         }
 
     @Test

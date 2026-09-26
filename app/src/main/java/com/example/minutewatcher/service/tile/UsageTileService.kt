@@ -125,7 +125,7 @@ class UsageTileService : TileService() {
         // Select SIM with limit and lowest minutes, or null if no SIM has limit
         val activeSim = TileSimSelector.select(activeSims) ?: activeSims[0]
 
-        val operatorName = SimUtils.getShortOperatorName(this, activeSim.operatorName)
+        val operatorName = SimUtils.getShortOperatorName(this, activeSim.operatorName, activeSim.slot)
         val minutes = activeSim.entities[PackageType.MINUTES]
 
         // Note: remaining == 0 when limit == 0 means "no limit set", not "exhausted".

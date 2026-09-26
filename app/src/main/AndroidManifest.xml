@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
+    <!--
+      tools:targetApi="tiramisu" applies exclusively to android:localeConfig,
+      which is used natively by the platform starting from API 33 (Tiramisu).
+      On API 26-32, per-app language selection is provided by AppCompat via AppLocalesMetadataHolderService.
+    -->
     <application
         android:name=".MinuteWatcherApp"
         android:icon="@mipmap/ic_launcher"
@@ -19,8 +24,14 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.MinuteWatcher"
-        tools:ignore="GoogleAppIndexingWarning">
+        tools:ignore="GoogleAppIndexingWarning"
+        tools:targetApi="tiramisu">
 
+        <!--
+          AppLocalesMetadataHolderService with meta-data autoStoreLocales="true" enables persistent
+          storage of per-app locales by AppCompat automatically.
+          Programmatic calls to AppCompatDelegate.setAutoStoreLocales() are not required or used.
+        -->
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
             android:enabled="false"

@@ -1,10 +1,12 @@
 package com.example.minutewatcher.feature.settings.ui
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -13,6 +15,7 @@ import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -22,13 +25,13 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35]) // behavior-specific SDK
+@Config(sdk = [35])
 class WidgetSettingsScreenTest {
     @get:Rule
-    val composeTestRule =
-        createComposeRule()
+    val composeTestRule = createComposeRule()
 
     private lateinit var viewModel: WidgetSettingsViewModel
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -60,8 +63,7 @@ class WidgetSettingsScreenTest {
 
     private fun createEmptySnapshot() =
         GlobalSnapshot(
-            version =
-                SchemaVersion(1, 0, 0),
+            version = SchemaVersion(1, 0, 0),
             timestamp = 0L,
             simSnapshots = emptyList(),
             capabilities = emptyList(),
@@ -69,8 +71,6 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun loadingState_isDisplayed() {
-        // settingsState is already null by default from @Before
-
         composeTestRule.setContent {
             WidgetSettingsScreen(
                 viewModel = viewModel,
@@ -78,7 +78,6 @@ class WidgetSettingsScreenTest {
             )
         }
 
-        // CircularProgressIndicator has ProgressBarRangeInfo property
         composeTestRule
             .onNode(
                 SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo),
@@ -112,5 +111,45 @@ class WidgetSettingsScreenTest {
         }
 
         composeTestRule.onNodeWithText(context.getString(R.string.layout_mode_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun backButtonHasContentDescriptionInErrorState() {
+        val navUpDesc = context.getString(R.string.navigate_up_content_desc)
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(isLoadError = true)))
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+        composeTestRule.onNodeWithContentDescription(navUpDesc).assertIsDisplayed()
+    }
+
+    @Test
+    fun backButtonHasContentDescriptionInContentState() {
+        val navUpDesc = context.getString(R.string.navigate_up_content_desc)
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+        composeTestRule.onNodeWithContentDescription(navUpDesc).assertIsDisplayed()
+    }
+
+    @Test
+    fun navigateUpContentDescResolvesAndIsNotEmptyInAllConfiguredLocales() {
+        val supportedLocales = listOf("en", "ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
+        supportedLocales.forEach { lang ->
+            val locale = Locale.forLanguageTag(lang)
+            val config = Configuration(context.resources.configuration)
+            config.setLocale(locale)
+            val localizedContext = context.createConfigurationContext(config)
+
+            val stringVal = localizedContext.getString(R.string.navigate_up_content_desc)
+            assertTrue("String navigate_up_content_desc for locale $lang must not be empty", stringVal.isNotEmpty())
+        }
     }
 }

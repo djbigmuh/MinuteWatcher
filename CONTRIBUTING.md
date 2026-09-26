@@ -90,7 +90,8 @@ As a general rule, we prefer stable releases. However, some non-stable versions 
 ## Build Performance & Unit Test Stability
 
 To maintain a reliable testing environment on Windows and prevent issues with native runtimes or file locking, the
-following configurations are enforced:
+following configurations are enforced centrally in `build-logic` convention plugins and must not be duplicated in
+individual module build scripts:
 
 - **`maxParallelForks = 1`**: Prevents multiple JVMs from competing for system resources and native library locks.
 - **`forkEvery = 1`**: Ensures each test class runs in a fresh JVM. This prevents side effects between

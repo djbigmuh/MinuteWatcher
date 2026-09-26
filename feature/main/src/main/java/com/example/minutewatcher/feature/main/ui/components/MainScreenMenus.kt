@@ -1,9 +1,6 @@
 package com.example.minutewatcher.feature.main.ui.components
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -14,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.resources.R
@@ -48,7 +46,7 @@ fun LanguageMenu(
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                Icons.Default.Language,
+                painter = painterResource(R.drawable.ic_language),
                 contentDescription = stringResource(R.string.menu_language_content_desc),
             )
         }
@@ -93,7 +91,7 @@ fun ThemeMenu(
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                Icons.Default.Palette,
+                painter = painterResource(R.drawable.ic_palette),
                 contentDescription = stringResource(R.string.menu_theme_content_desc),
             )
         }

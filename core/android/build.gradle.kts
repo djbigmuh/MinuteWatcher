@@ -1,3 +1,5 @@
+import com.example.minutewatcher.buildlogic.SdkVersions
+
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.hiltAndroid)
@@ -6,14 +8,11 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {
     namespace = "com.example.minutewatcher.core.android"
-
-    defaultConfig {
-    }
 
     @Suppress("UnstableApiUsage")
     testFixtures {
@@ -22,18 +21,6 @@ android {
 
     buildFeatures {
         compose = true
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-            isReturnDefaultValues = true
-        }
     }
 }
 

@@ -85,12 +85,12 @@ class SimUsageRepositoryImpl
         /**
          * Increments minutes used for the identity by the given delta for a specific call.
          *
-         * Idempotent implementation using [callMarker]. If the marker matches the saved one,
-         * no changes are made and false is returned.
+         * Idempotent implementation using [callSignature]. If the signature matches the saved one,
+         * no changes are made and false is returned. Deprecated numeric marker is removed upon
+         * first successful call recording for the given identity.
          *
-         * The [callMarker] is the session's bootTime (elapsedRealtime of the call start).
-         * Marker collisions between different boots are theoretically possible only if
-         * elapsedRealtime matches exactly, which is handled as a conservative skip.
+         * The [callSignature] is composed of session start time (wall clock)
+         * and session start moment (elapsedRealtime).
          *
          * Safe to call from any coroutine context.
          * @return True if incremented, false if already counted or identity is invalid.
@@ -99,7 +99,7 @@ class SimUsageRepositoryImpl
         override suspend fun incrementMinutesUsedForCall(
             identity: String,
             deltaMinutes: Int,
-            callMarker: Long,
+            callSignature: String,
         ): Boolean {
             if (SimConstants.isInvalid(identity)) {
                 AppLogger.w("incrementMinutesUsedForCall called with invalid identity: $identity")
@@ -107,16 +107,17 @@ class SimUsageRepositoryImpl
             }
             var result = false
             dataStore.edit { prefs ->
-                val lastMarker = prefs[DataStoreKeys.lastCountedCallMarkerKey(identity)] ?: 0L
-                if (lastMarker == callMarker) {
-                    AppLogger.d("incrementMinutesUsedForCall: call $callMarker already counted for $identity")
+                val lastSignature = prefs[DataStoreKeys.lastCountedCallSignatureKey(identity)]
+                if (lastSignature == callSignature) {
+                    AppLogger.d("incrementMinutesUsedForCall: call $callSignature already counted for $identity")
                     result = false
                     return@edit
                 }
 
                 val current = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0
                 prefs[DataStoreKeys.minutesUsedKey(identity)] = current + deltaMinutes
-                prefs[DataStoreKeys.lastCountedCallMarkerKey(identity)] = callMarker
+                prefs[DataStoreKeys.lastCountedCallSignatureKey(identity)] = callSignature
+                prefs.remove(DataStoreKeys.lastCountedCallMarkerKey(identity))
                 result = true
             }
             return result

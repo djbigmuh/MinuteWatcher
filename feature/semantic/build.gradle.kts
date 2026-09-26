@@ -1,3 +1,5 @@
+import com.example.minutewatcher.buildlogic.SdkVersions
+
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.hiltAndroid)
@@ -5,7 +7,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {
@@ -13,18 +15,6 @@ android {
 
     defaultConfig {
         consumerProguardFiles("consumer-rules.pro")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-            isReturnDefaultValues = true
-        }
     }
 }
 

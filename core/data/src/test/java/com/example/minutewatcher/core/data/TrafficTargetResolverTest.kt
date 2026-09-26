@@ -6,7 +6,9 @@ import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
+import kotlinx.coroutines.CancellationException
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -41,16 +43,39 @@ class TrafficTargetResolverTest {
     }
 
     @Test
-    fun `resolve returns InconsistentFirmware when system says no default but SIM claims it`() {
-        // SubscriptionManager returns -1
+    fun `resolve returns StaleInput when system says no default sub but a SIM claims default status`() {
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
 
-        // But SIM info from snapshot claims it's default
         val activeSims = listOf(createActiveSim(1, 2, isDefaultData = true))
 
         val result = resolver.resolve(activeSims)
 
-        assertEquals(TrafficTargetResolver.TargetResult.InconsistentFirmware, result)
+        assertEquals(TrafficTargetResolver.TargetResult.StaleInput, result)
+    }
+
+    @Test
+    fun `resolve returns StaleInput when default data subscription ID is missing in active SIMs`() {
+        whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+
+        val activeSims = listOf(createActiveSim(0, 2, isDefaultData = false))
+
+        val result = resolver.resolve(activeSims)
+
+        assertEquals(TrafficTargetResolver.TargetResult.StaleInput, result)
+    }
+
+    @Test
+    fun `resolve returns Failed when simSlotIndex is out of supported range`() {
+        whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+
+        val activeSims = listOf(createActiveSim(99, 1, isDefaultData = true))
+
+        val result = resolver.resolve(activeSims)
+
+        assertTrue(result is TrafficTargetResolver.TargetResult.Failed)
+        val failed = result as TrafficTargetResolver.TargetResult.Failed
+        assertNotNull(failed.message)
+        assertTrue(failed.message!!.contains("99"))
     }
 
     @Test
@@ -63,7 +88,6 @@ class TrafficTargetResolverTest {
     fun `resolve returns NoDefaultData when internet is off`() {
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
 
-        // Active SIMs exist but none is marked as default data (data off)
         val activeSims =
             listOf(
                 createActiveSim(0, 1, isDefaultData = false),
@@ -76,15 +100,28 @@ class TrafficTargetResolverTest {
     }
 
     @Test
-    fun `resolve returns InconsistentFirmware when simSlotIndex is out of supported range`() {
+    fun `resolve returns Failed when unexpected exception occurs`() {
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+        val throwingList =
+            object : ArrayList<ActiveSimInfo>() {
+                override fun iterator(): MutableIterator<ActiveSimInfo> =
+                    throw IllegalStateException("Unexpected error")
+            }
+        throwingList.add(createActiveSim(0, 1, isDefaultData = true))
 
-        // No active SIM for this subId
-        val activeSims = listOf(createActiveSim(0, 2, isDefaultData = false))
+        val result = resolver.resolve(throwingList)
 
-        val result = resolver.resolve(activeSims)
+        assertTrue(result is TrafficTargetResolver.TargetResult.Failed)
+        assertEquals("Unexpected error", (result as TrafficTargetResolver.TargetResult.Failed).message)
+    }
 
-        assertEquals(TrafficTargetResolver.TargetResult.InconsistentFirmware, result)
+    @Test(expected = CancellationException::class)
+    fun `resolve rethrows CancellationException`() {
+        whenever(permissionManager.getDefaultDataSubscriptionId()).thenThrow(CancellationException("Cancelled"))
+
+        val activeSims = listOf(createActiveSim(0, 1, isDefaultData = true))
+
+        resolver.resolve(activeSims)
     }
 
     private fun createActiveSim(

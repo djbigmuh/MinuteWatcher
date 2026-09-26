@@ -7,6 +7,7 @@ import com.example.minutewatcher.feature.main.LimitDialogData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
@@ -15,6 +16,9 @@ import javax.inject.Inject
  * **Thread Safety:** Safe to call from any coroutine context.
  * **SavedStateHandle:** Persists dialog state via [SavedStateHandle]
  * (survives configuration changes and process death).
+ * **Invariant:** Showing the onboarding dialog is performed at most once per lifecycle of the
+ * controller instance. Hiding the dialog prevents any subsequent showing until the ViewModel
+ * is recreated.
  *
  * @property savedStateHandle SavedStateHandle for preserving dialog state across process death.
  */
@@ -28,6 +32,15 @@ class MainDialogController
         val showAdjustDialog = savedStateHandle.getStateFlow<AdjustDialogData?>(KEY_ADJUST_DIALOG, null)
         val showTrafficLimitationDialog = savedStateHandle.getStateFlow(KEY_TRAFFIC_LIMITATION_DIALOG, false)
         val showUsageAccessDialog = savedStateHandle.getStateFlow(KEY_USAGE_ACCESS_DIALOG, false)
+
+    private val onboardingPromptClaimed = AtomicBoolean(false)
+
+    /**
+     * Claims the single permission/right to show the onboarding dialog prompt.
+     *
+     * @return True if this is the first claim call for this controller instance, false otherwise.
+     */
+    fun claimOnboardingPrompt(): Boolean = onboardingPromptClaimed.compareAndSet(false, true)
 
         /**
          * Sets the data for the limit editing dialog.
@@ -100,6 +113,9 @@ class MainDialogController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun setShowOnboardingDialog(show: Boolean) {
+            if (!show) {
+                onboardingPromptClaimed.set(true)
+            }
             _showOnboardingDialog.value = show
         }
 

@@ -62,6 +62,12 @@ internal object DataStoreKeys {
 
     @JvmStatic val WIDGET_LIMIT_EXCEEDED = booleanPreferencesKey("widget_limit_exceeded")
 
+    @JvmStatic
+    val AUTO_RESET_LAST_CHECK_MILLIS = longPreferencesKey("auto_reset_last_check_millis")
+
+    @JvmStatic
+    val AUTO_RESET_FAIL_COUNT = intPreferencesKey("auto_reset_fail_count")
+
     @JvmStatic val INACCURATE_CALL_ATTRIBUTIONS_COUNT = intPreferencesKey("inaccurate_call_attributions_count")
 
     @JvmStatic val CALL_TRACKING_ENABLED = booleanPreferencesKey("call_tracking_enabled")
@@ -109,6 +115,12 @@ internal object DataStoreKeys {
     @JvmStatic fun trafficLimitKey(identity: String) = intPreferencesKey("traffic_limit_$identity")
 
     @JvmStatic fun minutesUsedKey(identity: String) = intPreferencesKey("minutes_used_$identity")
+
+    const val LAST_COUNTED_CALL_SIGNATURE_PREFIX = "last_counted_call_signature_"
+
+    @JvmStatic
+    fun lastCountedCallSignatureKey(identity: String) =
+        stringPreferencesKey("$LAST_COUNTED_CALL_SIGNATURE_PREFIX$identity")
 
     @JvmStatic
     fun lastCountedCallMarkerKey(identity: String) = longPreferencesKey("last_counted_call_marker_$identity")

@@ -225,7 +225,7 @@ class ShortcutManager
             if ((entity == null) || (entity.limit <= 0)) return null
 
             val slot = sim.slot
-            val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
+            val operator = SimUtils.getShortOperatorName(context, sim.operatorName, slot)
             val shortLabel =
                 context.getString(
                     R.string.shortcut_minutes_short,
@@ -254,7 +254,7 @@ class ShortcutManager
             if (entity == null || (entity.limit <= 0)) return null
 
             val slot = sim.slot
-            val operator = SimUtils.getShortOperatorName(context, sim.operatorName)
+            val operator = SimUtils.getShortOperatorName(context, sim.operatorName, slot)
             val trafficGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
             val shortLabel =
                 context.getString(

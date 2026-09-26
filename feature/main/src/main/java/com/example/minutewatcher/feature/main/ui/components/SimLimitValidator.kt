@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main.ui.components
 
 import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.model.Constants
+import java.util.Locale
 
 sealed interface SimLimitValidationResult {
     data class Valid(
@@ -23,9 +24,10 @@ object SimLimitValidator {
         invalidNumberMsg: String,
         minutesRangeMsg: String,
         trafficRangeMsg: String,
+        locale: Locale,
     ): SimLimitValidationResult {
-        val normalizedMin = NumberInputNormalizer.normalize(minutesText)
-        val normalizedTraf = NumberInputNormalizer.normalize(trafficText)
+        val normalizedMin = NumberInputNormalizer.normalize(minutesText, locale)
+        val normalizedTraf = NumberInputNormalizer.normalize(trafficText, locale)
 
         val min = normalizedMin.toIntOrNull()
         val trafGb = normalizedTraf.toFloatOrNull()
@@ -49,7 +51,7 @@ object SimLimitValidator {
         rangeMsg: String,
     ): String? =
         when {
-            text.isEmpty() -> fieldRequiredMsg
+            text.isBlank() -> fieldRequiredMsg
             value == null -> invalidNumberMsg
             value < 0 || value > Constants.MAX_MINUTES_LIMIT -> rangeMsg
             else -> null
@@ -63,7 +65,7 @@ object SimLimitValidator {
         rangeMsg: String,
     ): String? =
         when {
-            text.isEmpty() -> fieldRequiredMsg
+            text.isBlank() -> fieldRequiredMsg
             value == null || value.isNaN() || value.isInfinite() -> invalidNumberMsg
             value < 0 || value > Constants.MAX_TRAFFIC_LIMIT_GB -> rangeMsg
             else -> null

@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -30,11 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
@@ -52,7 +55,8 @@ fun SimLimitComposeDialog(
     onConfirm: (minutes: Int, trafficMb: Int, rollover: Boolean) -> Unit,
     onReset: () -> Unit,
 ) {
-    val state = rememberSimLimitState(slot, initialMinutes, initialTrafficMb, initialRolloverEnabled)
+    val locale = FormatUtils.getLocale(LocalContext.current)
+    val state = rememberSimLimitState(slot, initialMinutes, initialTrafficMb, initialRolloverEnabled, locale)
     var showResetConfirm by remember { mutableStateOf(false) }
 
     if (showResetConfirm) {
@@ -70,11 +74,11 @@ fun SimLimitComposeDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.limits_for_operator, operatorName)) },
-        text = { DialogFields(state = state) },
+        text = { DialogFields(state = state, locale = locale) },
         confirmButton = {
             DialogButtons(
                 onConfirm = {
-                    when (val result = state.validate(validationMessages)) {
+                    when (val result = state.validate(validationMessages, locale)) {
                         is SimLimitValidationResult.Valid -> {
                             onConfirm(
                                 result.minutes,
@@ -128,13 +132,13 @@ private fun rememberSimLimitState(
     initialMinutes: Int,
     initialTrafficMb: Int,
     initialRolloverEnabled: Boolean,
+    locale: Locale,
 ): SimLimitState {
     val initialTrafficText =
-        remember(initialTrafficMb) {
+        remember(initialTrafficMb, locale) {
             val gb = initialTrafficMb / Constants.MB_PER_GB
-            // Locale.getDefault() is used because the user should see their local decimal separator.
-            // The input is then normalized by NumberInputNormalizer.
-            String.format(Locale.getDefault(), "%.1f", gb)
+            // Format with the effective UI locale to display the user's localized decimal separator.
+            String.format(locale, "%.1f", gb)
         }
 
     return key(slot) {
@@ -239,7 +243,10 @@ internal class SimLimitState(
             )
     }
 
-    fun validate(msgs: ValidationMessages): SimLimitValidationResult {
+    fun validate(
+        msgs: ValidationMessages,
+        locale: Locale,
+    ): SimLimitValidationResult {
         val result =
             SimLimitValidator.validate(
                 minutesText.text,
@@ -248,6 +255,7 @@ internal class SimLimitState(
                 msgs.invalidNumber,
                 msgs.minutesRange,
                 msgs.trafficRange,
+                locale,
             )
         when (result) {
             is SimLimitValidationResult.Valid -> {
@@ -272,7 +280,10 @@ internal class SimLimitState(
      * 2. Full selection replacement: trusts [newValue] as the result of the replacement.
      * 3. All other cases: normalizes the input using [NumberInputNormalizer] and strips leading zeros.
      */
-    fun onMinutesChange(newValue: TextFieldValue) {
+    fun onMinutesChange(
+        newValue: TextFieldValue,
+        locale: Locale,
+    ) {
         if (minutesSelectAllPending) {
             minutesSelectAllPending = false
             if (newValue.text == minutesText.text) {
@@ -297,7 +308,7 @@ internal class SimLimitState(
             }
         }
 
-        var text = NumberInputNormalizer.normalize(processed.text)
+        var text = NumberInputNormalizer.normalize(processed.text, locale)
         // Strip leading zeros for minutes
         if (text.length > 1 && text.startsWith("0")) {
             text = text.dropWhile { it == '0' }.ifEmpty { "0" }
@@ -332,7 +343,10 @@ internal class SimLimitState(
      * 3. All other cases: normalizes the input using [NumberInputNormalizer] and strips leading zeros
      *    if not a decimal.
      */
-    fun onTrafficChange(newValue: TextFieldValue) {
+    fun onTrafficChange(
+        newValue: TextFieldValue,
+        locale: Locale,
+    ) {
         if (trafficSelectAllPending) {
             trafficSelectAllPending = false
             if (newValue.text == trafficText.text) {
@@ -355,7 +369,7 @@ internal class SimLimitState(
             }
         }
 
-        var text = NumberInputNormalizer.normalize(processed.text)
+        var text = NumberInputNormalizer.normalize(processed.text, locale)
         // Strip leading zeros for traffic if it's not a decimal starting with "0."
         if (text.length > 1 && text.startsWith("0") && !text.startsWith("0.")) {
             text = text.dropWhile { it == '0' }.ifEmpty { "0" }
@@ -385,17 +399,20 @@ internal class SimLimitState(
 }
 
 @Composable
-private fun DialogFields(state: SimLimitState) {
+private fun DialogFields(
+    state: SimLimitState,
+    locale: Locale,
+) {
     val minutesFocusRequester = remember { FocusRequester() }
 
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         minutesFocusRequester.requestFocus()
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = state.minutesText,
-            onValueChange = { state.onMinutesChange(it) },
+            onValueChange = { state.onMinutesChange(it, locale) },
             label = { Text(stringResource(id = R.string.set_minutes_limit)) },
             placeholder = { Text("0") },
             isError = state.minutesError != null,
@@ -410,7 +427,7 @@ private fun DialogFields(state: SimLimitState) {
         )
         OutlinedTextField(
             value = state.trafficText,
-            onValueChange = { state.onTrafficChange(it) },
+            onValueChange = { state.onTrafficChange(it, locale) },
             label = { Text(stringResource(id = R.string.set_traffic_limit)) },
             placeholder = { Text("0") },
             isError = state.trafficError != null,

@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -195,6 +196,7 @@ open class CallTracker
          * @param subId Subscription ID.
          * @param eventElapsedRealtime Time when the event was captured (SystemClock.elapsedRealtime).
          * -1 if unknown.
+         * @throws IOException If a database or storage error occurs during call start recording.
          * @throws CancellationException if the calling coroutine is cancelled.
          * Does NOT throw if the tracker is stopped while waiting for initialization.
          */
@@ -220,6 +222,7 @@ open class CallTracker
          * @param subId Subscription ID.
          * @param eventElapsedRealtime Time when the event was captured (SystemClock.elapsedRealtime).
          * -1 if unknown.
+         * @throws IOException If a database or storage error occurs during call end recording.
          * @throws CancellationException if the calling coroutine is cancelled.
          * Does NOT throw if the tracker is stopped while waiting for initialization.
          */

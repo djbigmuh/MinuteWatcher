@@ -25,7 +25,7 @@ object FormatUtils {
         context: Context,
         mb: Float,
     ): String {
-        val locale = getLocaleFromContext(context)
+        val locale = getLocale(context)
         return "${formatTrafficGb(locale, mb / Constants.MB_PER_GB)}${context.getString(R.string.gb_abbr)}"
     }
 
@@ -37,7 +37,7 @@ object FormatUtils {
     ): String {
         if (remainingGb < 0) return "-"
         val gbUnit = context.getString(R.string.gb_abbr)
-        val locale = getLocaleFromContext(context)
+        val locale = getLocale(context)
         val logic = formatTrafficDisplayLogic(locale, remainingGb, limitGb, showLimit, gbUnit)
         return if (showLimit && limitGb > 0) {
             "${context.getString(R.string.remaining_text)} $logic"
@@ -98,7 +98,7 @@ object FormatUtils {
         days: Int,
     ): String = context.resources.getQuantityString(R.plurals.days_plurals, days, days)
 
-    private fun getLocaleFromContext(context: Context): Locale =
+    fun getLocale(context: Context): Locale =
         try {
             context.resources
                 .configuration

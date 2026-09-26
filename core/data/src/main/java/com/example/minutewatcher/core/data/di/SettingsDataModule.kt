@@ -8,10 +8,12 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.data.AppSettingsRepositoryImpl
+import com.example.minutewatcher.core.data.AutoResetScheduleRepositoryImpl
 import com.example.minutewatcher.core.data.BenchmarkUseCaseImpl
 import com.example.minutewatcher.core.data.PermissionRepositoryImpl
 import com.example.minutewatcher.core.data.PermissionStateNotifierImpl
 import com.example.minutewatcher.core.domain.AppSettingsRepository
+import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.domain.BenchmarkUseCase
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -95,6 +97,10 @@ interface SettingsDataModule {
     @Binds
     @Singleton
     fun bindBenchmarkUseCase(impl: BenchmarkUseCaseImpl): BenchmarkUseCase
+
+    @Binds
+    @Singleton
+    fun bindAutoResetScheduleRepository(impl: AutoResetScheduleRepositoryImpl): AutoResetScheduleRepository
 
     companion object {
         @Provides

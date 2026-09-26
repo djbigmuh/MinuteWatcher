@@ -10,4 +10,5 @@ object SdkVersions {
     const val MIN_SDK = 26
     const val TARGET_SDK = 37
     const val COMPILE_SDK = 37
+    const val JAVA_TOOLCHAIN_VERSION = 21
 }

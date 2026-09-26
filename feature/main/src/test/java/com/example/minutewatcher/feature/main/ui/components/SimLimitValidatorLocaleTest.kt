@@ -2,10 +2,12 @@ package com.example.minutewatcher.feature.main.ui.components
 
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class SimLimitValidatorLocaleTest {
     @Test
     fun `test validate with ar digits`() {
+        val arLocale = Locale.forLanguageTag("ar")
         // Arabic-Indic digits: ١٠٠ (100) and ١٥٫٥ (15.5)
         val result =
             SimLimitValidator.validate(
@@ -15,6 +17,7 @@ class SimLimitValidatorLocaleTest {
                 invalidNumberMsg = "invalid",
                 minutesRangeMsg = "range",
                 trafficRangeMsg = "range",
+                locale = arLocale,
             )
 
         assertTrue("Result should be Valid", result is SimLimitValidationResult.Valid)

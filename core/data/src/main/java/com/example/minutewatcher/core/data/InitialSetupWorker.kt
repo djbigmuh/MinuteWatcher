@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.data.InitialSetupWorker.Companion.WORKER_TIMEOUT_MS
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MigrationSkipReason
@@ -125,13 +126,14 @@ class InitialSetupWorker
             } ?: throw IOException("DataStore timeout reading $name flag")
 
         private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): Result? {
-            val hasLegacyData =
-                try {
-                    deps.migrationService.hasLegacyData()
-                } catch (e: IOException) {
-                    AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
-                    return Result.retry()
+            val hasLegacyData = deps.migrationService.hasLegacyData()
+            if (hasLegacyData == null) {
+                return if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
+                    Result.retry()
+                } else {
+                    markMigrationSkippedPermanently()
                 }
+            }
 
             if (!hasLegacyData) {
                 if (!v1Completed) {
@@ -148,16 +150,17 @@ class InitialSetupWorker
             val activeSims = getActiveSimsWithRetry()
 
             val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
-            val hasLegacyData =
-                try {
-                    deps.migrationService.hasLegacyData(activeIdentities)
-                } catch (e: IOException) {
-                    AppLogger.w("InitialSetupWorker: Failed to check legacy data (IO), retrying", e)
-                    null
-                }
+            val hasLegacyData = deps.migrationService.hasLegacyData(activeIdentities)
 
             return when {
-                hasLegacyData == null -> Result.retry()
+                hasLegacyData == null -> {
+                    if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
+                        Result.retry()
+                    } else {
+                        markMigrationSkippedPermanently()
+                    }
+                }
+
                 activeSims.isEmpty() -> {
                     if (!hasLegacyData) {
                         if (!v1Completed) {
@@ -172,6 +175,17 @@ class InitialSetupWorker
 
                 else -> performActualMigration(activeSims)
             }
+        }
+
+    private suspend fun markMigrationSkippedPermanently(): Result? {
+        AppLogger.e(
+            "InitialSetupWorker: legacy data availability could not be determined " +
+                "after $MAX_MIGRATION_ATTEMPTS attempts, skipping migration",
+        )
+        deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+        deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.LEGACY_DATA_CHECK_FAILED)
+        deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+        return null
         }
 
         private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =
