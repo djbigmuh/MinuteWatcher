@@ -19,6 +19,7 @@ import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
@@ -76,30 +78,38 @@ class MainSimDataController
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
+        private val retryTrigger = MutableStateFlow(0)
+
+        @OptIn(ExperimentalCoroutinesApi::class)
         private val uiStateSource: Flow<SimCardListState> =
-            usageStateRepository
-                .observeSimCardUiModels()
-                .map { models ->
-                    if (models.isEmpty()) {
-                        if (usageStateRepository.isDataLoaded()) {
-                            SimCardListState.Empty
+            retryTrigger.flatMapLatest {
+                usageStateRepository
+                    .observeSimCardUiModels()
+                    .map { models ->
+                        if (models.isEmpty()) {
+                            if (usageStateRepository.isDataLoaded()) {
+                                SimCardListState.Empty
+                            } else {
+                                SimCardListState.Loading
+                            }
                         } else {
-                            SimCardListState.Loading
+                            SimCardListState.Success(models)
                         }
-                    } else {
-                        SimCardListState.Success(models)
+                    }.retryWhen { cause, attempt ->
+                        (cause as? CancellationException)?.let { throw it }
+                        if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
+                            val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
+                            delay(delayMs.milliseconds)
+                            true
+                        } else {
+                            false
+                        }
+                    }.onStart { emit(SimCardListState.Loading) }
+                    .catch { e ->
+                        AppLogger.e("MainSimDataController: observeSimCardUiModels failed", e)
+                        emit(SimCardListState.Error(R.string.refresh_error))
                     }
-                }.retryWhen { cause, attempt ->
-                    (cause as? CancellationException)?.let { throw it }
-                    if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
-                        val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
-                        delay(delayMs.milliseconds)
-                        true
-                    } else {
-                        false
-                    }
-                }.onStart { emit(SimCardListState.Loading) }
-                .catch { e -> emit(SimCardListState.Error(e.message ?: "Unknown error")) }
+            }
 
         /**
          * Observes the UI state of SIM cards.
@@ -113,6 +123,15 @@ class MainSimDataController
                 started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                 initialValue = SimCardListState.Loading,
             )
+
+        /**
+         * Triggers a restart of SIM card list observation.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        fun retrySimList() {
+            retryTrigger.value += 1
+        }
 
         /**
          * Error of the last operation if it failed.

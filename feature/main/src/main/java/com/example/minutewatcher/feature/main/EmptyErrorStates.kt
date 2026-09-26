@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -57,15 +58,15 @@ fun EmptyState(onGrantPermission: () -> Unit) {
  *
  * Screen layout:
  * - Header: Standard error message.
- * - Description: Detailed error text passed via [message] parameter.
+ * - Description: Detailed error text passed via [messageRes] parameter.
  * - Action button: Triggers data reload process via [onRetry].
  *
- * @param message Text description of the error for the user.
+ * @param messageRes Resource ID for the text description of the error.
  * @param onRetry Callback to retry data loading or reset error state.
  */
 @Composable
 fun ErrorState(
-    message: String,
+    @StringRes messageRes: Int,
     onRetry: () -> Unit = {},
 ) {
     Column(
@@ -79,7 +80,7 @@ fun ErrorState(
             color = MaterialTheme.colorScheme.error,
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = message, style = MaterialTheme.typography.bodyMedium)
+        Text(text = stringResource(id = messageRes), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onRetry) {
             Text(text = stringResource(id = R.string.action_retry))

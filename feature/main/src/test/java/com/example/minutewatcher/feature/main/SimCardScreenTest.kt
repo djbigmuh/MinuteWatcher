@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.resources.R
@@ -16,8 +17,7 @@ import org.robolectric.annotation.Config
 class SimCardScreenTest {
     @get:Rule
     val composeTestRule =
-        androidx.compose.ui.test.junit4.v2
-            .createComposeRule()
+        createComposeRule()
 
     @Test
     fun emptyState_isDisplayed() {
@@ -31,10 +31,11 @@ class SimCardScreenTest {
 
     @Test
     fun errorState_isDisplayedWithMessage() {
-        val errorMessage = "Test Error Message"
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val expectedText = context.getString(R.string.refresh_error)
         composeTestRule.setContent {
-            ErrorState(message = errorMessage)
+            ErrorState(messageRes = R.string.refresh_error)
         }
-        composeTestRule.onNodeWithText(errorMessage).assertIsDisplayed()
+        composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
     }
 }

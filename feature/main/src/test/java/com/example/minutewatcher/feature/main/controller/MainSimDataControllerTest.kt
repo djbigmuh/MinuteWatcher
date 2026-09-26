@@ -317,7 +317,7 @@ class MainSimDataControllerTest {
     @Test
     fun `retryAppSearch does not crash on exception`() =
         runTest {
-            whenever(trackingRecoveryController.retryAppSearch()).thenThrow(RuntimeException("Recovery failed"))
+            whenever(trackingRecoveryController.retryAppSearch()).thenThrow(IllegalStateException("Recovery failed"))
             controller = createController()
             controller.retryAppSearch()
             testScheduler.advanceUntilIdle()
@@ -326,7 +326,7 @@ class MainSimDataControllerTest {
     @Test
     fun `retryCalls does not crash on exception`() =
         runTest {
-            whenever(trackingRecoveryController.retryCalls()).thenThrow(RuntimeException("Recovery failed"))
+            whenever(trackingRecoveryController.retryCalls()).thenThrow(IllegalStateException("Recovery failed"))
             controller = createController()
             controller.retryCalls()
             testScheduler.advanceUntilIdle()
@@ -335,7 +335,7 @@ class MainSimDataControllerTest {
     @Test
     fun `retryShortcuts does not crash on exception`() =
         runTest {
-            whenever(trackingRecoveryController.retryShortcuts()).thenThrow(RuntimeException("Recovery failed"))
+            whenever(trackingRecoveryController.retryShortcuts()).thenThrow(IllegalStateException("Recovery failed"))
             controller = createController()
             controller.retryShortcuts()
             testScheduler.advanceUntilIdle()
@@ -344,7 +344,7 @@ class MainSimDataControllerTest {
     @Test
     fun `retryTraffic does not crash on exception and does not notify`() =
         runTest {
-            whenever(trackingRecoveryController.retryTraffic()).thenThrow(RuntimeException("Recovery failed"))
+            whenever(trackingRecoveryController.retryTraffic()).thenThrow(IllegalStateException("Recovery failed"))
             controller = createController()
             controller.retryTraffic()
             testScheduler.advanceUntilIdle()
@@ -354,7 +354,7 @@ class MainSimDataControllerTest {
     @Test
     fun `retrySimDiscovery does not crash on exception`() =
         runTest {
-            whenever(trackingRecoveryController.retrySimDiscovery()).thenThrow(RuntimeException("Recovery failed"))
+            whenever(trackingRecoveryController.retrySimDiscovery()).thenThrow(IllegalStateException("Recovery failed"))
             controller = createController()
             controller.retrySimDiscovery()
             testScheduler.advanceUntilIdle()
@@ -400,5 +400,91 @@ class MainSimDataControllerTest {
             testScheduler.advanceUntilIdle()
 
             assertTrue("Cancellation should be propagated", wasCancelled)
+        }
+
+    @Test
+    fun `source throwing non IO exception leads to error state with localized string res and stays subscribed`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val sourceFlow =
+                flow<List<SimCardUiModel>> {
+                    throw IllegalStateException("Fatal source failure")
+                }
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(sourceFlow)
+
+            controller = createController()
+            val uiState = controller.observeUiState(backgroundScope)
+
+            val emittedStates = mutableListOf<SimCardListState>()
+            val job = launch { uiState.collect { emittedStates.add(it) } }
+            testScheduler.runCurrent()
+
+            val lastState = emittedStates.last()
+            assertTrue("Last state should be Error", lastState is SimCardListState.Error)
+            assertEquals(R.string.refresh_error, (lastState as SimCardListState.Error).messageRes)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `retrySimList with recovered source emits loading and then success`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val sourceTrigger = MutableStateFlow(0)
+            val simModels = listOf(mock<SimCardUiModel>())
+
+            val sourceFlow =
+                flow {
+                    if (sourceTrigger.value == 0) {
+                        throw IllegalStateException("Temporary source error")
+                    } else {
+                        emit(simModels)
+                    }
+                }
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(sourceFlow)
+
+            controller = createController()
+            val uiState = controller.observeUiState(backgroundScope)
+
+            val emittedStates = mutableListOf<SimCardListState>()
+            val job = launch { uiState.collect { emittedStates.add(it) } }
+            testScheduler.runCurrent()
+
+            val errorState = emittedStates.last()
+            assertTrue("Should end in Error state initially", errorState is SimCardListState.Error)
+            assertEquals(R.string.refresh_error, (errorState as SimCardListState.Error).messageRes)
+
+            sourceTrigger.value = 1
+            controller.retrySimList()
+            testScheduler.runCurrent()
+
+            assertTrue("Should receive Loading after retry", emittedStates.contains(SimCardListState.Loading))
+            val finalState = emittedStates.last()
+            assertTrue("Should end in Success state after retry", finalState is SimCardListState.Success)
+            assertEquals(simModels, (finalState as SimCardListState.Success).simCards)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `multiple retrySimList calls do not increase subscription count on source`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val sourceFlow = MutableSharedFlow<List<SimCardUiModel>>(replay = 1)
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(sourceFlow)
+
+            controller = createController()
+            val uiState = controller.observeUiState(backgroundScope)
+
+            val job = launch { uiState.collect {} }
+            testScheduler.runCurrent()
+
+            assertEquals("Single subscription initially", 1, sourceFlow.subscriptionCount.value)
+
+            repeat(5) {
+                controller.retrySimList()
+                testScheduler.runCurrent()
+            }
+
+            assertEquals("Subscription count remains 1 after multiple retries", 1, sourceFlow.subscriptionCount.value)
+
+            job.cancel()
         }
 }

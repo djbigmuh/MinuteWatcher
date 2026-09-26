@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -113,14 +114,22 @@ private fun rememberTrackingBannerCallbacks(
 @Composable
 private fun SimCardListContent(
     uiState: SimCardListState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyListState,
     viewModel: MainViewModel,
     onGrantPhonePermission: () -> Unit,
 ) {
     when (uiState) {
         is SimCardListState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         is SimCardListState.Empty -> EmptyState(onGrantPhonePermission)
-        is SimCardListState.Error -> ErrorState(uiState.message, onRetry = { viewModel.refreshSimCardsNow() })
+        is SimCardListState.Error -> {
+            ErrorState(
+                messageRes = uiState.messageRes,
+                onRetry = {
+                    viewModel.retrySimList()
+                    viewModel.refreshSimCardsNow()
+                },
+            )
+        }
         is SimCardListState.Success -> {
             SimCardList(
                 simCards = uiState.simCards,

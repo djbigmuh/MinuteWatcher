@@ -192,6 +192,8 @@ class MainViewModel
         fun setLanguage(language: String?) = controllers.settings.setLanguage(language)
 
         // Delegate SIM Data Actions
+        fun retrySimList() = controllers.simData.retrySimList()
+
         fun updateLimits(
             slot: Int,
             min: Int,

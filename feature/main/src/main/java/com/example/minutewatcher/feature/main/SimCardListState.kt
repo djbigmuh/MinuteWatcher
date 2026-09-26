@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main
 
+import androidx.annotation.StringRes
 import com.example.minutewatcher.core.model.SimCardUiModel
 
 sealed interface SimCardListState {
@@ -10,7 +11,7 @@ sealed interface SimCardListState {
     ) : SimCardListState
 
     data class Error(
-        val message: String,
+        @StringRes val messageRes: Int,
     ) : SimCardListState
 
     data object Empty : SimCardListState
