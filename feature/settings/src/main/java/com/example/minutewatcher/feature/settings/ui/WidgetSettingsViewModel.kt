@@ -274,8 +274,6 @@ class WidgetSettingsViewModel
                         lastSavedSettings = settingsToSave
                     }
 
-                    // If SIM list failed to load, show information that settings were saved partially.
-                    // We treat this as success for internal state, but notify the user via PartialSuccess.
                     val finalResult =
                         if (result is SaveResult.Success && settingsToSave?.simListLoadFailed == true) {
                             SaveResult.PartialSuccess(skippedSimSettings = true)
@@ -289,7 +287,7 @@ class WidgetSettingsViewModel
                 } catch (e: Exception) {
                     AppLogger.e("Failed to save widget settings", e)
                     currentCoroutineContext().ensureActive()
-                    reduce { copy(saveResult = SaveResult.Failed("Failed to save settings")) }
+                    reduce { copy(saveResult = SaveResult.Failed(SaveFailureReason.GENERAL)) }
                 } finally {
                     withContext(NonCancellable) {
                         try {
@@ -303,18 +301,16 @@ class WidgetSettingsViewModel
         }
 
         private suspend fun performSaveInternal(currentState: WidgetSettingsUiState): SaveResult {
-            // Use settings from currentState captured at save entry point
-            // to ensure data consistency.
             val currentSettings = currentState.settings
             return when {
                 currentState.isLoadError || (currentSettings?.settingsLoadFailed == true) -> {
                     AppLogger.w("saveAndNotify skipped: settings load failed previously")
-                    SaveResult.Failed("Settings were not loaded")
+                    SaveResult.Failed(SaveFailureReason.NOT_LOADED)
                 }
 
                 currentSettings == null -> {
                     AppLogger.w("saveAndNotify called before settings were loaded")
-                    SaveResult.Failed("Settings are still loading")
+                    SaveResult.Failed(SaveFailureReason.IN_PROGRESS)
                 }
 
                 (lastSavedSettings != null) && (currentSettings == lastSavedSettings) -> {
@@ -348,12 +344,11 @@ class WidgetSettingsViewModel
 
             return result ?: run {
                 AppLogger.e("saveAndNotify: operation timed out after ${timeout.inWholeMilliseconds}ms")
-                SaveResult.Failed("Saving timed out. Storage might be slow or unavailable.")
+                SaveResult.Failed(SaveFailureReason.TIMEOUT)
             }
         }
 
         override fun onCleared() {
-            // Cancel ongoing auto-save.
             autoSaveJob?.cancel()
 
             val currentState = state.value
@@ -361,8 +356,6 @@ class WidgetSettingsViewModel
             val lastSaved = lastSavedSettings
 
             if (currentSettings != null && lastSaved != null && currentSettings != lastSaved) {
-                // Perform emergency save in application scope to ensure changes are persisted
-                // even if the ViewModel is destroyed.
                 appScope.launch {
                     try {
                         withTimeoutOrNull(FLUSH_TIMEOUT) {

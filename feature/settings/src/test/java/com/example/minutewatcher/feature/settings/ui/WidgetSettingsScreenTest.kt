@@ -152,4 +152,48 @@ class WidgetSettingsScreenTest {
             assertTrue("String navigate_up_content_desc for locale $lang must not be empty", stringVal.isNotEmpty())
         }
     }
+
+    @Test
+    fun snackbarForPartialFailureWithSlotListDisplaysLocalizedTextWithUserSlotNumber() {
+        val expectedText = context.getString(R.string.settings_save_partial_failure_slots, "1")
+        whenever(viewModel.state).doReturn(
+            MutableStateFlow(
+                WidgetSettingsUiState(
+                    settings = testSettings,
+                    saveResult = SaveResult.PartialFailure(listOf(0)),
+                ),
+            ),
+        )
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
+    }
+
+    @Test
+    fun snackbarForPartialFailureWithEmptyListDisplaysGeneralLocalizedFailureText() {
+        val expectedText = context.getString(R.string.settings_save_partial_failure)
+        whenever(viewModel.state).doReturn(
+            MutableStateFlow(
+                WidgetSettingsUiState(
+                    settings = testSettings,
+                    saveResult = SaveResult.PartialFailure(emptyList()),
+                ),
+            ),
+        )
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
+    }
 }

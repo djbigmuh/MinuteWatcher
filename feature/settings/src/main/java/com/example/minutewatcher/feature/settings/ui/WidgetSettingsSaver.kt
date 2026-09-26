@@ -27,19 +27,8 @@ open class WidgetSettingsSaver
         /**
          * Saves widget settings.
          *
-         * **Strict API compliance:** Method performs defensive validation
-         * of input state via [WidgetSettingsState.validate].
-         * This guarantees data consistency on save even
-         * if method is called directly.
-         *
-         * **Strict API compliance:** on AOSP settings saving completes in milliseconds.
-         * Failure during SIM settings phase indicates DataStore degradation or seed
-         * unavailability (custom firmware issue). General settings do not depend on seed
-         * and are always saved.
-         *
          * @param state Settings state.
-         * @param skipSimSettings If true, SIM-specific settings are not
-         *   saved (used when simListLoadFailed).
+         * @param skipSimSettings If true, SIM-specific settings are not saved.
          * @return [SaveResult] operation result.
          */
         open suspend fun save(
@@ -56,7 +45,7 @@ open class WidgetSettingsSaver
 
             return result ?: run {
                 AppLogger.e("WidgetSettingsSaver: save timed out (lock acquisition or execution exceeded budget)")
-                SaveResult.Failed("Save operation timed out")
+                SaveResult.Failed(SaveFailureReason.TIMEOUT)
             }
         }
 
@@ -66,10 +55,9 @@ open class WidgetSettingsSaver
         ): SaveResult {
             if (state.settingsLoadFailed) {
                 AppLogger.w("Skipping save in WidgetSettingsSaver: settings were not loaded successfully")
-                return SaveResult.Failed("Settings were not loaded")
+                return SaveResult.Failed(SaveFailureReason.NOT_LOADED)
             }
 
-            // Perform defensive validation.
             val validatedState = WidgetSettingsState.validate(state)
 
             return try {
@@ -84,7 +72,7 @@ open class WidgetSettingsSaver
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save general widget settings", e)
-                SaveResult.Failed("Failed to save general settings")
+                SaveResult.Failed(SaveFailureReason.GENERAL)
             }
         }
 
@@ -98,16 +86,14 @@ open class WidgetSettingsSaver
                 if (failedSlots.isEmpty()) {
                     SaveResult.Success
                 } else {
-                    val slotsString = failedSlots.joinToString(", ")
-                    SaveResult.PartialFailure("SIM settings could not be saved for slots: $slotsString")
+                    AppLogger.w("SIM settings could not be saved for slots: ${failedSlots.joinToString(", ")}")
+                    SaveResult.PartialFailure(failedSlots)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Failed to save SIM-specific widget settings", e)
-                SaveResult.PartialFailure(
-                    "General settings saved, but SIM-specific settings failed due to an error.",
-                )
+                SaveResult.PartialFailure(emptyList())
             }
 
         private suspend fun notifyDataChanged() {

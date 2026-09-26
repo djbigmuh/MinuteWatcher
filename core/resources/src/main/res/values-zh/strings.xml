@@ -17,6 +17,8 @@
     <!-- Settings: General -->
     <string name="settings_saved_toast">设置已保存</string>
     <string name="settings_save_partial_success">常规设置已保存。SIM 设置已跳过（SIM 列表不可用）</string>
+    <string name="settings_save_partial_failure">常规设置已保存。SIM 特定设置无法保存</string>
+    <string name="settings_save_partial_failure_slots">常规设置已保存。SIM %1$s 的特定设置无法保存</string>
     <string name="settings_save_failed">保存失败</string>
     <string name="settings_save_already_in_progress">保存正在进行中</string>
     <string name="language_system">系统默认</string>

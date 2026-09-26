@@ -17,6 +17,8 @@
     <!-- Settings: General -->
     <string name="settings_saved_toast">Ajustes guardados</string>
     <string name="settings_save_partial_success">Ajustes generales guardados. Ajustes de SIM omitidos (lista de SIM no disponible)</string>
+    <string name="settings_save_partial_failure">Ajustes generales guardados. No se pudieron guardar los ajustes de SIM</string>
+    <string name="settings_save_partial_failure_slots">Ajustes generales guardados. No se pudieron guardar los ajustes de la SIM %1$s</string>
     <string name="settings_save_failed">Error al guardar</string>
     <string name="settings_save_already_in_progress">Guardado ya en curso</string>
     <string name="language_system">Sistema</string>

@@ -17,6 +17,8 @@
     <!-- Settings: General -->
     <string name="settings_saved_toast">सेटिंग्स सहेजी गईं</string>
     <string name="settings_save_partial_success">सामान्य सेटिंग्स सहेजी गईं। SIM सेटिंग्स छोड़ी गईं (SIM सूची अनुपलब्ध)</string>
+    <string name="settings_save_partial_failure">सामान्य सेटिंग्स सहेजी गईं। SIM सेटिंग्स सहेजी नहीं जा सकीं</string>
+    <string name="settings_save_partial_failure_slots">सामान्य सेटिंग्स सहेजी गईं। SIM %1$s की सेटिंग्स सहेजी नहीं जा सकीं</string>
     <string name="settings_save_failed">सहेजना विफल रहा</string>
     <string name="settings_save_already_in_progress">सहेजना पहले से प्रगति में है</string>
     <string name="language_system">सिस्टम</string>

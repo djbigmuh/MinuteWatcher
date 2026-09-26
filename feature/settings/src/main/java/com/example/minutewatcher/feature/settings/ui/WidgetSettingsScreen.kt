@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import android.content.res.Resources
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -159,21 +161,23 @@ private fun WidgetSettingsContent(
 ) {
     var showColorPicker by remember { mutableStateOf(value = false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val resources = LocalResources.current
 
     val partialSuccessMessage = stringResource(id = R.string.settings_save_partial_success)
     val failedMessage = stringResource(id = R.string.settings_save_failed)
+    val partialFailureGeneralMessage = stringResource(id = R.string.settings_save_partial_failure)
 
     LaunchedEffect(saveResult) {
         if (saveResult != null) {
             try {
                 val message =
-                    when (saveResult) {
-                        SaveResult.Success -> null // Suppress success snackbar for auto-save
-                        is SaveResult.PartialSuccess -> partialSuccessMessage
-                        is SaveResult.PartialFailure -> saveResult.message
-                        is SaveResult.Failed -> saveResult.message ?: failedMessage
-                    }
-
+                    resolveSaveResultMessage(
+                        saveResult = saveResult,
+                        partialSuccessMessage = partialSuccessMessage,
+                        failedMessage = failedMessage,
+                        partialFailureGeneralMessage = partialFailureGeneralMessage,
+                        resources = resources,
+                    )
                 message?.let { snackbarHostState.showSnackbar(it) }
             } finally {
                 viewModel.consumeSaveResult()
@@ -213,6 +217,28 @@ private fun WidgetSettingsContent(
         }
     }
 }
+
+private fun resolveSaveResultMessage(
+    saveResult: SaveResult,
+    partialSuccessMessage: String,
+    failedMessage: String,
+    partialFailureGeneralMessage: String,
+    resources: Resources,
+): String? =
+    when (saveResult) {
+        SaveResult.Success -> null
+        is SaveResult.PartialSuccess -> partialSuccessMessage
+        is SaveResult.PartialFailure -> {
+            if (saveResult.failedSlots.isEmpty()) {
+                partialFailureGeneralMessage
+            } else {
+                val slotsString = saveResult.failedSlots.map { it + 1 }.joinToString(", ")
+                resources.getString(R.string.settings_save_partial_failure_slots, slotsString)
+            }
+        }
+
+        is SaveResult.Failed -> failedMessage
+    }
 
 @Composable
 private fun WidgetSettingsList(

@@ -1,6 +1,16 @@
 package com.example.minutewatcher.feature.settings.ui
 
 /**
+ * Reason for complete save operation failure.
+ */
+enum class SaveFailureReason {
+    NOT_LOADED,
+    IN_PROGRESS,
+    TIMEOUT,
+    GENERAL,
+}
+
+/**
  * Result of widget settings save operation.
  *
  * Sealed interface guarantees exhaustive handling of all options
@@ -9,21 +19,12 @@ package com.example.minutewatcher.feature.settings.ui
 sealed interface SaveResult {
     /**
      * Complete save success. All settings saved.
-     *
-     * **Important:** this is a one-shot event for Snackbar.
-     * UI should display "Settings saved" message.
-     * After displaying message, UI calls consumeSaveResult()
-     * to reset saveResult to null.
      */
     data object Success : SaveResult
 
     /**
      * Partial success: general settings saved, but SIM-specific
      * settings skipped (simListLoadFailed = true).
-     *
-     * **Important:** this is a one-shot event for Snackbar.
-     * UI should display message "General settings saved.
-     * SIM settings skipped (SIM list unavailable)."
      */
     data class PartialSuccess(
         val skippedSimSettings: Boolean,
@@ -33,18 +34,19 @@ sealed interface SaveResult {
      * Partial failure: general settings saved successfully, but at least one
      * SIM-specific setting was not saved due to an error.
      *
-     * **Important:** this is a one-shot event for Snackbar.
+     * @property failedSlots 0-based indices of slots that failed to save.
+     * An empty list means slot composition is unknown.
      */
     data class PartialFailure(
-        val message: String,
+        val failedSlots: List<Int>,
     ) : SaveResult
 
     /**
      * Complete save failure. Settings not saved.
      *
-     * **Important:** this is a one-shot event for Snackbar.
+     * @property reason Machine-readable reason for the failure.
      */
     data class Failed(
-        val message: String? = null,
+        val reason: SaveFailureReason,
     ) : SaveResult
 }

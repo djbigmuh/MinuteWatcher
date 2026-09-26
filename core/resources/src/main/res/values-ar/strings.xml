@@ -21,6 +21,8 @@
     <!-- Settings: General -->
     <string name="settings_saved_toast">تم حفظ الإعدادات</string>
     <string name="settings_save_partial_success">تم حفظ الإعدادات العامة. تم تخطي إعدادات SIM (قائمة SIM غير متاحة)</string>
+    <string name="settings_save_partial_failure">تم حفظ الإعدادات العامة. تعذر حفظ إعدادات بطاقة SIM</string>
+    <string name="settings_save_partial_failure_slots">تم حفظ الإعدادات العامة. تعذر حفظ إعدادات بطاقة SIM %1$s</string>
     <string name="settings_save_failed">فشل الحفظ</string>
     <string name="settings_save_already_in_progress">جارٍ الحفظ بالفعل</string>
     <string name="language_system">النظام</string>

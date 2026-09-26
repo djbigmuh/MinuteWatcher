@@ -3,6 +3,7 @@ package com.example.minutewatcher.feature.settings.ui
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -13,7 +14,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
@@ -33,7 +36,6 @@ class WidgetSettingsSaverTest {
     @Test
     fun `save returns Success even if notifyDataChanged is cancelled`() =
         runTest {
-            // Given: Saving succeeds, but notification throws CancellationException
             whenever(loader.saveGeneralSettings(any())).thenReturn(Unit)
             whenever(loader.saveSimSettings(any())).thenReturn(emptyList())
             whenever(
@@ -42,83 +44,88 @@ class WidgetSettingsSaverTest {
 
             val state = WidgetSettingsState()
 
-            // Act: Save
             val result = saver.save(state)
 
-            // Then: Result should be Success, not Failed
             assertEquals(SaveResult.Success, result)
         }
 
     @Test
-    fun `save returns Failed if saving itself fails`() =
+    fun `save returns Failed GENERAL if saving general settings throws exception`() =
         runTest {
-            // Given: Saving general settings throws Exception
             whenever(loader.saveGeneralSettings(any())).thenThrow(RuntimeException("DB failure"))
 
             val state = WidgetSettingsState()
 
-            // Act: Save
             val result = saver.save(state)
 
-            // Then: Result should be Failed
-            assertEquals(SaveResult.Failed("Failed to save general settings"), result)
+            assertEquals(SaveResult.Failed(SaveFailureReason.GENERAL), result)
+        }
+
+    @Test
+    fun `save returns Failed NOT_LOADED if settings load failed`() =
+        runTest {
+            val state = WidgetSettingsState(settingsLoadFailed = true)
+
+            val result = saver.save(state)
+
+            assertEquals(SaveResult.Failed(SaveFailureReason.NOT_LOADED), result)
         }
 
     @Test
     fun `save performs defensive validation of input state`() =
         runTest {
-            // Given: Invalid layout mode (too large)
             val invalidState = WidgetSettingsState(layoutMode = 99)
 
-            // Act: Save
             saver.save(invalidState)
 
-            // Then: verify that the loader received a validated state
-            org.mockito.kotlin.verify(loader).saveGeneralSettings(
-                org.mockito.kotlin.argThat {
-                    this.layoutMode <= com.example.minutewatcher.core.model.Constants.Widget.MAX_LAYOUT_MODE
+            verify(loader).saveGeneralSettings(
+                argThat {
+                    this.layoutMode <= Constants.Widget.MAX_LAYOUT_MODE
                 },
             )
         }
 
     @Test
-    fun `save returns PartialFailure if general settings saved but SIM settings throw exception`() =
+    fun `save returns PartialFailure with failed slots list when saveSimSettings returns failed slots`() =
         runTest {
-            // Given: General settings save succeeds
             whenever(loader.saveGeneralSettings(any())).thenReturn(Unit)
-            // But: SIM settings save throws an exception
+            whenever(loader.saveSimSettings(any())).thenReturn(listOf(0, 1))
+
+            val state = WidgetSettingsState()
+
+            val result = saver.save(state)
+
+            assertEquals(SaveResult.PartialFailure(listOf(0, 1)), result)
+
+            verify(dataChangeNotifier)
+                .notifyDataChanged(any(), any())
+        }
+
+    @Test
+    fun `save returns PartialFailure with empty list when saveSimSettings throws exception`() =
+        runTest {
+            whenever(loader.saveGeneralSettings(any())).thenReturn(Unit)
             whenever(loader.saveSimSettings(any())).thenThrow(RuntimeException("SIM DB failure"))
 
             val state = WidgetSettingsState()
 
-            // Act: Save
             val result = saver.save(state)
 
-            // Then: Result should be PartialFailure
-            assertTrue(
-                "Result should be PartialFailure, but was $result",
-                result is SaveResult.PartialFailure,
-            )
-            val partialFailure = result as SaveResult.PartialFailure
-            assertTrue(partialFailure.message.contains("General settings saved"))
+            assertTrue("Result should be PartialFailure", result is SaveResult.PartialFailure)
+            assertEquals(emptyList<Int>(), (result as SaveResult.PartialFailure).failedSlots)
 
-            // Verify notification still happened
-            org.mockito.kotlin
-                .verify(dataChangeNotifier)
+            verify(dataChangeNotifier)
                 .notifyDataChanged(any(), any())
         }
 
     @Test
     fun `save returns Success when skipSimSettings is true`() =
         runTest {
-            // Given: General settings save succeeds
             whenever(loader.saveGeneralSettings(any())).thenReturn(Unit)
             val state = WidgetSettingsState()
 
-            // Act: Save with skipSimSettings = true
             val result = saver.save(state, skipSimSettings = true)
 
-            // Then: Result should be Success, not PartialSuccess
             assertEquals(SaveResult.Success, result)
         }
 }

@@ -17,6 +17,8 @@
     <!-- Settings: General -->
     <string name="settings_saved_toast">Настройки сохранены</string>
     <string name="settings_save_partial_success">Общие настройки сохранены. Настройки SIM пропущены (список SIM недоступен)</string>
+    <string name="settings_save_partial_failure">Общие настройки сохранены. Настройки SIM не удалось сохранить</string>
+    <string name="settings_save_partial_failure_slots">Общие настройки сохранены. Настройки SIM %1$s не удалось сохранить</string>
     <string name="settings_save_failed">Не удалось сохранить</string>
     <string name="settings_save_already_in_progress">Сохранение уже выполняется</string>
     <string name="language_system">Системный</string>

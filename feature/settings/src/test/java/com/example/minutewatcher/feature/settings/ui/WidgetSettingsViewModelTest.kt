@@ -28,6 +28,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -39,8 +40,6 @@ import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
-/* Suppressing LargeClass as this test file covers exhaustive scenarios for widget settings,
-   including resolution edge cases and persistent state transitions. */
 @Suppress("LargeClass")
 class WidgetSettingsViewModelTest {
     @get:Rule
@@ -50,8 +49,6 @@ class WidgetSettingsViewModelTest {
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
-
-    private val testDispatcher get() = mainDispatcherRule.testDispatcher
 
     private lateinit var viewModel: WidgetSettingsViewModel
 
@@ -85,9 +82,8 @@ class WidgetSettingsViewModelTest {
     @Test
     fun `retryLoad re-attempts loading`() =
         runTest {
-            whenever(loader.load()).thenThrow(RuntimeException("Fail")).thenReturn(WidgetSettingsState())
+            whenever(loader.load()).thenThrow(IllegalStateException("Fail")).thenReturn(WidgetSettingsState())
 
-            // Initial load in init
             val initialViewModel =
                 WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
             advanceUntilIdle()
@@ -134,7 +130,6 @@ class WidgetSettingsViewModelTest {
             runCurrent()
             assertTrue(vm.state.value.isSaving)
 
-            // Second call waits for the first one to complete
             val secondSave = launch { vm.saveAndNotify() }
             runCurrent()
             assertFalse(secondSave.isCompleted)
@@ -152,13 +147,11 @@ class WidgetSettingsViewModelTest {
             viewModel.updateSettings { it.copy(transparency = 10) }
             runCurrent()
 
-            // Should not save immediately
             verify(saver, never()).save(any(), any())
 
             advanceTimeBy(3.seconds)
             runCurrent()
 
-            // Should save after delay
             verify(saver).save(any(), any())
         }
 
@@ -174,7 +167,6 @@ class WidgetSettingsViewModelTest {
             advanceTimeBy(3.seconds)
             runCurrent()
 
-            // Should save only once
             verify(saver, times(1)).save(any(), any())
         }
 
@@ -189,13 +181,11 @@ class WidgetSettingsViewModelTest {
             viewModel.saveAndNotify()
             advanceUntilIdle()
 
-            // Manual save happened
             verify(saver, times(1)).save(any(), any())
 
             advanceTimeBy(3.seconds)
             runCurrent()
 
-            // Auto-save should have been cancelled or skipped (no changes since manual save)
             verify(saver, times(1)).save(any(), any())
         }
 
@@ -287,15 +277,39 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
-    fun `save failure updates state with error`() =
+    fun `save failure GENERAL updates state with reason`() =
         runTest {
             initViewModel()
-            whenever(saver.save(any(), any())).thenReturn(SaveResult.Failed("Network error"))
+            whenever(saver.save(any(), any())).thenReturn(SaveResult.Failed(SaveFailureReason.GENERAL))
 
             viewModel.saveAndNotify()
             advanceUntilIdle()
 
-            assertEquals(SaveResult.Failed("Network error"), viewModel.state.value.saveResult)
+            assertEquals(SaveResult.Failed(SaveFailureReason.GENERAL), viewModel.state.value.saveResult)
+        }
+
+    @Test
+    fun `save failure NOT_LOADED returned when settings not loaded`() =
+        runTest {
+            whenever(loader.load()).thenThrow(IllegalStateException("Load failed"))
+            initViewModel()
+
+            viewModel.saveAndNotify()
+            advanceUntilIdle()
+
+            assertEquals(SaveResult.Failed(SaveFailureReason.NOT_LOADED), viewModel.state.value.saveResult)
+        }
+
+    @Test
+    fun `save failure TIMEOUT returned when save times out`() =
+        runTest {
+            initViewModel()
+            whenever(saver.save(any(), any())).thenReturn(SaveResult.Failed(SaveFailureReason.TIMEOUT))
+
+            viewModel.saveAndNotify()
+            advanceUntilIdle()
+
+            assertEquals(SaveResult.Failed(SaveFailureReason.TIMEOUT), viewModel.state.value.saveResult)
         }
 
     @Test
@@ -312,19 +326,19 @@ class WidgetSettingsViewModelTest {
             advanceTimeBy(3.seconds)
             runCurrent()
 
-            verify(saver).save(org.mockito.kotlin.argThat { transparency == 30 }, any())
+            verify(saver).save(argThat { transparency == 30 }, any())
         }
 
     @Test
     fun `save with partial failure updates state correctly`() =
         runTest {
             initViewModel()
-            whenever(saver.save(any(), any())).thenReturn(SaveResult.PartialFailure("SIM 1 failed"))
+            whenever(saver.save(any(), any())).thenReturn(SaveResult.PartialFailure(listOf(0)))
 
             viewModel.saveAndNotify()
             advanceUntilIdle()
 
-            assertEquals(SaveResult.PartialFailure("SIM 1 failed"), viewModel.state.value.saveResult)
+            assertEquals(SaveResult.PartialFailure(listOf(0)), viewModel.state.value.saveResult)
         }
 
     @Test
