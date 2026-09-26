@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -11,7 +12,6 @@ import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
-import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
@@ -22,7 +22,7 @@ import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
-import com.example.minutewatcher.core.model.SimUsage
+import com.example.minutewatcher.core.model.util.DateUtils
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -46,7 +46,6 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerTest {
     private val usageStateRepository: UsageStateRepository = mock()
-    private val simUsageRepository: SimUsageRepository = mock()
     private val simNotificationFlagsRepository: SimNotificationFlagsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val autoResetUseCase: AutoResetUseCase = mock()
@@ -67,7 +66,6 @@ class UsageCheckWorkerTest {
         val workerParams: WorkerParameters = mock()
         val deps =
             UsageWorkerDependencies(
-                simUsageRepository = simUsageRepository,
                 simNotificationFlagsRepository = simNotificationFlagsRepository,
                 appSettingsRepository = appSettingsRepository,
                 autoResetUseCase = autoResetUseCase,
@@ -95,6 +93,7 @@ class UsageCheckWorkerTest {
         minutesUsed: Int = 0,
         minutesLimit: Int = 0,
         identity: String = "sim_0",
+        autoResetDay: Int = 1,
     ): GlobalSnapshot {
         val entity =
             SemanticEntity(
@@ -117,7 +116,7 @@ class UsageCheckWorkerTest {
                 identity = identity,
                 operatorName = "MTS",
                 entities = mapOf(PackageType.MINUTES to entity),
-                autoResetDay = 1,
+                autoResetDay = autoResetDay,
             )
         return GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
@@ -132,6 +131,7 @@ class UsageCheckWorkerTest {
         used: Long,
         limit: Long,
         remaining: Long,
+        autoResetDay: Int = 1,
     ): GlobalSnapshot {
         val entity =
             SemanticEntity(
@@ -154,7 +154,7 @@ class UsageCheckWorkerTest {
                 identity = identity,
                 operatorName = "MTS",
                 entities = mapOf(PackageType.DATA to entity),
-                autoResetDay = 1,
+                autoResetDay = autoResetDay,
             )
         return GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
@@ -163,29 +163,6 @@ class UsageCheckWorkerTest {
             capabilities = emptyList(),
         )
     }
-
-    private fun createSimUsage(
-        identity: String,
-        minutesUsed: Int = 0,
-        minutesLimit: Int = 0,
-        trafficUsedMb: Float = 0f,
-        trafficLimitMb: Int = 0,
-    ) = SimUsage(
-        identity = identity,
-        slotIndex = 0,
-        subscriptionId = 1,
-        operator = "MTS",
-        minutesUsed = minutesUsed,
-        minutesLimit = minutesLimit,
-        trafficUsedMb = trafficUsedMb,
-        trafficLimitMb = trafficLimitMb,
-        manualAdjustment = 0,
-        trafficAdjustmentGb = 0f,
-        autoReset = true,
-        autoResetDay = 1,
-        lastResetDate = 0L,
-        rolloverEnabled = false,
-    )
 
     @Test
     fun `doWork returns success when no snapshots`() =
@@ -206,15 +183,43 @@ class UsageCheckWorkerTest {
     fun `doWork sends notification when minutes low`() =
         runTest(testDispatcher) {
             setupDefaultMocks()
-            val identity = "sim_0"
             val snapshot = createUsageSnapshot(minutesUsed = 81, minutesLimit = 100)
 
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
-            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity)))
 
             worker.doWork()
 
             verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
+        }
+
+    @Test
+    fun `daysRemaining in notification corresponds to autoResetDay from simSnapshot`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val nowMs = 1_700_000_000_000L
+            whenever(timeProvider.now()).thenReturn(nowMs)
+
+            val customAutoResetDay = 15
+            val snapshot =
+                createUsageSnapshot(
+                    minutesUsed = 85,
+                    minutesLimit = 100,
+                    identity = "sim_custom_reset",
+                    autoResetDay = customAutoResetDay,
+                )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val expectedDaysRemaining = DateUtils.getDaysRemainingInMonth(customAutoResetDay, nowMs)
+            val expectedDaysText = FormatUtils.formatDaysPlural(context, expectedDaysRemaining)
+
+            worker.doWork()
+
+            verify(notificationHelper).sendUsageNotification(
+                title = any(),
+                message = argThat { contains(expectedDaysText) },
+                simSlot = eq(0),
+                type = eq(NOTIFICATION_TYPE_MINUTES),
+            )
         }
 
     @Test
@@ -230,7 +235,6 @@ class UsageCheckWorkerTest {
 
     private suspend fun setupTrafficCriticalScenario(identity: String) {
         setupDefaultMocks()
-        // Use 95% used, 5% remaining ( < 10% critical threshold)
         val limit = 1000L * 1024 * 1024
         val used = 950L * 1024 * 1024
         val remaining = 50L * 1024 * 1024
@@ -238,8 +242,6 @@ class UsageCheckWorkerTest {
         val snapshot = createTrafficSnapshot(identity, used, limit, remaining)
 
         whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
-        whenever(simUsageRepository.getSimUsage(identity))
-            .thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 950f, trafficLimitMb = 1000)))
     }
 
     private fun verifyTrafficCriticalNotification() {
@@ -256,13 +258,10 @@ class UsageCheckWorkerTest {
     fun `doWork skips notifications when settings load fails`() =
         runTest(testDispatcher) {
             setupDefaultMocks()
-            val identity = "sim_0"
             val snapshot = createUsageSnapshot(minutesUsed = 81, minutesLimit = 100)
 
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
-            // Mock timeout: a flow that never emits
             whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
-            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity)))
 
             val result = worker.doWork()
 
@@ -271,6 +270,7 @@ class UsageCheckWorkerTest {
         }
 
     private companion object {
+        private const val NOTIFICATION_TYPE_MINUTES = 0
         private const val NOTIFICATION_TYPE_TRAFFIC = 1
     }
 }

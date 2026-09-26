@@ -29,6 +29,7 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * UsageCheckWorker encapsulates a single background check cycle
  * for limit usage across all active SIM cards.
+ * Notification limits and remaining days are calculated directly from the SIM snapshot.
  *
  * NOTE: TooManyFunctions is suppressed: the worker is a single sequential
  * pipeline (permission checks, usage reads, notifications); decomposition
@@ -195,28 +196,8 @@ class UsageCheckWorker
             appSettings: AppSettings,
         ) {
             val identity = simSnapshot.identity
-            var simUsageResult =
-                deps.simUsageRepository
-                    .getSimUsage(identity)
-                    .firstWithTimeout()
-            if (simUsageResult == null) {
-                AppLogger.w("UsageCheckWorker: getSimUsage timed out for $identity, retrying with 10s...")
-                simUsageResult =
-                    deps.simUsageRepository
-                        .getSimUsage(identity)
-                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
-            }
-
-            val simUsage =
-                simUsageResult ?: run {
-                    AppLogger.e(
-                        "UsageCheckWorker: getSimUsage failed for $identity after retry, skipping notifications",
-                    )
-                    return
-                }
-
             val now = deps.timeProvider.now()
-            val daysRemaining = DateUtils.getDaysRemainingInMonth(simUsage.autoResetDay, now)
+            val daysRemaining = DateUtils.getDaysRemainingInMonth(simSnapshot.autoResetDay, now)
 
             simSnapshot.entities[PackageType.MINUTES]?.let {
                 checkMinutesUsage(it, daysRemaining, identity, appSettings)

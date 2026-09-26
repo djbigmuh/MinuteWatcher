@@ -5,12 +5,15 @@ import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
+import androidx.work.WorkerFactory
+import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -20,6 +23,8 @@ import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -36,7 +41,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerModuleTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -70,7 +75,6 @@ class UsageCheckWorkerModuleTest {
     fun setUp() {
         MockitoAnnotations.openMocks(this)
 
-        // Grant permission for Robolectric
         val application = ApplicationProvider.getApplicationContext<Application>()
         Shadows.shadowOf(application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
 
@@ -84,12 +88,12 @@ class UsageCheckWorkerModuleTest {
 
         runTest {
             whenever(usageStateRepository.refresh()).thenReturn(
-                com.example.minutewatcher.core.domain.RefreshResult
+                RefreshResult
                     .Success(emptySnapshot),
             )
             whenever(
                 usageStateRepository.observeSnapshot(),
-            ).thenReturn(kotlinx.coroutines.flow.MutableStateFlow(emptySnapshot))
+            ).thenReturn(MutableStateFlow(emptySnapshot))
             whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         }
     }
@@ -101,15 +105,14 @@ class UsageCheckWorkerModuleTest {
             val worker =
                 TestListenableWorkerBuilder<UsageCheckWorker>(context)
                     .setWorkerFactory(
-                        object : androidx.work.WorkerFactory() {
+                        object : WorkerFactory() {
                             override fun createWorker(
                                 appContext: Context,
                                 workerClassName: String,
-                                workerParameters: androidx.work.WorkerParameters,
+                                workerParameters: WorkerParameters,
                             ): ListenableWorker {
                                 val deps =
                                     UsageWorkerDependencies(
-                                        simUsageRepository = simUsageRepository,
                                         simNotificationFlagsRepository = simNotificationFlagsRepository,
                                         appSettingsRepository = appSettingsRepository,
                                         autoResetUseCase = autoResetUseCase,
@@ -133,7 +136,6 @@ class UsageCheckWorkerModuleTest {
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.success(), result)
 
-            // Verify refresh was called once as per checkUsageAndNotify logic
             verify(usageStateRepository, times(1)).refresh()
         }
 }

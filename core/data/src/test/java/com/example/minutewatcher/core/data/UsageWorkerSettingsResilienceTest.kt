@@ -110,10 +110,9 @@ class UsageWorkerSettingsResilienceTest {
     @Test
     fun `regression - Worker should NOT send notifications if settings load fails (fail-closed)`() =
         runTest {
-            // 1. Mock AppSettings to fail (hang until timeout)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(
                 flow {
-                    delay(60_000.milliseconds) // Longer than worker's 10s wait
+                    delay(60_000.milliseconds)
                     emit(AppSettings())
                 },
             )
@@ -130,7 +129,6 @@ class UsageWorkerSettingsResilienceTest {
                             ): ListenableWorker {
                                 val deps =
                                     UsageWorkerDependencies(
-                                        simUsageRepository,
                                         simNotificationFlagsRepository,
                                         appSettingsRepository,
                                         autoResetUseCase,
@@ -151,14 +149,10 @@ class UsageWorkerSettingsResilienceTest {
                         },
                     ).build()
 
-            // 2. Run work
             val result = worker.doWork()
 
-            // 3. Verify it completed successfully.
-            // It continues with stale/empty settings and fails-closed.
             assertEquals(ListenableWorker.Result.success(), result)
 
-            // 4. Verify NO notifications sent
             verify(notificationHelper, never()).sendUsageNotification(
                 any(),
                 any(),
