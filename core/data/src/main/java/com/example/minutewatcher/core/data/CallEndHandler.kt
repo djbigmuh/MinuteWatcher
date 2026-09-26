@@ -416,10 +416,10 @@ internal class CallEndHandler
                 }
             }
 
-    private fun buildCallSignature(
-        startTimeMillis: Long,
-        startElapsedRealtime: Long,
-    ): String = "$startTimeMillis|$startElapsedRealtime"
+        private fun buildCallSignature(
+            startTimeMillis: Long,
+            startElapsedRealtime: Long,
+        ): String = "$startTimeMillis|$startElapsedRealtime"
 
         private suspend fun handleReadStartTimeFailure(
             subId: Int,

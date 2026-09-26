@@ -177,15 +177,15 @@ class InitialSetupWorker
             }
         }
 
-    private suspend fun markMigrationSkippedPermanently(): Result? {
-        AppLogger.e(
-            "InitialSetupWorker: legacy data availability could not be determined " +
-                "after $MAX_MIGRATION_ATTEMPTS attempts, skipping migration",
-        )
-        deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
-        deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.LEGACY_DATA_CHECK_FAILED)
-        deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-        return null
+        private suspend fun markMigrationSkippedPermanently(): Result? {
+            AppLogger.e(
+                "InitialSetupWorker: legacy data availability could not be determined " +
+                    "after $MAX_MIGRATION_ATTEMPTS attempts, skipping migration",
+            )
+            deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
+            deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.LEGACY_DATA_CHECK_FAILED)
+            deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+            return null
         }
 
         private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =

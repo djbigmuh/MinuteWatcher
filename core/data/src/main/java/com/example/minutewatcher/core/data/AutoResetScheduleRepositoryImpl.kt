@@ -17,42 +17,42 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class AutoResetScheduleRepositoryImpl
-@Inject
-constructor(
-    @AppDataStore dataStore: DataStore<Preferences>,
-) : BaseDataStoreRepository(dataStore),
-    AutoResetScheduleRepository {
-    override suspend fun getLastCheckMillis(): Long? =
-        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-            dataStore.data.map { prefs -> prefs[DataStoreKeys.AUTO_RESET_LAST_CHECK_MILLIS] }.first()
+    @Inject
+    constructor(
+        @AppDataStore dataStore: DataStore<Preferences>,
+    ) : BaseDataStoreRepository(dataStore),
+        AutoResetScheduleRepository {
+        override suspend fun getLastCheckMillis(): Long? =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                dataStore.data.map { prefs -> prefs[DataStoreKeys.AUTO_RESET_LAST_CHECK_MILLIS] }.first()
+            }
+
+        override suspend fun setLastCheckMillis(valueMillis: Long) {
+            val result =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    dataStore.edit { prefs ->
+                        prefs[DataStoreKeys.AUTO_RESET_LAST_CHECK_MILLIS] = valueMillis
+                    }
+                }
+            if (result == null) {
+                AppLogger.w("AutoResetScheduleRepositoryImpl: setLastCheckMillis timed out")
+            }
         }
 
-    override suspend fun setLastCheckMillis(valueMillis: Long) {
-        val result =
+        override suspend fun getFailureCount(): Int =
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                dataStore.edit { prefs ->
-                    prefs[DataStoreKeys.AUTO_RESET_LAST_CHECK_MILLIS] = valueMillis
+                dataStore.data.map { prefs -> prefs[DataStoreKeys.AUTO_RESET_FAIL_COUNT] ?: 0 }.first()
+            } ?: 0
+
+        override suspend fun setFailureCount(count: Int) {
+            val result =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    dataStore.edit { prefs ->
+                        prefs[DataStoreKeys.AUTO_RESET_FAIL_COUNT] = count
+                    }
                 }
+            if (result == null) {
+                AppLogger.w("AutoResetScheduleRepositoryImpl: setFailureCount timed out")
             }
-        if (result == null) {
-            AppLogger.w("AutoResetScheduleRepositoryImpl: setLastCheckMillis timed out")
         }
     }
-
-    override suspend fun getFailureCount(): Int =
-        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-            dataStore.data.map { prefs -> prefs[DataStoreKeys.AUTO_RESET_FAIL_COUNT] ?: 0 }.first()
-        } ?: 0
-
-    override suspend fun setFailureCount(count: Int) {
-        val result =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                dataStore.edit { prefs ->
-                    prefs[DataStoreKeys.AUTO_RESET_FAIL_COUNT] = count
-                }
-            }
-        if (result == null) {
-            AppLogger.w("AutoResetScheduleRepositoryImpl: setFailureCount timed out")
-        }
-    }
-}

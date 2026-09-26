@@ -33,14 +33,14 @@ class MainDialogController
         val showTrafficLimitationDialog = savedStateHandle.getStateFlow(KEY_TRAFFIC_LIMITATION_DIALOG, false)
         val showUsageAccessDialog = savedStateHandle.getStateFlow(KEY_USAGE_ACCESS_DIALOG, false)
 
-    private val onboardingPromptClaimed = AtomicBoolean(false)
+        private val onboardingPromptClaimed = AtomicBoolean(false)
 
-    /**
-     * Claims the single permission/right to show the onboarding dialog prompt.
-     *
-     * @return True if this is the first claim call for this controller instance, false otherwise.
-     */
-    fun claimOnboardingPrompt(): Boolean = onboardingPromptClaimed.compareAndSet(false, true)
+        /**
+         * Claims the single permission/right to show the onboarding dialog prompt.
+         *
+         * @return True if this is the first claim call for this controller instance, false otherwise.
+         */
+        fun claimOnboardingPrompt(): Boolean = onboardingPromptClaimed.compareAndSet(false, true)
 
         /**
          * Sets the data for the limit editing dialog.
