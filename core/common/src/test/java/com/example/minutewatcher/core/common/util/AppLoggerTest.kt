@@ -182,6 +182,58 @@ class AppLoggerTest {
         assertTrue(File(dir2, "logs.txt").readText().contains("Log in dir2"))
     }
 
+    @Test
+    fun `rotation failure when directory is read only retains active log file content`() {
+        val largeChunk = "X".repeat(200_000)
+        repeat(6) { idx ->
+            AppLogger.d("Pre-rotation chunk $idx: $largeChunk")
+        }
+
+        val preRotationMarker = "PRE_ROTATION_MARKER"
+        AppLogger.d(preRotationMarker)
+        waitForLogMarker(preRotationMarker)
+
+        val logFile = File(logDir, "logs.txt")
+        assertTrue("logs.txt must exist before rotation", logFile.exists())
+
+        try {
+            logDir.setReadOnly()
+
+            val triggerMarker = "TRIGGER_ROTATION_ENTRY"
+            AppLogger.d(triggerMarker)
+            waitForChannelDrain()
+
+            assertTrue("logs.txt must exist after failed rotation", logFile.exists())
+            val contentAfter = logFile.readText()
+            assertTrue("logs.txt must retain pre-rotation content", contentAfter.contains(preRotationMarker))
+        } finally {
+            logDir.setWritable(true)
+        }
+    }
+
+    @Test
+    fun `reinitializing for test resets failure counter and reenables file logging`() {
+        val readOnlyFile = File(logDir, "logs.txt")
+        readOnlyFile.createNewFile()
+        readOnlyFile.setReadOnly()
+
+        repeat(5) { i ->
+            AppLogger.d("Failing entry $i")
+        }
+
+        waitForChannelDrain()
+
+        val newDir = tmpFolder.newFolder("logs_reinit")
+        AppLogger.initForTest(newDir, enabled = true)
+
+        val newMarker = "REINITIALIZED_SUCCESS_MARKER"
+        AppLogger.d(newMarker)
+        waitForLogMarker(newMarker, targetDir = newDir)
+
+        val newLogFile = File(newDir, "logs.txt")
+        assertTrue("New log file should contain new marker", newLogFile.readText().contains(newMarker))
+    }
+
     private fun waitForLogMarker(
         marker: String,
         targetDir: File = logDir,

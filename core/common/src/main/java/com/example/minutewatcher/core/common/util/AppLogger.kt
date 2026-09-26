@@ -4,11 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.BuildConfig
-import com.example.minutewatcher.core.common.util.AppLogger.init
-import com.example.minutewatcher.core.common.util.AppLogger.initForTest
-import com.example.minutewatcher.core.common.util.AppLogger.resetForTest
-import com.example.minutewatcher.core.common.util.AppLogger.shutdown
-import com.example.minutewatcher.core.common.util.AppLogger.writer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,11 +27,14 @@ import java.time.format.DateTimeFormatter
  * Guaranteed to be exception-safe for all public methods.
  *
  * **Invariants:**
- * - The buffered file writer [writer] belongs exclusively to the single worker coroutines job.
+ * - Worker file operations (file size checks, writer opening, writing, flushing, rotation, closing)
+ *   and lifecycle methods ([init], [initForTest], [resetForTest], [shutdown], [closeWriter]) are serialized
+ *   using the `synchronized(this)` monitor.
+ * - During rotation, the active log file is neither deleted nor truncated until its contents have been
+ *   successfully transferred to `logs.old.txt`.
  * - Consumes the log channel sequentially in FIFO order.
  * - Opened lazily on first log entry and closed on file rotation, file logging disablement,
  *   [shutdown], or test state reset ([resetForTest], [initForTest], [init]).
- * - Access from other threads is synchronized via `synchronized(this)`.
  *
  * NOTE: Suppressing TooManyFunctions as this component manages complex multi-threaded
  * logging lifecycle, including coroutine-based worker, file rotation and test utilities.
@@ -49,6 +47,7 @@ object AppLogger {
     private const val LOG_FILE_OLD_NAME = "logs.old.txt"
     private const val LOG_QUEUE_CAPACITY = 8192
     private const val LOG_BUFFER_SIZE = 8192
+    private const val MAX_WRITE_FAILURES = 3
 
     @Volatile
     private var isFileLoggingEnabled = BuildConfig.DEBUG
@@ -64,6 +63,8 @@ object AppLogger {
 
     @Volatile
     private var writer: BufferedWriter? = null
+
+    private var consecutiveWriteFailures = 0
 
     private val logChannel =
         Channel<LogEntry>(
@@ -92,6 +93,7 @@ object AppLogger {
         synchronized(this) {
             if (isShutdown) return
             closeWriter()
+            consecutiveWriteFailures = 0
             logDir = context.filesDir
             logger = customLogger
             ensureWorkerStarted()
@@ -162,9 +164,6 @@ object AppLogger {
         logChannel.trySend(LogEntry(level, message))
     }
 
-    private var consecutiveWriteFailures = 0
-    private const val MAX_WRITE_FAILURES = 3
-
     private fun openWriter(dir: File): BufferedWriter? =
         try {
             val logFile = File(dir, LOG_FILE_NAME)
@@ -189,34 +188,34 @@ object AppLogger {
     }
 
     private fun processLogEntry(entry: LogEntry) {
-        val dir = logDir ?: return
-        try {
-            val logFile = File(dir, LOG_FILE_NAME)
-            var activeWriter = writer
+        synchronized(this) {
+            val dir = logDir
+            if (!isFileLoggingEnabled || isShutdown || dir == null) return
+            try {
+                val logFile = File(dir, LOG_FILE_NAME)
 
-            if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+                if (logFile.exists() && logFile.length() > MAX_FILE_SIZE) {
+                    rotateLogFiles(dir)
+                } else if (writer == null) {
+                    openWriter(dir)
+                }
+
+                val activeWriter = writer
+                if (activeWriter == null) {
+                    consecutiveWriteFailures++
+                    handleWriteFailure("failed to open writer")
+                } else {
+                    val timestamp = dateFormat.format(entry.timestamp)
+                    activeWriter.write("$timestamp ${entry.level}/$TAG: ${entry.message}\n")
+                    activeWriter.flush()
+                    consecutiveWriteFailures = 0
+                }
+            } catch (e: Exception) {
                 closeWriter()
-                rotateLogFiles(dir, logFile)
-                activeWriter = openWriter(dir)
-            } else if (activeWriter == null) {
-                activeWriter = openWriter(dir)
-            }
-
-            if (activeWriter == null) {
                 consecutiveWriteFailures++
-                handleWriteFailure("failed to open writer")
-                return
+                Log.e(TAG, "AppLogger: failed to write log to file (failure $consecutiveWriteFailures)", e)
+                handleWriteFailure("write exception")
             }
-
-            val timestamp = dateFormat.format(entry.timestamp)
-            activeWriter.write("$timestamp ${entry.level}/$TAG: ${entry.message}\n")
-            activeWriter.flush()
-            consecutiveWriteFailures = 0
-        } catch (e: Exception) {
-            closeWriter()
-            consecutiveWriteFailures++
-            Log.e(TAG, "AppLogger: failed to write log to file (failure $consecutiveWriteFailures)", e)
-            handleWriteFailure("write exception")
         }
     }
 
@@ -233,15 +232,45 @@ object AppLogger {
         }
     }
 
-    private fun rotateLogFiles(
-        dir: File,
-        logFile: File,
-    ) {
+    private fun rotateLogFiles(dir: File) {
+        closeWriter()
+
+        val logFile = File(dir, LOG_FILE_NAME)
         val oldFile = File(dir, LOG_FILE_OLD_NAME)
-        if (oldFile.exists()) oldFile.delete()
-        if (!logFile.renameTo(oldFile)) {
-            logFile.delete()
+
+        if (oldFile.exists()) {
+            runCatching { oldFile.delete() }
         }
+
+        val moved = runCatching { logFile.renameTo(oldFile) }.getOrDefault(false)
+
+        if (!moved) {
+            val copySuccess =
+                runCatching {
+                    logFile.inputStream().use { input ->
+                        oldFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    true
+                }.getOrDefault(false)
+
+            if (copySuccess) {
+                val truncateSuccess =
+                    runCatching {
+                        FileOutputStream(logFile, false).use { }
+                        true
+                    }.getOrDefault(false)
+
+                if (!truncateSuccess) {
+                    Log.e(TAG, "AppLogger: failed to truncate active log file after copy")
+                }
+            } else {
+                Log.e(TAG, "AppLogger: log file rotation failed (move and copy failed)")
+            }
+        }
+
+        openWriter(dir)
     }
 
     /**
@@ -267,6 +296,7 @@ object AppLogger {
         synchronized(this) {
             isShutdown = false
             isFileLoggingEnabled = BuildConfig.DEBUG
+            consecutiveWriteFailures = 0
             closeWriter()
             logDir = null
             workerJob?.cancel()
@@ -288,6 +318,7 @@ object AppLogger {
     ) {
         synchronized(this) {
             closeWriter()
+            consecutiveWriteFailures = 0
             logDir = dir
             isFileLoggingEnabled = enabled
             ensureWorkerStarted()
