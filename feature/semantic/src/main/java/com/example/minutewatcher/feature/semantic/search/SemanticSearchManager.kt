@@ -231,8 +231,7 @@ class SemanticSearchManager
 
         private fun handleMutexTimeout() {
             val count = consecutiveMutexTimeouts.get()
-            // Log as debug for transient timeouts, warning if it persists.
-            if (count < MAX_MUTEX_TIMEOUT_RETRIES) {
+            if (count < MUTEX_STUCK_THRESHOLD) {
                 AppLogger.d(
                     "SemanticSearchManager: indexing skipped due to mutex timeout (cycle $count)",
                 )
@@ -249,7 +248,7 @@ class SemanticSearchManager
             if (!indexMutex.tryLock()) {
                 consecutiveMutexTimeouts.incrementAndGet()
 
-                if (consecutiveMutexTimeouts.get() >= 2) {
+                if (consecutiveMutexTimeouts.get() >= MUTEX_STUCK_THRESHOLD) {
                     transitionStatus(
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -470,10 +469,9 @@ class SemanticSearchManager
             private const val SNIPPETS_PER_DOCUMENT = 2
 
             /**
-             * Maximum consecutive mutex timeouts before escalating to warning in logs.
-             * This threshold prevents log spamming for transient contention while ensuring
-             * persistent issues are visible.
+             * Number of consecutive indexing mutex timeouts after which the index loop
+             * is considered stuck.
              */
-            private const val MAX_MUTEX_TIMEOUT_RETRIES = 3
+            private const val MUTEX_STUCK_THRESHOLD = 2
         }
     }

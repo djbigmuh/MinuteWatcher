@@ -291,7 +291,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `consecutiveMutexTimeouts is reset after successful acquisition`() =
+    fun `consecutiveMutexTimeouts is reset and status recovers after successful acquisition`() =
         runTest(testDispatcher) {
             val manager = createManager(appScope)
 
@@ -302,10 +302,16 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                 manager.indexSnapshot(createSnapshotWithOneSim())
                 assertEquals(1, manager.consecutiveMutexTimeouts.get())
 
-                // Second timeout -> should set Error status
+                // Second timeout -> reaches MUTEX_STUCK_THRESHOLD -> should set Error status with DATABASE_ERROR
                 manager.indexSnapshot(createSnapshotWithOneSim())
                 assertEquals(2, manager.consecutiveMutexTimeouts.get())
-                assertTrue(manager.status.value is TrackingStatus.Error)
+
+                val errorStatus = manager.status.value
+                assertTrue("Status should be Error on reaching stuck threshold", errorStatus is TrackingStatus.Error)
+                assertEquals(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    (errorStatus as TrackingStatus.Error).type,
+                )
             } finally {
                 manager.indexMutex.unlock()
             }
@@ -313,8 +319,12 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             // 2. Now call indexSnapshot successfully
             manager.indexSnapshot(createSnapshotWithOneSim())
 
-            // 3. Verify counter is reset to 0
+            // 3. Verify counter is reset to 0 and status recovers
             assertEquals(0, manager.consecutiveMutexTimeouts.get())
+            assertTrue(
+                "Status should recover to Ready after successful indexing, was ${manager.status.value}",
+                manager.status.value is TrackingStatus.Ready,
+            )
         }
 
     @Test
