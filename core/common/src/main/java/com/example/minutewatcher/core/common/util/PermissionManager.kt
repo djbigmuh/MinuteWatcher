@@ -10,6 +10,7 @@ import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +19,8 @@ import javax.inject.Singleton
  *
  * **Thread safety:** All methods are safe to call from any thread.
  * System service access is handled by the Android Framework.
+ *
+ * **Logging Contract:** Permission state is logged once when changed, rather than on every check.
  */
 @Singleton
 class PermissionManager
@@ -26,6 +29,10 @@ class PermissionManager
         @param:ApplicationContext private val context: Context,
         private val subscriptionManager: SubscriptionManager?,
     ) {
+        private val phoneStatePermissionState = AtomicReference<Boolean?>(null)
+        private val notificationPermissionState = AtomicReference<Boolean?>(null)
+        private val usageStatsPermissionState = AtomicReference<Boolean?>(null)
+
         /**
          * Returns true if the device supports telephony services (SIM cards).
          */
@@ -39,7 +46,7 @@ class PermissionManager
                     context,
                     Manifest.permission.READ_PHONE_STATE,
                 ) == PackageManager.PERMISSION_GRANTED
-            AppLogger.d("Checking READ_PHONE_STATE permission: ${if (granted) "Granted" else "Denied"}")
+            logPermissionStateChange("Phone state", phoneStatePermissionState, granted)
             return granted
         }
 
@@ -117,7 +124,7 @@ class PermissionManager
                 } else {
                     true
                 }
-            AppLogger.d("Checking POST_NOTIFICATIONS permission: ${if (granted) "Granted" else "Denied"}")
+            logPermissionStateChange("Notification", notificationPermissionState, granted)
             return granted
         }
 
@@ -146,7 +153,18 @@ class PermissionManager
                     AppOpsManager.MODE_IGNORED
                 }
             val granted = mode == AppOpsManager.MODE_ALLOWED
-            AppLogger.d("Checking GET_USAGE_STATS permission: ${if (granted) "Granted" else "Denied"}")
+            logPermissionStateChange("Usage stats", usageStatsPermissionState, granted)
             return granted
+        }
+
+        private fun logPermissionStateChange(
+            permissionName: String,
+            stateRef: AtomicReference<Boolean?>,
+            granted: Boolean,
+        ) {
+            val previousState = stateRef.getAndSet(granted)
+            if (previousState != granted) {
+                AppLogger.d("$permissionName permission state: ${if (granted) "Granted" else "Denied"}")
+            }
         }
     }
