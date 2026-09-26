@@ -191,7 +191,7 @@ class UpdateCoordinator
                             ),
                         )
                     } finally {
-                        setupJob.compareAndSet(coroutineContext.job, null)
+                        setupJob.compareAndSet(currentCoroutineContext().job, null)
                     }
                 }
 
@@ -458,7 +458,7 @@ class UpdateCoordinator
             // This allows external calls (performForcedUpdate) to cancel current update
             // without interrupting the whole observation cycle.
             coroutineScope {
-                currentUpdateJob.set(coroutineContext.job)
+                currentUpdateJob.set(currentCoroutineContext().job)
                 try {
                     val result = performWidgetUpdate()
 
@@ -475,7 +475,7 @@ class UpdateCoordinator
                         throw TerminalUpdateException("Terminal widget update failure")
                     }
                 } finally {
-                    currentUpdateJob.compareAndSet(coroutineContext.job, null)
+                    currentUpdateJob.compareAndSet(currentCoroutineContext().job, null)
                 }
             }
         }
