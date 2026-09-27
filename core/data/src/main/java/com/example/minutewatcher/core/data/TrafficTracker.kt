@@ -102,7 +102,7 @@ class TrafficTracker
         private val updateMutex = Mutex()
         private val initializationFailed = AtomicBoolean(false)
         private val isInitializing = AtomicBoolean(false)
-    private val bothPermissionsGranted = AtomicBoolean(false)
+        private val bothPermissionsGranted = AtomicBoolean(false)
 
         @VisibleForTesting
         internal val lastSuccessElapsed = AtomicLong(0L)
