@@ -174,7 +174,8 @@ internal class CallEndHandler
             val error = TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message)
             // Specific rule for CallEndHandler: do not overwrite a legitimate Active status
             // from a successful concurrent refreshStatus with a stale error from the catch block.
-            // The transitionStatus implementation in CallTracker handles this priority.
+            // The prioritized rules in TrackingStatusMachine.transition applied via
+            // CallTracker.updateStatus handle this.
             context.updateStatus(error)
             if (subId != -1) {
                 try {
@@ -313,6 +314,9 @@ internal class CallEndHandler
         /**
          * Validates the call duration and determines if cleanup or refresh is needed.
          *
+         * Serves as the single source of truth for stale boot time and max call duration checks.
+         * Subsequent processing in [processCallDurationLocked] relies on these checks having passed.
+         *
          * @return [CallEndResult.CONTINUE] if validation passed.
          *         [CallEndResult.CLEANUP_AND_REFRESH] if session was cleaned up (no bootTime) and refresh is needed.
          *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up due to stale boot time
@@ -365,20 +369,6 @@ internal class CallEndHandler
             context: CallTrackingContext,
         ): CallEndResult =
             when {
-                durationSeconds < 0 -> {
-                    AppLogger.w(
-                        "CallTracker: negative duration detected for subId $subId ($durationSeconds s), ignoring",
-                    )
-                    CallEndResult.CLEANUP_AND_REFRESH
-                }
-
-                durationSeconds > (Constants.Calls.MAX_CALL_DURATION_MS / Constants.Time.MILLIS_IN_SECOND) -> {
-                    AppLogger.w(
-                        "CallTracker: duration $durationSeconds s exceeds max, clearing session for subId $subId",
-                    )
-                    CallEndResult.CLEANUP_AND_REFRESH
-                }
-
                 data.savedUptimeResult.getOrElse { 0L }.let { (it > 0L) && (data.currentUptime < it) } -> {
                     AppLogger.w("CallTracker: negative uptime duration detected for subId $subId, ignoring")
                     CallEndResult.CLEANUP_AND_REFRESH
