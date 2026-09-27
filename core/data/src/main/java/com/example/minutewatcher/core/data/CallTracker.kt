@@ -96,17 +96,30 @@ open class CallTracker
 
         /**
          * Ensures the tracker is started.
+         *
+         * State transition from [State.IDLE] or [State.FAILED] to [State.INITIALIZING] and replacement
+         * of completed [initDeferred] occur atomically within a single synchronized block. This guarantees
+         * that concurrent calls to [awaitInitialization] or [onCallStarted] will not observe a completed
+         * [initDeferred] from a previous failed cycle while a new initialization cycle is in progress.
+         *
          * This method is idempotent and thread-safe.
          */
         open fun ensureStarted() {
-            if (trackerState.compareAndSet(State.IDLE, State.INITIALIZING) ||
-                trackerState.compareAndSet(State.FAILED, State.INITIALIZING)
-            ) {
+            val shouldStart =
                 synchronized(this) {
-                    if (initDeferred.isCompleted) {
-                        initDeferred = CompletableDeferred()
+                    val current = trackerState.get()
+                    if (current == State.IDLE || current == State.FAILED) {
+                        trackerState.set(State.INITIALIZING)
+                        if (initDeferred.isCompleted) {
+                            initDeferred = CompletableDeferred()
+                        }
+                        true
+                    } else {
+                        false
                     }
                 }
+
+            if (shouldStart) {
                 try {
                     startPermissionObserver()
                     val newInitJob =
@@ -414,8 +427,8 @@ open class CallTracker
         fun stop() {
             initJob.getAndSet(null)?.cancel()
             permissionObserverJob.getAndSet(null)?.cancel()
-            trackerState.set(State.IDLE)
             synchronized(this) {
+                trackerState.set(State.IDLE)
                 // Cancel current deferred to unblock any awaiters (e.g. in workers or handlers)
                 if (!initDeferred.isCompleted) {
                     initDeferred.completeExceptionally(CallTrackerStoppedException())
