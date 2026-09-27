@@ -100,10 +100,25 @@ class SimUtilsTest {
     }
 
     @Test
-    fun `getShortOperatorName returns truncated original name on exception when original name is non-empty`() {
+    fun `getShortOperatorName returns truncated original name on resource exception when original name is non-empty`() {
         whenever(context.getString(R.string.operator_mts)).thenThrow(RuntimeException("Resource error"))
         val result = SimUtils.getShortOperatorName(context, "MTS RUS", 0)
         assertEquals("MTS RUS", result)
+    }
+
+    @Test
+    fun `getShortOperatorName preserves case on resource exception for mixed case operator name`() {
+        whenever(context.getString(R.string.operator_mts)).thenThrow(RuntimeException("Resource error"))
+        val result = SimUtils.getShortOperatorName(context, "mts rus", 0)
+        assertEquals("mts rus", result)
+    }
+
+    @Test
+    fun `getShortOperatorName truncates name on resource exception for operator name longer than 20 characters`() {
+        whenever(context.getString(R.string.operator_mts)).thenThrow(RuntimeException("Resource error"))
+        val longName = "MTS Russia Telecommunications Network"
+        val result = SimUtils.getShortOperatorName(context, longName, 0)
+        assertEquals("MTS Russia Teleco...", result)
     }
 
     @Test

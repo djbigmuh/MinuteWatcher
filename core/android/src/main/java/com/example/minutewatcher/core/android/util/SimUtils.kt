@@ -4,7 +4,6 @@ import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.CancellationException
-import java.util.Locale
 
 object SimUtils {
     fun getOperatorIconResource(operatorName: String): Int =
@@ -26,7 +25,7 @@ object SimUtils {
         try {
             val resId = OperatorResolver.getOperatorResourceId(operatorName)
             when {
-                resId != null -> getStringSafe(context, resId, operatorName.uppercase(Locale.ROOT))
+                resId != null -> getStringSafe(context, resId, truncateName(operatorName))
                 operatorName.isNotEmpty() -> truncateName(operatorName)
                 else -> genericOperatorName(context, slot)
             }
