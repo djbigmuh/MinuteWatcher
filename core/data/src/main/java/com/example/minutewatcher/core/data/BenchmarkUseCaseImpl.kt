@@ -42,7 +42,6 @@ class BenchmarkUseCaseImpl
 
                 // Set mock operator
                 simIdentityRepository.setSimOperator(identity, "Mock Operator ${i + 1}")
-                simIdentityRepository.setSimCode(identity, "00100${i + 1}")
 
                 // Set mock limits
                 simLimitsRepository.updateSimLimits(

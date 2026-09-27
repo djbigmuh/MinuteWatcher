@@ -3,17 +3,13 @@ package com.example.minutewatcher.core.data
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimIdentity
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of [SimIdentityRepository].
@@ -55,28 +51,8 @@ class SimIdentityRepositoryImpl
         override fun getActiveIdentities(): Flow<List<String>> =
             observeActiveSims().map { sims -> sims.map { it.identity.stableId } }.distinctUntilChanged()
 
-        @OptIn(FlowPreview::class)
-        override fun observeIdentities(): Flow<List<String>> =
-            getActiveIdentities().debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
-
-        override fun getSimOperator(identity: String): Flow<String> = persistence.getSimOperator(identity)
-
-        override fun getCustomSimOperator(identity: String): Flow<String?> = persistence.getCustomSimOperator(identity)
-
         override suspend fun setSimOperator(
             identity: String,
             name: String,
         ) = persistence.setSimOperator(identity, name)
-
-        override suspend fun setCustomSimOperator(
-            identity: String,
-            name: String?,
-        ) = persistence.setCustomSimOperator(identity, name)
-
-        override fun getSimCode(identity: String): Flow<String> = persistence.getSimCode(identity)
-
-        override suspend fun setSimCode(
-            identity: String,
-            code: String,
-        ) = persistence.setSimCode(identity, code)
     }

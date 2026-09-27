@@ -47,23 +47,6 @@ interface SimIdentityRepository {
     fun observeActiveSims(): Flow<List<ActiveSimInfo>>
 
     /**
-     * Observes all known SIM identity strings.
-     */
-    fun observeIdentities(): Flow<List<String>>
-
-    /**
-     * Returns a flow of the operator name for the given identity.
-     * Note: Currently used for persistence; production UI reads directly from preferences.
-     */
-    fun getSimOperator(identity: String): Flow<String>
-
-    /**
-     * Returns a flow of the SIM code for the given identity.
-     * Note: Currently used for persistence; production code uses it for operator resolution.
-     */
-    fun getSimCode(identity: String): Flow<String>
-
-    /**
      * Sets the operator name for the given identity.
      *
      * @throws IOException if storage access fails.
@@ -72,34 +55,6 @@ interface SimIdentityRepository {
     suspend fun setSimOperator(
         identity: String,
         name: String,
-    )
-
-    /**
-     * Returns a flow of the custom operator name for the given identity.
-     * Note: Currently used for persistence; production UI reads directly from preferences.
-     */
-    fun getCustomSimOperator(identity: String): Flow<String?>
-
-    /**
-     * Sets the custom operator name for the given identity.
-     *
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun setCustomSimOperator(
-        identity: String,
-        name: String?,
-    )
-
-    /**
-     * Sets the SIM code for the given identity.
-     *
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun setSimCode(
-        identity: String,
-        code: String,
     )
 }
 

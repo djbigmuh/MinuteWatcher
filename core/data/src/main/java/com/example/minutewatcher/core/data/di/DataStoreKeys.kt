@@ -141,8 +141,6 @@ internal object DataStoreKeys {
 
     @JvmStatic fun customSimOperatorKey(identity: String) = stringPreferencesKey("custom_sim_operator_$identity")
 
-    @JvmStatic fun simCodeKey(identity: String) = stringPreferencesKey("sim_code_$identity")
-
     @JvmStatic fun slotIndexKey(identity: String) = intPreferencesKey("slot_index_$identity")
 
     const val SUBSCRIPTION_ID_PREFIX = "subscription_id_"

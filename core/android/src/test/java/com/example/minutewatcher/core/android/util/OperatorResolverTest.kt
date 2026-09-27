@@ -64,65 +64,62 @@ class OperatorResolverTest {
 
     @Test
     fun testResolve_ByDisplayName() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "My Operator", emptyList(), 0)
-        assertEquals("My Operator", result.name)
+        val result = OperatorResolver.resolve(context, "My Operator", emptyList(), 0)
+        assertEquals("My Operator", result)
     }
 
     @Test
     fun testResolve_ByMccMnc_MTS() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("25001"), 0)
-        assertEquals("MTS", result.name)
-        assertEquals("25001", result.matchedCode)
+        val result = OperatorResolver.resolve(context, "", listOf("25001"), 0)
+        assertEquals("MTS", result)
     }
 
     @Test
     fun testResolve_ByMccMnc_Beeline() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("25099"), 1)
-        assertEquals("Beeline", result.name)
-        assertEquals("25099", result.matchedCode)
+        val result = OperatorResolver.resolve(context, "", listOf("25099"), 1)
+        assertEquals("Beeline", result)
     }
 
     @Test
-    fun `resolveWithMatchedCode treats string literal null as specific display name`() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "null", listOf("25099"), 1)
-        assertEquals("null", result.name)
-        assertNull(result.matchedCode)
+    fun `resolve treats string literal null as specific display name`() {
+        val result = OperatorResolver.resolve(context, "null", listOf("25099"), 1)
+        assertEquals("null", result)
     }
 
     @Test
     fun testResolve_Unknown() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("99999"), 0)
-        assertEquals("Operator with mcc MCC:999 MNC:99", result.name)
+        val result = OperatorResolver.resolve(context, "", listOf("99999"), 0)
+        assertEquals("Operator with mcc MCC:999 MNC:99", result)
     }
 
     @Test
     fun testResolve_Empty() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", emptyList(), 1)
-        assertEquals("Operator 2", result.name)
+        val result = OperatorResolver.resolve(context, "", emptyList(), 1)
+        assertEquals("Operator 2", result)
     }
 
     @Test
     fun testResolve_Rostelecom() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("25039"), 0)
-        assertEquals("Rostelecom", result.name)
+        val result = OperatorResolver.resolve(context, "", listOf("25039"), 0)
+        assertEquals("Rostelecom", result)
     }
 
     @Test
     fun testResolve_A1() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("23201"), 0)
-        assertEquals("A1", result.name)
+        val result = OperatorResolver.resolve(context, "", listOf("23201"), 0)
+        assertEquals("A1", result)
     }
 
     @Test
     fun testResolve_Three() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("23205"), 0)
-        assertEquals("Three", result.name)
+        val result = OperatorResolver.resolve(context, "", listOf("23205"), 0)
+        assertEquals("Three", result)
     }
 
     @Test
     fun testResolve_Movistar() {
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf("21407"), 0)
-        assertEquals("Movistar", result.name)
+        val result = OperatorResolver.resolve(context, "", listOf("21407"), 0)
+        assertEquals("Movistar", result)
     }
 
     @Test
@@ -139,34 +136,33 @@ class OperatorResolverTest {
 
     @Test
     fun `isValidSpecificName rejects generic sim pattern and empty string`() {
-        val genericResult = OperatorResolver.resolveWithMatchedCode(context, "SIM 1", listOf("25001"), 0)
-        assertEquals("MTS", genericResult.name)
+        val genericResult = OperatorResolver.resolve(context, "SIM 1", listOf("25001"), 0)
+        assertEquals("MTS", genericResult)
 
-        val emptyResult = OperatorResolver.resolveWithMatchedCode(context, "", listOf("25001"), 0)
-        assertEquals("MTS", emptyResult.name)
+        val emptyResult = OperatorResolver.resolve(context, "", listOf("25001"), 0)
+        assertEquals("MTS", emptyResult)
     }
 
     @Test
-    fun testResolveWithMatchedCode_Success() {
+    fun testResolve_Success() {
         val candidates = listOf("2501", "25001", "250001")
-        val resolution = OperatorResolver.resolveWithMatchedCode(context, "", candidates, 0)
-        assertEquals("MTS", resolution.name)
-        assertEquals("25001", resolution.matchedCode)
+        val result = OperatorResolver.resolve(context, "", candidates, 0)
+        assertEquals("MTS", result)
     }
 
     @Test
-    fun testResolveWithMatchedCode_FallbackToGeneric() {
+    fun testResolve_FallbackToGeneric() {
         val candidates = listOf("99901", "9991", "999001")
-        val result = OperatorResolver.resolveWithMatchedCode(context, "", candidates, 0)
-        assertEquals("Operator with mcc MCC:999 MNC:01", result.name)
+        val result = OperatorResolver.resolve(context, "", candidates, 0)
+        assertEquals("Operator with mcc MCC:999 MNC:01", result)
     }
 
     @Test
     fun `loadDbInternal loads all keys from the database`() {
         val candidates = listOf("25001", "25099", "21407", "25039", "23201", "23205")
         for (code in candidates) {
-            val result = OperatorResolver.resolveWithMatchedCode(context, "", listOf(code), 0)
-            assertTrue("Should match code $code", result.matchedCode == code)
+            val result = OperatorResolver.resolve(context, "", listOf(code), 0)
+            assertTrue("Should resolve code $code", !result.startsWith("Operator "))
         }
     }
 

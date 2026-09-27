@@ -70,7 +70,6 @@ abstract class CallTrackerTestFixtures {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
         }
 
-        whenever(simIdentityRepository.getSimOperator(any())).thenReturn(flowOf("MTS"))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
         runBlocking {
             whenever(simUsageRepository.incrementMinutesUsedForCall(any(), any(), any())).thenReturn(true)

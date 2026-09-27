@@ -211,30 +211,20 @@ object OperatorResolver {
         }
 
     /**
-     * Data structure to return both resolved name and the code that matched.
-     */
-    data class Resolution(
-        val name: String,
-        val matchedCode: String?,
-    )
-
-    /**
      * Resolves operator name using a list of MCC/MNC candidates.
-     * Returns the code that actually matched the database if any.
      */
-    fun resolveWithMatchedCode(
+    fun resolve(
         context: Context,
         operatorName: String,
         candidates: List<String>,
         simSlot: Int,
-    ): Resolution {
-        if (isValidSpecificName(operatorName)) return Resolution(operatorName, null)
+    ): String {
+        if (isValidSpecificName(operatorName)) return operatorName
 
         val database = loadDb(context)
         val searchResult = findInDatabase(database, candidates)
 
         val resKey = searchResult.first
-        val matchedCode = searchResult.second
 
         val resolved =
             if (resKey != null) {
@@ -244,11 +234,7 @@ object OperatorResolver {
                 null
             }
 
-        return if (resolved != null) {
-            Resolution(resolved, matchedCode)
-        } else {
-            Resolution(fallbackResolution(context, candidates.firstOrNull().orEmpty(), simSlot), null)
-        }
+        return resolved ?: fallbackResolution(context, candidates.firstOrNull().orEmpty(), simSlot)
     }
 
     private fun findInDatabase(

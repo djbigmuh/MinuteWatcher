@@ -12,10 +12,6 @@ import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -167,60 +163,12 @@ class SimIdentityPersistence
             migratedIdentities.retainAll(currentIdentities)
         }
 
-        fun getSimOperator(identity: String): Flow<String> {
-            if (SimConstants.isInvalid(identity)) {
-                return flowOf("")
-            }
-            return combine(
-                getData(DataStoreKeys.simOperatorKey(identity), ""),
-                getCustomSimOperator(identity),
-            ) { resolved, custom ->
-                custom ?: resolved
-            }
-        }
-
-        fun getCustomSimOperator(identity: String): Flow<String?> {
-            if (SimConstants.isInvalid(identity)) {
-                return flowOf(null)
-            }
-            return dataStore.data.map { it[DataStoreKeys.customSimOperatorKey(identity)] }
-        }
-
         suspend fun setSimOperator(
             identity: String,
             name: String,
         ) {
             if (SimConstants.isInvalid(identity)) return
             dataStore.edit { it[DataStoreKeys.simOperatorKey(identity)] = name }
-        }
-
-        suspend fun setCustomSimOperator(
-            identity: String,
-            name: String?,
-        ) {
-            if (SimConstants.isInvalid(identity)) return
-            dataStore.edit { prefs ->
-                if (name == null) {
-                    prefs.remove(DataStoreKeys.customSimOperatorKey(identity))
-                } else {
-                    prefs[DataStoreKeys.customSimOperatorKey(identity)] = name
-                }
-            }
-        }
-
-        fun getSimCode(identity: String): Flow<String> {
-            if (SimConstants.isInvalid(identity)) {
-                return flowOf("")
-            }
-            return getData(DataStoreKeys.simCodeKey(identity), "")
-        }
-
-        suspend fun setSimCode(
-            identity: String,
-            code: String,
-        ) {
-            if (SimConstants.isInvalid(identity)) return
-            dataStore.edit { it[DataStoreKeys.simCodeKey(identity)] = code }
         }
 
         companion object {

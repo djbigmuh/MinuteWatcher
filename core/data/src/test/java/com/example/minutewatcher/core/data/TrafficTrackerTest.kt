@@ -342,10 +342,6 @@ class TrafficTrackerTest {
                 )
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
 
-            // Sim 0 has valid operator, Sim 1 does not
-            whenever(simIdentityRepository.getSimOperator("sim_0")).thenReturn(flowOf("MTS"))
-            whenever(simIdentityRepository.getSimOperator("sim_1")).thenReturn(null)
-
             // Acts on update
             tracker.updateTrafficUsage()
             runCurrent()
