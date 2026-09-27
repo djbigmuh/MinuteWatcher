@@ -71,6 +71,7 @@ class SimIdentityObserverTest {
 
     @Before
     fun setup() {
+        whenever(mockSimProvider.getMockSims(any())).thenReturn(null)
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(seedRepository.seedFlow).thenReturn(MutableStateFlow("test_seed"))
         runBlocking {

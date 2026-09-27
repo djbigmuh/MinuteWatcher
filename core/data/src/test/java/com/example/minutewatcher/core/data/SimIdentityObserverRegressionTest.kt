@@ -32,6 +32,7 @@ class SimIdentityObserverRegressionTest {
 
     @Before
     fun setup() {
+        whenever(mockSimProvider.getMockSims(any())).thenReturn(null)
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(discovery.observeSubscriptionChanges()).thenReturn(flow { })
     }

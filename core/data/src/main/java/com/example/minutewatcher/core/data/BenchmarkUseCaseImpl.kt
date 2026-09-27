@@ -9,8 +9,11 @@ import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of [BenchmarkUseCase] for populating mock data in UI tests and benchmarks.
@@ -31,37 +34,13 @@ class BenchmarkUseCaseImpl
          *
          * @param simCount Number of SIMs to mock, coerced to [SimConstants.MAX_SUPPORTED_SIM_SLOTS].
          * Safe to call from any coroutine context.
-         * @throws IOException if any DataStore update fails.
+         * @throws IOException if any DataStore update fails or waiting for active SIMs times out.
          * @throws CancellationException if the population process is cancelled.
          */
         override suspend fun populateMockData(simCount: Int) {
             val safeCount = simCount.coerceIn(1, SimConstants.MAX_SUPPORTED_SIM_SLOTS)
 
-            for (i in 0 until safeCount) {
-                val identity = simIdentityRepository.getIdentity(i)
-
-                // Set mock operator
-                simIdentityRepository.setSimOperator(identity, "Mock Operator ${i + 1}")
-
-                // Set mock limits
-                simLimitsRepository.updateSimLimits(
-                    identity = identity,
-                    minutesLimit = 500 * (i + 1),
-                    trafficLimitMb = 5000 * (i + 1),
-                    rolloverEnabled = i == 1,
-                )
-
-                // Set mock usage
-                simUsageAdjustmentRepository.updateSimStats(
-                    identity = identity,
-                    minutesUsed = 100 * (i + 1),
-                    trafficUsedMb = Constants.MB_PER_GB * (i + 1),
-                    manualAdjustment = 10 * (i + 1),
-                )
-            }
-
-            // Prevent onboarding and permission dialogs during benchmarks
-            // Force English locale to ensure stable UI tests
+            // 1. Set app settings flags and migration completion flags first
             appSettingsRepository.updateAppSettings {
                 it.copy(
                     onboardingCompleted = true,
@@ -71,9 +50,40 @@ class BenchmarkUseCaseImpl
                     benchmarkSimCount = safeCount,
                 )
             }
-
-            // Prevent background migrations during benchmarks
             migrationFlagsRepository.setMigrationV1Completed(completed = true)
             migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
+
+            // 2. Wait for active SIMs to appear with timeout
+            val timeout = Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds
+            val activeSims =
+                withTimeoutOrNull(timeout) {
+                    simIdentityRepository.observeActiveSims().firstOrNull { it.isNotEmpty() }
+                }
+
+            if (activeSims.isNullOrEmpty()) {
+                throw IOException("Timed out waiting for active SIMs in benchmark populate")
+            }
+
+            // 3. Populate mock data for each active SIM
+            activeSims.forEachIndexed { index, sim ->
+                val n = index + 1
+                val identity = sim.identity.stableId
+
+                simIdentityRepository.setSimOperator(identity, "Mock Operator $n")
+
+                simLimitsRepository.updateSimLimits(
+                    identity = identity,
+                    minutesLimit = 500 * n,
+                    trafficLimitMb = 5000 * n,
+                    rolloverEnabled = n == 2,
+                )
+
+                simUsageAdjustmentRepository.updateSimStats(
+                    identity = identity,
+                    minutesUsed = 100 * n,
+                    trafficUsedMb = Constants.MB_PER_GB * n,
+                    manualAdjustment = 10 * n,
+                )
+            }
         }
     }
