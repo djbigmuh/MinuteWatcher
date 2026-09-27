@@ -51,19 +51,6 @@ class AppLoggerRaceTest {
         }
     }
 
-    private fun pollUntil(
-        timeoutMs: Long = 10000L,
-        message: String,
-        condition: () -> Boolean,
-    ) {
-        val maxIterations = (timeoutMs / 10).toInt().coerceAtLeast(1)
-        repeat(maxIterations) {
-            if (condition()) return
-            Thread.sleep(10)
-        }
-        assertTrue("Timeout waiting for condition: $message", condition())
-    }
-
     @Test
     fun `concurrent logging from multiple threads is safe`() {
         val threadCount = 20
