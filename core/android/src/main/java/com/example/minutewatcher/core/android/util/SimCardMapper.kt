@@ -10,6 +10,7 @@ import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrafficModel
 import com.example.minutewatcher.core.model.util.ClampingUtils
+import com.example.minutewatcher.core.resources.R
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -153,7 +154,7 @@ object SimCardMapper {
         slot = slot,
         identity = identity,
         operatorName = "",
-        iconRes = 0,
+        iconRes = R.drawable.ic_unknown,
         minutesUsed = 0,
         minutesLimit = 0,
         manualAdjustment = 0,

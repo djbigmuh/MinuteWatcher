@@ -63,7 +63,7 @@ internal class TrafficUpdateTimeoutException(
  * delegating to specialized components while maintaining the primary tracking lifecycle.
  */
 @Singleton
-@Suppress("LongParameterList", "TooManyFunctions")
+@Suppress("LongParameterList", "TooManyFunctions", "LargeClass")
 class TrafficTracker
     @Inject
     constructor(
@@ -102,6 +102,7 @@ class TrafficTracker
         private val updateMutex = Mutex()
         private val initializationFailed = AtomicBoolean(false)
         private val isInitializing = AtomicBoolean(false)
+    private val bothPermissionsGranted = AtomicBoolean(false)
 
         @VisibleForTesting
         internal val lastSuccessElapsed = AtomicLong(0L)
@@ -136,7 +137,7 @@ class TrafficTracker
             try {
                 oldJob?.join()
             } catch (_: Exception) {
-                // job is already completed or cancelled
+                // job is already completed or canceled
             }
             currentCoroutineContext().ensureActive()
             performInitializeWithRetry()
@@ -150,10 +151,33 @@ class TrafficTracker
         private fun startPermissionRecoveryObserver() {
             scope.launch {
                 try {
+                    bothPermissionsGranted.set(
+                        permissionManager.hasPhoneStatePermission() &&
+                            permissionManager.hasUsageStatsPermission(),
+                    )
                     permissionStateNotifier.changes.collect {
-                        if (permissionManager.hasPhoneStatePermission() &&
-                            permissionManager.hasUsageStatsPermission()
-                        ) {
+                        val bothGranted =
+                            permissionManager.hasPhoneStatePermission() &&
+                                permissionManager.hasUsageStatsPermission()
+                        val previousGranted = bothPermissionsGranted.getAndSet(bothGranted)
+                        if (bothGranted) {
+                            if (!previousGranted) {
+                                AppLogger.d(
+                                    "TrafficTracker: permissions granted transition detected, updating traffic",
+                                )
+                                scope.launch {
+                                    try {
+                                        updateTrafficUsage()
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        AppLogger.e(
+                                            "TrafficTracker: permission transition triggered update failed",
+                                            e,
+                                        )
+                                    }
+                                }
+                            }
                             checkAndScheduleAutoRecovery("permission change")
                         }
                     }
@@ -465,34 +489,35 @@ class TrafficTracker
             startElapsed: Long,
             activeSims: List<ActiveSimInfo>,
         ) {
-            val result = targetResolver.resolve(activeSims)
+            val target =
+                when (val result = targetResolver.resolve(activeSims)) {
+                    is TrafficTargetResolver.TargetResult.Success -> result.target
+                    is TrafficTargetResolver.TargetResult.StaleInput -> {
+                        AppLogger.w("TrafficTracker: stale SIM state during target resolution, skipping this cycle")
+                        return
+                    }
 
-            if (result is TrafficTargetResolver.TargetResult.StaleInput) {
-                AppLogger.w("TrafficTracker: stale SIM state during target resolution, skipping this cycle")
-                return
-            }
+                    is TrafficTargetResolver.TargetResult.NoDefaultData -> {
+                        AppLogger.d("TrafficTracker: no default data SIM, transitioning to Idle")
+                        transitionStatus(TrackingStatus.Idle)
+                        return
+                    }
 
-            if (result is TrafficTargetResolver.TargetResult.NoDefaultData) {
-                AppLogger.d("TrafficTracker: no default data SIM, transitioning to Idle")
-                transitionStatus(TrackingStatus.Idle)
-                return
-            }
+                    is TrafficTargetResolver.TargetResult.Failed -> {
+                        updateStatusOnError(
+                            startElapsed,
+                            result.message ?: "Traffic target resolution failed",
+                            type = TrackingStatus.ErrorType.UNKNOWN,
+                        )
+                        return
+                    }
 
-            if (result is TrafficTargetResolver.TargetResult.Failed) {
-                updateStatusOnError(
-                    startElapsed,
-                    result.message ?: "Traffic target resolution failed",
-                    type = TrackingStatus.ErrorType.UNKNOWN,
-                )
-                return
-            }
+                    is TrafficTargetResolver.TargetResult.NoActiveSims -> {
+                        AppLogger.w("TrafficTracker: No active SIMs during target resolution")
+                        return
+                    }
+                }
 
-            if (result !is TrafficTargetResolver.TargetResult.Success) {
-                AppLogger.w("TrafficTracker: resolution failed or SIMs inactive: $result")
-                return
-            }
-
-            val target = result.target
             val targetSimInfo = activeSims.find { it.slotIndex == target.slot }
             if (targetSimInfo?.identity?.isStable == false) {
                 AppLogger.w("TrafficTracker: skipping traffic update for unstable identity on slot ${target.slot}")
@@ -534,7 +559,15 @@ class TrafficTracker
                     simIdentityRepository
                         .getActiveIdentities()
                         .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
-                        ?: return@withLock
+                        ?: run {
+                            AppLogger.w("TrafficTracker: Timeout reading activeIdentities")
+                            updateStatusOnError(
+                                startElapsed,
+                                "Timeout reading activeIdentities",
+                                code = TrackingStatus.ErrorCode.TIMEOUT,
+                            )
+                            return@withLock
+                        }
 
                 if (targetIdentity !in currentActive) {
                     AppLogger.d("TrafficTracker: $targetIdentity no longer active, skipping")

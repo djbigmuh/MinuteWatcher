@@ -18,6 +18,7 @@ import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.CallEventWorker
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -100,6 +101,8 @@ class UsageMonitorReceiverTest {
             val receiver =
                 object : UsageMonitorReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val intent =
@@ -130,6 +133,8 @@ class UsageMonitorReceiverTest {
             val receiver =
                 object : UsageMonitorReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val intent =
@@ -159,6 +164,8 @@ class UsageMonitorReceiverTest {
             val receiver =
                 object : UsageMonitorReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val intent =
@@ -195,6 +202,8 @@ class UsageMonitorReceiverTest {
                         callCount++
                         return if (callCount == 1) mockPendingResult1 else mockPendingResult2
                     }
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val intentOffhook =
@@ -233,6 +242,8 @@ class UsageMonitorReceiverTest {
             val receiver =
                 object : UsageMonitorReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val intent = Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
@@ -261,6 +272,8 @@ class UsageMonitorReceiverTest {
             val receiver =
                 object : UsageMonitorReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val intent =
@@ -284,6 +297,8 @@ class UsageMonitorReceiverTest {
             val receiver =
                 object : UsageMonitorReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val failingContext = mock(Context::class.java)

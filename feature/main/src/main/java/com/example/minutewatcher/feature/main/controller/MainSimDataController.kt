@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -130,7 +131,7 @@ class MainSimDataController
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         fun retrySimList() {
-            retryTrigger.value += 1
+            retryTrigger.update { it + 1 }
         }
 
         /**
@@ -331,7 +332,7 @@ class MainSimDataController
         }
 
         /**
-         * Retries installed apps search indexing (for AppFunctions).
+         * Retries usage data indexing in AppSearch.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          */

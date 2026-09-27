@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.model.SimUsage
+import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -204,6 +205,7 @@ class SimCardMapperTest {
         assertEquals(100, model.slot)
         assertEquals("test_id", model.identity)
         assertEquals("", model.operatorName)
+        assertEquals(R.drawable.ic_unknown, model.iconRes)
         assertEquals(0, model.minutesUsed)
     }
 }

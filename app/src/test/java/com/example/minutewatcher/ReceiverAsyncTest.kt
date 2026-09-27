@@ -11,16 +11,21 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -95,5 +100,24 @@ class ReceiverAsyncTest {
             advanceUntilIdle()
 
             verify(mockPendingResult, times(1)).finish()
+        }
+
+    @Test
+    fun `goAsyncWithScope executes block when dispatcher is null and entry point unavailable`() =
+        runTest(testDispatcher) {
+            val mockPendingResult: BroadcastReceiver.PendingResult = mock()
+            val latch = CountDownLatch(1)
+
+            withTimeout(5_000.milliseconds) {
+                goAsyncWithScope(context, mockPendingResult, dispatcher = null) {
+                    latch.countDown()
+                }
+                val executed = latch.await(2, TimeUnit.SECONDS)
+                Assert.assertTrue(
+                    "Async block should execute on fallback dispatcher when entry point is unavailable",
+                    executed,
+                )
+                verify(mockPendingResult, Mockito.timeout(2_000).times(1)).finish()
+            }
         }
 }

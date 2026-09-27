@@ -11,9 +11,11 @@ import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.minutewatcher.UsageMonitorReceiver.Companion.UNIQUE_WORK_NAME
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.CallEventWorker
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.guava.await
 import java.util.concurrent.TimeUnit
 
@@ -28,7 +30,7 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
             return
         }
 
-        goAsyncWithScope(context, acquirePendingResult()) { appContext ->
+        goAsyncWithScope(context, acquirePendingResult(), dispatcher = asyncDispatcher()) { appContext ->
             try {
                 processPhoneStateChange(appContext, intent)
             } catch (e: CancellationException) {
@@ -41,6 +43,9 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
 
     @VisibleForTesting
     protected open fun acquirePendingResult(): BroadcastReceiver.PendingResult = goAsync()
+
+    @VisibleForTesting
+    protected open fun asyncDispatcher(): CoroutineDispatcher? = null
 
     /**
      * Processes the phone state change and enqueues a [CallEventWorker] to handle it.

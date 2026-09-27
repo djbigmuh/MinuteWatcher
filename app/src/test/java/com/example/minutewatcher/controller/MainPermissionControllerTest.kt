@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -144,5 +145,33 @@ class MainPermissionControllerTest {
 
             // Should schedule setup because check timed out (null result)
             verify(workScheduler).scheduleInitialSetup(eq(false), eq(false))
+        }
+
+    @Test
+    fun `checkPermissionsAndInit proceeds immediately without waiting for appSettings when phone permission granted`() =
+        runTest(testDispatcher) {
+            withTimeout(5000.milliseconds) {
+                whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+                whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+                whenever(viewModel.appSettings).thenReturn(MutableStateFlow(AppSettings(isLoaded = false)))
+
+                var showUsageAccessDialogCalled = false
+
+                controller.checkPermissionsAndInit(
+                    scope = this,
+                    viewModel = viewModel,
+                    lastPermissionState = -1,
+                    onShowUsageAccessDialog = { showUsageAccessDialogCalled = true },
+                    onRequestPhonePermission = {},
+                    onCheckNotifications = {},
+                )
+
+                runCurrent()
+
+                assertTrue(
+                    "Usage access dialog callback should be invoked without waiting for appSettings",
+                    showUsageAccessDialogCalled,
+                )
+            }
         }
 }

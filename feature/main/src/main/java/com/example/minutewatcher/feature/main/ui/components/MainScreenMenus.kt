@@ -15,7 +15,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.resources.R
-import com.example.minutewatcher.feature.main.LanguageOption
+import com.example.minutewatcher.feature.main.supportedLanguageOptions
 
 // LanguageMenu — dropdown menu for selecting language.
 // Contains options: System, English, Russian, etc.
@@ -29,19 +29,6 @@ fun LanguageMenu(
     onLanguageChange: (String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val languages =
-        listOf(
-            LanguageOption(null, stringResource(R.string.language_system), "🌐"),
-            LanguageOption("en", stringResource(R.string.language_en), "🇺🇸"),
-            LanguageOption("ru", stringResource(R.string.language_ru), "🇷🇺"),
-            LanguageOption("de", stringResource(R.string.language_de), "🇩🇪"),
-            LanguageOption("fr", stringResource(R.string.language_fr), "🇫🇷"),
-            LanguageOption("es", stringResource(R.string.language_es), "🇪🇸"),
-            LanguageOption("ar", stringResource(R.string.language_ar), "🇸🇦"),
-            LanguageOption("hi", stringResource(R.string.language_hi), "🇮🇳"),
-            LanguageOption("ja", stringResource(R.string.language_ja), "🇯🇵"),
-            LanguageOption("zh", stringResource(R.string.language_zh), "🇨🇳"),
-        )
 
     Box {
         IconButton(onClick = { expanded = true }) {
@@ -51,9 +38,10 @@ fun LanguageMenu(
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            languages.forEach { option ->
+            supportedLanguageOptions.forEach { option ->
+                val name = stringResource(option.nameRes)
                 DropdownMenuItem(
-                    text = { Text("${option.flag} ${option.name}") },
+                    text = { Text("${option.flag} $name") },
                     onClick = {
                         onLanguageChange(option.code)
                         expanded = false

@@ -19,6 +19,7 @@ import com.example.minutewatcher.core.data.WorkScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -102,6 +103,8 @@ class BootReceiverTest {
             val receiver =
                 object : BootReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
@@ -133,6 +136,8 @@ class BootReceiverTest {
             val receiver =
                 object : BootReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
@@ -152,6 +157,8 @@ class BootReceiverTest {
             val receiver =
                 object : BootReceiver() {
                     override fun acquirePendingResult() = mockPendingResult
+
+                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
                 }
 
             // Use real context but mock workScheduler to throw

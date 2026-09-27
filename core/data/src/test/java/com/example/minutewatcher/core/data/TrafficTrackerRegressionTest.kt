@@ -20,18 +20,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -114,6 +117,93 @@ class TrafficTrackerRegressionTest {
             assertTrue("Expected Error status with TIMEOUT code, but was $status", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorCode.TIMEOUT, (status as TrackingStatus.Error).code)
             verify(simUsageResetRepository, never()).setBaselineRetryCount(eq("sim_0"), eq(null))
+        }
+
+    @Test
+    fun `granting missing permissions triggers immediate traffic usage update`() =
+        runTest {
+            val permissionChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+            whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
+
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+
+            val activeSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, isStable = true),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        iccId = "sim_0",
+                        displayName = "SIM 1",
+                        carrierName = "Carrier 1",
+                        mccMnc = "25001",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0")))
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
+            whenever(simUsageResetRepository.getBaselineRetryCount("sim_0")).thenReturn(flowOf(null))
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(5000L))
+
+            val tracker = createTracker(backgroundScope)
+
+            withTimeout(5000.milliseconds) {
+                while (true) {
+                    val status = tracker.status.value
+                    if (status is TrackingStatus.Error &&
+                        status.type == TrackingStatus.ErrorType.PERMISSION_MISSING
+                    ) {
+                        break
+                    }
+                    delay(20.milliseconds)
+                }
+            }
+
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
+            permissionChanges.emit(Unit)
+
+            withTimeout(5000.milliseconds) {
+                while (tracker.status.value !is TrackingStatus.Active) {
+                    delay(20.milliseconds)
+                }
+            }
+
+            verify(networkStatsProvider, atLeastOnce()).queryMobileBytes(any(), any())
+        }
+
+    @Test
+    fun `traffic update times out and sets TIMEOUT error when getActiveIdentities times out`() =
+        runTest {
+            val activeSims =
+                listOf(
+                    ActiveSimInfo(
+                        identity = SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, isStable = true),
+                        slotIndex = 0,
+                        subscriptionId = 1,
+                        iccId = "sim_0",
+                        displayName = "SIM 1",
+                        carrierName = "Carrier 1",
+                        mccMnc = "25001",
+                        isDefaultData = true,
+                        isDefaultVoice = true,
+                    ),
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flow { delay(Long.MAX_VALUE) })
+
+            val tracker = createTracker(backgroundScope)
+
+            tracker.updateTrafficUsage()
+
+            val status = tracker.status.value
+            assertTrue(
+                "Expected Error status with TIMEOUT code when getActiveIdentities times out, but was $status",
+                status is TrackingStatus.Error && status.code == TrackingStatus.ErrorCode.TIMEOUT,
+            )
         }
 
     private fun <T> stubSuspend(block: suspend () -> T): Answer<Any?> =

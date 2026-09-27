@@ -29,7 +29,9 @@ Call duration is tracked using real-time system state changes.
 - **Rounding Logic**: Call duration is rounded **up** to the nearest minute (e.g., a 1-second call adds 1 minute to usage, a 61-second call adds 2 minutes). This aligns with common mobile carrier billing policies.
 
 ### AppSearch Integration
-Semantic search (AppFunctions) is automatically disabled on devices without the AppSearch system service (e.g., LineageOS or CalyxOS without Google Services).
+
+Semantic indexing of usage data via AppSearch is automatically disabled on devices without the AppSearch system
+service (e.g., LineageOS or CalyxOS without Google Services).
 - An error banner is **not** displayed for `NOT_SUPPORTED` errors to ensure a clean UX on these devices.
 - For other recoverable issues (like database schema drift), the app attempts automatic recovery with limited retry attempts.
 

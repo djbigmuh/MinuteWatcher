@@ -55,10 +55,6 @@ class MainPermissionController
             checkJob?.cancel()
             checkJob =
                 scope.launch {
-                    val settings: AppSettings? =
-                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                            viewModel.appSettings.filter { it.isLoaded }.firstOrNull()
-                        }
                     if (permissionManager.hasPhoneStatePermission()) {
                         launch(ioDispatcher) {
                             try {
@@ -83,8 +79,14 @@ class MainPermissionController
                         } else {
                             onCheckNotifications(true)
                         }
-                    } else if (settings != null && !settings.wasPhonePermissionRequestedBefore) {
-                        onRequestPhonePermission()
+                    } else {
+                        val settings: AppSettings? =
+                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                viewModel.appSettings.filter { it.isLoaded }.firstOrNull()
+                            }
+                        if (settings != null && !settings.wasPhonePermissionRequestedBefore) {
+                            onRequestPhonePermission()
+                        }
                     }
                 }
         }

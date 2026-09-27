@@ -1,6 +1,8 @@
 package com.example.minutewatcher.feature.main
 
 import android.os.Parcelable
+import androidx.annotation.StringRes
+import com.example.minutewatcher.core.resources.R
 import kotlinx.parcelize.Parcelize
 
 /**
@@ -63,11 +65,25 @@ data class AdjustDialogData(
  * Language option for LanguageMenu.
  *
  * @property code Language code (null for system default).
- * @property name Language name.
+ * @property nameRes String resource ID for language name.
  * @property flag Language flag/emoji.
  */
 data class LanguageOption(
     val code: String?,
-    val name: String,
+    @StringRes val nameRes: Int,
     val flag: String,
 )
+
+val supportedLanguageOptions: List<LanguageOption> =
+    listOf(
+        LanguageOption(null, R.string.language_system, "🌐"),
+        LanguageOption("en", R.string.language_en, "🇺🇸"),
+        LanguageOption("ru", R.string.language_ru, "🇷🇺"),
+        LanguageOption("de", R.string.language_de, "🇩🇪"),
+        LanguageOption("fr", R.string.language_fr, "🇫🇷"),
+        LanguageOption("es", R.string.language_es, "🇪🇸"),
+        LanguageOption("ar", R.string.language_ar, "🇸🇦"),
+        LanguageOption("hi", R.string.language_hi, "🇮🇳"),
+        LanguageOption("ja", R.string.language_ja, "🇯🇵"),
+        LanguageOption("zh", R.string.language_zh, "🇨🇳"),
+    )

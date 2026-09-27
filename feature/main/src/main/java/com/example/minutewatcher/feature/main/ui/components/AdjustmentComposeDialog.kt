@@ -138,14 +138,18 @@ fun AdjustmentComposeDialog(
         },
         confirmButton = {
             Button(onClick = {
-                val normalized = NumberInputNormalizer.normalize(state.text.text, locale)
-                val value = normalized.toFloatOrNull()
-                if (value == null) {
-                    state.errorText = invalidNumberMsg
-                } else if (value < 0 || value > maxLimit) {
-                    state.errorText = invalidRangeMsg
-                } else {
-                    onConfirm(value)
+                when (
+                    val result =
+                        AdjustmentValidator.validate(
+                            text = state.text.text,
+                            isMinutes = isMinutes,
+                            locale = locale,
+                            invalidNumberMsg = invalidNumberMsg,
+                            invalidRangeMsg = invalidRangeMsg,
+                        )
+                ) {
+                    is AdjustmentValidationResult.Valid -> onConfirm(result.value)
+                    is AdjustmentValidationResult.Invalid -> state.errorText = result.errorText
                 }
             }) {
                 Text(stringResource(id = R.string.save_button))

@@ -36,10 +36,15 @@ fun SimCardList(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(bottom = 80.dp),
     ) {
-        items(simCards) { model ->
+        items(
+            items = simCards,
+            key = { it.slot },
+        ) { model ->
             SimCardListRow(
                 model = model,
                 viewModel = viewModel,
