@@ -36,11 +36,6 @@ interface MigrationFlagsRepository {
     suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean)
 
     /**
-     * Returns a flow of the V1 migration skip reason.
-     */
-    fun getMigrationV1SkippedReason(): Flow<String?>
-
-    /**
      * Sets the V1 migration skip reason.
      *
      * @throws IOException if storage access fails.

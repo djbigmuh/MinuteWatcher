@@ -6,20 +6,16 @@ import com.example.minutewatcher.core.common.util.FlowObservationScope
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
-import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
-import com.example.minutewatcher.core.model.TrackingStatusMachine
 import com.example.minutewatcher.feature.main.TrackingBannerState
 import com.example.minutewatcher.feature.main.util.TrackingBannerMapper
 import dagger.Lazy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,17 +27,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainBannerController manages the state of tracking banners (errors and notifications).
- *
- * **Invariant:** The aggregator does not include its own status in the input data
- * to avoid a self-holding error state.
  *
  * **Thread Safety:** Safe to call from any coroutine context.
  * **Error Handling:** Propagates [CancellationException].
@@ -64,22 +55,7 @@ class MainBannerController
         appSettingsRepository: AppSettingsRepository,
         seedRepository: SimIdentitySeedRepository,
         @ApplicationScope private val scope: CoroutineScope,
-    ) : TrackingStatusProvider {
-        override val key: TrackingKey = TrackingKey.BANNERS
-
-        private val statusMachine = TrackingStatusMachine()
-        override val status: StateFlow<TrackingStatus> = statusMachine.status
-
-        /**
-         * Updates the tracker status using canonical prioritized rules.
-         */
-        private fun transitionStatus(
-            newStatus: TrackingStatus,
-            force: Boolean = false,
-        ) {
-            statusMachine.transition(newStatus, force)
-        }
-
+    ) {
         private val appSearchRetryCount = MutableStateFlow(value = 0)
         private val appSearchBannerDismissed = MutableStateFlow(value = false)
 
@@ -207,18 +183,6 @@ class MainBannerController
                 observationScope.observe(trackingStatus) { statusMap ->
                     currentCoroutineContext().ensureActive()
 
-                    // Update _status based on banner errors, EXCLUDING our own status
-                    // to avoid self-holding Error state.
-                    val others = statusMap.filterKeys { it != key }
-                    val hasError = others.values.any { it is TrackingStatus.Error }
-                    transitionStatus(
-                        if (hasError) {
-                            TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Banner errors detected")
-                        } else {
-                            TrackingStatus.Active
-                        },
-                    )
-
                     val appsearch = statusMap[TrackingKey.APPSEARCH]
                     val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
                     if (currentErrorType != lastAppSearchErrorType) {
@@ -234,30 +198,8 @@ class MainBannerController
             job?.invokeOnCompletion { cause ->
                 if (cause != null && cause !is CancellationException) {
                     AppLogger.e("MainBannerController: Banner observation failed", cause)
-                    transitionStatus(
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
-                            "Banner observation failed: ${cause.message}",
-                        ),
-                    )
                     isObservationStarted.set(false)
                 }
             }
-        }
-
-        /**
-         * Attempts to recover tracking observation.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         */
-        override suspend fun recover() {
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                observationScope.currentJob?.cancelAndJoin()
-            }
-            isObservationStarted.set(false)
-            appSearchRetryCount.value = 0
-            appSearchBannerDismissed.value = false
-            transitionStatus(TrackingStatus.Idle, force = true)
-            ensureObservationStarted()
         }
     }

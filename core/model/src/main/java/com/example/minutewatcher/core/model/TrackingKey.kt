@@ -11,7 +11,6 @@ enum class TrackingKey(
     APPSEARCH("appsearch"),
     SHORTCUTS("shortcuts"),
     WIDGET_OBSERVATION("widget_observation"),
-    BANNERS("banners"),
     APP_SETTINGS("app_settings"),
     SIM_DISCOVERY("sim_discovery"),
     USAGE_STATE("usage_state"),

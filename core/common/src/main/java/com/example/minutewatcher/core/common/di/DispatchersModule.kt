@@ -37,19 +37,6 @@ object DispatchersModule {
 }
 
 /**
- * Sanctioned fallback accessor for the main immediate dispatcher.
- *
- * Used by infrastructure that must run even when the Hilt entry point
- * is unavailable (e.g. receivers in non-Hilt test applications).
- * Direct `Dispatchers` references outside this file and `AppLogger`
- * are forbidden by the architecture policy.
- */
-object MainDispatcherFallback {
-    val mainImmediate: CoroutineDispatcher
-        get() = Dispatchers.Main.immediate
-}
-
-/**
  * Sanctioned fallback accessor for the IO dispatcher.
  *
  * Used by infrastructure that must run even when the Hilt entry point

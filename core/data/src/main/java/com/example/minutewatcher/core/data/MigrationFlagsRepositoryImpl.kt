@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.model.MigrationSkipReason
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -64,16 +63,6 @@ class MigrationFlagsRepositoryImpl
         override suspend fun setMigrationIdentityStabilityCompleted(completed: Boolean) {
             dataStore.edit { it[DataStoreKeys.MIGRATION_IDENTITY_STABILITY_COMPLETED] = completed }
         }
-
-        /**
-         * Returns a flow of the reason why V1 migration was skipped, if any.
-         *
-         * Safe to call from any coroutine context.
-         */
-        override fun getMigrationV1SkippedReason(): Flow<String?> =
-            dataStore.data.map {
-                it[DataStoreKeys.MIGRATION_V1_SKIPPED_REASON]
-            }
 
         /**
          * Records the reason for skipping V1 migration.
