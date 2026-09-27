@@ -44,10 +44,13 @@ internal class CallAttributionResolver
                     targetIdentity = matched.identity.stableId
                 } else if (activeSims.isNotEmpty()) {
                     // Fallback is allowed only when the slot is not identified.
-                    // Take the first active SIM, but record the inaccuracy.
-                    targetIdentity = activeSims.first().identity.stableId
+                    // Deterministically select SIM with lowest slotIndex, then lowest subscriptionId.
+                    val fallbackSim = activeSims.minWithOrNull(compareBy({ it.slotIndex }, { it.subscriptionId }))
+                    targetIdentity = fallbackSim?.identity?.stableId
                     isFallbackUsed = true
-                    AppLogger.w("CallTracker: no SIM matched subId=$subId, using first active as fallback")
+                    AppLogger.w(
+                        "CallTracker: no SIM matched subId=$subId, using deterministic fallback $targetIdentity",
+                    )
                 }
             }
             return targetIdentity to isFallbackUsed
