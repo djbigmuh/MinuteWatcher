@@ -120,7 +120,7 @@ class WidgetSettingsViewModel
                 viewModelScope.launch {
                     @OptIn(FlowPreview::class)
                     autoSaveTrigger
-                        .debounce(400.milliseconds)
+                        .debounce(AUTO_SAVE_DEBOUNCE)
                         .collect {
                             saveAndNotify()
                         }
@@ -380,6 +380,7 @@ class WidgetSettingsViewModel
         companion object {
             private val LOAD_TIMEOUT: Duration = 15.seconds
             private val FLUSH_TIMEOUT: Duration = 10.seconds
+            private val AUTO_SAVE_DEBOUNCE: Duration = 400.milliseconds
             private const val MAX_PENDING_UPDATES = 10
         }
     }

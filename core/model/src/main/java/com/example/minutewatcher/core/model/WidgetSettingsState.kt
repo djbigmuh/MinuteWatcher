@@ -18,11 +18,11 @@ package com.example.minutewatcher.core.model
  * @property simListLoadFailed SIM list load failure flag.
  */
 data class WidgetSettingsState(
-    val layoutMode: Int = 2,
-    val simArrangement: Int = 0,
-    val transparency: Int = 50,
-    val fontSize: Int = 2,
-    val backgroundColor: Int = 0xFF000000.toInt(),
+    val layoutMode: Int = Constants.Widget.DEFAULT_LAYOUT_MODE,
+    val simArrangement: Int = Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL,
+    val transparency: Int = Constants.Widget.DEFAULT_TRANSPARENCY,
+    val fontSize: Int = Constants.Widget.DEFAULT_FONT_SIZE_INDEX,
+    val backgroundColor: Int = Constants.UI.DEFAULT_BG_COLOR,
     val notifyLowMinutes: Boolean = true,
     val notifyLowTraffic: Boolean = true,
     val simStates: Map<Int, SimSettingsState> = emptyMap(),

@@ -91,12 +91,15 @@ object Constants {
 
         const val MIN_LAYOUT_MODE = 0
         const val MAX_LAYOUT_MODE = 4
+        const val DEFAULT_LAYOUT_MODE = 2
         const val MIN_SIM_ARRANGEMENT = 0
         const val MAX_SIM_ARRANGEMENT = 1
         const val MIN_TRANSPARENCY = 0
         const val MAX_TRANSPARENCY = 100
+        const val DEFAULT_TRANSPARENCY = 50
         const val MIN_FONT_SIZE = 0
         const val MAX_FONT_SIZE = 4
+        const val DEFAULT_FONT_SIZE_INDEX = 2
     }
 
     /**
@@ -251,23 +254,23 @@ object Constants {
      */
     const val MB_PER_GB = 1024.0f
 
-    /**
-     * Low remaining threshold (20%).
-     * Notification is shown when remaining is below this threshold.
-     */
-    const val LOW_REMAINING_THRESHOLD_PERCENT = 0.20f
-
-    /**
-     * Critical remaining threshold (10%).
-     * Critical notification is shown when remaining is below this threshold.
-     */
-    const val CRITICAL_REMAINING_THRESHOLD_PERCENT = 0.10f
-
-    /** Critical remaining threshold in percent (integer). */
+    /** Critical remaining threshold in percent (integer, 10%). */
     const val CRITICAL_THRESHOLD_PERCENT_INT = 10
 
-    /** Low remaining threshold in percent (integer). */
+    /** Low remaining threshold in percent (integer, 20%). */
     const val LOW_THRESHOLD_PERCENT_INT = 20
+
+    /**
+     * Critical remaining threshold as a fraction (0.10f).
+     * Derived from [CRITICAL_THRESHOLD_PERCENT_INT].
+     */
+    const val CRITICAL_REMAINING_THRESHOLD_FRACTION = CRITICAL_THRESHOLD_PERCENT_INT / 100f
+
+    /**
+     * Low remaining threshold as a fraction (0.20f).
+     * Derived from [LOW_THRESHOLD_PERCENT_INT].
+     */
+    const val LOW_REMAINING_THRESHOLD_FRACTION = LOW_THRESHOLD_PERCENT_INT / 100f
 
     /**
      * Maximum minutes limit (44640 = 31 days × 24 hours × 60 minutes).

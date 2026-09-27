@@ -13,8 +13,8 @@ object ColorProvider {
         when {
             limit <= 0 -> UsageStatus.NORMAL
             remaining <= 0 -> UsageStatus.CRITICAL
-            remaining < limit * Constants.CRITICAL_REMAINING_THRESHOLD_PERCENT -> UsageStatus.CRITICAL
-            remaining < limit * Constants.LOW_REMAINING_THRESHOLD_PERCENT -> UsageStatus.LOW
+            remaining < limit * Constants.CRITICAL_REMAINING_THRESHOLD_FRACTION -> UsageStatus.CRITICAL
+            remaining < limit * Constants.LOW_REMAINING_THRESHOLD_FRACTION -> UsageStatus.LOW
             else -> UsageStatus.NORMAL
         }
 }
