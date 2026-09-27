@@ -2,7 +2,6 @@ package com.example.minutewatcher.core.domain
 
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SimCardUiModel
-import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.IOException
@@ -39,11 +38,6 @@ sealed interface RefreshResult {
  * Data updates are expected to be atomic and comply with AOSP DataStore practices.
  */
 interface UsageStateRepository {
-    /**
-     * Observes usage data for all active SIM cards.
-     */
-    fun observeSimUsages(): Flow<List<SimUsage>>
-
     /**
      * Observes UI models for SIM cards.
      */

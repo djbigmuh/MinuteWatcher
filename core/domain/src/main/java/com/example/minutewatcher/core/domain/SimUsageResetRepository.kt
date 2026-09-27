@@ -46,22 +46,6 @@ interface SimUsageResetRepository {
     ): Boolean
 
     /**
-     * Returns a flow of the last reset timestamp.
-     */
-    fun getLastResetDate(identity: String): Flow<Long>
-
-    /**
-     * Sets the last reset timestamp.
-     *
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun setLastResetDate(
-        identity: String,
-        value: Long,
-    )
-
-    /**
      * Returns a flow of the last total bytes seen at reset.
      */
     fun getLastTotalBytes(identity: String): Flow<Long>

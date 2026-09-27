@@ -85,9 +85,8 @@ class UsageStateRepositoryResilienceTest {
             advanceTimeBy(1500.milliseconds)
             runCurrent()
 
-            val usages = repo.observeSimUsages().first { it.isNotEmpty() }
-            assertEquals(1, usages.size)
-            assertEquals("sim_1", usages[0].identity)
+            val models = repo.observeSimCardUiModels().first { it.isNotEmpty() }
+            assertEquals(1, models.size)
             assertTrue(repo.isDataLoaded())
         }
 

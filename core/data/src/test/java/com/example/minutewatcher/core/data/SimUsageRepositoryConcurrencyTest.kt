@@ -54,10 +54,11 @@ class SimUsageRepositoryConcurrencyTest {
             val identity = "test_sim"
             val autoResetDay = 1
             val now = 1000000000000L
+            val futureNow = now + 40L * 24 * 3600 * 1000
 
             // Data preparation
-            repository.setLastResetDate(identity, 1L)
-            repository.setMinutesUsed(identity, 50)
+            repository.ensureTrackingWindowInitialized(identity)
+            repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // 3. Launch concurrent calls on the VERY SAME repository instance
             val concurrentCalls = 10
@@ -65,7 +66,7 @@ class SimUsageRepositoryConcurrencyTest {
                 (1..concurrentCalls)
                     .map {
                         async {
-                            repository.resetSimUsageIfDue(identity, autoResetDay, now)
+                            repository.resetSimUsageIfDue(identity, autoResetDay, futureNow)
                         }
                     }.awaitAll()
 
@@ -77,6 +78,6 @@ class SimUsageRepositoryConcurrencyTest {
 
             val usage = repository.getSimUsage(identity).first()
             assertEquals(0, usage.minutesUsed)
-            assertEquals(now, usage.lastResetDate)
+            assertEquals(futureNow, usage.lastResetDate)
         }
 }

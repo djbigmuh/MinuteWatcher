@@ -122,7 +122,7 @@ class SimUsageRepositoryImplTest {
         runTest {
             val identity = "test_sim"
             val now = 1000000L
-            repository.setMinutesUsed(identity, 50)
+            repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // First call - should NOT reset but initialize date
             val result = repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = now)
@@ -131,7 +131,7 @@ class SimUsageRepositoryImplTest {
             val usage = repository.getSimUsage(identity).first()
             assertEquals("Minutes should be preserved", 50, usage.minutesUsed)
 
-            val lastReset = repository.getLastResetDate(identity).first()
+            val lastReset = usage.lastResetDate
             assertEquals("Last reset date should be set to now", now, lastReset)
         }
 
@@ -140,14 +140,14 @@ class SimUsageRepositoryImplTest {
         runTest {
             val identity = "test_sim"
             val now = 1000000L // Assume this is day 10
-            repository.setMinutesUsed(identity, 50)
+            repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // 1. Initialize
             repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = now)
 
             // 2. Second call in same period (e.g., day 15)
             val laterSamePeriod = now + 5 * 24 * 3600 * 1000L
-            repository.setMinutesUsed(identity, 60)
+            repository.updateSimStats(identity, minutesUsed = 60, trafficUsedMb = 0f, manualAdjustment = 0)
             val result = repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = laterSamePeriod)
 
             assertFalse("Should not reset in same period", result)
@@ -160,7 +160,7 @@ class SimUsageRepositoryImplTest {
         runTest {
             val identity = "test_sim"
             val now = 1000000L // Day 1
-            repository.setMinutesUsed(identity, 50)
+            repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // 1. Initialize
             repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = now)
@@ -173,7 +173,7 @@ class SimUsageRepositoryImplTest {
             val usage = repository.getSimUsage(identity).first()
             assertEquals(0, usage.minutesUsed)
 
-            val lastReset = repository.getLastResetDate(identity).first()
+            val lastReset = usage.lastResetDate
             assertEquals(nextMonth, lastReset)
         }
 
@@ -182,7 +182,7 @@ class SimUsageRepositoryImplTest {
         runTest {
             val identity = "test_sim"
             val now = 1000000L
-            repository.setMinutesUsed(identity, 50)
+            repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // Set limit and enable rollover
             dataStore.edit { prefs ->
@@ -208,7 +208,7 @@ class SimUsageRepositoryImplTest {
         runTest {
             val identity = "test_sim"
             val now = 1000000L
-            repository.setMinutesUsed(identity, 50)
+            repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             dataStore.edit { prefs ->
                 prefs[DataStoreKeys.monthlyLimitKey(identity)] = 100
@@ -234,7 +234,7 @@ class SimUsageRepositoryImplTest {
         runTest {
             val identity = "test_sim"
             val now = 1000000L
-            repository.setMinutesUsed(identity, 50)
+            repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             dataStore.edit { prefs ->
                 prefs[DataStoreKeys.monthlyLimitKey(identity)] = 100

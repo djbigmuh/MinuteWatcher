@@ -162,15 +162,6 @@ class UsageStateRepositoryImpl
             )
 
         /**
-         * Returns a flow of all active SIM usages.
-         *
-         * @return [Flow] of [SimUsage] list.
-         *
-         * **Thread Safety:** Safe to call from any coroutine context.
-         */
-        override fun observeSimUsages(): Flow<List<SimUsage>> = sharedSimUsagesFlow
-
-        /**
          * Returns a flow of UI models for all active SIM cards.
          *
          * Maps [SimUsage] data to [SimCardUiModel] using [SimCardMapper].
@@ -282,7 +273,7 @@ class UsageStateRepositoryImpl
          * @return [RefreshResult] containing the new snapshot on success, or the previous one on timeout.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * @throws kotlinx.coroutines.CancellationException if the refresh is cancelled.
+         * @throws CancellationException if the refresh is cancelled.
          */
         override suspend fun refresh(): RefreshResult {
             val startRevision = snapshotFlow.value.revision

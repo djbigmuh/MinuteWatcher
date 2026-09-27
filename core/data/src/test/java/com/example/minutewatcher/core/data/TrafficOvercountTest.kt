@@ -33,7 +33,6 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -55,7 +54,6 @@ class TrafficOvercountTest {
 
     private val sim1Identity = "sim_1"
     private val sim2Identity = "sim_2"
-    private val lastResetDate = 1000000000000L
 
     private val appScope = CoroutineScope(testDispatcher + Job())
 
@@ -181,11 +179,11 @@ class TrafficOvercountTest {
             val tracker = startTracker()
 
             // 1. Setup SIM 1 with some initial state in DataStore
-            simUsageResetRepository.setLastResetDate(sim1Identity, lastResetDate)
+            simUsageResetRepository.ensureTrackingWindowInitialized(sim1Identity)
             simUsageResetRepository.setLastTotalBytes(sim1Identity, 100L * Constants.BYTES_PER_MB)
 
             // SIM 1 is active. Let's say it has 500MB used.
-            whenever(networkStatsProvider.queryMobileBytes(eq(lastResetDate), any())).thenReturn(
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(
                 StatsResult.Success(
                     500L * Constants.BYTES_PER_MB,
                 ),
@@ -199,14 +197,14 @@ class TrafficOvercountTest {
             assertEquals(400f, usage1.trafficUsedMb, 0.01f)
 
             // 2. Switch default data to SIM 2.
-            simUsageResetRepository.setLastResetDate(sim2Identity, lastResetDate)
+            simUsageResetRepository.ensureTrackingWindowInitialized(sim2Identity)
             simUsageResetRepository.setLastTotalBytes(sim2Identity, 0L)
 
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
             whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))
 
             // And it SHOULD query lastResetDate for SIM 2 instead.
-            whenever(networkStatsProvider.queryMobileBytes(eq(lastResetDate), any())).thenReturn(
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(
                 StatsResult.Success(
                     1000L * Constants.BYTES_PER_MB.toLong(),
                 ),
@@ -220,7 +218,7 @@ class TrafficOvercountTest {
             assertEquals(1000L * Constants.BYTES_PER_MB.toLong(), baseline2)
 
             // 3. Next update for SIM 2. Now it has 1050MB.
-            whenever(networkStatsProvider.queryMobileBytes(eq(lastResetDate), any())).thenReturn(
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(
                 StatsResult.Success(
                     1050L * Constants.BYTES_PER_MB,
                 ),
@@ -241,11 +239,11 @@ class TrafficOvercountTest {
             val identity = sim1Identity
 
             // 1. Setup SIM 1 with initial state and a retry state.
-            simUsageResetRepository.setLastResetDate(identity, lastResetDate)
+            simUsageResetRepository.ensureTrackingWindowInitialized(identity)
             simUsageResetRepository.setBaselineRetryCount(identity, 1)
 
             // 2. Mock stats result for the full window.
-            whenever(networkStatsProvider.queryMobileBytes(eq(lastResetDate), any())).thenReturn(
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(
                 StatsResult.Success(
                     1000L * Constants.BYTES_PER_MB,
                 ),

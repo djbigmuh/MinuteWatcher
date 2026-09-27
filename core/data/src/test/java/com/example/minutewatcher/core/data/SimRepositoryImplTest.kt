@@ -195,7 +195,8 @@ class SimRepositoryImplTest {
 
             // 1. Setup limit and usage
             limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
-            usageRepo.setMinutesUsed(identity, 80) // 20 minutes remaining
+            // 20 minutes remaining
+            usageRepo.updateSimStats(identity, minutesUsed = 80, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // 2. Perform reset
             usageRepo.resetSimUsage(identity)
@@ -217,7 +218,8 @@ class SimRepositoryImplTest {
 
             // 1. Setup limit and usage (1GB limit = 1024MB)
             limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
-            usageRepo.setTrafficUsed(identity, 512f) // 0.5GB used, 0.5GB remaining
+            // 0.5GB used, 0.5GB remaining
+            usageRepo.updateSimStats(identity, minutesUsed = 0, trafficUsedMb = 512f, manualAdjustment = 0)
 
             // 2. Perform reset
             usageRepo.resetSimUsage(identity)
@@ -239,8 +241,7 @@ class SimRepositoryImplTest {
 
             // 1. Setup limit, usage and rollover
             limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
-            usageRepo.setMinutesUsed(identity, 80)
-            usageRepo.setTrafficUsed(identity, 512f)
+            usageRepo.updateSimStats(identity, minutesUsed = 80, trafficUsedMb = 512f, manualAdjustment = 0)
 
             // 2. Perform MANUAL reset
             usageRepo.resetSimUsageManual(identity)

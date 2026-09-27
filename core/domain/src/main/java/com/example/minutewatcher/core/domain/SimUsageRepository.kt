@@ -19,17 +19,6 @@ interface SimUsageRepository {
     fun getSimUsage(identity: String): Flow<SimUsage>
 
     /**
-     * Sets the minutes used for the given identity.
-     *
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun setMinutesUsed(
-        identity: String,
-        value: Int,
-    )
-
-    /**
      * Increments the minutes used for the given identity for a specific call.
      *
      * This operation is idempotent: if a call with the same [callSignature] has already been
@@ -51,26 +40,4 @@ interface SimUsageRepository {
         deltaMinutes: Int,
         callSignature: String,
     ): Boolean
-
-    /**
-     * Sets the traffic used in MB for the given identity.
-     *
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun setTrafficUsed(
-        identity: String,
-        valueMb: Float,
-    )
-
-    /**
-     * Increments the traffic used in MB for the given identity.
-     *
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun incrementTrafficUsed(
-        identity: String,
-        deltaMb: Float,
-    )
 }

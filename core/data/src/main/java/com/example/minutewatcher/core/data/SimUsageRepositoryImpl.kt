@@ -66,23 +66,6 @@ class SimUsageRepositoryImpl
         }
 
         /**
-         * Sets the absolute value of minutes used for the identity.
-         *
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if write fails.
-         */
-        override suspend fun setMinutesUsed(
-            identity: String,
-            value: Int,
-        ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setMinutesUsed called with invalid identity: $identity")
-                return
-            }
-            dataStore.edit { it[DataStoreKeys.minutesUsedKey(identity)] = value }
-        }
-
-        /**
          * Increments minutes used for the identity by the given delta for a specific call.
          *
          * Idempotent implementation using [callSignature]. If the signature matches the saved one,
@@ -121,45 +104,6 @@ class SimUsageRepositoryImpl
                 result = true
             }
             return result
-        }
-
-        /**
-         * Sets the absolute value of traffic used in MB for the identity.
-         *
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if write fails.
-         */
-        override suspend fun setTrafficUsed(
-            identity: String,
-            valueMb: Float,
-        ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setTrafficUsed called with invalid identity: $identity")
-                return
-            }
-            dataStore.edit { it[DataStoreKeys.trafficUsedKey(identity)] = valueMb }
-        }
-
-        /**
-         * Increments traffic used in MB for the identity by the given delta.
-         *
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if write fails.
-         */
-        override suspend fun incrementTrafficUsed(
-            identity: String,
-            deltaMb: Float,
-        ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("incrementTrafficUsed called with invalid identity: $identity")
-                return
-            }
-            dataStore.edit { prefs ->
-                val current = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                val newValue = current + deltaMb.toDouble()
-                val rounded = ((newValue * TRAFFIC_ROUNDING_FACTOR).roundToLong() / TRAFFIC_ROUNDING_FACTOR).toFloat()
-                prefs[DataStoreKeys.trafficUsedKey(identity)] = rounded.coerceIn(0f, MAX_TRAFFIC_MB)
-            }
         }
 
         /**
@@ -310,25 +254,6 @@ class SimUsageRepositoryImpl
                 }
                 actuallyReset
             }
-        }
-
-        override fun getLastResetDate(identity: String): Flow<Long> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getLastResetDate called with invalid identity: $identity")
-                return flowOf(0L)
-            }
-            return getData(DataStoreKeys.lastResetDateKey(identity), 0L)
-        }
-
-        override suspend fun setLastResetDate(
-            identity: String,
-            value: Long,
-        ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setLastResetDate called with invalid identity: $identity")
-                return
-            }
-            dataStore.edit { it[DataStoreKeys.lastResetDateKey(identity)] = value }
         }
 
         override fun getLastTotalBytes(identity: String): Flow<Long> {

@@ -247,9 +247,8 @@ class UsageStateRepositoryImplTest {
                 )
 
             // Start multiple observers
-            val job1 = launch { repository.observeSimUsages().collect {} }
-            val job2 = launch { repository.observeSnapshot().collect {} }
-            val job3 = launch { repository.observeSimCardUiModels().collect {} }
+            val job1 = launch { repository.observeSnapshot().collect {} }
+            val job2 = launch { repository.observeSimCardUiModels().collect {} }
 
             testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
@@ -258,7 +257,6 @@ class UsageStateRepositoryImplTest {
 
             job1.cancel()
             job2.cancel()
-            job3.cancel()
         }
 
     @Test
