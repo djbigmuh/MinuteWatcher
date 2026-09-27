@@ -11,11 +11,9 @@ import com.example.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.util.BillingPeriodCalculator
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -57,13 +55,8 @@ class SimUsageRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun getSimUsage(identity: String): Flow<SimUsage> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getSimUsage called with invalid identity: $identity")
-                return flowOf(mapper.createEmptyUsage(identity))
-            }
-            return dataStore.data.map { prefs -> mapper.mapToSimUsage(identity, prefs) }
-        }
+        override fun getSimUsage(identity: String): Flow<SimUsage> =
+            dataStore.data.map { prefs -> mapper.mapToSimUsage(identity, prefs) }
 
         /**
          * Increments minutes used for the identity by the given delta for a specific call.
@@ -84,10 +77,6 @@ class SimUsageRepositoryImpl
             deltaMinutes: Int,
             callSignature: String,
         ): Boolean {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("incrementMinutesUsedForCall called with invalid identity: $identity")
-                return false
-            }
             var result = false
             dataStore.edit { prefs ->
                 val lastSignature = prefs[DataStoreKeys.lastCountedCallSignatureKey(identity)]
@@ -116,10 +105,6 @@ class SimUsageRepositoryImpl
             identity: String,
             value: Int,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setManualAdjustment called with invalid identity: $identity")
-                return
-            }
             dataStore.edit { it[DataStoreKeys.manualAdjustmentKey(identity)] = value }
         }
 
@@ -133,10 +118,6 @@ class SimUsageRepositoryImpl
             identity: String,
             valueGb: Float,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setTrafficAdjustment called with invalid identity: $identity")
-                return
-            }
             dataStore.edit { it[DataStoreKeys.trafficAdjustmentKey(identity)] = valueGb }
         }
 
@@ -152,10 +133,6 @@ class SimUsageRepositoryImpl
             trafficUsedMb: Float,
             manualAdjustment: Int,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("updateSimStats called with invalid identity: $identity")
-                return
-            }
             dataStore.edit {
                 it[DataStoreKeys.minutesUsedKey(identity)] = minutesUsed
                 it[DataStoreKeys.trafficUsedKey(identity)] = trafficUsedMb
@@ -172,10 +149,6 @@ class SimUsageRepositoryImpl
          * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
          */
         override suspend fun resetSimUsage(identity: String) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("resetSimUsage called with invalid identity: $identity")
-                return
-            }
             resetMutex.withLock {
                 dataStore.edit { prefs ->
                     resetLogic.applyResetWithRollover(prefs, identity, timeProvider.now())
@@ -193,10 +166,6 @@ class SimUsageRepositoryImpl
          * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
          */
         override suspend fun resetSimUsageManual(identity: String) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("resetSimUsageManual called with invalid identity: $identity")
-                return
-            }
             resetMutex.withLock {
                 dataStore.edit { prefs ->
                     prefs[DataStoreKeys.minutesUsedKey(identity)] = 0
@@ -230,12 +199,8 @@ class SimUsageRepositoryImpl
             identity: String,
             autoResetDay: Int,
             nowMillis: Long,
-        ): Boolean {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("resetSimUsageIfDue called with invalid identity: $identity")
-                return false
-            }
-            return resetMutex.withLock {
+        ): Boolean =
+            resetMutex.withLock {
                 val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
 
                 var actuallyReset = false
@@ -254,24 +219,14 @@ class SimUsageRepositoryImpl
                 }
                 actuallyReset
             }
-        }
 
-        override fun getLastTotalBytes(identity: String): Flow<Long> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getLastTotalBytes called with invalid identity: $identity")
-                return flowOf(-1L)
-            }
-            return getData(DataStoreKeys.lastTotalBytesKey(identity), -1L)
-        }
+        override fun getLastTotalBytes(identity: String): Flow<Long> =
+            getData(DataStoreKeys.lastTotalBytesKey(identity), -1L)
 
         override suspend fun setLastTotalBytes(
             identity: String,
             bytes: Long,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setLastTotalBytes called with invalid identity: $identity")
-                return
-            }
             dataStore.edit { it[DataStoreKeys.lastTotalBytesKey(identity)] = bytes }
         }
 
@@ -280,10 +235,6 @@ class SimUsageRepositoryImpl
             deltaMb: Float,
             totalBytes: Long,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("incrementTrafficAndSetBaseline called with invalid identity: $identity")
-                return
-            }
             dataStore.edit { prefs ->
                 // 1. Increment traffic
                 val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
@@ -296,10 +247,8 @@ class SimUsageRepositoryImpl
             }
         }
 
-        override suspend fun ensureTrackingWindowInitialized(identity: String): Boolean {
-            if (SimConstants.isInvalid(identity)) return false
-
-            return resetMutex.withLock {
+        override suspend fun ensureTrackingWindowInitialized(identity: String): Boolean =
+            resetMutex.withLock {
                 var initialized = false
                 dataStore.edit { prefs ->
                     val lastResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: 0L
@@ -314,18 +263,14 @@ class SimUsageRepositoryImpl
                 }
                 initialized
             }
-        }
 
-        override fun getBaselineRetryCount(identity: String): Flow<Int?> {
-            if (SimConstants.isInvalid(identity)) return flowOf(null)
-            return dataStore.data.map { it[DataStoreKeys.baselineRetryCountKey(identity)] }
-        }
+        override fun getBaselineRetryCount(identity: String): Flow<Int?> =
+            dataStore.data.map { it[DataStoreKeys.baselineRetryCountKey(identity)] }
 
         override suspend fun setBaselineRetryCount(
             identity: String,
             count: Int?,
         ) {
-            if (SimConstants.isInvalid(identity)) return
             dataStore.edit { prefs ->
                 val key = DataStoreKeys.baselineRetryCountKey(identity)
                 if (count == null) {

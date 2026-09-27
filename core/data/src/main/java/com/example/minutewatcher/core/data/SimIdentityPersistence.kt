@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.di.DataStoreKeys
-import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
@@ -79,7 +78,6 @@ class SimIdentityPersistence
         private fun filterValidIdentities(identities: List<SimIdentity>): List<SimIdentity> =
             identities
                 .asSequence()
-                .filter { !SimConstants.isInvalid(it.stableId) }
                 .distinctBy { it.stableId }
                 .toList()
 
@@ -167,7 +165,6 @@ class SimIdentityPersistence
             identity: String,
             name: String,
         ) {
-            if (SimConstants.isInvalid(identity)) return
             dataStore.edit { it[DataStoreKeys.simOperatorKey(identity)] = name }
         }
 

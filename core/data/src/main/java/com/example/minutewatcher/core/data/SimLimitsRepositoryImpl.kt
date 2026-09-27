@@ -4,13 +4,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.SimDataStore
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,26 +38,14 @@ class SimLimitsRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun getMonthlyLimit(identity: String): Flow<Int> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getMonthlyLimit called with invalid identity: $identity")
-                return flowOf(0)
-            }
-            return get(DataStoreKeys.monthlyLimitKey(identity), 0)
-        }
+        override fun getMonthlyLimit(identity: String): Flow<Int> = get(DataStoreKeys.monthlyLimitKey(identity), 0)
 
         /**
          * Returns a flow of the monthly traffic limit in MB for the given identity.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getTrafficLimit(identity: String): Flow<Int> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getTrafficLimit called with invalid identity: $identity")
-                return flowOf(0)
-            }
-            return get(DataStoreKeys.trafficLimitKey(identity), 0)
-        }
+        override fun getTrafficLimit(identity: String): Flow<Int> = get(DataStoreKeys.trafficLimitKey(identity), 0)
 
         /**
          * Updates limits for the given identity.
@@ -77,10 +62,6 @@ class SimLimitsRepositoryImpl
             trafficLimitMb: Int,
             rolloverEnabled: Boolean,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("updateSimLimits called with invalid identity: $identity")
-                return
-            }
             val safeMinutes = minutesLimit.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
             val maxTrafficMb = (Constants.MAX_TRAFFIC_LIMIT_GB * Constants.MB_PER_GB).toInt()
             val safeTraffic = trafficLimitMb.coerceIn(0, maxTrafficMb)
@@ -97,26 +78,15 @@ class SimLimitsRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun getAutoReset(identity: String): Flow<Boolean> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getAutoReset called with invalid identity: $identity")
-                return flowOf(value = false)
-            }
-            return get(DataStoreKeys.autoResetKey(identity), defaultValue = false)
-        }
+        override fun getAutoReset(identity: String): Flow<Boolean> =
+            get(DataStoreKeys.autoResetKey(identity), defaultValue = false)
 
         /**
          * Returns a flow of the day of the month when automatic reset occurs.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getAutoResetDay(identity: String): Flow<Int> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getAutoResetDay called with invalid identity: $identity")
-                return flowOf(1)
-            }
-            return get(DataStoreKeys.autoResetDayKey(identity), 1)
-        }
+        override fun getAutoResetDay(identity: String): Flow<Int> = get(DataStoreKeys.autoResetDayKey(identity), 1)
 
         /**
          * Updates automatic reset settings for the given identity.
@@ -131,10 +101,6 @@ class SimLimitsRepositoryImpl
             day: Int,
             enabled: Boolean,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setAutoReset called with invalid identity: $identity")
-                return
-            }
             val safeDay = day.coerceIn(1, 31)
             dataStore.edit {
                 it[DataStoreKeys.autoResetDayKey(identity)] = safeDay

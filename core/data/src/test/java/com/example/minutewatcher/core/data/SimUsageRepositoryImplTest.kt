@@ -76,17 +76,6 @@ class SimUsageRepositoryImplTest {
         }
 
     @Test
-    fun `incrementMinutesUsedForCall returns false for invalid identity`() =
-        runTest {
-            val invalidIdentity = "invalid_slot_0"
-            val result = repository.incrementMinutesUsedForCall(invalidIdentity, 10, "1000|5000")
-            assertFalse(result)
-
-            val usage = repository.getSimUsage(invalidIdentity).first()
-            assertEquals(0, usage.minutesUsed)
-        }
-
-    @Test
     fun `legacy numeric call marker is removed after successful call recording`() =
         runTest {
             val identity = "test_sim"

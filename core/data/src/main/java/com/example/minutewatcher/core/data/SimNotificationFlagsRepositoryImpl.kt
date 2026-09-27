@@ -4,12 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.SimDataStore
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimNotificationFlagsRepository
-import com.example.minutewatcher.core.model.Constants.SimConstants
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,13 +32,8 @@ class SimNotificationFlagsRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getNotifiedLowMinutes called with invalid identity: $identity")
-                return flowOf(value = false)
-            }
-            return getData(DataStoreKeys.notifiedLowMinutesKey(identity), defaultValue = false)
-        }
+        override fun getNotifiedLowMinutes(identity: String): Flow<Boolean> =
+            getData(DataStoreKeys.notifiedLowMinutesKey(identity), defaultValue = false)
 
         /**
          * Sets the low minutes notification flag.
@@ -53,10 +45,6 @@ class SimNotificationFlagsRepositoryImpl
             identity: String,
             notified: Boolean,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setNotifiedLowMinutes called with invalid identity: $identity")
-                return
-            }
             dataStore.edit { it[DataStoreKeys.notifiedLowMinutesKey(identity)] = notified }
         }
 
@@ -65,13 +53,8 @@ class SimNotificationFlagsRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun getNotifiedLowTraffic(identity: String): Flow<Boolean> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getNotifiedLowTraffic called with invalid identity: $identity")
-                return flowOf(value = false)
-            }
-            return getData(DataStoreKeys.notifiedLowTrafficKey(identity), defaultValue = false)
-        }
+        override fun getNotifiedLowTraffic(identity: String): Flow<Boolean> =
+            getData(DataStoreKeys.notifiedLowTrafficKey(identity), defaultValue = false)
 
         /**
          * Sets the low traffic notification flag.
@@ -83,10 +66,6 @@ class SimNotificationFlagsRepositoryImpl
             identity: String,
             notified: Boolean,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setNotifiedLowTraffic called with invalid identity: $identity")
-                return
-            }
             dataStore.edit { it[DataStoreKeys.notifiedLowTrafficKey(identity)] = notified }
         }
 
@@ -95,13 +74,8 @@ class SimNotificationFlagsRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun getNotifiedExhaustedMinutes(identity: String): Flow<Boolean> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getNotifiedExhaustedMinutes called with invalid identity: $identity")
-                return flowOf(value = false)
-            }
-            return getData(DataStoreKeys.notifiedExhaustedMinutesKey(identity), defaultValue = false)
-        }
+        override fun getNotifiedExhaustedMinutes(identity: String): Flow<Boolean> =
+            getData(DataStoreKeys.notifiedExhaustedMinutesKey(identity), defaultValue = false)
 
         /**
          * Sets the exhausted minutes notification flag.
@@ -113,10 +87,6 @@ class SimNotificationFlagsRepositoryImpl
             identity: String,
             notified: Boolean,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setNotifiedExhaustedMinutes called with invalid identity: $identity")
-                return
-            }
             dataStore.edit { it[DataStoreKeys.notifiedExhaustedMinutesKey(identity)] = notified }
         }
 
@@ -125,13 +95,8 @@ class SimNotificationFlagsRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun getNotifiedExhaustedTraffic(identity: String): Flow<Boolean> {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("getNotifiedExhaustedTraffic called with invalid identity: $identity")
-                return flowOf(value = false)
-            }
-            return getData(DataStoreKeys.notifiedExhaustedTrafficKey(identity), defaultValue = false)
-        }
+        override fun getNotifiedExhaustedTraffic(identity: String): Flow<Boolean> =
+            getData(DataStoreKeys.notifiedExhaustedTrafficKey(identity), defaultValue = false)
 
         /**
          * Sets the exhausted traffic notification flag.
@@ -143,10 +108,6 @@ class SimNotificationFlagsRepositoryImpl
             identity: String,
             notified: Boolean,
         ) {
-            if (SimConstants.isInvalid(identity)) {
-                AppLogger.w("setNotifiedExhaustedTraffic called with invalid identity: $identity")
-                return
-            }
             dataStore.edit { it[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = notified }
         }
     }

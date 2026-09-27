@@ -4,10 +4,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.SimDataStore
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimWidgetVisibilityRepository
-import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -43,7 +41,6 @@ class SimWidgetVisibilityRepositoryImpl
             dataStore.data.map { prefs ->
                 identities
                     .asSequence()
-                    .filter { !SimConstants.isInvalid(it) }
                     .associateWith { identity ->
                         SimSettingsState(
                             showSim = prefs[DataStoreKeys.showSimKey(identity)] ?: true,
@@ -66,10 +63,6 @@ class SimWidgetVisibilityRepositoryImpl
         override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
             dataStore.edit { prefs ->
                 settingsMap.forEach { (identity, settings) ->
-                    if (SimConstants.isInvalid(identity)) {
-                        AppLogger.w("setSimSettingsBatch skipped for invalid identity: $identity")
-                        return@forEach
-                    }
                     prefs[DataStoreKeys.showSimKey(identity)] = settings.showSim
                     prefs[DataStoreKeys.showSimIconKey(identity)] = settings.showIcon
                     prefs[DataStoreKeys.showSimNameKey(identity)] = settings.showName

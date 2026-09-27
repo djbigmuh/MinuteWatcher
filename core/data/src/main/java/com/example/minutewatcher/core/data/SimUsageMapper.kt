@@ -39,22 +39,4 @@ class SimUsageMapper
                 lastResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: 0L,
                 rolloverEnabled = prefs[DataStoreKeys.rolloverEnabledKey(identity)] ?: false,
             )
-
-        fun createEmptyUsage(identity: String): SimUsage =
-            SimUsage(
-                identity = identity,
-                slotIndex = -1,
-                subscriptionId = null,
-                operator = "",
-                minutesUsed = 0,
-                minutesLimit = 0,
-                trafficUsedMb = 0f,
-                trafficLimitMb = 0,
-                manualAdjustment = 0,
-                trafficAdjustmentGb = 0f,
-                autoReset = false,
-                autoResetDay = 1,
-                lastResetDate = 0L,
-                rolloverEnabled = false,
-            )
     }

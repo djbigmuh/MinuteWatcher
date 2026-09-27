@@ -229,18 +229,10 @@ object Constants {
      *
      * MAX_SUPPORTED_SIM_SLOTS — maximum number of supported SIM slots.
      * SUPPORTED_SLOT_INDICES — range of supported slot indices.
-     * INVALID_SLOT_IDENTITY_PREFIX — invalid slot identity prefix.
-     *   Used when SIM cannot be identified.
      */
     object SimConstants {
         const val MAX_SUPPORTED_SIM_SLOTS = 10
         val SUPPORTED_SLOT_INDICES = 0 until MAX_SUPPORTED_SIM_SLOTS
-        const val INVALID_SLOT_IDENTITY_PREFIX = "invalid_slot_"
-
-        /**
-         * Checks if identity is invalid (generated for an empty slot).
-         */
-        fun isInvalid(identity: String): Boolean = identity.startsWith(INVALID_SLOT_IDENTITY_PREFIX)
     }
 
     /**
