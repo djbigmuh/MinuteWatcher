@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -184,5 +185,36 @@ class SimLimitComposeDialogTest {
 
         // Traffic text should be "7", not "10.07"
         composeTestRule.onNodeWithText("7").assertIsDisplayed()
+    }
+
+    @Test
+    fun confirmWithEmptyInput_showsValidationErrorAndDoesNotCallConfirm() {
+        var confirmCalled = false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 0,
+                initialTrafficMb = 0,
+                onDismiss = {},
+                onConfirm = { _, _, _ -> confirmCalled = true },
+                onReset = {},
+            )
+        }
+
+        // Clear the minutes text field
+        composeTestRule.onNodeWithText("0").performTextClearance()
+
+        // Click set button
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.set_button), ignoreCase = true)
+            .performClick()
+
+        assertFalse("onConfirm should not be called with empty input", confirmCalled)
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.validation_error_field_required))
+            .assertIsDisplayed()
     }
 }
