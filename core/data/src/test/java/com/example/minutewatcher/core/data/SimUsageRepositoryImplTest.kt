@@ -243,4 +243,67 @@ class SimUsageRepositoryImplTest {
             assertEquals(0, usage.minutesUsed)
             assertEquals("Rollover should include adjustment (100 + 30 - 50 = 80)", 80, usage.manualAdjustment)
         }
+
+    @Test
+    fun testRolloverLogic_AccumulatesRemainingMinutes() =
+        runTest {
+            val limitsRepo = SimLimitsRepositoryImpl(dataStore)
+            val identity = "test_sim"
+
+            // 1. Setup limit and usage
+            limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
+            // 20 minutes remaining
+            repository.updateSimStats(identity, minutesUsed = 80, trafficUsedMb = 0f, manualAdjustment = 0)
+
+            // 2. Perform reset
+            repository.resetSimUsage(identity)
+
+            // 3. Verify rollover
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(0, usage.minutesUsed)
+            assertEquals(20, usage.manualAdjustment)
+            assertEquals(120, usage.minutesLimit + usage.manualAdjustment)
+        }
+
+    @Test
+    fun testRolloverLogic_AccumulatesRemainingTraffic() =
+        runTest {
+            val limitsRepo = SimLimitsRepositoryImpl(dataStore)
+            val identity = "test_sim"
+
+            // 1. Setup limit and usage (1GB limit = 1024MB)
+            limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
+            // 0.5GB used, 0.5GB remaining
+            repository.updateSimStats(identity, minutesUsed = 0, trafficUsedMb = 512f, manualAdjustment = 0)
+
+            // 2. Perform reset
+            repository.resetSimUsage(identity)
+
+            // 3. Verify rollover
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(0f, usage.trafficUsedMb)
+            assertEquals(0.5f, usage.trafficAdjustmentGb)
+            assertEquals(1.5f, (usage.trafficLimitMb / 1024f) + usage.trafficAdjustmentGb, 0.001f)
+        }
+
+    @Test
+    fun testManualReset_ClearsEverythingEvenWithRollover() =
+        runTest {
+            val limitsRepo = SimLimitsRepositoryImpl(dataStore)
+            val identity = "test_sim"
+
+            // 1. Setup limit, usage and rollover
+            limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
+            repository.updateSimStats(identity, minutesUsed = 80, trafficUsedMb = 512f, manualAdjustment = 0)
+
+            // 2. Perform MANUAL reset
+            repository.resetSimUsageManual(identity)
+
+            // 3. Verify EVERYTHING is cleared
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(0, usage.minutesUsed)
+            assertEquals(0f, usage.trafficUsedMb)
+            assertEquals(0, usage.manualAdjustment)
+            assertEquals(0f, usage.trafficAdjustmentGb)
+        }
 }

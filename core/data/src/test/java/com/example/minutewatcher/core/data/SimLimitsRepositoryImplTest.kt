@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
+import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -48,5 +49,24 @@ class SimLimitsRepositoryImplTest {
 
             val autoResetDay = repository.getAutoResetDay("sim_0").first()
             assertEquals(15, autoResetDay)
+        }
+
+    @Test
+    fun testUpdateSimLimitsAndGetUsage() =
+        runTest {
+            val usageRepo =
+                SimUsageRepositoryImpl(
+                    dataStore = dataStore,
+                    timeProvider = FixedTimeProvider(currentTime = 1000000L),
+                    mapper = SimUsageMapper(),
+                    resetLogic = SimUsageResetLogic(),
+                )
+            val identity = "test_sim"
+
+            repository.updateSimLimits(identity, 100, 1024)
+
+            val usage = usageRepo.getSimUsage(identity).first()
+            assertEquals(100, usage.minutesLimit)
+            assertEquals(1024, usage.trafficLimitMb)
         }
 }

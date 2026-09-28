@@ -16,7 +16,7 @@ Every contribution must be accompanied by appropriate tests. We follow the **Tes
 The majority of our tests should be unit tests. They must cover:
 - **Core Logic:** Any calculators (`BillingPeriodCalculator`), date utilities, and formatting tools.
 - **Data Models:** State transitions and logic within data classes.
-- **Repositories:** Logic within `SimRepositoryImpl`, `SettingsRepositoryImpl`, etc. (using Mockito for dependencies).
+- **Repositories:** Logic within `SimLimitsRepositoryImpl`, `SimUsageRepositoryImpl`, `AppSettingsRepositoryImpl`, etc. (using Mockito for dependencies).
 - **ViewModels:** UI state mapping and user action handling.
 - **Resource Integrity:** Consistency between language arrays in `arrays.xml`.
 
@@ -38,8 +38,8 @@ Automated UI tests should cover critical user paths:
 
 Certain modules require 100% coverage of their public API:
 - `:core:model`: All utilities and calculators.
-- `:core:android`: `OperatorResolver`, `PermissionManager`.
-- `:feature:widget`: `WidgetUiMapper` (must test all `WidgetLayoutMode` scenarios).
+- `:core:common`: `PermissionManager`.
+- `:core:android`: `OperatorResolver`, `WidgetUiMapper` (must test all `WidgetLayoutMode` scenarios).
 
 ## The "Bug-Fix" Rule
 > [!IMPORTANT]
