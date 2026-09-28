@@ -84,7 +84,6 @@ object Constants {
         const val RETRY_BACKOFF_MS = 500L
         const val MAX_RETRY_DELAY_MS = 3000L
         const val MAX_UPDATE_ATTEMPTS = 3
-        // RACE_DELAY_MS removed: synchronization is provided by synchronous semantics of StateFlow.value
 
         /** Maximum number of consecutive widget update failures before locking. */
         const val MAX_CONSECUTIVE_UPDATE_FAILURES = 5

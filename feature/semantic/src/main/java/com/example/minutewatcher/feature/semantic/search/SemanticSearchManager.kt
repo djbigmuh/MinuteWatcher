@@ -190,7 +190,6 @@ class SemanticSearchManager
 
         private suspend fun processSnapshotInternal(snapshot: GlobalSnapshot) {
             try {
-                // Initializing/Indexing status removed as it was dead and unused.
                 val result =
                     try {
                         indexSnapshot(snapshot)

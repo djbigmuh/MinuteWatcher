@@ -15,8 +15,6 @@ import javax.inject.Singleton
  * Provides WidgetUpdater and WidgetRenderer.
  *
  * Sole creation point for WidgetRenderer.
- * Default parameter in WidgetUpdaterImpl constructor removed
- * to eliminate duplication and risk of implementation divergence.
  *
  * Strict API compliance: rendering mode (simplified / full)
  * is determined inside MinutesGlanceWidget.provideGlance.

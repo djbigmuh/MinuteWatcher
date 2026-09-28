@@ -54,8 +54,8 @@ class PermissionManager
         // the explicit check performed via ContextCompat.checkSelfPermission.
 
         /**
-         * Requires [Manifest.permission.READ_PHONE_STATE].
-         * Caller must ensure permission is granted before invoking this method.
+         * Returns an empty list if [Manifest.permission.READ_PHONE_STATE] is missing or [SubscriptionManager]
+         * is unavailable. Otherwise reads active subscription info list from [SubscriptionManager].
          */
         @Suppress("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> {
@@ -75,8 +75,8 @@ class PermissionManager
         }
 
         /**
-         * Requires [Manifest.permission.READ_PHONE_STATE].
-         * Caller must ensure permission is granted before invoking this method.
+         * Returns -1 if [Manifest.permission.READ_PHONE_STATE] is missing or [SubscriptionManager]
+         * is unavailable. Otherwise reads default voice subscription ID from [SubscriptionManager].
          */
         fun getDefaultVoiceSubscriptionId(): Int {
             val manager = subscriptionManager
@@ -95,8 +95,8 @@ class PermissionManager
         }
 
         /**
-         * Requires [Manifest.permission.READ_PHONE_STATE].
-         * Caller must ensure permission is granted before invoking this method.
+         * Returns -1 if [Manifest.permission.READ_PHONE_STATE] is missing or [SubscriptionManager]
+         * is unavailable. Otherwise reads default data subscription ID from [SubscriptionManager].
          */
         fun getDefaultDataSubscriptionId(): Int {
             val manager = subscriptionManager
