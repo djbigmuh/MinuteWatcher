@@ -507,4 +507,35 @@ class SimIdentityObserverResilienceTest {
 
             job.cancel()
         }
+
+    @Test
+    fun `pipeline recovers after failure when observeSubscriptionChanges throws exception`() =
+        runTest {
+            var callCount = 0
+            val mockSim = mock<ActiveSimInfo>()
+            whenever(discovery.observeSubscriptionChanges()).thenAnswer {
+                callCount++
+                if (callCount == 1) {
+                    throw IllegalStateException("Observer initialization failed")
+                } else {
+                    triggerFlow
+                }
+            }
+            whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
+                SimDiscoveryResult.Available(listOf(mockSim)),
+            )
+
+            observer = createObserver(backgroundScope)
+            val job = launch { observer.activeSimsCache.collect {} }
+
+            testScheduler.runCurrent()
+            testScheduler.advanceTimeBy(1000.milliseconds)
+            startObserverAndTrigger()
+
+            assertTrue("Should re-subscribe after exception, callCount=$callCount", callCount > 1)
+            assertEquals(listOf(mockSim), observer.activeSimsCache.value)
+            assertEquals(TrackingStatus.Active, observer.status.value)
+
+            job.cancel()
+        }
 }

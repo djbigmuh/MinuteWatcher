@@ -4,6 +4,7 @@ import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.android.util.SimCardMapper
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.observeWithRetry
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -412,7 +413,22 @@ internal class SimIdentityObserver
                 val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
                 mocks ?: physical
             }.distinctUntilChanged()
-                .onEach { cleanupCache(it) }
+                .observeWithRetry(
+                    label = "SimIdentityObserver: activeSims",
+                    logThreshold = 5,
+                    onPersistentFailure = { cause ->
+                        transitionStatus(
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                cause.message ?: "SIM observation degraded",
+                            ),
+                        )
+                    },
+                    onRecovered = {
+                        transitionStatus(TrackingStatus.Active, force = true)
+                    },
+                    onSourceCompleted = {},
+                ).onEach { cleanupCache(it) }
                 .onStart { isObservationInitialized.set(true) }
                 .stateIn(
                     scope,
