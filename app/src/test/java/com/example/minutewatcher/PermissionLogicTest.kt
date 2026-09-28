@@ -48,11 +48,12 @@ class PermissionLogicTest {
     }
 
     @Test
-    fun `TrackingBannerMapper uses permanentlyDenied flag`() {
+    fun `notification permission state is NOT_REQUESTED when notifyLowMinutes is enabled and not requested before`() {
         val settings =
             AppSettings(
-                wasPhonePermissionRequestedBefore = true,
                 onboardingCompleted = true,
+                notifyLowMinutes = true,
+                notificationPermissionRequested = false,
             )
 
         val state =
@@ -60,10 +61,52 @@ class PermissionLogicTest {
                 statusMap = emptyMap(),
                 phoneGranted = false,
                 usageGranted = true,
-                notificationsGranted = true,
+                notificationsGranted = false,
                 settings = settings,
             )
 
-        assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
+        assertEquals(PermissionUiState.NOT_REQUESTED, state.notificationPermissionState)
+    }
+
+    @Test
+    fun `notification permission state is PERMANENTLY_DENIED when notifyLowMinutes is enabled and requested before`() {
+        val settings =
+            AppSettings(
+                onboardingCompleted = true,
+                notifyLowMinutes = true,
+                notificationPermissionRequested = true,
+            )
+
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = false,
+                usageGranted = true,
+                notificationsGranted = false,
+                settings = settings,
+            )
+
+        assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.notificationPermissionState)
+    }
+
+    @Test
+    fun `notification permission state is GRANTED when both notification alerts are disabled`() {
+        val settings =
+            AppSettings(
+                onboardingCompleted = true,
+                notifyLowMinutes = false,
+                notifyLowTraffic = false,
+            )
+
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = false,
+                usageGranted = true,
+                notificationsGranted = false,
+                settings = settings,
+            )
+
+        assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
     }
 }
