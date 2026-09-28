@@ -36,16 +36,25 @@ class SystemShortcutApplier
             shortcuts: List<ShortcutInfoCompat>,
         ) {
             try {
-                if (shortcuts.isNotEmpty()) {
-                    ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
-                } else {
-                    ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+                val result =
+                    if (shortcuts.isNotEmpty()) {
+                        ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
+                    } else {
+                        ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+                        true
+                    }
+                if (!result) {
+                    val message = "System rejected dynamic shortcuts update"
+                    AppLogger.e(message)
+                    throw IllegalStateException(message)
                 }
             } catch (
                 @Suppress("TooGenericExceptionCaught")
                 e: Exception,
             ) {
-                AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
+                if (e !is IllegalStateException) {
+                    AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
+                }
                 throw e
             }
         }

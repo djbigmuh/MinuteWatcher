@@ -267,6 +267,25 @@ class ShortcutManagerTest {
         }
 
     @Test
+    fun `illegal state exception during apply sets UNKNOWN error status`() =
+        runTest {
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenThrow(IllegalStateException("System rejected dynamic shortcuts update"))
+
+            val result = shortcutManager.updateShortcutsSync(createSnapshot(emptyList()))
+            advanceUntilIdle()
+
+            assertFalse(result)
+            val status = shortcutManager.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
     fun `updateShortcutsSync ignores empty snapshot and does not remove shortcuts`() =
         runTest {
             // 1. Initial shortcuts setup
