@@ -158,8 +158,8 @@ class MainActivity : AppCompatActivity() {
             }
 
         val notificationLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-                handleNotificationResult(granted)
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+                handleNotificationResult()
             }
 
         private fun handlePhoneResult(granted: Boolean) {
@@ -179,16 +179,13 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            permissionStateNotifier.notifyChanged()
+            checkPermissionChanges()
         }
 
-        private fun handleNotificationResult(
-            @Suppress("UNUSED_PARAMETER") granted: Boolean,
-        ) {
+        private fun handleNotificationResult() {
             // API 33+ required for POST_NOTIFICATIONS runtime permission.
             // See: https://developer.android.com/training/notify-user/runtime-permissions
             // minSdk is 26, so this branch is reachable and required.
-            permissionStateNotifier.notifyChanged()
             checkPermissionChanges()
         }
 
