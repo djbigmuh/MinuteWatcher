@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import com.example.minutewatcher.core.common.util.AppLogger
-import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,8 +41,6 @@ class SystemShortcutApplier
                 } else {
                     ShortcutManagerCompat.removeAllDynamicShortcuts(context)
                 }
-            } catch (e: CancellationException) {
-                throw e
             } catch (
                 @Suppress("TooGenericExceptionCaught")
                 e: Exception,

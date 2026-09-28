@@ -1,13 +1,10 @@
 package com.example.minutewatcher.feature.semantic.search
 
-import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.SearchResult
 import androidx.appsearch.app.SearchSpec
 import androidx.appsearch.exceptions.AppSearchException
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -443,29 +440,6 @@ class SemanticSearchManager
         suspend fun indexInitialSnapshot(snapshot: GlobalSnapshot): IndexResult = indexSnapshot(snapshot)
 
         companion object {
-            /**
-             * Creates a test instance of [SemanticSearchManager] with unified error handling.
-             */
-            @VisibleForTesting
-            fun createForTest(
-                context: Context,
-                scope: CoroutineScope,
-                appSearchWrapper: AppSearchWrapper,
-                ioDispatcher: CoroutineDispatcher,
-                dataStore: DataStore<Preferences>,
-                timeProvider: TimeProvider,
-            ): SemanticSearchManager {
-                val errorHandler = AppSearchErrorHandler()
-                return SemanticSearchManager(
-                    sessionManager = AppSearchSessionManager(context, appSearchWrapper, errorHandler),
-                    indexer = SnapshotIndexer(appSearchWrapper, errorHandler, dataStore),
-                    errorHandler = errorHandler,
-                    scope = scope,
-                    ioDispatcher = ioDispatcher,
-                    timeProvider = timeProvider,
-                )
-            }
-
             private const val SNIPPETS_PER_DOCUMENT = 2
 
             /**

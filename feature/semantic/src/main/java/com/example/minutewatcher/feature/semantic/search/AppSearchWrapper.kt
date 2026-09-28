@@ -12,7 +12,6 @@ import androidx.appsearch.exceptions.AppSearchException
 import androidx.appsearch.localstorage.LocalStorage
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.semantic.search.AppSearchConstants.NAMESPACE
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.guava.await
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -128,7 +127,6 @@ internal class AppSearchSessionWrapperImpl(
         }
     }
 
-    @Suppress("ThrowingExceptionFromFinally")
     override suspend fun query(
         queryExpression: String,
         spec: SearchSpec,
@@ -139,8 +137,6 @@ internal class AppSearchSessionWrapperImpl(
         } finally {
             try {
                 searchResults.close()
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 AppLogger.w("AppSearchSessionWrapperImpl: Failed to close SearchResults", e)
             }

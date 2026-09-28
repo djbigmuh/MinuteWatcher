@@ -111,7 +111,6 @@ class ShortcutManager
                     },
                 ) { snapshot ->
                     try {
-                        transitionStatus(TrackingStatus.Active)
                         withContext(ioDispatcher) {
                             updateShortcuts(snapshot)
                         }

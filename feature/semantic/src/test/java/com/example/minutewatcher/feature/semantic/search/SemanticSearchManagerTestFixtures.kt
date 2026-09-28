@@ -70,15 +70,19 @@ abstract class SemanticSearchManagerTestFixtures {
         appScope.cancel()
     }
 
-    protected fun createManager(scope: CoroutineScope) =
-        SemanticSearchManager.createForTest(
-            context = context,
+    protected fun createManager(scope: CoroutineScope): SemanticSearchManager {
+        val errorHandler = AppSearchErrorHandler()
+        val sessionManager = AppSearchSessionManager(context, fakeWrapper, errorHandler)
+        val indexer = SnapshotIndexer(fakeWrapper, errorHandler, dataStore)
+        return SemanticSearchManager(
+            sessionManager = sessionManager,
+            indexer = indexer,
+            errorHandler = errorHandler,
             scope = scope,
-            appSearchWrapper = fakeWrapper,
             ioDispatcher = testDispatcher,
-            dataStore = dataStore,
             timeProvider = timeProvider,
         )
+    }
 
     protected fun createEntity(
         slot: Int,
