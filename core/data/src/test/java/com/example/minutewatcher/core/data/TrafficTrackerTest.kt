@@ -308,6 +308,22 @@ class TrafficTrackerTest {
         }
 
     @Test
+    fun `updateTrafficUsage handles StatsResult Unavailable`() =
+        runTest {
+            val tracker = startTracker()
+            whenever(networkStatsProvider.queryMobileBytes(any(), any()))
+                .thenReturn(StatsResult.Unavailable)
+
+            tracker.updateTrafficUsage()
+
+            val status = tracker.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals("Stats unavailable", (status as TrackingStatus.Error).message)
+            verify(simUsageResetRepository, never()).incrementTrafficAndSetBaseline(any(), any(), any())
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
+        }
+
+    @Test
     fun `findSingleActiveSimSlot returns slot when only one SIM has valid operator`() =
         runTest {
             val tracker = createTracker(backgroundScope)

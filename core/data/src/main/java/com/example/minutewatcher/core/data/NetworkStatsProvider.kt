@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.NetworkCapabilities
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -34,6 +35,22 @@ interface NetworkStatsProvider {
     ): StatsResult
 }
 
+/**
+ * Parses raw rxBytes and txBytes into a [StatsResult].
+ * Returns [StatsResult.Unavailable] if either value is negative (VALUE_UNKNOWN).
+ */
+@VisibleForTesting
+internal fun parseNetworkStatsBytes(
+    rxBytes: Long,
+    txBytes: Long,
+): StatsResult {
+    if (rxBytes < 0 || txBytes < 0) {
+        AppLogger.w("Invalid network stats bucket bytes: rxBytes=$rxBytes, txBytes=$txBytes")
+        return StatsResult.Unavailable
+    }
+    return StatsResult.Success(rxBytes + txBytes)
+}
+
 @Singleton
 class RealNetworkStatsProvider
     @Inject
@@ -57,7 +74,7 @@ class RealNetworkStatsProvider
                         startTime,
                         endTime,
                     )
-                StatsResult.Success(bucket.rxBytes + bucket.txBytes)
+                parseNetworkStatsBytes(bucket.rxBytes, bucket.txBytes)
             } catch (e: SecurityException) {
                 throw e
             } catch (e: Exception) {
