@@ -12,7 +12,6 @@ kotlin {
 android {
     namespace = "com.example.minutewatcher.core.common"
 
-    @Suppress("UnstableApiUsage")
     testFixtures {
         enable = true
     }

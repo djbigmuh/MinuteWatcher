@@ -61,9 +61,6 @@ configure<ApplicationExtension> {
 
     bundle {
         language {
-            // enableSplit is @Incubating in Gradle 9.x but is required for
-            // proper app bundle configuration.
-            @Suppress("UnstableApiUsage")
             enableSplit = false
         }
     }

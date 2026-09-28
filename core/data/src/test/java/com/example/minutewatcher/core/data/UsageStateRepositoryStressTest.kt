@@ -70,7 +70,6 @@ class UsageStateRepositoryStressTest {
     }
 
     @Test
-    @Suppress("MagicNumber")
     fun `refresh stress test with 100 parallel calls`() =
         runTest {
             val deps =

@@ -1,5 +1,3 @@
-@file:Suppress("MatchingDeclarationName")
-
 package com.example.minutewatcher.core.android.ui
 
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
