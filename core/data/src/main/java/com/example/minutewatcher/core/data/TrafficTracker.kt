@@ -385,7 +385,8 @@ class TrafficTracker
             }
         }
 
-        private fun updateStatusOnError(
+        @VisibleForTesting
+        internal fun updateStatusOnError(
             startElapsed: Long,
             message: String?,
             type: TrackingStatus.ErrorType = TrackingStatus.ErrorType.UNKNOWN,

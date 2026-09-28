@@ -12,7 +12,8 @@ import org.robolectric.annotation.Config
 import com.example.minutewatcher.core.resources.R as coreR
 
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "en", sdk = [35]) // behavior-specific SDK
+// Robolectric Compose UI test compatibility (Espresso InputManager requires SDK <= 35)
+@Config(qualifiers = "en", sdk = [35])
 class SimCardItemTest {
     @get:Rule
     val composeTestRule = createComposeRule()

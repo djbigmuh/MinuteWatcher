@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.android.util.SimCardMapper
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -111,6 +112,9 @@ internal class SimIdentityObserver
                 manualTrigger.emit(Unit)
             }
         }
+
+        @VisibleForTesting
+        internal fun emitManualTriggerForTest(): Boolean = manualTrigger.tryEmit(Unit)
 
         private fun scheduleDiscoveryRecovery(reason: String) {
             val newJob =

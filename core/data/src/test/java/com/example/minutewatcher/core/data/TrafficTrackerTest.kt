@@ -532,33 +532,21 @@ class TrafficTrackerTest {
             tracker.statusMachine.transition(TrackingStatus.Active)
 
             // This should be a no-op due to suppression
-            val updateStatusOnError =
-                tracker::class.java
-                    .getDeclaredMethod(
-                        "updateStatusOnError",
-                        Long::class.java,
-                        String::class.java,
-                        TrackingStatus.ErrorType::class.java,
-                        TrackingStatus.ErrorCode::class.java,
-                    ).apply { isAccessible = true }
-
-            updateStatusOnError.invoke(
-                tracker,
-                500L,
-                "Stale Error",
-                TrackingStatus.ErrorType.UNKNOWN,
-                null,
+            tracker.updateStatusOnError(
+                startElapsed = 500L,
+                message = "Stale Error",
+                type = TrackingStatus.ErrorType.UNKNOWN,
+                code = null,
             )
 
             assertEquals(TrackingStatus.Active, tracker.status.value)
 
             // Error started at 1500L, which is after 1000L
-            updateStatusOnError.invoke(
-                tracker,
-                1500L,
-                "Fresh Error",
-                TrackingStatus.ErrorType.UNKNOWN,
-                null,
+            tracker.updateStatusOnError(
+                startElapsed = 1500L,
+                message = "Fresh Error",
+                type = TrackingStatus.ErrorType.UNKNOWN,
+                code = null,
             )
             assertTrue(tracker.status.value is TrackingStatus.Error)
         }

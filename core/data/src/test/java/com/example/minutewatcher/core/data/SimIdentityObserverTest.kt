@@ -246,7 +246,7 @@ class SimIdentityObserverTest {
                 .thenReturn(IdentityMigrationService.MigrationOutcome(1, 0, 0))
 
             // 5. Trigger discovery AGAIN
-            manualTrigger(observer).emit(Unit)
+            observer.emitManualTriggerForTest()
             testScheduler.advanceTimeBy(1.seconds)
             testScheduler.advanceUntilIdle()
 
@@ -404,12 +404,6 @@ class SimIdentityObserverTest {
                 AppLogger.resetForTest()
             }
         }
-
-    private fun manualTrigger(observer: SimIdentityObserver): MutableSharedFlow<Unit> {
-        val field = SimIdentityObserver::class.java.getDeclaredField("manualTrigger")
-        field.isAccessible = true
-        return field.get(observer) as MutableSharedFlow<Unit>
-    }
 
     private fun createEmptySnapshot() =
         GlobalSnapshot(

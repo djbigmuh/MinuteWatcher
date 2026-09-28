@@ -11,7 +11,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "ru", sdk = [35]) // behavior-specific SDK
+// Robolectric Compose UI test compatibility (Espresso InputManager requires SDK <= 35)
+@Config(qualifiers = "ru", sdk = [35])
 class TopBarMenuContentDescriptionTest {
     @get:Rule
     val composeTestRule = createComposeRule()
