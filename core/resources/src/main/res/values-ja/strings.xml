@@ -56,7 +56,6 @@
     <string name="tracking_banner_phone_permission">電話の権限が必要です。</string>
     <string name="tracking_banner_usage_access">使用状況へのアクセス権限が必要です。</string>
     <string name="tracking_banner_traffic_error">トラフィックデータの更新中にエラーが発生しました。</string>
-    <string name="tracking_banner_traffic_fallback">デフォルトのデータSIMが特定されていません。トラフィックをスロット %1$d に割り当てています。誤っている場合は、SIM設定を確認してください。</string>
     <string name="tracking_banner_calls_error">通話トラッキングデータの更新中にエラーが発生しました。</string>
     <string name="tracking_banner_appsearch_error">AppSearchのインデックス作成に失敗しました。グローバル検索が古くなっている可能性があります。これはウィジェットや追跡機能には影響しません。</string>
     <string name="tracking_banner_shortcuts_error">動的ショートカットの更新に失敗しました。</string>

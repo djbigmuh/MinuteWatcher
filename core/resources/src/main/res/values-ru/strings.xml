@@ -56,7 +56,6 @@
     <string name="tracking_banner_phone_permission">Разрешение на доступ к телефону необходимо для идентификации SIM-карт. Некоторые функции могут не работать.</string>
     <string name="tracking_banner_usage_access">Доступ к использованию данных необходим для точного учета трафика.</string>
     <string name="tracking_banner_traffic_error">Произошла ошибка при обновлении данных о трафике.</string>
-    <string name="tracking_banner_traffic_fallback">SIM-карта для данных не определена. Трафик приписан слоту %1$d. Проверьте настройки SIM, если это неверно.</string>
     <string name="tracking_banner_calls_error">Произошла ошибка при обновлении данных о звонках.</string>
     <string name="tracking_banner_appsearch_error">Ошибка индексации AppSearch. Глобальный поиск может быть неактуален. Это не влияет на работу виджета и отслеживание.</string>
     <string name="tracking_banner_shortcuts_error">Ошибка обновления быстрых ярлыков.</string>

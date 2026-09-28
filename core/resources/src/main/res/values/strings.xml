@@ -56,7 +56,6 @@
     <string name="tracking_banner_phone_permission">Phone permission is required to identify SIM cards. Some features may not work.</string>
     <string name="tracking_banner_usage_access">Usage Access is required to track mobile data usage accurately.</string>
     <string name="tracking_banner_traffic_error">There was an error updating traffic data.</string>
-    <string name="tracking_banner_traffic_fallback">Default Data SIM not identified. Attributing traffic to Slot %1$d. Check SIM settings if this is incorrect.</string>
     <string name="tracking_banner_calls_error">There was an error updating call tracking data.</string>
     <string name="tracking_banner_appsearch_error">AppSearch indexing failed. Global search might be outdated. This does not affect widget or tracking functionality.</string>
     <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>

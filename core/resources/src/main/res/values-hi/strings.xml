@@ -56,7 +56,6 @@
     <string name="tracking_banner_phone_permission">फ़ोन अनुमति आवश्यक है।</string>
     <string name="tracking_banner_usage_access">उपयोग एक्सेस आवश्यक है।</string>
     <string name="tracking_banner_traffic_error">ट्रैफ़िक डेटा में त्रुटि हुई।</string>
-    <string name="tracking_banner_traffic_fallback">डिफ़ॉल्ट डेटा सिम की पहचान नहीं हुई। स्लॉट %1$d को ट्रैफ़िक दिया जा रहा है। यदि यह गलत है तो सिम सेटिंग्स की जाँच करें।</string>
     <string name="tracking_banner_calls_error">कॉल ट्रैकिंग डेटा अपडेट करने में त्रुटि हुई।</string>
     <string name="tracking_banner_appsearch_error">AppSearch इंडेक्सिंग विफल रही। वैश्विक खोज पुरानी हो सकती है। यह विजेट या ट्रैकिंग कार्यक्षमता को प्रभावित नहीं करता है।</string>
     <string name="tracking_banner_shortcuts_error">डायनामिक शॉर्टकट अपडेट विफल रहा।</string>

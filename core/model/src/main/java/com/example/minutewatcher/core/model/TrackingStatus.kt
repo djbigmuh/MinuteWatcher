@@ -16,7 +16,6 @@ sealed interface TrackingStatus {
     data class Error(
         val type: ErrorType,
         val message: String? = null,
-        val slotIndex: Int? = null,
         /**
          * Machine-readable reason. message is ONLY for human/logs.
          * Logic branching ONLY by type/code; message is for display and logs,

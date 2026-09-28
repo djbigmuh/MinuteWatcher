@@ -188,28 +188,6 @@ class TrackingBannerMapperTest {
     }
 
     @Test
-    fun `mapToBannerState reflects traffic fallback slot`() {
-        val state =
-            TrackingBannerMapper.mapToBannerState(
-                statusMap =
-                    mapOf(
-                        TrackingKey.TRAFFIC to
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
-                                slotIndex = 1,
-                            ),
-                    ),
-                phoneGranted = true,
-                usageGranted = true,
-                notificationsGranted = true,
-                settings = AppSettings(onboardingCompleted = true),
-            )
-
-        assertTrue(state.showTrafficFallbackBanner)
-        assertEquals(1, state.trafficFallbackSlot)
-    }
-
-    @Test
     fun `mapToBannerState still shows phone permission banner before onboarding completed`() {
         val state =
             TrackingBannerMapper.mapToBannerState(
@@ -346,7 +324,6 @@ class TrackingBannerMapperTest {
             )
 
         assertFalse(state.showTrafficErrorBanner)
-        assertFalse(state.showTrafficFallbackBanner)
         assertFalse(state.showCallsErrorBanner)
         assertFalse(state.showAppSearchErrorBanner)
         assertFalse(state.showShortcutsErrorBanner)

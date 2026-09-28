@@ -57,10 +57,6 @@ private fun ErrorBanners(
         state = state,
         onRetryTraffic = callbacks.onRetryTraffic,
     )
-    TrafficFallbackBanner(
-        state = state,
-        onRetryTraffic = callbacks.onRetryTraffic,
-    )
     CallsErrorBanner(
         state = state,
         onRetryCalls = callbacks.onRetryCalls,

@@ -54,8 +54,6 @@ object TrackingBannerMapper {
             phonePermissionState = phonePermissionState,
             showUsageAccessBanner = !usageGranted,
             showTrafficErrorBanner = isTrafficError(traffic),
-            showTrafficFallbackBanner = isTrafficFallback(traffic),
-            trafficFallbackSlot = getTrafficFallbackSlot(traffic),
             showCallsErrorBanner = isCallsError(calls),
             showAppSearchErrorBanner =
                 isAppSearchErrorToShow(
@@ -126,19 +124,6 @@ object TrackingBannerMapper {
         (status is TrackingStatus.Error) &&
             (status.type != TrackingStatus.ErrorType.PERMISSION_MISSING) &&
             (status.type != TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
-
-    private fun isTrafficFallback(status: TrackingStatus?): Boolean =
-        (status is TrackingStatus.Error) &&
-            (status.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
-
-    private fun getTrafficFallbackSlot(status: TrackingStatus?): Int =
-        if ((status is TrackingStatus.Error) &&
-            (status.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
-        ) {
-            status.slotIndex ?: -1
-        } else {
-            -1
-        }
 
     private fun isCallsError(status: TrackingStatus?): Boolean =
         (status is TrackingStatus.Error) &&

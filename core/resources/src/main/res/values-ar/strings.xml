@@ -60,7 +60,6 @@
     <string name="tracking_banner_phone_permission">مطلوب إذن الهاتف.</string>
     <string name="tracking_banner_usage_access">مطلوب الوصول إلى الاستخدام.</string>
     <string name="tracking_banner_traffic_error">خطأ في بيانات حركة المرور.</string>
-    <string name="tracking_banner_traffic_fallback">لم يتم تحديد شريحة البيانات الافتراضية. يتم تخصيص حركة المرور للفتحة %1$d. تحقق من إعدادات الشريحة إذا كان هذا غير صحيح.</string>
     <string name="tracking_banner_calls_error">حدث خطأ أثناء تحديث بيانات تتبع المكالمات.</string>
     <string name="tracking_banner_appsearch_error">فشلت عملية فهرسة AppSearch. قد يكون البحث العالمي قديماً. لا يؤثر هذا على أداة التطبيق أو وظيفة التتبع.</string>
     <string name="tracking_banner_shortcuts_error">فشل تحديث الاختصارات الديناميكية.</string>

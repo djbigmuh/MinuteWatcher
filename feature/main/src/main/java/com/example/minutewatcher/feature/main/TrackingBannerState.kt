@@ -9,8 +9,6 @@ data class TrackingBannerState(
     val phonePermissionState: PermissionUiState = PermissionUiState.NOT_REQUESTED,
     val showUsageAccessBanner: Boolean = false,
     val showTrafficErrorBanner: Boolean = false,
-    val showTrafficFallbackBanner: Boolean = false,
-    val trafficFallbackSlot: Int = -1,
     val showCallsErrorBanner: Boolean = false,
     val showAppSearchErrorBanner: Boolean = false,
     val appSearchErrorType: com.example.minutewatcher.core.model.TrackingStatus.ErrorType? = null,
