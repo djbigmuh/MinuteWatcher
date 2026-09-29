@@ -98,20 +98,15 @@ class TrafficSimChangeHandler
             )
 
             return if (isSimChanged) {
-                // Read the updated retry count from the map to accurately log the state after the attempt.
-                val retryCount = baselineManager.getRetryCount(targetIdentity) ?: 0
-                handleSkipDelta(target, retryCount)
+                handleSkipDelta(target)
                 null
             } else {
                 targetIdentity
             }
         }
 
-        private fun handleSkipDelta(
-            target: TargetInfo,
-            retryCount: Int,
-        ) {
-            AppLogger.d("Traffic delta skipped due to SIM change (slot=${target.slot}, retryCount=$retryCount)")
+        private fun handleSkipDelta(target: TargetInfo) {
+            AppLogger.d("Traffic delta skipped due to SIM change (slot=${target.slot})")
             // We do NOT update status to Active here, because handleSimChange already
             // triggered a baseline reset which sets the status (Active or Error).
         }
