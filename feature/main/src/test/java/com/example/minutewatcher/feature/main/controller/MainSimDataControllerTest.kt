@@ -429,7 +429,7 @@ class MainSimDataControllerTest {
     fun `retrySimList with recovered source emits loading and then success`() =
         runTest(mainDispatcherRule.testDispatcher) {
             val sourceTrigger = MutableStateFlow(0)
-            val simModels = listOf(mock<SimCardUiModel>())
+            val simModels = listOf(createTestSimModel())
 
             val sourceFlow =
                 flow {
@@ -487,4 +487,27 @@ class MainSimDataControllerTest {
 
             job.cancel()
         }
+
+    private fun createTestSimModel(slot: Int = 0) =
+        SimCardUiModel(
+            slot = slot,
+            identity = "sim_$slot",
+            operatorName = "Operator",
+            iconRes = 0,
+            minutesUsed = 0,
+            minutesLimit = 100,
+            manualAdjustment = 0,
+            minutesRemaining = 100,
+            effectiveMinutesLimit = 100,
+            isMinutesLimitSet = true,
+            trafficUsedMb = 0f,
+            trafficLimitMb = 1000,
+            trafficRemainingGb = 1f,
+            effectiveTrafficLimitGb = 1f,
+            trafficAdjustmentGb = 0f,
+            isTrafficLimitSet = true,
+            autoResetEnabled = true,
+            autoResetDay = 1,
+            rolloverEnabled = false,
+        )
 }

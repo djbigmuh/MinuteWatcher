@@ -25,7 +25,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -41,6 +40,7 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -476,13 +476,13 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage and resetBaseline are serialized`() =
         runTest {
             val tracker = startTracker()
+            timeProvider.advance(10000)
             val startCount = AtomicInteger(0)
             val finishCount = AtomicInteger(0)
 
             // Mock long-running update
-            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenAnswer {
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).doAnswer {
                 startCount.incrementAndGet()
-                runBlocking { delay(1000.milliseconds) }
                 finishCount.incrementAndGet()
                 StatsResult.Success(1000L)
             }

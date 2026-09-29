@@ -8,8 +8,10 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimDiscoveryFailureReason
 import com.example.minutewatcher.core.model.SimDiscoveryResult
+import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -339,7 +341,7 @@ class SimIdentityObserverResilienceTest {
     fun `fail-soft keeps last-known-good SIMs during transient failures`() =
         runTest {
             observer = createObserver(backgroundScope)
-            val simA = mock<ActiveSimInfo>().apply { whenever(slotIndex).thenReturn(0) }
+            val simA = createTestActiveSimInfo(slot = 0)
             val simListA = listOf(simA)
 
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
@@ -370,7 +372,7 @@ class SimIdentityObserverResilienceTest {
             assertEquals("Should keep last known good SIMs during retries", simListA, observer.activeSimsCache.value)
 
             // 3. Recovery
-            val simB = mock<ActiveSimInfo>().apply { whenever(slotIndex).thenReturn(1) }
+            val simB = createTestActiveSimInfo(slot = 1)
             val simListB = listOf(simB)
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
                 SimDiscoveryResult.Available(simListB),
@@ -389,7 +391,7 @@ class SimIdentityObserverResilienceTest {
     fun `terminal failure clears SIM list`() =
         runTest {
             observer = createObserver(backgroundScope)
-            val simA = mock<ActiveSimInfo>()
+            val simA = createTestActiveSimInfo(slot = 0)
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
                 SimDiscoveryResult.Available(listOf(simA)),
             )
@@ -418,7 +420,7 @@ class SimIdentityObserverResilienceTest {
     fun `PermissionMissing clears SIM list immediately`() =
         runTest {
             observer = createObserver(backgroundScope)
-            val simA = mock<ActiveSimInfo>()
+            val simA = createTestActiveSimInfo(slot = 0)
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
                 SimDiscoveryResult.Available(listOf(simA)),
             )
@@ -448,7 +450,7 @@ class SimIdentityObserverResilienceTest {
             whenever(seedRepository.seedFlow).thenReturn(seedStateFlow)
             observer = createObserver(backgroundScope)
 
-            val simA = mock<ActiveSimInfo>()
+            val simA = createTestActiveSimInfo(slot = 0)
             whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
                 SimDiscoveryResult.Available(listOf(simA)),
             )
@@ -512,7 +514,7 @@ class SimIdentityObserverResilienceTest {
     fun `pipeline recovers after failure when observeSubscriptionChanges throws exception`() =
         runTest {
             var callCount = 0
-            val mockSim = mock<ActiveSimInfo>()
+            val mockSim = createTestActiveSimInfo(slot = 0)
             whenever(discovery.observeSubscriptionChanges()).thenAnswer {
                 callCount++
                 if (callCount == 1) {
@@ -538,4 +540,26 @@ class SimIdentityObserverResilienceTest {
 
             job.cancel()
         }
+
+    private fun createTestActiveSimInfo(
+        slot: Int = 0,
+        stableId: String = "sim_$slot",
+    ) = ActiveSimInfo(
+        identity =
+            SimIdentity(
+                stableId = stableId,
+                subscriptionId = slot + 1,
+                slotIndex = slot,
+                source = IdentitySource.ICCID,
+                isStable = true,
+            ),
+        slotIndex = slot,
+        subscriptionId = slot + 1,
+        iccId = "icc_$slot",
+        displayName = "SIM ${slot + 1}",
+        carrierName = "Carrier",
+        mccMnc = "25001",
+        isDefaultData = slot == 0,
+        isDefaultVoice = slot == 0,
+    )
 }

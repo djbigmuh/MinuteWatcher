@@ -54,7 +54,7 @@ class UpdateCoordinatorTest {
             initTestLogger()
             snapshotFlow.tryEmit(createEmptySnapshot())
             whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
-            val simFlow = MutableStateFlow(listOf(mock<SimCardUiModel>()))
+            val simFlow = MutableStateFlow(listOf(createTestSimCardUiModel()))
             whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(simFlow)
         }
     }
@@ -399,4 +399,27 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
             verify(widgetUpdater, atLeastOnce()).updateAll()
         }
+
+    private fun createTestSimCardUiModel(slot: Int = 0) =
+        SimCardUiModel(
+            slot = slot,
+            identity = "sim_$slot",
+            operatorName = "Operator",
+            iconRes = 0,
+            minutesUsed = 0,
+            minutesLimit = 100,
+            manualAdjustment = 0,
+            minutesRemaining = 100,
+            effectiveMinutesLimit = 100,
+            isMinutesLimitSet = true,
+            trafficUsedMb = 0f,
+            trafficLimitMb = 1000,
+            trafficRemainingGb = 1f,
+            effectiveTrafficLimitGb = 1f,
+            trafficAdjustmentGb = 0f,
+            isTrafficLimitSet = true,
+            autoResetEnabled = true,
+            autoResetDay = 1,
+            rolloverEnabled = false,
+        )
 }
