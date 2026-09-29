@@ -33,7 +33,8 @@ interface SimUsageResetRepository {
     suspend fun resetSimUsageManual(identity: String)
 
     /**
-     * Resets SIM usage if the current day matches the auto-reset day.
+     * Resets SIM usage if a billing period boundary defined by [autoResetDay] has been crossed
+     * since lastResetDate. If lastResetDate is unrecorded, opens the tracking window without clearing stats.
      *
      * @return true if reset was performed.
      * @throws IOException if storage access fails.
@@ -76,8 +77,8 @@ interface SimUsageResetRepository {
 
     /**
      * Ensures that the tracking window (lastResetDate and lastTotalBytes) is initialized.
-     * If lastResetDate is 0, it is set to the current time, and the baseline is set
-     * to the current total mobile bytes.
+     * If lastResetDate is 0, the tracking window is opened at the current time and the baseline
+     * is set to 0, because the window [now, now] contains no traffic.
      *
      * @return true if initialization was performed, false if already initialized.
      * @throws IOException if storage access fails.

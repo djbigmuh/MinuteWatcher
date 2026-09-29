@@ -27,7 +27,7 @@ internal class ActiveSimsFetcher
         /**
          * Fetches active SIMs with exponential backoff retry logic.
          *
-         * Retries only transient storage errors (IOException) and unavailable identity seeds.
+         * Retries only transient storage errors (IOException).
          * Programming errors (like NPE) are rethrown immediately without retry.
          *
          * @param seed The identity seed result.
