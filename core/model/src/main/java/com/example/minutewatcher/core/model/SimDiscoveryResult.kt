@@ -15,7 +15,6 @@ sealed interface SimDiscoveryResult {
 }
 
 enum class SimDiscoveryFailureReason {
-    TIMEOUT,
     STORAGE_ERROR,
     UNKNOWN,
 }

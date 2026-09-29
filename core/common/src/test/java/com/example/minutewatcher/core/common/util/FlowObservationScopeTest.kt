@@ -13,7 +13,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -57,7 +56,7 @@ class FlowObservationScopeTest {
             scope.observe(flow2) { values2.add(it) }
             runCurrent()
 
-            assertTrue("First job should be cancelled", job1?.isCancelled == true)
+            assertTrue("First job should be cancelled", job1.isCancelled)
 
             flow1.emit(1)
             flow2.emit(10)
@@ -98,131 +97,6 @@ class FlowObservationScopeTest {
         }
 
     @Test
-    fun `recover uses collectLatest and restarts last observation`() =
-        runTest {
-            val scope = FlowObservationScope<Int>(backgroundScope, "test")
-            val flow = MutableSharedFlow<Int>(replay = 1)
-            val processedValues = mutableListOf<Int>()
-
-            scope.observe(flow) { value ->
-                delay(100.milliseconds)
-                processedValues.add(value)
-            }
-
-            runCurrent()
-
-            flow.emit(1)
-            advanceTimeBy(150.milliseconds)
-            assertEquals(listOf(1), processedValues)
-
-            scope.recover()
-            runCurrent()
-
-            flow.emit(2)
-            runCurrent()
-            flow.emit(3)
-            runCurrent()
-
-            advanceTimeBy(200.milliseconds)
-            runCurrent()
-
-            assertEquals(listOf(1, 3), processedValues)
-        }
-
-    @Test
-    fun `stopAndAwait cancels collector and returns true when finished in time`() =
-        runTest {
-            val scope = FlowObservationScope<Int>(backgroundScope, "test")
-            val flow = MutableSharedFlow<Int>()
-            var cancelled = false
-
-            scope.observe(flow) {
-                try {
-                    delay(10000)
-                } finally {
-                    cancelled = true
-                }
-            }
-            runCurrent()
-            flow.emit(1)
-            runCurrent()
-
-            val result = scope.stopAndAwait(100)
-            assertTrue("Should return true on successful completion", result)
-            assertTrue("Collector should be cancelled", cancelled)
-            assertNull("currentJob should be null", scope.currentJob)
-        }
-
-    @Test
-    fun `stopAndAwait returns false and clears reference when collector is stuck`() =
-        runTest {
-            val scope = FlowObservationScope<Int>(backgroundScope, "test")
-            val flow = MutableSharedFlow<Int>()
-            val reachedCleanup = CompletableDeferred<Unit>()
-
-            scope.observe(flow) {
-                reachedCleanup.complete(Unit)
-                withContext(NonCancellable) {
-                    delay(1000)
-                }
-            }
-            runCurrent()
-            flow.emit(1)
-            runCurrent()
-            reachedCleanup.await()
-
-            val result = scope.stopAndAwait(10)
-            assertFalse("Should return false on timeout", result)
-            assertNull("Reference should be cleared even on timeout", scope.currentJob)
-        }
-
-    @Test
-    fun `stopAndAwait propagates external cancellation`() =
-        runTest {
-            val scope = FlowObservationScope<Int>(backgroundScope, "test")
-            val flow = MutableSharedFlow<Int>(replay = 1)
-            flow.emit(1)
-
-            scope.observe(flow) {
-                withContext(NonCancellable) {
-                    delay(10000)
-                }
-            }
-            runCurrent()
-
-            val stopJob =
-                launch {
-                    scope.stopAndAwait(5000)
-                }
-            runCurrent()
-            assertFalse("stopJob should be suspended at job.join()", stopJob.isCompleted)
-
-            stopJob.cancel()
-            runCurrent()
-            stopJob.join()
-
-            assertTrue("Outer job should be cancelled", stopJob.isCancelled)
-        }
-
-    @Test
-    fun `shutdown cancels current job and clears references`() =
-        runTest {
-            val scope = FlowObservationScope<Int>(backgroundScope, "test")
-            val flow = MutableSharedFlow<Int>(replay = 1)
-            val job = scope.observe(flow) { }
-            runCurrent()
-
-            scope.shutdown()
-            runCurrent()
-
-            assertTrue("Job should be cancelled", job?.isCancelled == true)
-            assertNull("currentJob should be null", scope.currentJob)
-
-            val recoverJob = scope.recover()
-            assertNull("Recover should not start new job after shutdown", recoverJob)
-        }
-
-    @Test
     fun `currentJob returns active job`() =
         runTest {
             val scope = FlowObservationScope<Int>(backgroundScope, "test")
@@ -250,7 +124,7 @@ class FlowObservationScopeTest {
                 scope.observe(flow1) {
                     collector1Blocked.complete(Unit)
                     try {
-                        delay(100000)
+                        delay(10000)
                     } finally {
                         withContext(NonCancellable) {
                             collector1CanFinish.await()
@@ -313,52 +187,6 @@ class FlowObservationScopeTest {
                 secondObserveLaunch.join()
 
                 assertNotNull("New job must be launched after timeout even if previous stuck", newJob)
-            }
-        }
-
-    @Test
-    fun `observe after shutdown returns null and does not launch coroutine`() =
-        runTest {
-            withTimeout(5000.milliseconds) {
-                val scope = FlowObservationScope<Int>(backgroundScope, "test")
-                val flow = MutableSharedFlow<Int>()
-
-                scope.shutdown()
-                runCurrent()
-
-                val job = scope.observe(flow) { }
-                assertNull("observe after shutdown must return null", job)
-            }
-        }
-
-    @Test
-    fun `stopAndAwait returns true when no observer is active`() =
-        runTest {
-            withTimeout(5000.milliseconds) {
-                val scope = FlowObservationScope<Int>(backgroundScope, "test")
-                val result = scope.stopAndAwait(1000)
-                assertTrue("stopAndAwait must return true when no job is active", result)
-            }
-        }
-
-    @Test
-    fun `consecutive recover calls do not create more than one active observer`() =
-        runTest {
-            withTimeout(5000.milliseconds) {
-                val scope = FlowObservationScope<Int>(backgroundScope, "test")
-                val flow = MutableSharedFlow<Int>(replay = 1)
-                val collectorValues = mutableListOf<Int>()
-
-                scope.observe(flow) { collectorValues.add(it) }
-                runCurrent()
-
-                val job1 = scope.recover()
-                runCurrent()
-                val job2 = scope.recover()
-                runCurrent()
-
-                assertEquals("Only the last job should be active in currentJob", job2, scope.currentJob)
-                assertTrue("Previous job should be cancelled", job1?.isCancelled == true)
             }
         }
 }

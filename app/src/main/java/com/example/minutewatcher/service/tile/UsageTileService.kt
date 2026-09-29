@@ -161,7 +161,6 @@ class UsageTileService : TileService() {
 
     private enum class TileState {
         ACTIVE,
-        INACTIVE,
         UNAVAILABLE,
     }
 
@@ -169,7 +168,6 @@ class UsageTileService : TileService() {
         this.state =
             when (state) {
                 TileState.ACTIVE -> Tile.STATE_ACTIVE
-                TileState.INACTIVE -> Tile.STATE_INACTIVE
                 TileState.UNAVAILABLE -> Tile.STATE_UNAVAILABLE
             }
     }

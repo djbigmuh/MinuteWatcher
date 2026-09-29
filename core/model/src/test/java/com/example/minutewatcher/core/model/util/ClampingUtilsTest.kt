@@ -9,9 +9,6 @@ class ClampingUtilsTest {
 
     @Test
     fun `clamp boundary cases for Int`() {
-        // null case simulation (via clampNullable)
-        assertEquals(0, ClampingUtils.clampNullable(null, 0, hardLimitInt, 0))
-
         // 0 case
         assertEquals(0, ClampingUtils.clamp(0, 0, hardLimitInt))
 
@@ -27,9 +24,6 @@ class ClampingUtilsTest {
 
     @Test
     fun `clamp boundary cases for Float`() {
-        // null case
-        assertEquals(0f, ClampingUtils.clampNullable(null, 0f, hardLimitFloat, 0f))
-
         // 0 case
         assertEquals(0f, ClampingUtils.clamp(0f, 0f, hardLimitFloat))
 

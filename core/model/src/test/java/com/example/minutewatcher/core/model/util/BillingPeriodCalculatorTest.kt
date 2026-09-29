@@ -140,22 +140,18 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testProgress_CorrectOnShortMonth() {
+    fun testDaysRemaining_CorrectOnShortMonth() {
         // Reset 31, now is Feb 28 (non-leap)
         // Period is Feb 28 to March 31.
-        // Total days: 1 (Feb 28) + 31 (March) = 32 days.
         val now = createMillis(2026, 2, 28)
         val info = BillingPeriodCalculator.calculate(31, now, zoneId)
 
-        assertEquals(0, info.progressPercentage)
+        assertEquals(31, info.daysRemaining)
 
         // Move to March 16
         val middleNow = createMillis(2026, 3, 16)
         val middleInfo = BillingPeriodCalculator.calculate(31, middleNow, zoneId)
-        // Elapsed: 1 (Feb 28) + 15 (March 1-16) = 16 days.
-        // Period: Feb 28 to March 31 = 31 days.
-        // 16 / 31 = 51%
-        assertEquals(51, middleInfo.progressPercentage)
+        assertEquals(15, middleInfo.daysRemaining)
     }
 
     @Test

@@ -31,14 +31,4 @@ object ClampingUtils {
             else -> value
         }
     }
-
-    /**
-     * Overload for nullable values. Returns [defaultValue] if [value] is null, then clamps.
-     */
-    fun <T : Comparable<T>> clampNullable(
-        value: T?,
-        min: T,
-        max: T,
-        defaultValue: T,
-    ): T = clamp(value ?: defaultValue, min, max)
 }

@@ -11,7 +11,6 @@ object BillingPeriodCalculator {
         val startDate: Long,
         val endDate: Long,
         val daysRemaining: Int,
-        val progressPercentage: Int,
     )
 
     fun calculate(
@@ -41,10 +40,6 @@ object BillingPeriodCalculator {
         val nextResetDay = minOf(safeDay, nextMonth.lengthOfMonth())
         val endDate = nextMonth.atDay(nextResetDay).atStartOfDay(zoneId)
 
-        val totalDuration = ChronoUnit.MILLIS.between(startDate, endDate)
-        val elapsed = ChronoUnit.MILLIS.between(startDate, now)
-        val progress = if (totalDuration > 0) ((elapsed.toDouble() / totalDuration) * PERCENT_MAX).toInt() else 0
-
         // Accurate days remaining calculation
         val daysRemaining = ChronoUnit.DAYS.between(now.toLocalDate(), endDate.toLocalDate()).toInt()
 
@@ -52,10 +47,8 @@ object BillingPeriodCalculator {
             startDate = startDate.toInstant().toEpochMilli(),
             endDate = endDate.toInstant().toEpochMilli(),
             daysRemaining = maxOf(0, daysRemaining),
-            progressPercentage = progress.coerceIn(0, PERCENT_MAX),
         )
     }
 
-    private const val PERCENT_MAX = 100
     private const val MAX_DAYS_IN_MONTH = 31
 }

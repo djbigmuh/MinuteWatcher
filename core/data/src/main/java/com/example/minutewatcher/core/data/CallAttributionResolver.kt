@@ -24,8 +24,6 @@ internal class CallAttributionResolver
     ) {
         private val attributionFailures = ConcurrentHashMap<Int, Int>()
 
-        fun getFailureCount(subId: Int): Int = attributionFailures[subId] ?: 0
-
         fun retainOnlyActiveSubIds(activeSubIds: Set<Int>) {
             attributionFailures.entries.removeIf { it.key !in activeSubIds }
         }
@@ -108,6 +106,9 @@ internal class CallAttributionResolver
         fun clearAllFailures() {
             attributionFailures.clear()
         }
+
+        @VisibleForTesting
+        fun getFailureCount(subId: Int): Int = attributionFailures[subId] ?: 0
 
         @VisibleForTesting
         fun setFailureCountForTest(
