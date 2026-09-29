@@ -74,6 +74,8 @@ class WidgetUpdaterErrorTest {
                     try {
                         updater.updateAll()
                     } catch (
+                        // @Suppress("SwallowedException") is required because test
+                        // catches expected exception from async job.
                         @Suppress("SwallowedException") e: Throwable,
                     ) {
                         // The first call will rethrow the error, so we catch it here to avoid

@@ -66,6 +66,8 @@ class TrackerCancellationRegressionTest {
                         tracker.startInitialization()
                         startInitializationFinished = true
                     } catch (
+                        // @Suppress("SwallowedException") is required because test verifies
+                        // expected exception handling without rethrowing.
                         @Suppress("SwallowedException")
                         e: Exception,
                     ) {

@@ -208,6 +208,7 @@ class TrafficTrackerRegressionTest {
 
     private fun <T> stubSuspend(block: suspend () -> T): Answer<Any?> =
         Answer { invocation ->
+            // @Suppress("UNCHECKED_CAST") is required for Mockito continuation parameter casting in test.
             @Suppress("UNCHECKED_CAST")
             val continuation = invocation.rawArguments.last() as Continuation<T>
             val job =

@@ -21,12 +21,14 @@ class ApplicationScopeModuleTest {
     private class CapturingLogger : Logger {
         val errorLogs = mutableListOf<Triple<String, String, Throwable?>>()
 
+        // @Suppress("EmptyFunctionBlock") is required because Logger test double methods are intentionally no-op.
         @Suppress("EmptyFunctionBlock")
         override fun d(
             tag: String,
             message: String,
         ) {}
 
+        // @Suppress("EmptyFunctionBlock") is required because Logger test double methods are intentionally no-op.
         @Suppress("EmptyFunctionBlock")
         override fun w(
             tag: String,

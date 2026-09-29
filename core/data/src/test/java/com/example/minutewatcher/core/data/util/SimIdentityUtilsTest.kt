@@ -17,8 +17,10 @@ class SimIdentityUtilsTest {
     @Config(sdk = [28]) // behavior-specific SDK
     fun `mccStringCompat and mncStringCompat on API 28 normalize MCC and return raw MNC`() {
         val info: SubscriptionInfo = mock()
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mcc).thenReturn(250)
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mnc).thenReturn(1)
 
@@ -30,8 +32,10 @@ class SimIdentityUtilsTest {
     @Config(sdk = [28]) // behavior-specific SDK
     fun `mccMncCandidates on API 28 returns raw and padded variations`() {
         val info: SubscriptionInfo = mock()
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mcc).thenReturn(250)
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mnc).thenReturn(1)
 
@@ -44,8 +48,10 @@ class SimIdentityUtilsTest {
     @Config(sdk = [28]) // behavior-specific SDK
     fun `mccMncCandidates on API 28 removes duplicates when padding matches raw`() {
         val info: SubscriptionInfo = mock()
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mcc).thenReturn(250)
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mnc).thenReturn(10) // 2 digits raw
 
@@ -58,8 +64,10 @@ class SimIdentityUtilsTest {
     @Config(sdk = [28]) // behavior-specific SDK
     fun `mccMncCandidates on API 28 returns empty when mcc is unavailable`() {
         val info: SubscriptionInfo = mock()
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mcc).thenReturn(Integer.MAX_VALUE)
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mnc).thenReturn(1)
 
@@ -71,8 +79,10 @@ class SimIdentityUtilsTest {
     @Config(sdk = [28]) // behavior-specific SDK
     fun `mccMncCandidates on API 28 returns empty when mnc is unavailable`() {
         val info: SubscriptionInfo = mock()
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mcc).thenReturn(250)
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc and mnc are deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mnc).thenReturn(Integer.MAX_VALUE)
 

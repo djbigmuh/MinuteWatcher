@@ -111,6 +111,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             // No default voice subId
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
             // Telephony state OFFHOOK to trigger handleAmbiguousIdle
+            // @Suppress("DEPRECATION") is required because callStateForSubscription is deprecated on API 31+.
             @Suppress("DEPRECATION")
             whenever(
                 telephonyManager.callStateForSubscription,

@@ -15,6 +15,7 @@ class TelephonyExtensionsTest {
     @Config(sdk = [28]) // behavior-specific SDK
     fun `mccStringCompat on API 28 returns empty for sentinel`() {
         val info: SubscriptionInfo = mock()
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc is deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mcc).thenReturn(Integer.MAX_VALUE)
 
@@ -25,6 +26,7 @@ class TelephonyExtensionsTest {
     @Config(sdk = [28]) // behavior-specific SDK
     fun `mncStringCompat on API 28 returns empty for sentinel`() {
         val info: SubscriptionInfo = mock()
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mnc is deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mnc).thenReturn(Integer.MAX_VALUE)
 
@@ -35,6 +37,7 @@ class TelephonyExtensionsTest {
     @Config(sdk = [28]) // behavior-specific SDK
     fun `mccStringCompat on API 28 pads valid value`() {
         val info: SubscriptionInfo = mock()
+        // @Suppress("DEPRECATION") is required because SubscriptionInfo.mcc is deprecated on API 29+.
         @Suppress("DEPRECATION")
         whenever(info.mcc).thenReturn(1)
 

@@ -157,6 +157,7 @@ class WidgetLimitManagerTest {
         }
 
     @Test
+    // @Suppress("TooGenericExceptionThrown") is required for test exception simulation.
     @Suppress("TooGenericExceptionThrown")
     fun `performProbeUpdate does NOT set limit exceeded on regular Exception`() =
         runTest(testDispatcher) {

@@ -257,6 +257,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
@@ -283,6 +284,7 @@ class WidgetUpdaterImplTest {
             val mockLimitManager: WidgetLimitManager = mock()
             whenever(mockLimitManager.isLimitExceeded()).thenReturn(true)
             whenever(mockLimitManager.shouldProbe()).thenReturn(true)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
                 // Return success immediately to simulate successful probe result
@@ -344,6 +346,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
@@ -454,6 +457,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
@@ -482,6 +486,7 @@ class WidgetUpdaterImplTest {
             val mockLimitManager: WidgetLimitManager = mock()
             whenever(mockLimitManager.isLimitExceeded()).thenReturn(true)
             whenever(mockLimitManager.shouldProbe()).thenReturn(true)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
                 // Return success immediately to simulate successful probe
@@ -547,6 +552,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
@@ -597,6 +603,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
@@ -795,6 +802,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
@@ -818,6 +826,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings
@@ -879,6 +888,7 @@ class WidgetUpdaterImplTest {
             val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
             whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
             @Suppress("UNCHECKED_CAST")
             whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer {
                 val transform = it.arguments[0] as (AppSettings) -> AppSettings

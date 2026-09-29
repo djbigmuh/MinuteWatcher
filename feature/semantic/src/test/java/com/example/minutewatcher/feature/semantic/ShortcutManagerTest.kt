@@ -345,6 +345,7 @@ class ShortcutManagerTest {
             assertTrue("Shortcuts should be removed", androidShortcutManager.dynamicShortcuts.isEmpty())
         }
 
+    // @Suppress("SameParameterValue") is required because helper function parameter is reused across test cases.
     @Suppress("SameParameterValue")
     private fun createEntity(
         slot: Int,

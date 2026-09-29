@@ -158,6 +158,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(
                 telephonyManager.callStateForSubscription,
             ).thenReturn(TelephonyManager.CALL_STATE_IDLE)
+            // @Suppress("DEPRECATION") is required because TelephonyManager.callState is deprecated on API 31+.
             @Suppress("DEPRECATION")
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_IDLE)
 

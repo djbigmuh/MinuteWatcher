@@ -197,6 +197,7 @@ class SimIdentityRepositoryRaceTest {
         )
     }
 
+    // @Suppress("UNCHECKED_CAST") is required for internal reflective type cast in test.
     @Suppress("UNCHECKED_CAST")
     private fun getInternalSeedFlow(repository: SimIdentityRepositoryImpl): Flow<Any> =
         repository.observer.seedFlow as Flow<Any>

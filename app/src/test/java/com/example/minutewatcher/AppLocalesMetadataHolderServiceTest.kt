@@ -23,6 +23,7 @@ class AppLocalesMetadataHolderServiceTest {
 
         val serviceInfo =
             try {
+                // @Suppress("DEPRECATION") is required because getServiceInfo with int flags is deprecated on API 33+.
                 @Suppress("DEPRECATION")
                 context.packageManager.getServiceInfo(
                     componentName,

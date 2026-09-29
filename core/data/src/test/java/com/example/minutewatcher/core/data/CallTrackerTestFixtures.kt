@@ -74,9 +74,11 @@ abstract class CallTrackerTestFixtures {
         runBlocking {
             whenever(simUsageRepository.incrementMinutesUsedForCall(any(), any(), any())).thenReturn(true)
         }
+        // @Suppress("DEPRECATION") is required because createForSubscriptionId and callState are deprecated on API 31+.
         @Suppress("DEPRECATION")
         whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
         whenever(telephonyManager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
+        // @Suppress("DEPRECATION") is required because TelephonyManager.callState is deprecated on API 31+.
         @Suppress("DEPRECATION")
         whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)

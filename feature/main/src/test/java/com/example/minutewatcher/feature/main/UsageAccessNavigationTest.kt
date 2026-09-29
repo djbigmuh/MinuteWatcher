@@ -123,6 +123,7 @@ class UsageAccessNavigationTest {
         advanceUntilIdle()
     }
 
+    // @Suppress("LongMethod") is required for test ViewModel construction with mocked dependencies.
     @Suppress("LongMethod")
     private fun createViewModel(scope: CoroutineScope): MainViewModel {
         val dialogController = MainDialogController(savedStateHandle)

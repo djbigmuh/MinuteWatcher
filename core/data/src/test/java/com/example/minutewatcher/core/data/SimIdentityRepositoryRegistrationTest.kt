@@ -89,6 +89,7 @@ class SimIdentityRepositoryRegistrationTest {
 
     @Test
     @Config(sdk = [30]) // behavior-specific SDK
+    // @Suppress("DEPRECATION") is required because test checks legacy subscription listener registration on API 29/30.
     @Suppress("DEPRECATION")
     fun `test addOnSubscriptionsChangedListener uses executor on API 30`() =
         runTest {
@@ -111,6 +112,7 @@ class SimIdentityRepositoryRegistrationTest {
 
     @Test
     @Config(sdk = [29]) // behavior-specific SDK
+    // @Suppress("DEPRECATION") is required because test checks legacy subscription listener registration on API 29.
     @Suppress("DEPRECATION")
     fun `test addOnSubscriptionsChangedListener uses legacy on API 29`() =
         runTest {

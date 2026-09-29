@@ -37,6 +37,8 @@ import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
+// @Suppress("LargeClass") is required because WidgetSettingsViewModelTest
+// tests all widget settings options and state transitions.
 @Suppress("LargeClass")
 class WidgetSettingsViewModelTest {
     @get:Rule
