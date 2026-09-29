@@ -36,8 +36,10 @@ class SemanticCapabilities
          * On API 31+, we check for the presence of the system AppSearch service.
          * On older versions (26+), we rely on bundled LocalStorage which is available on all
          * supported API levels.
+         *
+         * Note: @SuppressLint("WrongConstant") is required because Context.APP_SEARCH_SERVICE
+         * is guarded by API level 31 check.
          */
-        @Suppress("NewApi")
         @SuppressLint("WrongConstant")
         private fun isAppSearchSupported(): Boolean =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
