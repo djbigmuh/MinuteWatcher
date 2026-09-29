@@ -17,8 +17,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.math.abs
 
+// UI-infra SDK pin: Espresso InputManager reflection fails on SDK > 35 in Robolectric
+@Config(sdk = [35])
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35]) // Robolectric Compose UI test compatibility (Espresso InputManager requires SDK <= 35)
 class WidgetPreviewLayoutTest {
     @get:Rule
     val composeTestRule = createComposeRule()

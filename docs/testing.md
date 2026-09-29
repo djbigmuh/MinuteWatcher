@@ -52,6 +52,7 @@ To maintain test execution speed and minimize overhead, we follow a strict SDK c
 - **Default SDK**: Set globally to **37** via `robolectric.properties` and Gradle system properties.
 - **No Routine Pinning**: Do NOT add `@Config(sdk = [35])` or any other SDK pinning to test classes if it matches the default.
 - **Behavior-Specific Tests**: Pinning a different SDK is ONLY permitted when testing logic that branches based on `Build.VERSION`. In such cases, accompany the `@Config` with a comment: `// behavior-specific SDK`.
+- **UI Infrastructure Pinning**: Pinning SDK 35 for Compose UI/Espresso tests is permitted when required due to test framework infrastructure limitations (e.g. Espresso InputManager reflection on API > 35 in Robolectric). Accompany the `@Config` with a comment: `// UI-infra SDK pin: <reason>`.
 - **Pure Logic**: Tests for classes that do not depend on Android framework (no `android.*` imports) must use the standard JUnit runner, not `RobolectricTestRunner`.
 
 ## Continuous Integration
