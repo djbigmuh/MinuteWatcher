@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.common.util
 
+import android.content.Context
 import com.example.minutewatcher.core.common.testing.AppLoggerResetRule
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -9,6 +10,8 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import java.io.File
 
 class AppLoggerTest {
@@ -148,6 +151,68 @@ class AppLoggerTest {
         AppLogger.d("After failure entry")
         AppLogger.w("Warning after failure")
         AppLogger.e("Error after failure")
+    }
+
+    @Test
+    fun `drain routes logs to custom logger according to their level`() {
+        val testDir = tmpFolder.newFolder("drain_logs")
+        val mockContext =
+            mock<Context> {
+                on { filesDir } doReturn testDir
+            }
+        val capturingLogger =
+            object : Logger {
+                val dLogs = mutableListOf<String>()
+                val wLogs = mutableListOf<String>()
+                val eLogs = mutableListOf<String>()
+
+                override fun d(
+                    tag: String,
+                    message: String,
+                ) {
+                    dLogs.add(message)
+                }
+
+                override fun w(
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                ) {
+                    wLogs.add(message)
+                }
+
+                override fun e(
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                ) {
+                    eLogs.add(message)
+                }
+            }
+
+        AppLogger.init(mockContext, capturingLogger)
+
+        val readOnlyFile = File(testDir, "logs.txt")
+        readOnlyFile.createNewFile()
+        readOnlyFile.setReadOnly()
+
+        repeat(10) { i ->
+            AppLogger.d("Debug drain entry $i")
+            AppLogger.w("Warning drain entry $i")
+            AppLogger.e("Error drain entry $i")
+        }
+
+        pollUntil(message = "Worker drains channel entries after write failure threshold") {
+            !AppLogger.hasPendingLogsForTest()
+        }
+
+        val hasDebugDrain = capturingLogger.dLogs.any { it.contains("[DRAIN] D/") }
+        val hasWarnDrain = capturingLogger.wLogs.any { it.contains("[DRAIN] W/") }
+        val hasErrorDrain = capturingLogger.eLogs.any { it.contains("[DRAIN] E/") }
+
+        assertTrue("Debug drain entry in dLogs", hasDebugDrain)
+        assertTrue("Warning drain entry in wLogs", hasWarnDrain)
+        assertTrue("Error drain entry in eLogs", hasErrorDrain)
     }
 
     @Test

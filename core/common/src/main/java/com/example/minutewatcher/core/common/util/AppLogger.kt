@@ -33,6 +33,7 @@ import java.time.format.DateTimeFormatter
  * - During rotation, the active log file is neither deleted nor truncated until its contents have been
  *   successfully transferred to `logs.old.txt`.
  * - Consumes the log channel sequentially in FIFO order.
+ * - Drains channel entries to [logger] retaining their original severity level upon file logging disablement.
  * - Opened lazily on first log entry and closed on file rotation, file logging disablement,
  *   [shutdown], or test state reset ([resetForTest], [initForTest], [init]).
  *
@@ -116,7 +117,7 @@ object AppLogger {
             logger.d(TAG, message)
             logToFile("D", message)
         } catch (e: Exception) {
-            Log.d(TAG, "AppLogger.d failed: $message", e)
+            Log.w(TAG, "AppLogger.d failed: $message", e)
         }
     }
 
@@ -227,7 +228,12 @@ object AppLogger {
             // Drain the channel to Logcat
             while (true) {
                 val next = logChannel.tryReceive().getOrNull() ?: break
-                Log.d(TAG, "[DRAIN] ${next.level}/$TAG: ${next.message}")
+                val drainMessage = "[DRAIN] ${next.level}/$TAG: ${next.message}"
+                when (next.level) {
+                    "W" -> logger.w(TAG, drainMessage)
+                    "E" -> logger.e(TAG, drainMessage)
+                    else -> logger.d(TAG, drainMessage)
+                }
             }
         }
     }
