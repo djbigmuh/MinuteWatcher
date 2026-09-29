@@ -46,6 +46,7 @@ import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+// Robolectric required: uses RuntimeEnvironment.getApplication() in test
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityObserverTest {

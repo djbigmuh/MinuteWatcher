@@ -31,19 +31,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("MaxLineLength", "LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class UpdateCoordinatorTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val widgetUpdater: WidgetUpdater = mock()
