@@ -21,19 +21,18 @@ import java.util.Locale
 object WidgetStringsFactory {
     fun create(context: Context): WidgetStrings {
         val appLocales = AppCompatDelegate.getApplicationLocales()
+        val configLocale =
+            context
+                .resources
+                .configuration
+                .locales
+                .get(0)
         val effectiveLocale =
             if (!appLocales.isEmpty) {
-                appLocales
-                    .get(0) ?: context.resources
-                    .configuration
-                    .locales
-                    .get(0)
+                appLocales.get(0) ?: configLocale
             } else {
-                context.resources
-                    .configuration
-                    .locales
-                    .get(0)
-            } ?: Locale.US
+                configLocale
+            } ?: Locale.getDefault()
 
         return WidgetStrings(
             usedText = context.getString(R.string.used_text),
