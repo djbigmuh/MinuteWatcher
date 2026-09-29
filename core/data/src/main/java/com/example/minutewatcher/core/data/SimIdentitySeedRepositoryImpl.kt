@@ -108,11 +108,11 @@ internal class SimIdentitySeedRepositoryImpl
         }
 
         private suspend fun readPersistentSeed(): String? {
-            val readOutcome: Result<String?>? =
+            val seed =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    Result.success(dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED])
-                }
-            return (readOutcome ?: throw IOException("DataStore read timeout")).getOrThrow()
+                    dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED] ?: ""
+                } ?: throw IOException("DataStore read timeout")
+            return seed.ifEmpty { null }
         }
 
         private suspend fun generateAndWritePersistentSeed(generator: () -> String): SeedResolutionResult.Persistent? {
@@ -141,15 +141,13 @@ internal class SimIdentitySeedRepositoryImpl
         private suspend fun handlePersistentSeedError(
             attempt: Int,
             e: IOException,
-        ): Nothing? {
+        ) {
             if (attempt == MAX_RETRIES - 1) {
                 AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
-                return null
             } else {
                 val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
                 AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying in ${delayMs}ms...")
                 delay(delayMs.milliseconds)
-                return null
             }
         }
 
