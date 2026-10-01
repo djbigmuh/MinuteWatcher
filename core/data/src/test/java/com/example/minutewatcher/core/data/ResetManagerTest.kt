@@ -14,6 +14,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -26,6 +27,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ResetManagerTest {
@@ -259,8 +261,10 @@ class ResetManagerTest {
             val d1 = async { resetManager.performAutoReset() }
             val d2 = async { resetManager.performAutoReset() }
 
-            d1.await()
-            d2.await()
+            withTimeoutOrNull(30.seconds) { d1.await() }
+                ?: throw AssertionError("Timed out waiting for d1")
+            withTimeoutOrNull(30.seconds) { d2.await() }
+                ?: throw AssertionError("Timed out waiting for d2")
 
             // Verify only one repository call happened despite concurrent high-level calls
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), eq(1), any())
@@ -285,8 +289,10 @@ class ResetManagerTest {
             val d1 = async { resetManager.performAutoReset() }
             val d2 = async { resetManager.performAutoReset() }
 
-            d1.await()
-            d2.await()
+            withTimeoutOrNull(30.seconds) { d1.await() }
+                ?: throw AssertionError("Timed out waiting for d1")
+            withTimeoutOrNull(30.seconds) { d2.await() }
+                ?: throw AssertionError("Timed out waiting for d2")
 
             // Verify exactly one reset call per SIM
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(id0), any(), any())
@@ -370,8 +376,10 @@ class ResetManagerTest {
             val d1 = async { resetManager.performAutoReset() }
             val d2 = async { resetManager.performAutoReset() }
 
-            d1.await()
-            d2.await()
+            withTimeoutOrNull(30.seconds) { d1.await() }
+                ?: throw AssertionError("Timed out waiting for d1")
+            withTimeoutOrNull(30.seconds) { d2.await() }
+                ?: throw AssertionError("Timed out waiting for d2")
 
             // Verify the repository is called once
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), any(), any())

@@ -11,6 +11,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -18,6 +19,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterErrorTest {
@@ -95,7 +97,9 @@ class WidgetUpdaterErrorTest {
             // We expect secondCall to complete because deferred SHOULD be
             // completed by startNewUpdate's catch(Throwable)
             // If it hangs, the test will timeout.
-            val result2 = secondCall.await()
+            val result2 =
+                withTimeoutOrNull(30.seconds) { secondCall.await() }
+                    ?: throw AssertionError("Timed out waiting for secondCall")
 
             assertTrue(
                 "Second call should return failure, not hang. Result was: $result2",
@@ -104,6 +108,7 @@ class WidgetUpdaterErrorTest {
             assertEquals(WidgetUpdateResult.FailureReason.TERMINAL, (result2 as WidgetUpdateResult.Failure).reason)
             assertTrue("Result should be marked as coalesced", result2.wasCoalesced)
 
-            firstCall.await()
+            withTimeoutOrNull(30.seconds) { firstCall.await() }
+                ?: throw AssertionError("Timed out waiting for firstCall")
         }
 }

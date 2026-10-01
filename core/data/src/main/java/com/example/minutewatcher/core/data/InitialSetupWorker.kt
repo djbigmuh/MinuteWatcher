@@ -59,6 +59,12 @@ class InitialSetupWorker
                 Result.failure()
             }
 
+    private enum class MigrationDecision {
+        PROCEED,
+        RETRY,
+        FAIL,
+    }
+
         private suspend fun performSetupSteps() {
             deps.usageUseCase.refreshOperatorInfo()
 
@@ -68,10 +74,12 @@ class InitialSetupWorker
                 } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
             }
 
-            val result = checkAndPerformMigrations()
-            if (result != null && result != Result.success()) {
-                val isRetry = result == Result.retry()
-                throw if (isRetry) IOException("Migration retry") else IllegalStateException("Migration failed")
+            when (checkAndPerformMigrations()) {
+                MigrationDecision.RETRY -> throw IOException("Migration retry")
+                MigrationDecision.FAIL -> throw IllegalStateException("Migration failed")
+                MigrationDecision.PROCEED -> {
+                    // Continue setup steps
+                }
             }
 
             performCleanupSafe {
@@ -100,12 +108,12 @@ class InitialSetupWorker
             }
         }
 
-        private suspend fun checkAndPerformMigrations(): Result? {
+    private suspend fun checkAndPerformMigrations(): MigrationDecision {
             val v1Completed = fetchFlag("migrationV1") { deps.migrationFlagsRepository.isMigrationV1Completed() }
             val stabilityCompleted =
                 fetchFlag("stability") { deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted() }
 
-            if (v1Completed && stabilityCompleted) return null
+        if (v1Completed && stabilityCompleted) return MigrationDecision.PROCEED
 
             return if (!deps.permissionManager.hasPhoneStatePermission()) {
                 handleMigrationWithoutPermission(v1Completed)
@@ -125,11 +133,11 @@ class InitialSetupWorker
                 throw IOException("Failed to read $name flag", e)
             } ?: throw IOException("DataStore timeout reading $name flag")
 
-        private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): Result? {
+    private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): MigrationDecision {
             val hasLegacyData = deps.migrationService.hasLegacyData()
             if (hasLegacyData == null) {
                 return if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
-                    Result.retry()
+                    MigrationDecision.RETRY
                 } else {
                     markMigrationSkippedPermanently()
                 }
@@ -143,10 +151,10 @@ class InitialSetupWorker
                 deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                 deps.migrationService.markSchemaCurrent()
             }
-            return null
+        return MigrationDecision.PROCEED
         }
 
-        private suspend fun handleMigrationWithPermission(v1Completed: Boolean): Result? {
+    private suspend fun handleMigrationWithPermission(v1Completed: Boolean): MigrationDecision {
             val activeSims = getActiveSimsWithRetry()
 
             val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
@@ -155,7 +163,7 @@ class InitialSetupWorker
             return when {
                 hasLegacyData == null -> {
                     if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
-                        Result.retry()
+                        MigrationDecision.RETRY
                     } else {
                         markMigrationSkippedPermanently()
                     }
@@ -170,14 +178,14 @@ class InitialSetupWorker
                         deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                         deps.migrationService.markSchemaCurrent()
                     }
-                    null
+                    MigrationDecision.PROCEED
                 }
 
                 else -> performActualMigration(activeSims)
             }
         }
 
-        private suspend fun markMigrationSkippedPermanently(): Result? {
+    private suspend fun markMigrationSkippedPermanently(): MigrationDecision {
             AppLogger.e(
                 "InitialSetupWorker: legacy data availability could not be determined " +
                     "after $MAX_MIGRATION_ATTEMPTS attempts, skipping migration",
@@ -185,10 +193,10 @@ class InitialSetupWorker
             deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
             deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.LEGACY_DATA_CHECK_FAILED)
             deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-            return null
+        return MigrationDecision.PROCEED
         }
 
-        private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): Result? =
+    private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): MigrationDecision =
             try {
                 var totalFailures = 0
                 activeSims.forEach { info ->
@@ -197,17 +205,17 @@ class InitialSetupWorker
                 }
 
                 if (totalFailures > 0) {
-                    if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) return Result.retry()
+                    if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) return MigrationDecision.RETRY
                     AppLogger.e("InitialSetupWorker: Max migration attempts reached with $totalFailures failures.")
                 }
 
                 deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
                 deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                 deps.migrationService.markSchemaCurrent()
-                null
+                MigrationDecision.PROCEED
             } catch (e: IOException) {
                 AppLogger.w("InitialSetupWorker: Actual migration failed due to IO error, retrying", e)
-                Result.retry()
+                MigrationDecision.RETRY
             }
 
         /**

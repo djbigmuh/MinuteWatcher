@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -22,6 +23,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsViewModelRaceTest {
@@ -69,7 +71,8 @@ class WidgetSettingsViewModelRaceTest {
                     ): SaveResult {
                         capturedStates.add(state)
                         saveStarted.complete(Unit)
-                        canCompleteSave.await()
+                        withTimeoutOrNull(30.seconds) { canCompleteSave.await() }
+                            ?: throw AssertionError("Timed out waiting for canCompleteSave in controlledSaver")
                         return SaveResult.Success
                     }
                 }
@@ -90,7 +93,8 @@ class WidgetSettingsViewModelRaceTest {
                     vm.saveAndNotify()
                 }
             runCurrent()
-            saveStarted.await()
+            withTimeoutOrNull(30.seconds) { saveStarted.await() }
+                ?: throw AssertionError("Timed out waiting for saveStarted")
 
             // 2. Try to update settings while save is in progress
             // This update is NOT blocked by saveMutex in memory,
@@ -100,7 +104,8 @@ class WidgetSettingsViewModelRaceTest {
 
             // 3. Allow first save to complete
             canCompleteSave.complete(Unit)
-            saveJob.join()
+            withTimeoutOrNull(30.seconds) { saveJob.join() }
+                ?: throw AssertionError("Timed out waiting for saveJob")
 
             // 4. Verify that the FIRST save call captured the state BEFORE the update was applied
             assertEquals("First save should see old state", 4, capturedStates.first().fontSize)

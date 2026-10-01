@@ -229,12 +229,7 @@ class TrafficTracker
         }
 
         private fun checkAndScheduleAutoRecovery(reason: String) {
-            val shouldStart =
-                if (initializationFailed.get() && tryClaimInitialization()) {
-                    true
-                } else {
-                    false
-                }
+            val shouldStart = initializationFailed.get() && tryClaimInitialization()
             if (shouldStart) {
                 AppLogger.d("TrafficTracker: attempting auto-recovery after $reason")
                 scope.launch {
@@ -305,12 +300,7 @@ class TrafficTracker
             (e is SecurityException) || (e is TrafficUpdateTimeoutException)
 
         override suspend fun recover() {
-            val shouldStart =
-                if (initializationFailed.get() && tryClaimInitialization()) {
-                    true
-                } else {
-                    false
-                }
+            val shouldStart = initializationFailed.get() && tryClaimInitialization()
             if (shouldStart) {
                 AppLogger.d("TrafficTracker: attempting manual recovery")
                 try {

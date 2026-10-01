@@ -34,11 +34,11 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             try {
                 val snapshot2 = createTestSnapshot(101L)
                 val result = manager.indexSnapshot(snapshot2)
-                assertEquals(SemanticSearchManager.IndexResult.MutexTimeout, result)
+                assertEquals(SemanticSearchManager.IndexResult.MutexContention, result)
 
                 // 3. Verify hash is still the old one and NOT null
                 assertEquals(
-                    "Hash should remain unchanged on mutex timeout",
+                    "Hash should remain unchanged on mutex contention",
                     hash1,
                     manager.lastSnapshotHash,
                 )
@@ -260,20 +260,20 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `mutex timeout does not increment failure count and does not set error status`() =
+    fun `mutex contention does not increment failure count and does not set error status`() =
         runTest(testDispatcher) {
             val manager = createManager(appScope)
             val errorHandler = getErrorHandler(manager)
 
-            // 1. Manually lock the indexMutex to cause timeout
+            // 1. Manually lock the indexMutex
             manager.indexMutex.lock()
             try {
-                // 2. Attempt indexing - should timeout based on SHORT_TIMEOUT_MS
+                // 2. Attempt indexing - should return MutexContention
                 val result = manager.indexSnapshot(createSnapshotWithOneSim())
 
                 assertEquals(
-                    "Should return MutexTimeout",
-                    SemanticSearchManager.IndexResult.MutexTimeout,
+                    "Should return MutexContention",
+                    SemanticSearchManager.IndexResult.MutexContention,
                     result,
                 )
 
@@ -291,20 +291,20 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `consecutiveMutexTimeouts is reset and status recovers after successful acquisition`() =
+    fun `consecutive mutex contention counter is reset and status recovers after successful acquisition`() =
         runTest(testDispatcher) {
             val manager = createManager(appScope)
 
-            // 1. Manually lock the indexMutex to cause timeout
+            // 1. Manually lock the indexMutex to cause contention
             manager.indexMutex.lock()
             try {
-                // First timeout
+                // First contention
                 manager.indexSnapshot(createSnapshotWithOneSim())
-                assertEquals(1, manager.consecutiveMutexTimeouts.get())
+                assertEquals(1, manager.consecutiveMutexContention.get())
 
-                // Second timeout -> reaches MUTEX_STUCK_THRESHOLD -> should set Error status with DATABASE_ERROR
+                // Second contention -> reaches MUTEX_STUCK_THRESHOLD -> should set Error status with DATABASE_ERROR
                 manager.indexSnapshot(createSnapshotWithOneSim())
-                assertEquals(2, manager.consecutiveMutexTimeouts.get())
+                assertEquals(2, manager.consecutiveMutexContention.get())
 
                 val errorStatus = manager.status.value
                 assertTrue("Status should be Error on reaching stuck threshold", errorStatus is TrackingStatus.Error)
@@ -320,7 +320,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
             manager.indexSnapshot(createSnapshotWithOneSim())
 
             // 3. Verify counter is reset to 0 and status recovers
-            assertEquals(0, manager.consecutiveMutexTimeouts.get())
+            assertEquals(0, manager.consecutiveMutexContention.get())
             assertTrue(
                 "Status should recover to Ready after successful indexing, was ${manager.status.value}",
                 manager.status.value is TrackingStatus.Ready,
@@ -328,24 +328,24 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `indexSnapshot returns MutexTimeout and increments counter when lock cannot be acquired`() =
+    fun `indexSnapshot returns MutexContention and increments counter when lock cannot be acquired`() =
         runTest(testDispatcher) {
             val manager = createManager(appScope)
 
-            // 1. Manually lock the indexMutex to cause timeout
+            // 1. Manually lock the indexMutex to cause contention
             manager.indexMutex.lock()
             try {
-                // 2. Attempt indexing - should timeout based on SHORT_TIMEOUT_MS
+                // 2. Attempt indexing - should return MutexContention
                 val result = manager.indexSnapshot(createSnapshotWithOneSim())
 
                 assertEquals(
-                    "Should return MutexTimeout",
-                    SemanticSearchManager.IndexResult.MutexTimeout,
+                    "Should return MutexContention",
+                    SemanticSearchManager.IndexResult.MutexContention,
                     result,
                 )
 
                 // 3. Verify counter is incremented
-                assertEquals(1, manager.consecutiveMutexTimeouts.get())
+                assertEquals(1, manager.consecutiveMutexContention.get())
             } finally {
                 manager.indexMutex.unlock()
             }

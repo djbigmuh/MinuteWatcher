@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -10,15 +11,19 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class CallTrackerAttributionTest : CallTrackerTestFixtures() {
     @Test
     fun `test dual SIM concurrent call tracking`() =
@@ -115,7 +120,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             @Suppress("DEPRECATION")
             whenever(
                 telephonyManager.callStateForSubscription,
-            ).thenReturn(android.telephony.TelephonyManager.CALL_STATE_OFFHOOK)
+            ).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
 
             // Trigger timeout for all reads
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
@@ -262,5 +267,120 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_voice"), any(), any())
             // SIM 2 session was NOT attempted to be closed
             verify(callSessionRepository, never()).saveCallSession(eq(2), any(), any(), any(), anyOrNull())
+        }
+
+    @Test
+    fun `resolveUnknownSubIdEnd attributes end event to single idle sub when other sub throws exception`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+
+            // Sub 1: throws IllegalStateException on call state check
+            val sub1Manager: TelephonyManager = mock()
+            whenever(telephonyManager.createForSubscriptionId(1)).thenReturn(sub1Manager)
+            whenever(sub1Manager.callStateForSubscription).thenThrow(IllegalStateException("Telecom error"))
+
+            // Sub 2: returns CALL_STATE_IDLE
+            val sub2Manager: TelephonyManager = mock()
+            whenever(telephonyManager.createForSubscriptionId(2)).thenReturn(sub2Manager)
+            whenever(sub2Manager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_IDLE)
+
+            // Setup active call data for sub 2
+            whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 10000L))
+            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
+            whenever(callSessionRepository.getCallIdentity(2)).thenReturn(flowOf("id_sub2"))
+
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // Verify call ended for sub 2 and minutes recorded for id_sub2
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(2))
+            verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_sub2"), any(), any())
+            verify(callSessionRepository, never()).clearCallSession(eq(1))
+        }
+
+    @Test
+    fun `resolveUnknownSubIdEnd sets INACCURATE_ATTRIBUTION when all sub call state queries throw exception`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+
+            val failingManager: TelephonyManager = mock()
+            whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(failingManager)
+            whenever(failingManager.callStateForSubscription).thenThrow(IllegalStateException("Telecom error"))
+
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            verify(callSessionRepository, never()).clearCallSession(any())
+            val status = callTracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
+    fun `resolveUnknownSubIdEnd attributes to single active sub without query when query throws exception`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            val subId = 1
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(subId))
+
+            val failingManager: TelephonyManager = mock()
+            whenever(telephonyManager.createForSubscriptionId(eq(subId))).thenReturn(failingManager)
+            whenever(failingManager.callStateForSubscription).thenThrow(IllegalStateException("Telecom error"))
+
+            whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 10000L))
+            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
+            whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf("id_single"))
+
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(subId))
+            verify(simUsageRepository).incrementMinutesUsedForCall(eq("id_single"), any(), any())
+        }
+
+    @Test
+    fun `resolveUnknownSubIdEnd does not treat device as idle when any call state query throws exception`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
+
+            // Sub 1 returns IDLE, Sub 2 throws exception
+            val sub1Manager: TelephonyManager = mock()
+            whenever(telephonyManager.createForSubscriptionId(1)).thenReturn(sub1Manager)
+            whenever(sub1Manager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_IDLE)
+
+            val sub2Manager: TelephonyManager = mock()
+            whenever(telephonyManager.createForSubscriptionId(2)).thenReturn(sub2Manager)
+            whenever(sub2Manager.callStateForSubscription).thenThrow(RuntimeException("Service unavailable"))
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 10000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_sub1"))
+
+            callTracker.onCallEnded(-1)
+            advanceUntilIdle()
+
+            // isDeviceIdle returns false, and Sub 1 is chosen as single IDLE target
+            verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
+            verify(callSessionRepository, never()).clearCallSession(eq(2))
         }
 }

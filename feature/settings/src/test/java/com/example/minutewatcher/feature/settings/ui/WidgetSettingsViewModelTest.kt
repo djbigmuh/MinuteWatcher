@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -114,7 +115,8 @@ class WidgetSettingsViewModelTest {
                     override suspend fun load(): WidgetSettingsState = WidgetSettingsState()
 
                     override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
-                        gate.await()
+                        withTimeoutOrNull(30.seconds) { gate.await() }
+                            ?: throw AssertionError("Timed out waiting for gate in blockingLoader")
                     }
 
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()

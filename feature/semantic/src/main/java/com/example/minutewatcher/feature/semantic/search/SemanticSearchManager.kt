@@ -89,7 +89,7 @@ class SemanticSearchManager
                 val message: String? = null,
             ) : IndexResult
 
-            data object MutexTimeout : IndexResult
+            data object MutexContention : IndexResult
         }
 
         private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "SemanticSearchManager")
@@ -106,7 +106,7 @@ class SemanticSearchManager
         internal val indexMutex = Mutex()
 
         @VisibleForTesting
-        internal val consecutiveMutexTimeouts = AtomicInteger(0)
+        internal val consecutiveMutexContention = AtomicInteger(0)
 
         override suspend fun recover() {
             initMutex.withLock {
@@ -117,7 +117,7 @@ class SemanticSearchManager
                         indexMutex.withLock {
                             lastSnapshotHash = null
                             lastSnapshotVersion = null
-                            consecutiveMutexTimeouts.set(0)
+                            consecutiveMutexContention.set(0)
                         }
                         true
                     } ?: false
@@ -215,8 +215,8 @@ class SemanticSearchManager
                     errorHandler.resetFailures()
                 }
 
-                IndexResult.MutexTimeout -> {
-                    handleMutexTimeout()
+                IndexResult.MutexContention -> {
+                    handleMutexContention()
                 }
 
                 else -> {
@@ -225,15 +225,15 @@ class SemanticSearchManager
             }
         }
 
-        private fun handleMutexTimeout() {
-            val count = consecutiveMutexTimeouts.get()
+    private fun handleMutexContention() {
+        val count = consecutiveMutexContention.get()
             if (count < MUTEX_STUCK_THRESHOLD) {
                 AppLogger.d(
-                    "SemanticSearchManager: indexing skipped due to mutex timeout (cycle $count)",
+                    "SemanticSearchManager: indexing skipped due to indexing mutex contended (cycle $count)",
                 )
             } else {
                 AppLogger.w(
-                    "SemanticSearchManager: indexing consistently skipped due to mutex timeout " +
+                    "SemanticSearchManager: indexing consistently skipped due to indexing mutex contended " +
                         "($count consecutive)",
                 )
             }
@@ -242,9 +242,9 @@ class SemanticSearchManager
         @Suppress("ReturnCount", "TooGenericExceptionCaught")
         internal suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
             if (!indexMutex.tryLock()) {
-                consecutiveMutexTimeouts.incrementAndGet()
+                val count = consecutiveMutexContention.incrementAndGet()
 
-                if (consecutiveMutexTimeouts.get() >= MUTEX_STUCK_THRESHOLD) {
+                if (count >= MUTEX_STUCK_THRESHOLD) {
                     transitionStatus(
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.DATABASE_ERROR,
@@ -254,11 +254,11 @@ class SemanticSearchManager
                 }
                 // We do not delay here to avoid blocking the observation collect path.
                 // Any further data changes or manual actions will trigger a new indexing attempt.
-                return IndexResult.MutexTimeout
+                return IndexResult.MutexContention
             }
 
             try {
-                consecutiveMutexTimeouts.set(0)
+                consecutiveMutexContention.set(0)
 
                 val result =
                     withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
@@ -276,7 +276,7 @@ class SemanticSearchManager
                         transitionStatus(TrackingStatus.Ready(timeProvider.now()), force = true)
                     }
 
-                    IndexResult.MutexTimeout -> {
+                    IndexResult.MutexContention -> {
                         // Should not happen in performIndexSnapshotLocked
                     }
                 }
@@ -442,8 +442,8 @@ class SemanticSearchManager
             private const val SNIPPETS_PER_DOCUMENT = 2
 
             /**
-             * Number of consecutive indexing mutex timeouts after which the index loop
-             * is considered stuck.
+             * Number of consecutive indexing skips due to a busy [indexMutex]
+             * after which the indexing loop is considered stuck.
              */
             private const val MUTEX_STUCK_THRESHOLD = 2
         }

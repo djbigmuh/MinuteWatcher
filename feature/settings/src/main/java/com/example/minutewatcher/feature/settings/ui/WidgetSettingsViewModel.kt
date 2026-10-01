@@ -369,7 +369,6 @@ class WidgetSettingsViewModel
                     }
                 }
             }
-            super.onCleared()
         }
 
         @VisibleForTesting

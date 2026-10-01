@@ -13,10 +13,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterCancellationTest {
@@ -61,7 +63,8 @@ class WidgetUpdaterCancellationTest {
                         forceFull: Boolean,
                     ) {
                         reachedUpdate.complete(Unit)
-                        finishUpdate.await()
+                        withTimeoutOrNull(30.seconds) { finishUpdate.await() }
+                            ?: throw AssertionError("Timed out waiting for finishUpdate in fakeRenderer")
                     }
                 }
 
@@ -82,7 +85,8 @@ class WidgetUpdaterCancellationTest {
                     testUpdater.updateAll()
                 }
 
-            reachedUpdate.await()
+            withTimeoutOrNull(30.seconds) { reachedUpdate.await() }
+                ?: throw AssertionError("Timed out waiting for reachedUpdate")
 
             // 2. Cancel it while it's "rendering" (suspended in finishUpdate.await())
             job.cancelAndJoin()

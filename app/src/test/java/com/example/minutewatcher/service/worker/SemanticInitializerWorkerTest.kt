@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -27,6 +28,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -90,7 +92,8 @@ class SemanticInitializerWorkerTest {
                 )
             snapshotFlow.value = realSnapshot
 
-            job.join()
+            withTimeoutOrNull(30.seconds) { job.join() }
+                ?: throw AssertionError("Timed out waiting for worker job to complete")
 
             verify(searchManager).indexInitialSnapshot(realSnapshot)
             verify(shortcutManager).updateShortcutsSync(realSnapshot)

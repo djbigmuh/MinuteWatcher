@@ -4,7 +4,6 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants.SimConstants
-import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,8 +57,6 @@ class TrafficTargetResolver
                 val currentDataSubId =
                     try {
                         permissionManager.getDefaultDataSubscriptionId()
-                    } catch (e: CancellationException) {
-                        throw e
                     } catch (e: Exception) {
                         AppLogger.e("Error getting default data SIM", e)
                         -1
@@ -94,8 +91,6 @@ class TrafficTargetResolver
 
                 AppLogger.d("TrafficTargetResolver: Resolved target SIM to slot $targetSim (subId $currentDataSubId)")
                 TargetResult.Success(TargetInfo(targetSim, currentDataSubId))
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 AppLogger.e("TrafficTargetResolver: Unexpected error during resolution", e)
                 TargetResult.Failed(e.message)

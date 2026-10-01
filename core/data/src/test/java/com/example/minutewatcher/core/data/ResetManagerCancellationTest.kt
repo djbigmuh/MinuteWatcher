@@ -18,11 +18,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ResetManagerCancellationTest {
@@ -73,7 +75,8 @@ class ResetManagerCancellationTest {
                     resetManager.performAutoReset(false)
                 }
 
-            reachedCheck.await()
+            withTimeoutOrNull(30.seconds) { reachedCheck.await() }
+                ?: throw AssertionError("Timed out waiting for reachedCheck")
             runCurrent()
             job.cancelAndJoin()
 

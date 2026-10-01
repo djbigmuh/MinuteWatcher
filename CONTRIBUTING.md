@@ -90,14 +90,19 @@ As a general rule, we prefer stable releases. However, some non-stable versions 
 ## Build Performance & Unit Test Stability
 
 To maintain a reliable testing environment on Windows and prevent issues with native runtimes or file locking, the
-following configurations are enforced centrally in `build-logic` convention plugins and must not be duplicated in
+following configurations are centralized in the build setup and must not be duplicated in
 individual module build scripts:
 
-- **`maxParallelForks = 1`**: Prevents multiple JVMs from competing for system resources and native library locks.
-- **`forkEvery = 1`**: Ensures each test class runs in a fresh JVM. This prevents side effects between
-  test classes and avoids issues with Robolectric native runtimes on Windows.
-- **`isReturnDefaultValues = true`**: Enabled for all modules. This allows plain JUnit tests to run without Robolectric
-  for logic that doesn't strictly depend on Android constants or native behavior.
+- **Test JVM Settings (`maxParallelForks = 1`, `forkEvery = 1`, JVM arguments, Robolectric properties)**:
+  Centralized in the root `build.gradle.kts` within `subprojects { tasks.withType<Test>() }`.
+    - `maxParallelForks = 1`: Prevents multiple JVMs from competing for system resources and native library locks.
+    - `forkEvery = 1`: Ensures each test class runs in a fresh JVM, preventing side effects between test classes and
+      avoiding issues with Robolectric native runtimes on Windows.
+- **Android Test Options (`isReturnDefaultValues = true`, `isIncludeAndroidResources = true`)**:
+  Configured centrally in `build-logic` convention plugins (`minutewatcher.android-application`,
+  `minutewatcher.android-library`).
+  `isReturnDefaultValues` allows plain JUnit tests to run without Robolectric for logic that doesn't strictly depend on
+  Android constants or native behavior.
 
 ### Robolectric vs. Plain JUnit
 

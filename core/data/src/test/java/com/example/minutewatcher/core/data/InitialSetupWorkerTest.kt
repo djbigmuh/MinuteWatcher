@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -48,6 +49,8 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
+import java.io.IOException
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -381,6 +384,27 @@ class InitialSetupWorkerTest {
         }
 
     @Test
+    fun `doWork retries when actual migration throws IOException`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
+            val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
+            val activeSim =
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+
+            Shadows.shadowOf(context as Application).grantPermissions(Manifest.permission.READ_PHONE_STATE)
+
+            whenever(migrationService.migrateLegacyData(any())).thenAnswer { throw IOException("Disk read error") }
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(migrationService, never()).markSchemaCurrent()
+        }
+
+    @Test
     fun `doWork completes migration after max retries even with failures`() =
         runTest {
             val worker =
@@ -503,7 +527,8 @@ class InitialSetupWorkerTest {
 
             runCurrent()
             job.cancel()
-            job.join()
+            withTimeoutOrNull(30.seconds) { job.join() }
+                ?: throw AssertionError("Timed out waiting for cancelled worker job to finish")
             throw CancellationException("Simulated external cancellation")
         }
 

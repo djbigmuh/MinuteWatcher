@@ -468,8 +468,9 @@ internal class SimIdentityObserver
                     val fallbackSeedValue = (lastSeed as? SeedResult.Fallback)?.seed ?: lastEphemeralSeed.get()
 
                     if (fallbackSeedValue == null) {
-                        // If we have no record of ephemeral seed being used, nothing to migrate.
-                        migrationTriggered.set(true) // Mark as "done" to avoid repeated warnings
+                        // If there is no record of an ephemeral seed being used, there is nothing to migrate.
+                        // The trigger flag remains set so no further migration checks are run
+                        // until returning to Fallback state.
                         return
                     }
 

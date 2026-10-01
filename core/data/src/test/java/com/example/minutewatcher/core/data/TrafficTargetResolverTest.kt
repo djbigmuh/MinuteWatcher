@@ -6,7 +6,6 @@ import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
-import kotlinx.coroutines.CancellationException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -115,13 +114,15 @@ class TrafficTargetResolverTest {
         assertEquals("Unexpected error", (result as TrafficTargetResolver.TargetResult.Failed).message)
     }
 
-    @Test(expected = CancellationException::class)
-    fun `resolve rethrows CancellationException`() {
-        whenever(permissionManager.getDefaultDataSubscriptionId()).thenThrow(CancellationException("Cancelled"))
+    @Test
+    fun `resolve handles exception in getDefaultDataSubscriptionId gracefully`() {
+        whenever(permissionManager.getDefaultDataSubscriptionId()).thenThrow(RuntimeException("Cancelled"))
 
         val activeSims = listOf(createActiveSim(0, 1, isDefaultData = true))
 
-        resolver.resolve(activeSims)
+        val result = resolver.resolve(activeSims)
+
+        assertEquals(TrafficTargetResolver.TargetResult.StaleInput, result)
     }
 
     private fun createActiveSim(

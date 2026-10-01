@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -25,6 +26,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BenchmarkUseCaseImplTest {
@@ -89,7 +91,8 @@ class BenchmarkUseCaseImplTest {
             activeSimsFlow.emit(listOf(sim1))
             testScheduler.advanceUntilIdle()
 
-            job.join()
+            withTimeoutOrNull(30.seconds) { job.join() }
+                ?: throw AssertionError("Timed out waiting for benchmark job")
         }
 
     @Test

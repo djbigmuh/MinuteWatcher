@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -38,6 +39,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -273,7 +275,8 @@ class SimIdentityRepositoryImplPersistenceTest {
                     override suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome {
                         if (activeIdentity.stableId == "to_migrate") {
                             migrationStarted.complete(Unit)
-                            canFinishMigration.await()
+                            withTimeoutOrNull(30.seconds) { canFinishMigration.await() }
+                                ?: throw AssertionError("Timed out waiting for canFinishMigration")
                         }
                         return MigrationOutcome(migrated = 1)
                     }
@@ -288,7 +291,8 @@ class SimIdentityRepositoryImplPersistenceTest {
                     persistence.saveSimIdentitiesInfo(listOf(identity))
                 }
 
-            migrationStarted.await()
+            withTimeoutOrNull(30.seconds) { migrationStarted.await() }
+                ?: throw AssertionError("Timed out waiting for migrationStarted")
 
             // At this point migration IS RUNNING.
             // If saveMutex is FREE, a second save can start.
@@ -301,11 +305,13 @@ class SimIdentityRepositoryImplPersistenceTest {
                     persistence.saveSimIdentitiesInfo(listOf(otherIdentity))
                 }
 
-            secondSaveStarted.await()
+            withTimeoutOrNull(30.seconds) { secondSaveStarted.await() }
+                ?: throw AssertionError("Timed out waiting for secondSaveStarted")
 
             // Advance time to let second save finish
             runCurrent()
-            secondSaveJob.join()
+            withTimeoutOrNull(30.seconds) { secondSaveJob.join() }
+                ?: throw AssertionError("Timed out waiting for secondSaveJob")
 
             // Verify second save finished while first was still "migrating"
             val prefs = realDataStore.data.first()
@@ -313,7 +319,8 @@ class SimIdentityRepositoryImplPersistenceTest {
 
             // Cleanup
             canFinishMigration.complete(Unit)
-            saveJob.join()
+            withTimeoutOrNull(30.seconds) { saveJob.join() }
+                ?: throw AssertionError("Timed out waiting for saveJob")
         }
 
     @Test

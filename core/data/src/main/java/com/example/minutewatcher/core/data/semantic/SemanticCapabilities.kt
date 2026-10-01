@@ -37,8 +37,7 @@ class SemanticCapabilities
          * On older versions (26+), we rely on bundled LocalStorage which is available on all
          * supported API levels.
          *
-         * Note: @SuppressLint("WrongConstant") is required because Context.APP_SEARCH_SERVICE
-         * is guarded by API level 31 check.
+         * Suppress WrongConstant as Context.APP_SEARCH_SERVICE is guarded by API 31 check.
          */
         @SuppressLint("WrongConstant")
         private fun isAppSearchSupported(): Boolean =

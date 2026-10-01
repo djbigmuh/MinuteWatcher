@@ -9,8 +9,8 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
     <!--
-      tools:targetApi="tiramisu" applies exclusively to android:localeConfig,
-      which is used natively by the platform starting from API 33 (Tiramisu).
+      tools:targetApi="tiramisu" applies to the <application> element and its children and is present
+      because android:localeConfig is a platform API 33+ (Tiramisu) attribute.
       On API 26-32, per-app language selection is provided by AppCompat via AppLocalesMetadataHolderService.
     -->
     <application

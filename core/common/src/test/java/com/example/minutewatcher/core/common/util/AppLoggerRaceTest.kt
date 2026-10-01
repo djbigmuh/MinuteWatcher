@@ -62,7 +62,7 @@ class AppLoggerRaceTest {
         repeat(threadCount) { threadIdx ->
             Thread {
                 startLatch.countDown()
-                latch.await()
+                assertTrue("Timed out waiting for release latch", latch.await(10, TimeUnit.SECONDS))
                 repeat(logsPerThread) { logIdx ->
                     AppLogger.d("Thread $threadIdx log $logIdx")
                 }
@@ -70,7 +70,7 @@ class AppLoggerRaceTest {
             }.start()
         }
 
-        startLatch.await()
+        assertTrue("Timed out waiting for start latch", startLatch.await(10, TimeUnit.SECONDS))
         latch.countDown() // Start all threads at once
         assertTrue("Logging should complete", completedLatch.await(10, TimeUnit.SECONDS))
 
@@ -101,7 +101,7 @@ class AppLoggerRaceTest {
             Thread {
                 try {
                     startLatch.countDown()
-                    readyLatch.await()
+                    assertTrue("Timed out waiting for ready latch", readyLatch.await(10, TimeUnit.SECONDS))
                     repeat(logsPerThread) { logIdx ->
                         when (logIdx % 3) {
                             0 -> AppLogger.d("Thread $threadIdx debug $logIdx")
@@ -120,7 +120,7 @@ class AppLoggerRaceTest {
         Thread {
             try {
                 startLatch.countDown()
-                readyLatch.await()
+                assertTrue("Timed out waiting for ready latch", readyLatch.await(10, TimeUnit.SECONDS))
                 repeat(lifecycleIterations) { iter ->
                     if (iter % 2 == 0) {
                         AppLogger.initForTest(logDir, enabled = true)
@@ -137,7 +137,7 @@ class AppLoggerRaceTest {
             }
         }.start()
 
-        startLatch.await()
+        assertTrue("Timed out waiting for start latch", startLatch.await(10, TimeUnit.SECONDS))
         readyLatch.countDown()
 
         assertTrue("All threads should finish within timeout", completedLatch.await(15, TimeUnit.SECONDS))

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -29,6 +30,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterImplTest {
@@ -200,7 +202,8 @@ class WidgetUpdaterImplTest {
                         forceFull: Boolean,
                     ) {
                         startBarrier.complete(Unit)
-                        finishBarrier.await()
+                        withTimeoutOrNull(30.seconds) { finishBarrier.await() }
+                            ?: throw AssertionError("Timed out waiting for finishBarrier in fakeRenderer")
                     }
                 }
             val updaterWithFake = createUpdater(backgroundScope, fakeRenderer)
@@ -211,7 +214,8 @@ class WidgetUpdaterImplTest {
             val result1Deferred = async { updaterWithFake.updateAll() }
 
             // Wait until the first update is actually inside the renderer
-            startBarrier.await()
+            withTimeoutOrNull(30.seconds) { startBarrier.await() }
+                ?: throw AssertionError("Timed out waiting for startBarrier")
 
             // Launch second update while first is still "rendering"
             val result2Deferred = async { updaterWithFake.updateAll() }
@@ -219,8 +223,12 @@ class WidgetUpdaterImplTest {
             // Allow the first update to complete
             finishBarrier.complete(Unit)
 
-            val result1 = result1Deferred.await()
-            val result2 = result2Deferred.await()
+            val result1 =
+                withTimeoutOrNull(30.seconds) { result1Deferred.await() }
+                    ?: throw AssertionError("Timed out waiting for result1Deferred")
+            val result2 =
+                withTimeoutOrNull(30.seconds) { result2Deferred.await() }
+                    ?: throw AssertionError("Timed out waiting for result2Deferred")
 
             assertTrue("Primary update should succeed", result1.isSuccess)
             assertTrue("Coalesced update should succeed", result2.isSuccess)
@@ -623,7 +631,8 @@ class WidgetUpdaterImplTest {
                         callCount++
                         if (callCount == 1) {
                             startBarrier.complete(Unit)
-                            finishBarrier.await()
+                            withTimeoutOrNull(30.seconds) { finishBarrier.await() }
+                                ?: throw AssertionError("Timed out waiting for finishBarrier in fakeRenderer")
                             throw IllegalArgumentException("Too large", TransactionTooLargeException())
                         }
                         // Second call (simplified recovery) succeeds immediately
@@ -634,15 +643,20 @@ class WidgetUpdaterImplTest {
 
             val result1Deferred = async { updaterWithFake.updateAll() }
 
-            startBarrier.await()
+            withTimeoutOrNull(30.seconds) { startBarrier.await() }
+                ?: throw AssertionError("Timed out waiting for startBarrier")
 
             // Second call joins the first one while it's still in the middle of its executeUpdate block
             val result2Deferred = async { updaterWithFake.updateAll() }
 
             finishBarrier.complete(Unit)
 
-            val result1 = result1Deferred.await()
-            val result2 = result2Deferred.await()
+            val result1 =
+                withTimeoutOrNull(30.seconds) { result1Deferred.await() }
+                    ?: throw AssertionError("Timed out waiting for result1Deferred")
+            val result2 =
+                withTimeoutOrNull(30.seconds) { result2Deferred.await() }
+                    ?: throw AssertionError("Timed out waiting for result2Deferred")
 
             assertTrue("Original update should succeed after recovery", result1.isSuccess)
             assertTrue("Joined update should succeed after recovery", result2.isSuccess)
@@ -670,7 +684,8 @@ class WidgetUpdaterImplTest {
                         context: Context,
                         forceFull: Boolean,
                     ) {
-                        finishBarrier.await()
+                        withTimeoutOrNull(30.seconds) { finishBarrier.await() }
+                            ?: throw AssertionError("Timed out waiting for finishBarrier in fakeRenderer")
                     }
                 }
 
@@ -684,7 +699,9 @@ class WidgetUpdaterImplTest {
             // by finishing first and immediately starting second.
             finishBarrier.complete(Unit)
             val result2 = updater.updateAll()
-            val result1 = result1Deferred.await()
+            val result1 =
+                withTimeoutOrNull(30.seconds) { result1Deferred.await() }
+                    ?: throw AssertionError("Timed out waiting for result1Deferred")
 
             assertTrue("First update should succeed", result1.isSuccess)
             assertTrue("Second update should succeed (either coalesced or new)", result2.isSuccess)
@@ -707,7 +724,8 @@ class WidgetUpdaterImplTest {
                         forceFull: Boolean,
                     ) {
                         startBarrier.complete(Unit)
-                        finishBarrier.await()
+                        withTimeoutOrNull(30.seconds) { finishBarrier.await() }
+                            ?: throw AssertionError("Timed out waiting for finishBarrier in fakeRenderer")
                     }
                 }
 
@@ -720,7 +738,8 @@ class WidgetUpdaterImplTest {
                 }
 
             // Wait until it enters the renderer
-            startBarrier.await()
+            withTimeoutOrNull(30.seconds) { startBarrier.await() }
+                ?: throw AssertionError("Timed out waiting for startBarrier")
 
             // 2. Start a second update that will coalesce
             val coalescedDeferred =
@@ -735,7 +754,9 @@ class WidgetUpdaterImplTest {
             advanceUntilIdle()
 
             // 4. Verify that the coalesced call returned a Failure result instead of throwing CancellationException
-            val result = coalescedDeferred.await()
+            val result =
+                withTimeoutOrNull(30.seconds) { coalescedDeferred.await() }
+                    ?: throw AssertionError("Timed out waiting for coalescedDeferred")
             assertTrue("Result should be failure", result is WidgetUpdateResult.Failure)
             val failure = result as WidgetUpdateResult.Failure
             assertTrue("Result should be marked as coalesced", failure.wasCoalesced)
@@ -759,7 +780,8 @@ class WidgetUpdaterImplTest {
                         forceFull: Boolean,
                     ) {
                         startBarrier.complete(Unit)
-                        finishBarrier.await()
+                        withTimeoutOrNull(30.seconds) { finishBarrier.await() }
+                            ?: throw AssertionError("Timed out waiting for finishBarrier in fakeRenderer")
                     }
                 }
 
@@ -767,7 +789,8 @@ class WidgetUpdaterImplTest {
 
             // Start first update
             launch { updater.updateAll() }
-            startBarrier.await()
+            withTimeoutOrNull(30.seconds) { startBarrier.await() }
+                ?: throw AssertionError("Timed out waiting for startBarrier")
 
             // Joined update should throw CancellationException if its scope is cancelled
             val joinedUpdateJob = async { updater.updateAll() }

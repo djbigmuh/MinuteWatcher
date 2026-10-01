@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -115,7 +116,8 @@ class UpdateCoordinatorTakeoverTest {
             callCount++
             onUpdateStarted?.invoke()
             if (shouldHang) {
-                return updateHang.await()
+                return withTimeoutOrNull(30.seconds) { updateHang.await() }
+                    ?: throw AssertionError("Timed out waiting for updateHang in FakeWidgetUpdater")
             }
             return WidgetUpdateResult.Success()
         }

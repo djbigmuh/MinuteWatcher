@@ -27,6 +27,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -197,7 +198,7 @@ class SimIdentityRepositoryRaceTest {
         )
     }
 
-    // @Suppress("UNCHECKED_CAST") is required for internal reflective type cast in test.
+    // Suppressing UNCHECKED_CAST for unchecked flow type casting in test.
     @Suppress("UNCHECKED_CAST")
     private fun getInternalSeedFlow(repository: SimIdentityRepositoryImpl): Flow<Any> =
         repository.observer.seedFlow as Flow<Any>
@@ -401,8 +402,12 @@ class SimIdentityRepositoryRaceTest {
             val job0 = async { repository.getSimIdentity(0) }
             val job1 = async { repository.getSimIdentity(1) }
 
-            val res0 = job0.await()
-            val res1 = job1.await()
+            val res0 =
+                withTimeoutOrNull(30.seconds) { job0.await() }
+                    ?: throw AssertionError("Timed out waiting for job0")
+            val res1 =
+                withTimeoutOrNull(30.seconds) { job1.await() }
+                    ?: throw AssertionError("Timed out waiting for job1")
 
             // Verify both successfully received an identity
             // StableId is generated as icc_<hash> when ICCID is present

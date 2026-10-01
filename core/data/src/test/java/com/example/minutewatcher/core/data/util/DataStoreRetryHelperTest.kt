@@ -118,7 +118,94 @@ class DataStoreRetryHelperTest {
                     }
                 }
             assertTrue("Should fail on attempt timeout", result.isFailure)
+            assertTrue(result.exceptionOrNull() is DataStoreReadTimeoutException)
             assertEquals("Should attempt max times", 3, attempts)
+        }
+
+    @Test
+    fun `readWithRetry returns DataStoreReadTimeoutException on exhaustion by timeout`() =
+        runTest {
+            var attempts = 0
+            val result =
+                helper.readWithRetry<String>(
+                    label = "test_label",
+                    attempts = 3,
+                    retryDelayMs = 10,
+                    attemptTimeoutMillis = 100,
+                ) {
+                    attempts++
+                    flow {
+                        awaitCancellation()
+                    }
+                }
+            assertTrue(result.isFailure)
+            val exception = result.exceptionOrNull()
+            assertTrue(
+                "Expected DataStoreReadTimeoutException, but was $exception",
+                exception is DataStoreReadTimeoutException,
+            )
+            assertEquals("DataStore read timeout (test_label)", exception?.message)
+            assertEquals(3, attempts)
+        }
+
+    @Test
+    fun `readWithRetry returns timeout exception when last attempt times out after earlier error`() =
+        runTest {
+            var attempts = 0
+            val result =
+                helper.readWithRetry<String>(
+                    label = "test_mixed",
+                    attempts = 2,
+                    retryDelayMs = 10,
+                    attemptTimeoutMillis = 100,
+                ) {
+                    attempts++
+                    flow {
+                        if (attempts == 1) {
+                            throw IOException("Early disk failure")
+                        } else {
+                            awaitCancellation()
+                        }
+                    }
+                }
+            assertTrue(result.isFailure)
+            val exception = result.exceptionOrNull()
+            assertTrue(
+                "Expected DataStoreReadTimeoutException for last attempt, but was $exception",
+                exception is DataStoreReadTimeoutException,
+            )
+            assertEquals(2, attempts)
+        }
+
+    @Test
+    fun `readWithRetry returns IOException when last attempt fails with IOException`() =
+        runTest {
+            var attempts = 0
+            val result =
+                helper.readWithRetry<String>(
+                    label = "test_mixed_2",
+                    attempts = 2,
+                    retryDelayMs = 10,
+                    attemptTimeoutMillis = 100,
+                ) {
+                    attempts++
+                    flow {
+                        if (attempts == 1) {
+                            awaitCancellation()
+                        } else {
+                            throw IOException("Last attempt disk error")
+                        }
+                    }
+                }
+            assertTrue(result.isFailure)
+            val exception = result.exceptionOrNull()
+            assertTrue("Expected regular IOException for last attempt", exception is IOException)
+            assertTrue(
+                "Should not be DataStoreReadTimeoutException",
+                exception !is DataStoreReadTimeoutException,
+            )
+            assertEquals("Last attempt disk error", exception?.message)
+            assertEquals(2, attempts)
         }
 
     @Test

@@ -79,15 +79,46 @@ class AutoResetSchedulerTest {
         }
 
     @Test
-    fun `checkOnStart skips reset when retries exceed max failures but updates check time`() =
+    fun `checkOnStart skips reset when retries exceed max failures and keeps last attempt timestamp`() =
         runTest {
-            fakeRepository.lastCheckMillis = 10_000_000L - 4_000_000L
+            val initialCheckTime = 10_000_000L - 4_000_000L
+            fakeRepository.lastCheckMillis = initialCheckTime
             fakeRepository.failCount = 4 // Exceeds MAX_AUTO_RESET_RETRIES (3)
 
             scheduler.checkOnStart()
 
             verify(autoResetUseCase, never()).performAutoReset(any())
-            assertEquals(10_000_000L, fakeRepository.lastCheckMillis)
+            assertEquals(initialCheckTime, fakeRepository.lastCheckMillis)
+        }
+
+    @Test
+    fun `checkOnStart resumes reset after failure window expires relative to last attempt`() =
+        runTest {
+            val t0 = 10_000_000L
+            val twoHoursMs = 2 * 3_600_000L
+            val twentyThreeHoursMs = 23 * 3_600_000L
+            val initialLastCheck = t0 - twoHoursMs
+
+            fakeRepository.lastCheckMillis = initialLastCheck
+            fakeRepository.failCount = 4
+            timeProvider.setTime(t0)
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
+
+            // First check at T0 is skipped and does not update lastCheckMillis
+            scheduler.checkOnStart()
+            verify(autoResetUseCase, never()).performAutoReset(any())
+            assertEquals(initialLastCheck, fakeRepository.lastCheckMillis)
+
+            // Advance time to T0 + 23h (> 24h since initialLastCheck)
+            val newTime = t0 + twentyThreeHoursMs
+            timeProvider.setTime(newTime)
+            val newScheduler = AutoResetScheduler(fakeRepository, autoResetUseCase, timeProvider)
+
+            // Second check with new scheduler instance succeeds as fail window expired
+            newScheduler.checkOnStart()
+            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+            assertEquals(0, fakeRepository.failCount)
+            assertEquals(newTime, fakeRepository.lastCheckMillis)
         }
 
     @Test

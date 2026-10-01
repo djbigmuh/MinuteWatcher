@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -23,6 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -118,8 +120,10 @@ class AppSettingsRepositoryImplTest {
                     repository.updateAppSettings { it.copy(widgetFontSize = 4) }
                 }
 
-            job1.join()
-            job2.join()
+            withTimeoutOrNull(30.seconds) { job1.join() }
+                ?: throw AssertionError("Timed out waiting for job1")
+            withTimeoutOrNull(30.seconds) { job2.join() }
+                ?: throw AssertionError("Timed out waiting for job2")
             advanceUntilIdle()
 
             val settings = repository.getAppSettings().first()
@@ -142,7 +146,8 @@ class AppSettingsRepositoryImplTest {
             repository.updateAppSettings { it.copy(onboardingCompleted = true) }
             advanceUntilIdle()
 
-            job.join()
+            withTimeoutOrNull(30.seconds) { job.join() }
+                ?: throw AssertionError("Timed out waiting for job")
             assertEquals(2, settingsList.size)
             assertEquals(false, settingsList[0].onboardingCompleted)
             assertEquals(true, settingsList[1].onboardingCompleted)

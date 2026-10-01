@@ -142,9 +142,6 @@ open class CallTracker
                             }
                         }
                     initJob.set(newInitJob)
-                } catch (e: CancellationException) {
-                    trackerState.set(State.IDLE)
-                    throw e
                 } catch (e: Exception) {
                     AppLogger.e("CallTracker: Failed to start initialization", e)
                     trackerState.set(State.FAILED)
@@ -255,17 +252,11 @@ open class CallTracker
         private suspend fun awaitInitialization() {
             try {
                 initDeferred.await()
-            } catch (
-                @Suppress("SwallowedException")
-                e: CallTrackerStoppedException,
-            ) {
+            } catch (_: CallTrackerStoppedException) {
                 AppLogger.w("CallTracker: stopped while waiting for init, proceeding anyway")
             } catch (e: CancellationException) {
                 throw e
-            } catch (
-                @Suppress("SwallowedException")
-                e: Exception,
-            ) {
+            } catch (e: Exception) {
                 AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
         }

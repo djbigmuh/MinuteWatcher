@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -19,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FlowObservationScopeTest {
@@ -127,14 +129,15 @@ class FlowObservationScopeTest {
                         delay(10000)
                     } finally {
                         withContext(NonCancellable) {
-                            collector1CanFinish.await()
+                            withTimeoutOrNull(30.seconds) { collector1CanFinish.await() }
                         }
                     }
                 }
                 runCurrent()
                 flow1.emit(1)
                 runCurrent()
-                collector1Blocked.await()
+                withTimeoutOrNull(30.seconds) { collector1Blocked.await() }
+                    ?: throw AssertionError("Timed out waiting for collector1Blocked")
 
                 flow2.emit(10)
                 var observe2Job: Job? = null
@@ -151,7 +154,8 @@ class FlowObservationScopeTest {
 
                 collector1CanFinish.complete(Unit)
                 runCurrent()
-                secondObserveLaunch.join()
+                withTimeoutOrNull(30.seconds) { secondObserveLaunch.join() }
+                    ?: throw AssertionError("Timed out waiting for secondObserveLaunch")
                 runCurrent()
 
                 assertEquals(listOf(10), collector2Values)
@@ -184,7 +188,8 @@ class FlowObservationScopeTest {
 
                 advanceTimeBy(3500.milliseconds)
                 runCurrent()
-                secondObserveLaunch.join()
+                withTimeoutOrNull(30.seconds) { secondObserveLaunch.join() }
+                    ?: throw AssertionError("Timed out waiting for secondObserveLaunch")
 
                 assertNotNull("New job must be launched after timeout even if previous stuck", newJob)
             }

@@ -8,11 +8,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetSettingsSaverResilienceTest {
@@ -35,7 +37,8 @@ class WidgetSettingsSaverResilienceTest {
                     override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
                         callCount++
                         saveStarted.complete(Unit)
-                        canCompleteSave.await()
+                        withTimeoutOrNull(30.seconds) { canCompleteSave.await() }
+                            ?: throw AssertionError("Timed out waiting for canCompleteSave in controlledLoader")
                     }
 
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
@@ -49,7 +52,8 @@ class WidgetSettingsSaverResilienceTest {
                     saver.save(WidgetSettingsState())
                 }
             runCurrent()
-            saveStarted.await()
+            withTimeoutOrNull(30.seconds) { saveStarted.await() }
+                ?: throw AssertionError("Timed out waiting for saveStarted")
 
             // 2. Start second save while first is pending
             val secondSave =
@@ -66,8 +70,14 @@ class WidgetSettingsSaverResilienceTest {
             runCurrent()
 
             // Both should eventually complete successfully
-            assertEquals(SaveResult.Success, firstSave.await())
-            assertEquals(SaveResult.Success, secondSave.await())
+            val res1 =
+                withTimeoutOrNull(30.seconds) { firstSave.await() }
+                    ?: throw AssertionError("Timed out waiting for firstSave")
+            val res2 =
+                withTimeoutOrNull(30.seconds) { secondSave.await() }
+                    ?: throw AssertionError("Timed out waiting for secondSave")
+            assertEquals(SaveResult.Success, res1)
+            assertEquals(SaveResult.Success, res2)
             assertEquals(2, callCount)
         }
 }

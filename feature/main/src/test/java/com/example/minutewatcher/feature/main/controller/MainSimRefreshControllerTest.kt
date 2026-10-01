@@ -10,11 +10,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainSimRefreshControllerTest {
@@ -52,7 +54,9 @@ class MainSimRefreshControllerTest {
             // Let's use a fake implementation instead of mock for the suspending call
             val fakeRepository =
                 object : UsageStateRepository by mock() {
-                    override suspend fun refresh(): RefreshResult = refreshDeferred.await()
+                    override suspend fun refresh(): RefreshResult =
+                        withTimeoutOrNull(30.seconds) { refreshDeferred.await() }
+                            ?: throw AssertionError("Timed out waiting for refreshDeferred in fakeRepository")
                 }
 
             controller =

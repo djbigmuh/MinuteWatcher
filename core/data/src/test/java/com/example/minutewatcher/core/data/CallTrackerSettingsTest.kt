@@ -51,10 +51,7 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
             val errorStatus = status as TrackingStatus.Error
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, errorStatus.type)
-            assertTrue(
-                "Expected timeout message, but was: ${errorStatus.message}",
-                errorStatus.message?.contains("Timeout") == true,
-            )
+            assertEquals(TrackingStatus.ErrorCode.TIMEOUT, errorStatus.code)
             verify(callSessionRepository, never()).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
         }
 

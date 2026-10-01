@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.data.util.DataStoreReadTimeoutException
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -90,7 +91,8 @@ internal class CallEndHandler
             } catch (e2: Exception) {
                 AppLogger.w("CallEndHandler: refreshStatus failed after fatal error", e2)
             }
-            context.updateStatus(TrackingStatus.Error(errorType, e.message))
+            val code = if (e is DataStoreReadTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
+            context.updateStatus(TrackingStatus.Error(errorType, e.message, code = code))
             throw e
         }
 
@@ -419,7 +421,10 @@ internal class CallEndHandler
             (error as? CancellationException)?.let { throw it }
             val message = "Timeout reading session data for subId $subId"
             AppLogger.e(message, error)
-            context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message))
+            val code = if (error is DataStoreReadTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
+            context.updateStatus(
+                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message, code = code),
+            )
             sessionCleaner.cleanupCounters(subId, context)
         }
 

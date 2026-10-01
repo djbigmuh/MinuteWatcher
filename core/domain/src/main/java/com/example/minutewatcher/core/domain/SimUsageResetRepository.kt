@@ -10,11 +10,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * All methods are safe to call from any coroutine context.
  * Implementation must comply with AOSP DataStore best practices.
  * Operations are typically bounded by SHORT_TIMEOUT_MS.
- *
- * NOTE: Suppressing TooManyFunctions as this repository manages all aspects of SIM usage lifecycle
- * (resetting, window management, total bytes tracking) through a single interface.
  */
-@Suppress("TooManyFunctions")
 interface SimUsageResetRepository {
     /**
      * Resets SIM usage statistics.

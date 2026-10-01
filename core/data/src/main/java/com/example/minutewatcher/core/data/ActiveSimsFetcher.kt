@@ -43,14 +43,20 @@ internal class ActiveSimsFetcher
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: IOException) {
-                    handleFetchRetryException(e, attempt, retryDelay)
-                    retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
+                    if (attempt < MAX_FETCH_ATTEMPTS) {
+                        AppLogger.e("ActiveSimsFetcher: DataStore error, retrying", e)
+                        delay(retryDelay.milliseconds)
+                        retryDelay = (retryDelay * RETRY_DELAY_MULTIPLIER).coerceAtMost(maxDelay)
+                    } else {
+                        AppLogger.e("ActiveSimsFetcher: Terminal DataStore error after $attempt retries", e)
+                    }
                 }
             }
             return SimDiscoveryResult.Failed(SimDiscoveryFailureReason.STORAGE_ERROR)
         }
 
-        @Suppress("ReturnCount", "ThrowsCount")
+    // Suppressing ReturnCount as method returns early on discovery failure or unstable identities
+    @Suppress("ReturnCount")
         private suspend fun getActiveSimsInternal(seed: SeedResult): SimDiscoveryResult {
             val (seedValue, isStable) =
                 when (seed) {
@@ -84,22 +90,6 @@ internal class ActiveSimsFetcher
             }
 
             return SimDiscoveryResult.Available(infoList)
-        }
-
-        @Suppress("ThrowsCount")
-        private suspend fun handleFetchRetryException(
-            e: Exception,
-            attempt: Int,
-            delay: Long,
-        ) {
-            when (e) {
-                is IOException -> {
-                    if (attempt == MAX_FETCH_ATTEMPTS) return
-                    AppLogger.e("ActiveSimsFetcher: DataStore error, retrying", e)
-                    delay(delay.milliseconds)
-                }
-                else -> throw e
-            }
         }
 
         companion object {

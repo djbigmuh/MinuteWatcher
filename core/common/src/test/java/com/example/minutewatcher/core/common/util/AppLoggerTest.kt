@@ -299,6 +299,21 @@ class AppLoggerTest {
         assertTrue("New log file should contain new marker", newLogFile.readText().contains(newMarker))
     }
 
+    @Test
+    fun `initForTest after shutdown restores file logging in new directory`() {
+        AppLogger.shutdown()
+
+        val newDir = tmpFolder.newFolder("logs_after_shutdown")
+        AppLogger.initForTest(newDir, enabled = true)
+
+        val marker = "LOG_AFTER_REINIT_FROM_SHUTDOWN"
+        AppLogger.d(marker)
+        waitForLogMarker(marker, targetDir = newDir)
+
+        val newLogFile = File(newDir, "logs.txt")
+        assertTrue("New log file should contain marker logged after reinit", newLogFile.readText().contains(marker))
+    }
+
     private fun waitForLogMarker(
         marker: String,
         targetDir: File = logDir,

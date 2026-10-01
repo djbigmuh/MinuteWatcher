@@ -82,7 +82,7 @@ data class WidgetStrings(
  * @property minutesLimitFullText Full text of minutes limit.
  * @property trafficUsedFullText Full text of used traffic.
  * @property trafficLimitFullText Full text of traffic limit.
- * @property layoutSpec Layout specification for SimLayoutRenderV2.
+ * @property layoutSpec Layout specification for SimLayoutRender.
  */
 @Immutable
 data class SimUiState(
@@ -116,7 +116,7 @@ data class SimUiState(
 )
 
 /**
- * Layout specification for SimLayoutRenderV2.
+ * Layout specification for SimLayoutRender.
  * Contains a list of rows, each containing components.
  *
  * @property rows List of layout rows.
@@ -127,7 +127,7 @@ data class SimLayoutSpec(
 )
 
 /**
- * Layout row for SimLayoutRenderV2.
+ * Layout row for SimLayoutRender.
  * Contains a list of components.
  *
  * @property components List of row components.
@@ -138,7 +138,7 @@ data class SimLayoutRow(
 )
 
 /**
- * Layout component for SimLayoutRenderV2.
+ * Layout component for SimLayoutRender.
  * Sealed class ensures exhaustive processing of all variants.
  *
  * Variants:

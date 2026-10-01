@@ -39,7 +39,6 @@ import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-@Suppress("MaxLineLength", "LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
 class UpdateCoordinatorTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()

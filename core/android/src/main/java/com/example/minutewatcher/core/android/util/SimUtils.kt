@@ -3,7 +3,6 @@ package com.example.minutewatcher.core.android.util
 import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
-import kotlinx.coroutines.CancellationException
 
 object SimUtils {
     fun getOperatorIconResource(operatorName: String): Int =
@@ -29,8 +28,6 @@ object SimUtils {
                 operatorName.isNotEmpty() -> truncateName(operatorName)
                 else -> genericOperatorName(context, slot)
             }
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
             AppLogger.e("Error resolving short operator name for: $operatorName", e)
             if (operatorName.isNotEmpty()) truncateName(operatorName) else genericOperatorName(context, slot)
@@ -58,8 +55,6 @@ object SimUtils {
     ): String =
         try {
             context.getString(resId)
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
             AppLogger.w("Resource not found or failed to load: $resId. Using default: $default", e)
             default

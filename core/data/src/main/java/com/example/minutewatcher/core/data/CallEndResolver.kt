@@ -87,7 +87,29 @@ internal class CallEndResolver
                 null
             }
 
-        @Suppress("MissingPermission")
+    @Suppress("MissingPermission", "TooGenericExceptionCaught", "ReturnCount")
+    private fun getCallStateForSub(subId: Int): Int? {
+        val manager = telephonyManager ?: return null
+        if (!permissionManager.hasPhoneStatePermission()) {
+            AppLogger.w("Permission not granted, skipping telephony callState query")
+            return null
+        }
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                manager.createForSubscriptionId(subId).callStateForSubscription
+            } else {
+                @Suppress("DEPRECATION")
+                manager.callState
+            }
+        } catch (e: SecurityException) {
+            AppLogger.w("SecurityException while querying call state for subId $subId", e)
+            null
+        } catch (e: RuntimeException) {
+            AppLogger.w("RuntimeException from telephony service for subId $subId", e)
+            null
+        }
+    }
+
         private fun isDeviceIdle(activeSubIds: List<Int>): Boolean {
             val manager = telephonyManager
             val hasPermission = permissionManager.hasPhoneStatePermission()
@@ -101,14 +123,12 @@ internal class CallEndResolver
 
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                     activeSubIds.all { id ->
-                        manager.createForSubscriptionId(id).callStateForSubscription ==
-                            TelephonyManager.CALL_STATE_IDLE
+                        getCallStateForSub(id) == TelephonyManager.CALL_STATE_IDLE
                     }
                 }
 
                 else -> {
-                    @Suppress("DEPRECATION")
-                    manager.callState == TelephonyManager.CALL_STATE_IDLE
+                    getCallStateForSub(activeSubIds.firstOrNull() ?: -1) == TelephonyManager.CALL_STATE_IDLE
                 }
             }
         }
@@ -119,7 +139,6 @@ internal class CallEndResolver
             return TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, message)
         }
 
-        @Suppress("MissingPermission")
         private fun findTargetSubId(activeSubIds: List<Int>): Int? {
             val manager = telephonyManager
             val hasPermission = permissionManager.hasPhoneStatePermission()
@@ -133,8 +152,7 @@ internal class CallEndResolver
                 activeSubIds.size == 1 -> activeSubIds.first()
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                     activeSubIds.singleOrNull { id ->
-                        manager.createForSubscriptionId(id).callStateForSubscription ==
-                            TelephonyManager.CALL_STATE_IDLE
+                        getCallStateForSub(id) == TelephonyManager.CALL_STATE_IDLE
                     }
                 }
                 else -> null

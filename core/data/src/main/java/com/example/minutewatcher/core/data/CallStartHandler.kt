@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.data.util.DataStoreReadTimeoutException
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.Constants
@@ -75,7 +76,10 @@ internal class CallStartHandler
                 shouldRefreshStatus = false
                 when (e) {
                     is IOException -> {
-                        context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message))
+                        val code = if (e is DataStoreReadTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
+                        context.updateStatus(
+                            TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message, code = code),
+                        )
                     }
                     is SecurityException -> {
                         AppLogger.e("SecurityException in onCallStarted", e)
@@ -212,7 +216,10 @@ internal class CallStartHandler
             (error as? CancellationException)?.let { throw it }
             val message = "Timeout reading session data for subId $targetSubId"
             AppLogger.e(message, error)
-            context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message))
+            val code = if (error is DataStoreReadTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
+            context.updateStatus(
+                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message, code = code),
+            )
             sessionCleaner.cleanupCounters(targetSubId, context)
         }
 

@@ -17,6 +17,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -30,6 +31,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -183,8 +185,12 @@ class UsageStateRepositoryStressTest {
             // 2. Trigger another refresh
             val job2 = async { repository.refresh() }
 
-            val result1 = job1.await()
-            val result2 = job2.await()
+            val result1 =
+                withTimeoutOrNull(30.seconds) { job1.await() }
+                    ?: throw AssertionError("Timed out waiting for job1")
+            val result2 =
+                withTimeoutOrNull(30.seconds) { job2.await() }
+                    ?: throw AssertionError("Timed out waiting for job2")
 
             assertTrue(result1 is RefreshResult.Success)
             assertTrue(result2 is RefreshResult.Success)

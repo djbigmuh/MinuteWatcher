@@ -25,7 +25,7 @@ import com.example.minutewatcher.core.model.SimLayoutSpec
  * @param rowContainer Row container.
  */
 @Composable
-fun SimLayoutRenderV2(
+fun SimLayoutRender(
     spec: SimLayoutSpec,
     iconRenderer: @Composable (SimLayoutComponent.Icon) -> Unit,
     textRenderer: @Composable (SimLayoutComponent.Text) -> Unit,

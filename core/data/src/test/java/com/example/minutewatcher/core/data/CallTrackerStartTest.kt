@@ -132,10 +132,9 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             // Assert
             val status = callTracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
-            assertTrue(
-                "Expected timeout message, but was: ${(status as TrackingStatus.Error).message}",
-                status.message?.contains("Timeout") == true,
-            )
+            val error = status as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, error.type)
+            assertEquals(TrackingStatus.ErrorCode.TIMEOUT, error.code)
 
             // Verify session WAS cleared for safety
             verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
@@ -303,8 +302,9 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             // Assert
             val status = callTracker.status.first()
             assertTrue("Expected Error status, but got $status", status is TrackingStatus.Error)
-            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
-            assertTrue(status.message?.contains("Timeout") == true)
+            val error = status as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, error.type)
+            assertEquals(TrackingStatus.ErrorCode.TIMEOUT, error.code)
         }
 
     @Test

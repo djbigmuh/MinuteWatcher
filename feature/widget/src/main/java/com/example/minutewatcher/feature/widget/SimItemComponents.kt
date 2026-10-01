@@ -25,7 +25,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.example.minutewatcher.core.android.ui.SimLayoutRenderV2
+import com.example.minutewatcher.core.android.ui.SimLayoutRender
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
@@ -35,7 +35,7 @@ import com.example.minutewatcher.core.resources.R
 /**
  * Renders a single SIM card in widget.
  * Contains icon, operator name, minutes and traffic state.
- * Uses SimLayoutRenderV2 for rendering.
+ * Uses SimLayoutRender for rendering.
  *
  * @param sim SIM card state.
  * @param uiState Widget state.
@@ -68,7 +68,7 @@ internal fun SimItem(
 }
 
 /**
- * Renders SIM card layout via SimLayoutRenderV2.
+ * Renders SIM card layout via SimLayoutRender.
  * Passes renderers for icon, text, and spacer.
  *
  * @param sim SIM card state.
@@ -79,7 +79,7 @@ internal fun SimItemLayout(
     sim: SimUiState,
     uiState: WidgetUiState,
 ) {
-    SimLayoutRenderV2(
+    SimLayoutRender(
         spec = sim.layoutSpec,
         iconRenderer = { component ->
             SimItemIcon(component)
@@ -104,7 +104,7 @@ internal fun SimItemLayout(
 
 /**
  * Renders SIM card icon in widget.
- * Used in SimLayoutRenderV2.
+ * Used in SimLayoutRender.
  *
  * @param component Icon component (iconRes, sizeDp).
  */
@@ -119,7 +119,7 @@ internal fun SimItemIcon(component: SimLayoutComponent.Icon) {
 
 /**
  * Renders SIM card text in widget.
- * Used in SimLayoutRenderV2.
+ * Used in SimLayoutRender.
  * Text color is resolved depending on useSystemColors.
  *
  * @param component Text component (text, color, fontSizeSp, isBold).
@@ -164,7 +164,7 @@ private fun resolveTextColor(
 
 /**
  * Renders spacer in widget.
- * Used in SimLayoutRenderV2.
+ * Used in SimLayoutRender.
  *
  * @param component Spacer component (widthDp, heightDp).
  */

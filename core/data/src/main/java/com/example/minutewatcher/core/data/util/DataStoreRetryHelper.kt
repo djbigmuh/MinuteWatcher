@@ -14,6 +14,13 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
+ * Exception thrown when a DataStore read operation times out.
+ */
+internal class DataStoreReadTimeoutException(
+    label: String,
+) : IOException("DataStore read timeout ($label)")
+
+/**
  * Helper class for retrying DataStore read operations with exponential backoff.
  *
  * **Thread safety:** Safe to call from any coroutine context.
@@ -52,7 +59,11 @@ open class DataStoreRetryHelper
                         withTimeoutOrNull(attemptTimeoutMillis.milliseconds) {
                             reader().map { Emission(it) }.firstOrNull()
                         }
-                    if (emission != null) return Result.success(emission.value)
+                    if (emission != null) {
+                        return Result.success(emission.value)
+                    } else {
+                        lastException = DataStoreReadTimeoutException(label)
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -68,7 +79,7 @@ open class DataStoreRetryHelper
                     currentDelay *= 2
                 }
             }
-            return Result.failure(lastException ?: IOException("DataStore read Timeout ($label)"))
+            return Result.failure(lastException ?: DataStoreReadTimeoutException(label))
         }
 
         companion object {

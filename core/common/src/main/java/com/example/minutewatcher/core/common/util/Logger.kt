@@ -66,18 +66,15 @@ class AndroidLogger : Logger {
     }
 }
 
-// @Suppress("EmptyFunctionBlock") is required because this is a No-Op implementation
-// for testing purposes where log output is not needed.
-
 /**
  * Logger implementation that does nothing. Used for unit tests.
  */
-@Suppress("EmptyFunctionBlock")
 class NoOpLogger : Logger {
     override fun d(
         tag: String,
         message: String,
     ) {
+        // No-op by design.
     }
 
     override fun w(
@@ -85,6 +82,7 @@ class NoOpLogger : Logger {
         message: String,
         throwable: Throwable?,
     ) {
+        // No-op by design.
     }
 
     override fun e(
@@ -92,5 +90,6 @@ class NoOpLogger : Logger {
         message: String,
         throwable: Throwable?,
     ) {
+        // No-op by design.
     }
 }

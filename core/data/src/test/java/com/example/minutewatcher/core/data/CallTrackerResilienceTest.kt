@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,6 +22,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerResilienceTest : CallTrackerTestFixtures() {
@@ -92,7 +94,8 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
             // Arrange second attempt to succeed but block on activeCallSubIds
             val initBlockedDeferred = CompletableDeferred<Unit>()
             whenever(callSessionRepository.getActiveCallSubIds()).doSuspendableAnswer {
-                initBlockedDeferred.await()
+                withTimeoutOrNull(30.seconds) { initBlockedDeferred.await() }
+                    ?: throw AssertionError("Timed out waiting for initBlockedDeferred")
                 emptyList<Int>()
             }
 
@@ -109,7 +112,8 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
 
             // 3. Unblock second initialization
             initBlockedDeferred.complete(Unit)
-            callJob.join()
+            withTimeoutOrNull(30.seconds) { callJob.join() }
+                ?: throw AssertionError("Timed out waiting for callJob")
 
             // 4. Verification: init completes first, then saveCallSession is invoked
             verify(callSessionRepository, atLeastOnce()).saveCallSession(eq(1), any(), any(), any(), anyOrNull())

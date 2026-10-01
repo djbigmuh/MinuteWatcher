@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -30,6 +31,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -178,7 +180,8 @@ class SimIdentitySeedRepositoryImplTest {
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
             assertTrue("setSeed should have completed", setSeedJob.isCompleted)
 
-            firstCall.join()
+            withTimeoutOrNull(30.seconds) { firstCall.join() }
+                ?: throw AssertionError("Timed out waiting for firstCall")
         }
 
     @Test
@@ -249,7 +252,8 @@ class SimIdentitySeedRepositoryImplTest {
 
                     override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
                         val deferred = CompletableDeferred<Preferences>()
-                        return deferred.await()
+                        return withTimeoutOrNull(30.seconds) { deferred.await() }
+                            ?: throw AssertionError("Timed out waiting for hangingDataStore updateData")
                     }
                 }
 

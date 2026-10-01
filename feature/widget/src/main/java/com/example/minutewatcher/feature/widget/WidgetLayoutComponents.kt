@@ -32,7 +32,6 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
-import kotlinx.coroutines.CancellationException
 import androidx.glance.unit.ColorProvider as IColorProvider
 
 /**
@@ -299,8 +298,6 @@ internal fun getWidgetModifier(
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 }
             modifier = modifier.clickable(actionStartActivity(launchIntent))
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
             AppLogger.e("Failed to attach click action to widget", e)
         }

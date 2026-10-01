@@ -34,6 +34,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -50,6 +51,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(
     InternalCoroutinesApi::class,
@@ -202,7 +204,8 @@ class TrafficTrackerTest {
             timeProvider.advance(11000)
             testScheduler.advanceTimeBy(11000.milliseconds)
             runCurrent()
-            updateJob.join()
+            withTimeoutOrNull(30.seconds) { updateJob.join() }
+                ?: throw AssertionError("Timed out waiting for updateJob")
 
             val status = tracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
@@ -221,7 +224,8 @@ class TrafficTrackerTest {
             timeProvider.advance(11000)
             testScheduler.advanceTimeBy(11000.milliseconds)
             runCurrent()
-            updateJob.join()
+            withTimeoutOrNull(30.seconds) { updateJob.join() }
+                ?: throw AssertionError("Timed out waiting for updateJob")
 
             val status = tracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
@@ -534,7 +538,8 @@ class TrafficTrackerTest {
             timeProvider.advance(timeout.inWholeMilliseconds)
 
             runCurrent()
-            updateJob.join()
+            withTimeoutOrNull(30.seconds) { updateJob.join() }
+                ?: throw AssertionError("Timed out waiting for updateJob")
 
             // Verification: Status should remain Active and NOT be overwritten by the timeout error
             assertEquals(TrackingStatus.Active, tracker.status.value)
@@ -583,7 +588,8 @@ class TrafficTrackerTest {
             timeProvider.advance(11000)
             testScheduler.advanceTimeBy(11000.milliseconds)
             runCurrent()
-            updateJob.join()
+            withTimeoutOrNull(30.seconds) { updateJob.join() }
+                ?: throw AssertionError("Timed out waiting for updateJob")
 
             // 2. Status should be Error with TIMEOUT code
             val status = tracker.status.value
@@ -619,7 +625,8 @@ class TrafficTrackerTest {
             val recoverJob = launch { tracker.recover() }
             runCurrent()
             testScheduler.advanceUntilIdle()
-            recoverJob.join()
+            withTimeoutOrNull(30.seconds) { recoverJob.join() }
+                ?: throw AssertionError("Timed out waiting for recoverJob")
 
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
