@@ -34,9 +34,9 @@ fun MainScreenContent(
     trackingBannerState: TrackingBannerState,
     highlightedSlot: Int?,
     actions: SimCardScreenActions,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
 
     val currentUiState by rememberUpdatedState(uiState)
 

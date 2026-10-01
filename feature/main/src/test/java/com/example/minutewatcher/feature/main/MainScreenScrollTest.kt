@@ -1,14 +1,17 @@
 package com.example.minutewatcher.feature.main
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.resources.R
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,7 +49,11 @@ class MainScreenScrollTest {
                 onGrantNotificationPermission = {},
             )
 
+        var listState: LazyListState? = null
+
         composeTestRule.setContent {
+            val state = rememberLazyListState()
+            listState = state
             MainScreenContent(
                 uiState = uiState.value,
                 paddingValues = PaddingValues(0.dp),
@@ -54,37 +61,43 @@ class MainScreenScrollTest {
                 trackingBannerState = TrackingBannerState(),
                 highlightedSlot = highlightedSlot.value,
                 actions = actions,
+                listState = state,
             )
         }
 
-        // 1. Initially loading
+        // 1. Initially loading - Operator 5 does not exist
         composeTestRule.onNodeWithText("Operator 5").assertDoesNotExist()
 
         // 2. Data arrives with slot 5
         uiState.value = SimCardListState.Success(simCards)
+        composeTestRule.waitForIdle()
 
-        composeTestRule.waitUntil(5000) {
-            composeTestRule.onAllNodesWithText("Operator 5").fetchSemanticsNodes().isNotEmpty()
+        composeTestRule.waitUntil(conditionDescription = "Wait for scroll to index 5", timeoutMillis = 5000L) {
+            listState?.firstVisibleItemIndex == 5
         }
 
-        // Verify slot 5 is displayed
+        assertEquals(5, listState?.firstVisibleItemIndex)
+        composeTestRule.onNodeWithText("Operator 0").assertIsNotDisplayed()
         composeTestRule.onNodeWithText("Operator 5").assertIsDisplayed()
 
-        // 3. Subsequent update with new data (simulating background refresh)
-        // We change something in the models to trigger recomposition/emission
-        val updatedSimCards = simCards.map { it.copy(minutesUsed = 1) }
+        // 3. Subsequent update with new data
+        val updatedSimCards = simCards.map { if (it.slot == 5) it.copy(minutesUsed = 42) else it }
         uiState.value = SimCardListState.Success(updatedSimCards)
         composeTestRule.waitForIdle()
 
-        // If it scrolls AGAIN, it might conflict with user.
-        // But since we use .first(), the LaunchedEffect should have finished.
-        // There is no easy way to verify "it did NOT scroll" without observing listState.
+        // Position must remain at index 5 and not scroll back or elsewhere
+        assertEquals(5, listState?.firstVisibleItemIndex)
+        composeTestRule.onNodeWithText("Operator 5").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Operator 0").assertIsNotDisplayed()
+
+        // Verify updated data reached the UI
+        composeTestRule.onNodeWithText("42", substring = true).assertIsDisplayed()
     }
 
     @Test
     fun `does not scroll if highlighted slot is missing in data`() {
         val uiState = mutableStateOf<SimCardListState>(SimCardListState.Loading)
-        val highlightedSlot = mutableStateOf<Int?>(20) // Non-existent slot
+        val highlightedSlot = mutableStateOf<Int?>(20)
 
         val simCards = (0..5).map { slot -> createMockSimCard(slot) }
 
@@ -101,7 +114,11 @@ class MainScreenScrollTest {
                 onGrantNotificationPermission = {},
             )
 
+        var listState: LazyListState? = null
+
         composeTestRule.setContent {
+            val state = rememberLazyListState()
+            listState = state
             MainScreenContent(
                 uiState = uiState.value,
                 paddingValues = PaddingValues(0.dp),
@@ -109,17 +126,17 @@ class MainScreenScrollTest {
                 trackingBannerState = TrackingBannerState(),
                 highlightedSlot = highlightedSlot.value,
                 actions = actions,
+                listState = state,
             )
         }
 
         uiState.value = SimCardListState.Success(simCards)
         composeTestRule.waitForIdle()
 
-        // Should not crash and should keep waiting or finish if we implement correctly.
-        // My implementation uses .first { it.simCards.any { it.slot == slot } }
-        // So it should continue waiting until slot 20 appears.
-
-        // If slot 20 never appears, effect just keeps waiting (which is fine, cancelled on null).
+        // List should remain at initial scroll position 0
+        assertEquals(0, listState?.firstVisibleItemIndex)
+        composeTestRule.onNodeWithText("Operator 0").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Operator 5").assertIsNotDisplayed()
     }
 
     private fun createMockSimCard(slot: Int) =
