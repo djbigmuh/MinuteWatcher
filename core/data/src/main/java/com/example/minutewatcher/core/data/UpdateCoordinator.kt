@@ -84,6 +84,14 @@ class UpdateCoordinator
             statusMachine.transition(newStatus, force)
         }
 
+        /**
+         * Hash of the latest snapshot content confirmed to be rendered on the widget.
+         *
+         * Invariant: [lastSnapshotHash] corresponds to content no newer than what was actually
+         * rendered. Coalesced updates do not update this hash because a joined execution
+         * cannot guarantee that caller's snapshot content was rendered. Any discrepancy is
+         * compensated by the subsequent reactive cycle.
+         */
         private var lastSnapshotHash: Int? = null
         private var consecutiveUpdateFailures = 0
         private var observationRestartCount = 0
@@ -521,8 +529,10 @@ class UpdateCoordinator
                         observationRestartCount = 0
                         degradedCycleCount = 0
                         consecutiveUpdateFailures = 0
-                        // Update hash of the latest successfully processed state.
-                        lastSnapshotHash = newHash
+                        // Update hash only for non-coalesced success.
+                        if (!result.wasCoalesced) {
+                            lastSnapshotHash = newHash
+                        }
                     }
 
                     is WidgetUpdateResult.Failure -> {
@@ -666,16 +676,26 @@ class UpdateCoordinator
                 val hashAfter = SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
 
                 stateMutex.withLock {
-                    if (result.isSuccess) {
+                    if (result is WidgetUpdateResult.Success) {
                         consecutiveUpdateFailures = 0
                         observationRestartCount = 0
                         degradedCycleCount = 0
 
-                        // Invariant: hash <= rendered state.
-                        // Discrepancy is compensated by reactive cycle, and if data changed
-                        // during forced render, suppression of the next reactive update is disabled.
-                        lastSnapshotHash = hashBefore
-                        ForcedUpdateOutcome(true, contentChangedDuringUpdate = hashAfter != hashBefore)
+                        if (result.wasCoalesced) {
+                            ForcedUpdateOutcome(
+                                success = true,
+                                contentChangedDuringUpdate = true,
+                            )
+                        } else {
+                            // Invariant: hash <= rendered state.
+                            // Discrepancy is compensated by reactive cycle, and if data changed
+                            // during forced render, suppression of the next reactive update is disabled.
+                            lastSnapshotHash = hashBefore
+                            ForcedUpdateOutcome(
+                                success = true,
+                                contentChangedDuringUpdate = hashAfter != hashBefore,
+                            )
+                        }
                     } else {
                         handleUpdateFailure()
                         ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)

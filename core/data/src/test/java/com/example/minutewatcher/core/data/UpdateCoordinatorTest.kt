@@ -421,4 +421,94 @@ class UpdateCoordinatorTest {
             autoResetDay = 1,
             rolloverEnabled = false,
         )
+
+    @Test
+    fun `reactive update with coalesced success does not update lastSnapshotHash`() {
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success(wasCoalesced = true))
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            testScheduler.runCurrent()
+
+            val snapshotA = createSnapshot(timestamp = 1000L, content = "IdenticalContent")
+            snapshotFlow.emit(snapshotA)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // Emit snapshot B with identical content
+            val snapshotB = createSnapshot(timestamp = 2000L, content = "IdenticalContent")
+            snapshotFlow.emit(snapshotB)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should re-trigger update because hash was not updated on coalesced success
+            verify(widgetUpdater, times(2)).updateAll()
+        }
+    }
+
+    @Test
+    fun `reactive update with non-coalesced success updates lastSnapshotHash`() {
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success(wasCoalesced = false))
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            testScheduler.runCurrent()
+
+            val snapshotA = createSnapshot(timestamp = 1000L, content = "IdenticalContent")
+            snapshotFlow.emit(snapshotA)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            verify(widgetUpdater, times(1)).updateAll()
+
+            // Emit snapshot B with identical content
+            val snapshotB = createSnapshot(timestamp = 2000L, content = "IdenticalContent")
+            snapshotFlow.emit(snapshotB)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Should skip update because hash matched non-coalesced success
+            verify(widgetUpdater, times(1)).updateAll()
+        }
+    }
+
+    @Test
+    fun `forced update with coalesced success does not update lastSnapshotHash`() {
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success(wasCoalesced = true))
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            testScheduler.runCurrent()
+
+            val snapshot = createSnapshot(timestamp = 1000L, content = "ForcedCoalescedContent")
+            snapshotFlow.emit(snapshot)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            val success = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertTrue("Forced update should succeed", success)
+
+            verify(dataRefreshNotifier).notifyRefresh(isManual = true, suppressWidgetUpdate = false)
+
+            // Emit identical snapshot reactively
+            val nextSnapshot = createSnapshot(timestamp = 2000L, content = "ForcedCoalescedContent")
+            snapshotFlow.emit(nextSnapshot)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            // Update should be re-triggered reactively because hash was not updated
+            verify(widgetUpdater, times(3)).updateAll()
+        }
+    }
 }
