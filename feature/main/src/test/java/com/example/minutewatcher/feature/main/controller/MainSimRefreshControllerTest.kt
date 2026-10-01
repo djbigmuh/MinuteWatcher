@@ -12,29 +12,14 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainSimRefreshControllerTest {
     private val usageUseCase: UsageUseCase = mock()
-    private val usageStateRepository: UsageStateRepository = mock()
     private val testDispatcher = StandardTestDispatcher()
-
-    private lateinit var controller: MainSimRefreshController
-
-    @Before
-    fun setup() {
-        controller =
-            MainSimRefreshController(
-                usageUseCase,
-                usageStateRepository,
-                testDispatcher,
-            )
-    }
 
     @Test
     fun `refreshSimCardsInternal returns SkippedAlreadyInProgress on contention`() =
@@ -42,16 +27,6 @@ class MainSimRefreshControllerTest {
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
             val refreshDeferred = CompletableDeferred<RefreshResult>()
 
-            whenever(usageStateRepository.refresh()).thenAnswer {
-                // Mocking a suspending function that waits for deferred
-                // Using runBlocking is bad, but here we are in a test and it's a suspending context?
-                // No, thenAnswer is not suspending.
-                // We should use doAnswer { ... } and it might work if we use it correctly.
-                // Or better: use a fake implementation of UsageStateRepository.
-                throw IllegalStateException("Should not be called directly")
-            }
-
-            // Let's use a fake implementation instead of mock for the suspending call
             val fakeRepository =
                 object : UsageStateRepository by mock() {
                     override suspend fun refresh(): RefreshResult =
@@ -59,7 +34,7 @@ class MainSimRefreshControllerTest {
                             ?: throw AssertionError("Timed out waiting for refreshDeferred in fakeRepository")
                 }
 
-            controller =
+            val controller =
                 MainSimRefreshController(
                     usageUseCase,
                     fakeRepository,
