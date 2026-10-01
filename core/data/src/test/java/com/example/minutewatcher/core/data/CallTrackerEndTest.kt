@@ -171,7 +171,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `processCallDuration sets active status on success`() =
+    fun `processCallDurationLocked sets active status on success`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -452,7 +452,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(null))
 
-            // Trigger unexpected exception in endCall -> processCallDuration ->
+            // Trigger unexpected exception in endCall -> processCallDurationLocked ->
             // resolveTargetIdentity -> resolveIdentity
             whenever(simIdentityRepository.observeActiveSims()).thenThrow(IllegalStateException("Unexpected crash"))
 
@@ -471,7 +471,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `loadCallSessionData handle timeout with clearSession failure sets cleanup error`() =
+    fun `session data read timeout with clearSession failure sets cleanup error on call end`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -484,7 +484,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.clearCallSession(eq(1)))
                 .thenThrow(RuntimeException("DataStore crash"))
 
-            // Act: End call (which calls loadCallSessionData)
+            // Act: End call (which fetches call end data)
             callTracker.onCallEnded(subId = 1)
             advanceUntilIdle()
 

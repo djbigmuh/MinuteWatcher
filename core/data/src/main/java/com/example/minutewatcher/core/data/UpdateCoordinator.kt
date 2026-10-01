@@ -290,7 +290,7 @@ class UpdateCoordinator
             return firstSnapshot
         }
 
-    @Suppress("ThrowsCount")
+        @Suppress("ThrowsCount")
         private suspend fun processSnapshotSafe(
             snapshot: GlobalSnapshot,
             observationJob: Job,

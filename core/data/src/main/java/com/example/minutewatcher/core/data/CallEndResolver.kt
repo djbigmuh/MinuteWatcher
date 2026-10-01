@@ -87,28 +87,28 @@ internal class CallEndResolver
                 null
             }
 
-    @Suppress("MissingPermission", "TooGenericExceptionCaught", "ReturnCount")
-    private fun getCallStateForSub(subId: Int): Int? {
-        val manager = telephonyManager ?: return null
-        if (!permissionManager.hasPhoneStatePermission()) {
-            AppLogger.w("Permission not granted, skipping telephony callState query")
-            return null
-        }
-        return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                manager.createForSubscriptionId(subId).callStateForSubscription
-            } else {
-                @Suppress("DEPRECATION")
-                manager.callState
+        @Suppress("MissingPermission", "TooGenericExceptionCaught", "ReturnCount")
+        private fun getCallStateForSub(subId: Int): Int? {
+            val manager = telephonyManager ?: return null
+            if (!permissionManager.hasPhoneStatePermission()) {
+                AppLogger.w("Permission not granted, skipping telephony callState query")
+                return null
             }
-        } catch (e: SecurityException) {
-            AppLogger.w("SecurityException while querying call state for subId $subId", e)
-            null
-        } catch (e: RuntimeException) {
-            AppLogger.w("RuntimeException from telephony service for subId $subId", e)
-            null
+            return try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    manager.createForSubscriptionId(subId).callStateForSubscription
+                } else {
+                    @Suppress("DEPRECATION")
+                    manager.callState
+                }
+            } catch (e: SecurityException) {
+                AppLogger.w("SecurityException while querying call state for subId $subId", e)
+                null
+            } catch (e: RuntimeException) {
+                AppLogger.w("RuntimeException from telephony service for subId $subId", e)
+                null
+            }
         }
-    }
 
         private fun isDeviceIdle(activeSubIds: List<Int>): Boolean {
             val manager = telephonyManager

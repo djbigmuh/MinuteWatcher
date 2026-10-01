@@ -192,7 +192,7 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `processTrafficUpdate handles timeout reading lastTotalBytes without resetting baseline`() =
+    fun `fetchLastTotalBytes handles timeout reading lastTotalBytes without resetting baseline`() =
         runTest {
             val tracker = startTracker()
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(2000L))
@@ -213,7 +213,7 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `processTrafficUpdate handles timeout reading simUsage`() =
+    fun `performTrafficUpdate handles timeout reading simUsage`() =
         runTest {
             val tracker = startTracker()
             whenever(simUsageRepository.getSimUsage(any())).thenReturn(MutableSharedFlow())
@@ -330,12 +330,9 @@ class TrafficTrackerTest {
         }
 
     @Test
-    fun `findSingleActiveSimSlot returns slot when only one SIM has valid operator`() =
+    fun `updateTrafficUsage updates traffic for default data SIM when multiple SIMs are active`() =
         runTest {
             val tracker = createTracker(backgroundScope)
-            setupPermissionMocks()
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
-            whenever(simIdentityRepository.getIdentity(1)).thenReturn("sim_1")
 
             val activeSims =
                 listOf(

@@ -59,7 +59,7 @@ class SimIdentitySeedRepositoryImplTest {
     }
 
     @Test
-    fun `getOrCreateSeed is atomic`() =
+    fun `getOrCreateSeedOrEphemeralFallback is atomic`() =
         runTest {
             val results =
                 (1..50)
@@ -74,7 +74,7 @@ class SimIdentitySeedRepositoryImplTest {
         }
 
     @Test
-    fun `getOrCreateSeed falls back to ephemeral on storage failure`() =
+    fun `getOrCreateSeedOrEphemeralFallback falls back to ephemeral on storage failure`() =
         runTest {
             val failingDataStore =
                 object : DataStore<Preferences> {
@@ -159,7 +159,7 @@ class SimIdentitySeedRepositoryImplTest {
 
             val repo = SimIdentitySeedRepositoryImpl(failingDataStore)
 
-            // 1. Start getOrCreateSeed... which will fail and delay
+            // 1. Start getOrCreateSeedOrEphemeralFallback... which will fail and delay
             val firstCall =
                 launch {
                     repo.getOrCreateSeedOrEphemeralFallback { "ephemeral" }

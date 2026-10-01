@@ -59,11 +59,11 @@ class InitialSetupWorker
                 Result.failure()
             }
 
-    private enum class MigrationDecision {
-        PROCEED,
-        RETRY,
-        FAIL,
-    }
+        private enum class MigrationDecision {
+            PROCEED,
+            RETRY,
+            FAIL,
+        }
 
         private suspend fun performSetupSteps() {
             deps.usageUseCase.refreshOperatorInfo()
@@ -108,12 +108,12 @@ class InitialSetupWorker
             }
         }
 
-    private suspend fun checkAndPerformMigrations(): MigrationDecision {
+        private suspend fun checkAndPerformMigrations(): MigrationDecision {
             val v1Completed = fetchFlag("migrationV1") { deps.migrationFlagsRepository.isMigrationV1Completed() }
             val stabilityCompleted =
                 fetchFlag("stability") { deps.migrationFlagsRepository.isMigrationIdentityStabilityCompleted() }
 
-        if (v1Completed && stabilityCompleted) return MigrationDecision.PROCEED
+            if (v1Completed && stabilityCompleted) return MigrationDecision.PROCEED
 
             return if (!deps.permissionManager.hasPhoneStatePermission()) {
                 handleMigrationWithoutPermission(v1Completed)
@@ -133,7 +133,7 @@ class InitialSetupWorker
                 throw IOException("Failed to read $name flag", e)
             } ?: throw IOException("DataStore timeout reading $name flag")
 
-    private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): MigrationDecision {
+        private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): MigrationDecision {
             val hasLegacyData = deps.migrationService.hasLegacyData()
             if (hasLegacyData == null) {
                 return if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
@@ -151,10 +151,10 @@ class InitialSetupWorker
                 deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
                 deps.migrationService.markSchemaCurrent()
             }
-        return MigrationDecision.PROCEED
+            return MigrationDecision.PROCEED
         }
 
-    private suspend fun handleMigrationWithPermission(v1Completed: Boolean): MigrationDecision {
+        private suspend fun handleMigrationWithPermission(v1Completed: Boolean): MigrationDecision {
             val activeSims = getActiveSimsWithRetry()
 
             val activeIdentities = activeSims.mapTo(mutableSetOf()) { it.identity.stableId }
@@ -185,7 +185,7 @@ class InitialSetupWorker
             }
         }
 
-    private suspend fun markMigrationSkippedPermanently(): MigrationDecision {
+        private suspend fun markMigrationSkippedPermanently(): MigrationDecision {
             AppLogger.e(
                 "InitialSetupWorker: legacy data availability could not be determined " +
                     "after $MAX_MIGRATION_ATTEMPTS attempts, skipping migration",
@@ -193,10 +193,10 @@ class InitialSetupWorker
             deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
             deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.LEGACY_DATA_CHECK_FAILED)
             deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-        return MigrationDecision.PROCEED
+            return MigrationDecision.PROCEED
         }
 
-    private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): MigrationDecision =
+        private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): MigrationDecision =
             try {
                 var totalFailures = 0
                 activeSims.forEach { info ->
