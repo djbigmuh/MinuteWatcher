@@ -117,10 +117,7 @@ class ShortcutManager
                         transitionStatus(TrackingStatus.Active)
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (
-                        @Suppress("TooGenericExceptionCaught")
-                        e: Exception,
-                    ) {
+                    } catch (e: Exception) {
                         AppLogger.e("Failed to update dynamic shortcuts", e)
                         val type = classifyShortcutError(e)
                         transitionStatus(TrackingStatus.Error(type, e.message))
@@ -168,10 +165,7 @@ class ShortcutManager
                 true
             } catch (e: CancellationException) {
                 throw e
-            } catch (
-                @Suppress("TooGenericExceptionCaught")
-                e: Exception,
-            ) {
+            } catch (e: Exception) {
                 AppLogger.e("Failed to update dynamic shortcuts", e)
                 val type = classifyShortcutError(e)
                 transitionStatus(TrackingStatus.Error(type, e.message))

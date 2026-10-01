@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
 
 object TrackingBannerMapper {
-    @Suppress("LongParameterList")
     fun mapToBannerState(
         statusMap: Map<TrackingKey, TrackingStatus>,
         phoneGranted: Boolean,

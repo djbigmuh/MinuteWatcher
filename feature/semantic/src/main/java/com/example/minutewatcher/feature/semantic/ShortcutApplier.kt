@@ -48,10 +48,7 @@ class SystemShortcutApplier
                     AppLogger.e(message)
                     throw IllegalStateException(message)
                 }
-            } catch (
-                @Suppress("TooGenericExceptionCaught")
-                e: Exception,
-            ) {
+            } catch (e: Exception) {
                 if (e !is IllegalStateException) {
                     AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
                 }

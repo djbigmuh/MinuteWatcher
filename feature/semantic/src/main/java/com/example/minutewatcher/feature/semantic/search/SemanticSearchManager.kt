@@ -225,8 +225,8 @@ class SemanticSearchManager
             }
         }
 
-    private fun handleMutexContention() {
-        val count = consecutiveMutexContention.get()
+        private fun handleMutexContention() {
+            val count = consecutiveMutexContention.get()
             if (count < MUTEX_STUCK_THRESHOLD) {
                 AppLogger.d(
                     "SemanticSearchManager: indexing skipped due to indexing mutex contended (cycle $count)",
@@ -239,7 +239,6 @@ class SemanticSearchManager
             }
         }
 
-        @Suppress("ReturnCount", "TooGenericExceptionCaught")
         internal suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
             if (!indexMutex.tryLock()) {
                 val count = consecutiveMutexContention.incrementAndGet()
@@ -286,7 +285,7 @@ class SemanticSearchManager
             }
         }
 
-        @Suppress("ReturnCount", "TooGenericExceptionCaught")
+        @Suppress("ReturnCount")
         private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): IndexResult {
             val hasSims = snapshot.simSnapshots.isNotEmpty()
             val currentHash = if (hasSims) SnapshotUtils.calculateContentHash(snapshot) else null

@@ -83,14 +83,14 @@ class AutoResetScheduler
             }
         }
 
-    /**
-     * Executes auto-reset if [failCount] is within the maximum allowed retries.
-     *
-     * Updates [AutoResetScheduleRepository.setLastCheckMillis] only when an actual auto-reset
-     * attempt is made. When [failCount] exceeds [MAX_AUTO_RESET_RETRIES], the reset is skipped
-     * without updating the attempt timestamp, allowing failure window to elapse relative to
-     * the last actual attempt.
-     */
+        /**
+         * Executes auto-reset if [failCount] is within the maximum allowed retries.
+         *
+         * Updates [AutoResetScheduleRepository.setLastCheckMillis] only when an actual auto-reset
+         * attempt is made. When [failCount] exceeds [MAX_AUTO_RESET_RETRIES], the reset is skipped
+         * without updating the attempt timestamp, allowing failure window to elapse relative to
+         * the last actual attempt.
+         */
         private suspend fun executeAutoResetWithRetry(
             now: Long,
             failCount: Int,

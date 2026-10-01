@@ -34,7 +34,6 @@ internal class CallEndHandler
         private val callEndResolver: CallEndResolver,
         private val dataChangeNotifier: DataChangeNotifier,
     ) {
-        @Suppress("LongMethod", "ThrowsCount")
         suspend fun performCallEnd(
             subId: Int,
             eventElapsedRealtime: Long,
