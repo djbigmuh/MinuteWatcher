@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.SimIdentity
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -267,7 +268,7 @@ class SimIdentityRepositoryRaceTest {
 
             // Because of the mutex and caching, resolution should be stable.
             // Persistence.saveSimIdentitiesInfo should be called, which in turn calls migrationService if needed.
-            // Since all 10 calls happen concurrently for the SAME slot, the mutex ensures only one resolution occurs.
+            // Since all 5 calls happen concurrently for the SAME slot, the mutex ensures only one resolution occurs.
             verify(migrationService, times(1)).migrateLegacyData(any())
         }
 
@@ -418,6 +419,15 @@ class SimIdentityRepositoryRaceTest {
     @Test
     fun `slow DataStore seed arrival does not cause terminal failure`() =
         runTest {
+            whenever(permissionManager.isTelephonySupported()).thenReturn(true)
+            val mockSubInfo =
+                mock<SubscriptionInfo> {
+                    on { simSlotIndex } doReturn 0
+                    on { subscriptionId } doReturn 1
+                    on { iccId } doReturn "icc_slow"
+                }
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+
             // storedSeed is empty initially
             val storedSeed = MutableSharedFlow<String>(replay = 0)
             val identityRepo = createRepositoryForSeedFlowTest("test_slow_seed.preferences_pb", storedSeed)
@@ -428,16 +438,26 @@ class SimIdentityRepositoryRaceTest {
                     identityRepo.observeActiveSims().collect { activeSimsList.add(it) }
                 }
 
-            // 1. Initial wait: T=14s.
+            // 1. Initial wait: seed has not arrived yet
             testScheduler.advanceTimeBy(14.seconds)
             testScheduler.runCurrent()
 
-            // 2. T=14.5s. Real seed arrives
-            testScheduler.advanceTimeBy(0.5.seconds)
-            storedSeed.emit("slow_real_seed")
-            testScheduler.runCurrent()
+            val sizeBeforeSeed = activeSimsList.size
 
+            // 2. Real seed arrives after delay
+            storedSeed.emit("slow_real_seed")
+            testScheduler.advanceTimeBy(1.seconds)
             testScheduler.advanceUntilIdle()
+
+            val status = identityRepo.observer.status.value
+            assertTrue("Observer status should not be Error, but was $status", status !is TrackingStatus.Error)
+            assertEquals(TrackingStatus.Active, status)
+            assertTrue("Active SIMs list size should increase after seed arrival", activeSimsList.size > sizeBeforeSeed)
+
+            val lastEmission = activeSimsList.last()
+            assertEquals(1, lastEmission.size)
+            assertEquals(1, lastEmission.first().subscriptionId)
+
             job.cancel()
         }
 }
