@@ -38,7 +38,7 @@ internal class AdjustmentInputState(
             TextFieldValue(
                 text = initialText,
                 selection =
-                    if (initialText == "0" || initialText == "0.0") {
+                    if (NumberInputNormalizer.isZeroValue(initialText)) {
                         TextRange(0, initialText.length)
                     } else {
                         TextRange.Zero

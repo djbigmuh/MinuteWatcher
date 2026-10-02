@@ -77,4 +77,18 @@ object NumberInputNormalizer {
         }
         return sb.toString()
     }
+
+    /**
+     * Determines whether the given [text] represents a zero numerical value
+     * under any supported decimal or grouping separator format.
+     * Not intended for arbitrary number parsing.
+     *
+     * @param text String input to check.
+     * @return True if the text evaluates to 0, false if blank, invalid, or non-zero.
+     */
+    fun isZeroValue(text: String): Boolean {
+        if (text.isBlank()) return false
+        val value = normalize(text, Locale.ROOT).toFloatOrNull()
+        return value == 0f
+    }
 }

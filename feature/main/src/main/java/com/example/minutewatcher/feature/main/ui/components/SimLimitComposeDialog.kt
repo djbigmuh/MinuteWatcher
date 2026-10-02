@@ -163,7 +163,7 @@ internal class SimLimitState(
             TextFieldValue(
                 text = initialMinutesText,
                 selection =
-                    if (initialMinutesText == "0") {
+                    if (NumberInputNormalizer.isZeroValue(initialMinutesText)) {
                         TextRange(0, initialMinutesText.length)
                     } else {
                         TextRange.Zero
@@ -175,7 +175,7 @@ internal class SimLimitState(
             TextFieldValue(
                 text = initialTrafficText,
                 selection =
-                    if (initialTrafficText == "0" || initialTrafficText == "0.0") {
+                    if (NumberInputNormalizer.isZeroValue(initialTrafficText)) {
                         TextRange(0, initialTrafficText.length)
                     } else {
                         TextRange.Zero

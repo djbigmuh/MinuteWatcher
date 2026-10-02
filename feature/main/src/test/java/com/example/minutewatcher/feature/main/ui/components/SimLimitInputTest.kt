@@ -239,4 +239,24 @@ class SimLimitInputTest {
         assertEquals("1.5", state.trafficText.text)
         assertEquals(state.trafficText.text.length, state.trafficText.selection.start)
     }
+
+    @Test
+    fun `traffic selection covers full text for localized zero value comma`() {
+        val state = SimLimitState("0", "0,0", false)
+        assertEquals(0, state.trafficText.selection.start)
+        assertEquals(3, state.trafficText.selection.end)
+    }
+
+    @Test
+    fun `traffic selection is zero range for non-zero value`() {
+        val state = SimLimitState("0", "1.5", false)
+        assertEquals(TextRange.Zero, state.trafficText.selection)
+    }
+
+    @Test
+    fun `traffic selection covers full text for standard zero value`() {
+        val state = SimLimitState("0", "0.0", false)
+        assertEquals(0, state.trafficText.selection.start)
+        assertEquals(3, state.trafficText.selection.end)
+    }
 }

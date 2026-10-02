@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.common.util
 
+import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Locale
@@ -70,5 +71,26 @@ class NumberInputNormalizerTest {
         val normalized = NumberInputNormalizer.normalize("\u0661\u0662\u0663", arLocale)
         assertEquals("123", normalized)
         assertEquals(123, normalized.toIntOrNull())
+    }
+
+    @Test
+    fun `test isZeroValue returns true for zero representation in any locale`() {
+        Assert.assertTrue(NumberInputNormalizer.isZeroValue("0"))
+        Assert.assertTrue(NumberInputNormalizer.isZeroValue("0.0"))
+        Assert.assertTrue(NumberInputNormalizer.isZeroValue("0,0"))
+        Assert.assertTrue(NumberInputNormalizer.isZeroValue("00"))
+        Assert.assertTrue(NumberInputNormalizer.isZeroValue("000.000"))
+        // Arabic-Indic digits 0.0: \u0660\u066B\u0660
+        Assert.assertTrue(NumberInputNormalizer.isZeroValue("\u0660\u066B\u0660"))
+    }
+
+    @Test
+    fun `test isZeroValue returns false for non-zero or invalid inputs`() {
+        Assert.assertFalse(NumberInputNormalizer.isZeroValue("1.5"))
+        Assert.assertFalse(NumberInputNormalizer.isZeroValue("0.5"))
+        Assert.assertFalse(NumberInputNormalizer.isZeroValue("10"))
+        Assert.assertFalse(NumberInputNormalizer.isZeroValue("abc"))
+        Assert.assertFalse(NumberInputNormalizer.isZeroValue(""))
+        Assert.assertFalse(NumberInputNormalizer.isZeroValue("   "))
     }
 }
