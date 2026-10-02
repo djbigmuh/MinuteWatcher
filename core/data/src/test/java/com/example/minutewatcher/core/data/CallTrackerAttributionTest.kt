@@ -4,7 +4,6 @@ import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -107,37 +106,41 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `fallbackAttribution returns null when all reads time out`() =
+    fun `onCallEnded with unknown subId and ambiguous active calls sets INACCURATE_ATTRIBUTION error`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
-            // Arrange: Two active calls
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            // Two active calls exist
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
-            // No default voice subId
+            // No default voice subscription set
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
-            // Telephony state OFFHOOK to trigger handleAmbiguousIdle
+            // Non-IDLE call state means global session cleanup does not apply
+            // and target session cannot be uniquely determined.
             // @Suppress("DEPRECATION") is required because callStateForSubscription is deprecated on API 31+.
             @Suppress("DEPRECATION")
             whenever(
                 telephonyManager.callStateForSubscription,
             ).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
 
-            // Trigger timeout for all reads
-            whenever(callSessionRepository.getCallStartTime(any())).thenReturn(MutableSharedFlow())
-
             // Act
-            try {
-                callTracker.onCallEnded(-1)
-            } catch (e: SecurityException) {
-                val matches = e.message?.contains("Permission revoked") == true
-                assertTrue("Expected SecurityException message to match", matches)
-            }
+            callTracker.onCallEnded(-1)
             advanceUntilIdle()
 
-            // Assert: No minutes incremented
+            // Assert: status is Error with INACCURATE_ATTRIBUTION type
+            val status = callTracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(
+                TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
+                (status as TrackingStatus.Error).type,
+            )
+
+            // Assert: no minutes incremented and no sessions cleared
             verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
-            // No calls cleared
             verify(callSessionRepository, never()).clearCallSession(any())
+            verify(callSessionRepository, never()).clearAllCallSessions()
         }
 
     @Test
