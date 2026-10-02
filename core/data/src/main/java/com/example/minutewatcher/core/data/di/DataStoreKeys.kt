@@ -19,58 +19,55 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  */
 internal object DataStoreKeys {
     // App settings (SettingsKeys)
-    @JvmStatic val APP_THEME = intPreferencesKey("app_theme")
+    val APP_THEME = intPreferencesKey("app_theme")
 
-    @JvmStatic val APP_LANGUAGE = stringPreferencesKey("app_language")
+    val APP_LANGUAGE = stringPreferencesKey("app_language")
 
-    @JvmStatic val WIDGET_LAYOUT_MODE = intPreferencesKey("widget_layout_mode")
+    val WIDGET_LAYOUT_MODE = intPreferencesKey("widget_layout_mode")
 
-    @JvmStatic val WIDGET_SIM_ARRANGEMENT = intPreferencesKey("widget_sim_arrangement")
+    val WIDGET_SIM_ARRANGEMENT = intPreferencesKey("widget_sim_arrangement")
 
-    @JvmStatic val WIDGET_TRANSPARENCY = intPreferencesKey("widget_transparency")
+    val WIDGET_TRANSPARENCY = intPreferencesKey("widget_transparency")
 
-    @JvmStatic val WIDGET_FONT_SIZE = intPreferencesKey("widget_font_size")
+    val WIDGET_FONT_SIZE = intPreferencesKey("widget_font_size")
 
-    @JvmStatic val WIDGET_BACKGROUND_COLOR = intPreferencesKey("widget_background_color")
+    val WIDGET_BACKGROUND_COLOR = intPreferencesKey("widget_background_color")
 
-    @JvmStatic val NOTIFY_LOW_MINUTES = booleanPreferencesKey("notify_low_minutes")
+    val NOTIFY_LOW_MINUTES = booleanPreferencesKey("notify_low_minutes")
 
-    @JvmStatic val NOTIFY_LOW_TRAFFIC = booleanPreferencesKey("notify_low_traffic")
+    val NOTIFY_LOW_TRAFFIC = booleanPreferencesKey("notify_low_traffic")
 
-    @JvmStatic val LAST_DATA_SUB_ID = intPreferencesKey("last_data_sub_id")
+    val LAST_DATA_SUB_ID = intPreferencesKey("last_data_sub_id")
 
-    @JvmStatic val MIGRATION_V1_COMPLETED = booleanPreferencesKey("migration_v1_completed")
+    val MIGRATION_V1_COMPLETED = booleanPreferencesKey("migration_v1_completed")
 
-    @JvmStatic val MIGRATION_V1_SKIPPED_REASON = stringPreferencesKey("migration_v1_skipped_reason")
+    val MIGRATION_V1_SKIPPED_REASON = stringPreferencesKey("migration_v1_skipped_reason")
 
-    @JvmStatic val MIGRATION_IDENTITY_STABILITY_COMPLETED =
+    val MIGRATION_IDENTITY_STABILITY_COMPLETED =
         booleanPreferencesKey("migration_identity_stability_completed")
 
-    @JvmStatic
     val INITIAL_SETUP_COMPLETED = booleanPreferencesKey("initial_setup_completed")
 
-    @JvmStatic val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+    val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
-    @JvmStatic val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
+    val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
 
-    @JvmStatic val WAS_PHONE_PERMISSION_REQUESTED_BEFORE =
+    val WAS_PHONE_PERMISSION_REQUESTED_BEFORE =
         booleanPreferencesKey("was_phone_permission_requested_before")
 
-    @JvmStatic val DATA_SCHEMA_VERSION = intPreferencesKey("data_schema_version")
+    val DATA_SCHEMA_VERSION = intPreferencesKey("data_schema_version")
 
-    @JvmStatic val BENCHMARK_SIM_COUNT = intPreferencesKey("benchmark_sim_count")
+    val BENCHMARK_SIM_COUNT = intPreferencesKey("benchmark_sim_count")
 
-    @JvmStatic val WIDGET_LIMIT_EXCEEDED = booleanPreferencesKey("widget_limit_exceeded")
+    val WIDGET_LIMIT_EXCEEDED = booleanPreferencesKey("widget_limit_exceeded")
 
-    @JvmStatic
     val AUTO_RESET_LAST_CHECK_MILLIS = longPreferencesKey("auto_reset_last_check_millis")
 
-    @JvmStatic
     val AUTO_RESET_FAIL_COUNT = intPreferencesKey("auto_reset_fail_count")
 
-    @JvmStatic val INACCURATE_CALL_ATTRIBUTIONS_COUNT = intPreferencesKey("inaccurate_call_attributions_count")
+    val INACCURATE_CALL_ATTRIBUTIONS_COUNT = intPreferencesKey("inaccurate_call_attributions_count")
 
-    @JvmStatic val CALL_TRACKING_ENABLED = booleanPreferencesKey("call_tracking_enabled")
+    val CALL_TRACKING_ENABLED = booleanPreferencesKey("call_tracking_enabled")
 
     const val CURRENT_DATA_SCHEMA_VERSION = 2
 
@@ -81,91 +78,88 @@ internal object DataStoreKeys {
     const val BASELINE_RETRY_COUNT_PREFIX = "baseline_retry_count_"
 
     // Dynamic keys (DynamicSettingsKeys)
-    @JvmStatic fun callStartTimeKey(subId: Int) = longPreferencesKey("$CALL_START_TIME_PREFIX$subId")
+    fun callStartTimeKey(subId: Int) = longPreferencesKey("$CALL_START_TIME_PREFIX$subId")
 
-    @JvmStatic fun bootTimeKey(subId: Int) = longPreferencesKey("$BOOT_TIME_PREFIX$subId")
+    fun bootTimeKey(subId: Int) = longPreferencesKey("$BOOT_TIME_PREFIX$subId")
 
-    @JvmStatic fun uptimeKey(subId: Int) = longPreferencesKey("$UPTIME_PREFIX$subId")
+    fun uptimeKey(subId: Int) = longPreferencesKey("$UPTIME_PREFIX$subId")
 
-    @JvmStatic fun callIdentityKey(subId: Int) = stringPreferencesKey("$CALL_IDENTITY_PREFIX$subId")
+    fun callIdentityKey(subId: Int) = stringPreferencesKey("$CALL_IDENTITY_PREFIX$subId")
 
-    @JvmStatic fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
+    fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
 
-    @JvmStatic
     fun baselineRetryCountKey(identity: String) = intPreferencesKey("$BASELINE_RETRY_COUNT_PREFIX$identity")
 
     // Notification states (NotificationSettingsKeys)
-    @JvmStatic fun notifiedLowMinutesKey(identity: String) = booleanPreferencesKey("notified_low_minutes_$identity")
+    fun notifiedLowMinutesKey(identity: String) = booleanPreferencesKey("notified_low_minutes_$identity")
 
-    @JvmStatic fun notifiedLowTrafficKey(identity: String) = booleanPreferencesKey("notified_low_traffic_$identity")
+    fun notifiedLowTrafficKey(identity: String) = booleanPreferencesKey("notified_low_traffic_$identity")
 
-    @JvmStatic fun notifiedExhaustedMinutesKey(identity: String) =
+    fun notifiedExhaustedMinutesKey(identity: String) =
         booleanPreferencesKey(
             "notified_exhausted_minutes_$identity",
         )
 
-    @JvmStatic fun notifiedExhaustedTrafficKey(identity: String) =
+    fun notifiedExhaustedTrafficKey(identity: String) =
         booleanPreferencesKey(
             "notified_exhausted_traffic_$identity",
         )
 
     // SIM settings (SimSettingsKeys)
-    @JvmStatic fun monthlyLimitKey(identity: String) = intPreferencesKey("monthly_limit_$identity")
+    fun monthlyLimitKey(identity: String) = intPreferencesKey("monthly_limit_$identity")
 
-    @JvmStatic fun trafficLimitKey(identity: String) = intPreferencesKey("traffic_limit_$identity")
+    fun trafficLimitKey(identity: String) = intPreferencesKey("traffic_limit_$identity")
 
-    @JvmStatic fun minutesUsedKey(identity: String) = intPreferencesKey("minutes_used_$identity")
+    fun minutesUsedKey(identity: String) = intPreferencesKey("minutes_used_$identity")
 
     const val LAST_COUNTED_CALL_SIGNATURE_PREFIX = "last_counted_call_signature_"
 
-    @JvmStatic
     fun lastCountedCallSignatureKey(identity: String) =
         stringPreferencesKey("$LAST_COUNTED_CALL_SIGNATURE_PREFIX$identity")
 
-    @JvmStatic
     fun lastCountedCallMarkerKey(identity: String) = longPreferencesKey("last_counted_call_marker_$identity")
 
-    @JvmStatic fun manualAdjustmentKey(identity: String) = intPreferencesKey("manual_adjustment_$identity")
+    fun manualAdjustmentKey(identity: String) = intPreferencesKey("manual_adjustment_$identity")
 
-    @JvmStatic fun trafficAdjustmentKey(identity: String) = floatPreferencesKey("traffic_adjustment_$identity")
+    fun trafficAdjustmentKey(identity: String) = floatPreferencesKey("traffic_adjustment_$identity")
 
-    @JvmStatic fun trafficUsedKey(identity: String) = floatPreferencesKey("traffic_used_$identity")
+    fun trafficUsedKey(identity: String) = floatPreferencesKey("traffic_used_$identity")
 
-    @JvmStatic fun autoResetKey(identity: String) = booleanPreferencesKey("auto_reset_$identity")
+    fun autoResetKey(identity: String) = booleanPreferencesKey("auto_reset_$identity")
 
-    @JvmStatic fun autoResetDayKey(identity: String) = intPreferencesKey("auto_reset_day_$identity")
+    fun autoResetDayKey(identity: String) = intPreferencesKey("auto_reset_day_$identity")
 
-    @JvmStatic fun lastResetDateKey(identity: String) = longPreferencesKey("last_reset_date_$identity")
+    fun lastResetDateKey(identity: String) = longPreferencesKey("last_reset_date_$identity")
 
-    @JvmStatic fun simOperatorKey(identity: String) = stringPreferencesKey("sim_operator_$identity")
+    fun simOperatorKey(identity: String) = stringPreferencesKey("sim_operator_$identity")
 
-    @JvmStatic fun customSimOperatorKey(identity: String) = stringPreferencesKey("custom_sim_operator_$identity")
+    fun customSimOperatorKey(identity: String) = stringPreferencesKey("custom_sim_operator_$identity")
 
-    @JvmStatic fun slotIndexKey(identity: String) = intPreferencesKey("slot_index_$identity")
+    fun slotIndexKey(identity: String) = intPreferencesKey("slot_index_$identity")
 
     const val SUBSCRIPTION_ID_PREFIX = "subscription_id_"
     const val CONFLICT_PREFIX = "conflict_"
 
-    @JvmStatic fun subscriptionIdKey(identity: String) = intPreferencesKey("$SUBSCRIPTION_ID_PREFIX$identity")
+    fun subscriptionIdKey(identity: String) = intPreferencesKey("$SUBSCRIPTION_ID_PREFIX$identity")
 
-    @JvmStatic fun rolloverEnabledKey(identity: String) = booleanPreferencesKey("rollover_enabled_$identity")
+    fun rolloverEnabledKey(identity: String) = booleanPreferencesKey("rollover_enabled_$identity")
 
     // Widget settings (WidgetSettingsKeys)
 
-    @JvmStatic fun showSimKey(identity: String) = booleanPreferencesKey("widget_show_sim_$identity")
+    fun showSimKey(identity: String) = booleanPreferencesKey("widget_show_sim_$identity")
 
-    @JvmStatic fun showSimIconKey(identity: String) = booleanPreferencesKey("widget_show_sim_icon_$identity")
+    fun showSimIconKey(identity: String) = booleanPreferencesKey("widget_show_sim_icon_$identity")
 
-    @JvmStatic fun showSimNameKey(identity: String) = booleanPreferencesKey("widget_show_sim_name_$identity")
+    fun showSimNameKey(identity: String) = booleanPreferencesKey("widget_show_sim_name_$identity")
 
-    @JvmStatic fun showMinutesKey(identity: String) = booleanPreferencesKey("widget_show_minutes_$identity")
+    fun showMinutesKey(identity: String) = booleanPreferencesKey("widget_show_minutes_$identity")
 
-    @JvmStatic fun showMinutesLimitKey(identity: String) = booleanPreferencesKey("widget_show_minutes_limit_$identity")
+    fun showMinutesLimitKey(identity: String) = booleanPreferencesKey("widget_show_minutes_limit_$identity")
 
-    @JvmStatic fun showTrafficKey(identity: String) = booleanPreferencesKey("widget_show_traffic_$identity")
+    fun showTrafficKey(identity: String) = booleanPreferencesKey("widget_show_traffic_$identity")
 
-    @JvmStatic fun showTrafficLimitKey(identity: String) = booleanPreferencesKey("widget_show_traffic_limit_$identity")
+    fun showTrafficLimitKey(identity: String) = booleanPreferencesKey("widget_show_traffic_limit_$identity")
 
     // Identity Seed (SimIdentitySeedRepositoryImpl)
-    @JvmStatic val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
+    val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")
 }

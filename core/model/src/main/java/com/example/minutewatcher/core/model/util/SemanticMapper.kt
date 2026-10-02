@@ -15,19 +15,16 @@ object SemanticMapper {
      *
      * Contract: "sim_${slot}_${typeName.lowercase(Locale.ROOT)}"
      */
-    @JvmStatic
     fun getDocumentId(
         slot: Int,
         typeName: String,
     ): String = "sim_${slot}_${typeName.lowercase(Locale.ROOT)}"
 
-    @JvmStatic
     fun getDocumentId(
         slot: Int,
         type: PackageType,
     ): String = getDocumentId(slot, type.name)
 
-    @JvmStatic
     fun mapMinutes(
         slot: Int,
         operatorName: String,
@@ -53,7 +50,6 @@ object SemanticMapper {
         )
     }
 
-    @JvmStatic
     fun mapTraffic(
         slot: Int,
         operatorName: String,
