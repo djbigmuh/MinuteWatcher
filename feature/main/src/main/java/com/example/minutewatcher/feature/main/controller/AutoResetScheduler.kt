@@ -5,7 +5,6 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.feature.main.controller.AutoResetScheduler.Companion.MAX_AUTO_RESET_RETRIES
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
