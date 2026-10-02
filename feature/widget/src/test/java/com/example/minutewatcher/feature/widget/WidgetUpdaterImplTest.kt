@@ -15,6 +15,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -28,11 +29,13 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("LargeClass")
 class WidgetUpdaterImplTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -1000,5 +1003,57 @@ class WidgetUpdaterImplTest {
             updater.updateAll()
             assertEquals(6, fullRenderCount)
             assertEquals(30, simplifiedRenderCount)
+        }
+
+    @Test
+    fun `updateAll increments limit counter once per update and probes once per interval when limit exceeded`() =
+        runTest {
+            val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
+
+            whenever(renderer.renderAll(eq(context), eq(true))).thenThrow(
+                IllegalArgumentException("RemoteViews too large", TransactionTooLargeException()),
+            )
+
+            val mockLimitManager: WidgetLimitManager = mock()
+            whenever(mockLimitManager.isLimitExceeded()).thenReturn(true)
+
+            var counter = 0
+            whenever(mockLimitManager.incrementUpdateCounter()).thenAnswer {
+                counter++
+            }
+            whenever(mockLimitManager.shouldProbe()).thenAnswer {
+                counter % WidgetLimitManager.PROBE_INTERVAL_UPDATES == 0
+            }
+            // @Suppress("UNCHECKED_CAST") is required for Mockito transform argument casting in test.
+            @Suppress("UNCHECKED_CAST")
+            whenever(mockLimitManager.performProbeUpdate(any(), any())).thenAnswer {
+                val block = it.arguments[1] as (suspend (Context, Boolean) -> UpdateResult)
+                runBlocking { block(context, false) }
+            }
+
+            val updater =
+                WidgetUpdaterImpl(
+                    context = context,
+                    appSettingsRepository = appSettingsRepository,
+                    renderer = renderer,
+                    retryManager = retryManager,
+                    limitManager = mockLimitManager,
+                    errorClassifier = errorClassifier,
+                )
+
+            repeat(WidgetLimitManager.PROBE_INTERVAL_UPDATES) {
+                updater.updateAll()
+            }
+            advanceUntilIdle()
+
+            verify(mockLimitManager, times(WidgetLimitManager.PROBE_INTERVAL_UPDATES)).incrementUpdateCounter()
+            verify(mockLimitManager, times(1)).performProbeUpdate(eq(context), any())
+            verify(renderer, times(1)).renderAll(eq(context), forceFull = eq(true))
+            verify(
+                renderer,
+                times(WidgetLimitManager.PROBE_INTERVAL_UPDATES),
+            ).renderAll(eq(context), forceFull = eq(false))
         }
 }

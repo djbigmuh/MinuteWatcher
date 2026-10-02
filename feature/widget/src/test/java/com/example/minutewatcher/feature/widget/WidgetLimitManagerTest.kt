@@ -175,12 +175,4 @@ class WidgetLimitManagerTest {
             // Should NOT call setWidgetLimitExceeded(true) in catch anymore.
             verify(appSettingsRepository, never()).updateAppSettings(any())
         }
-
-    @Test
-    fun `regression - counter increments exactly once per updateAll call`() =
-        runTest(testDispatcher) {
-            // ... need WidgetUpdaterImpl for this, but I can test the logic here via
-            // multiple calls to incrementUpdateCounter simulating multiple updates.
-            // The requirement is "10 sequential updateAll() in SIMPLIFIED mode -> exactly one PROBE".
-        }
 }
