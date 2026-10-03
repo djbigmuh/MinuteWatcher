@@ -21,14 +21,14 @@ class AppLocalesMetadataHolderServiceTest {
                 "androidx.appcompat.app.AppLocalesMetadataHolderService",
             )
 
+        val flags =
+            PackageManager.ComponentInfoFlags.of(
+                (PackageManager.GET_META_DATA or PackageManager.MATCH_DISABLED_COMPONENTS).toLong(),
+            )
+
         val serviceInfo =
             try {
-                // @Suppress("DEPRECATION") is required because getServiceInfo with int flags is deprecated on API 33+.
-                @Suppress("DEPRECATION")
-                context.packageManager.getServiceInfo(
-                    componentName,
-                    PackageManager.GET_META_DATA or PackageManager.GET_DISABLED_COMPONENTS,
-                )
+                context.packageManager.getServiceInfo(componentName, flags)
             } catch (e: PackageManager.NameNotFoundException) {
                 throw AssertionError("AppLocalesMetadataHolderService not found in manifest", e)
             }
