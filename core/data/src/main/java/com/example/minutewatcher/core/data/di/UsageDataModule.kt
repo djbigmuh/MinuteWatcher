@@ -39,7 +39,7 @@ import javax.inject.Singleton
  */
 @Module
 @InstallIn(SingletonComponent::class)
-@Suppress("unused", "TooManyFunctions")
+@Suppress("TooManyFunctions")
 internal interface UsageDataModule {
     @Binds
     @Singleton

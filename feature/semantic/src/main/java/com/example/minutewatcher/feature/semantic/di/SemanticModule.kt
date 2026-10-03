@@ -16,8 +16,6 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-// @Suppress("unused") is required because Hilt discovers bindings via reflection.
-@Suppress("unused")
 internal interface SemanticModule {
     @Binds
     @Singleton

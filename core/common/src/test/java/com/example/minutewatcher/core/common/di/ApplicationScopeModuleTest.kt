@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.common.di
 import android.content.Context
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.Logger
+import com.example.minutewatcher.core.common.util.NoOpLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -18,23 +19,8 @@ import org.mockito.kotlin.mock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ApplicationScopeModuleTest {
-    private class CapturingLogger : Logger {
+    private class CapturingLogger : Logger by NoOpLogger() {
         val errorLogs = mutableListOf<Triple<String, String, Throwable?>>()
-
-        // @Suppress("EmptyFunctionBlock") is required because Logger test double methods are intentionally no-op.
-        @Suppress("EmptyFunctionBlock")
-        override fun d(
-            tag: String,
-            message: String,
-        ) {}
-
-        // @Suppress("EmptyFunctionBlock") is required because Logger test double methods are intentionally no-op.
-        @Suppress("EmptyFunctionBlock")
-        override fun w(
-            tag: String,
-            message: String,
-            throwable: Throwable?,
-        ) {}
 
         override fun e(
             tag: String,
