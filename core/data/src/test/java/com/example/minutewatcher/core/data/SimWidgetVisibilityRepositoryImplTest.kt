@@ -64,5 +64,11 @@ class SimWidgetVisibilityRepositoryImplTest {
             assertEquals(true, prefs[DataStoreKeys.showSimIconKey(id1)])
             assertEquals(true, prefs[DataStoreKeys.showSimKey(id2)])
             assertEquals(false, prefs[DataStoreKeys.showSimIconKey(id2)])
+
+            val readSettings = repository.getSimSettingsBatch(listOf(id1, id2)).first()
+            assertEquals(settings1.showSim, readSettings[id1]?.showSim)
+            assertEquals(settings1.showIcon, readSettings[id1]?.showIcon)
+            assertEquals(settings2.showSim, readSettings[id2]?.showSim)
+            assertEquals(settings2.showIcon, readSettings[id2]?.showIcon)
         }
 }

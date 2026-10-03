@@ -103,10 +103,35 @@ class UpdateCoordinator
         private val monitoringJob = AtomicReference<Job?>(null)
         private val currentObservationJob = AtomicReference<Job?>(null)
         private val currentUpdateJob = AtomicReference<Job?>(null)
+    private val takeoverUpdateJob = AtomicReference<Job?>(null)
 
         init {
             ensureObservationStarted()
         }
+
+    private suspend fun reconcileObservationState() =
+        stateMutex.withLock {
+            reconcileObservationStateLocked()
+        }
+
+    private fun reconcileObservationStateLocked() {
+        val currentJob = observationScope.currentJob
+        if ((currentJob != null) && currentJob.isActive && (currentObservationJob.get() !== currentJob)) {
+            currentObservationJob.set(currentJob)
+            monitoringJob.getAndSet(launchMonitoringJob(currentJob))?.cancel()
+            transitionStatus(TrackingStatus.Active)
+        }
+    }
+
+    private fun tryReconcileObservationState() {
+        if (stateMutex.tryLock()) {
+            try {
+                reconcileObservationStateLocked()
+            } finally {
+                stateMutex.unlock()
+            }
+        }
+    }
 
         /**
          * Recovers widget observation state.
@@ -116,20 +141,22 @@ class UpdateCoordinator
         override suspend fun recover() {
             AppLogger.d("UpdateCoordinator: recover() called, resetting all counters")
 
-            // 1. Cancel and join monitoring job first to prevent it from interfering with recovery
+            // 1. Cancel and join pending setup (initial SIM wait) first
+            setupJob.get()?.let { job ->
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    job.cancelAndJoin()
+                } ?: job.cancel()
+            }
+
+            // 2. Cancel and join monitoring job
             monitoringJob.get()?.let { job ->
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     job.cancelAndJoin()
                 } ?: job.cancel()
             }
 
-            // 2. Cancel and join current observation
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                observationScope.currentJob?.cancelAndJoin()
-            }
-
-            // 3. Cancel and join any pending setup (initial SIM wait)
-            setupJob.get()?.let { job ->
+            // 3. Cancel and join current observation
+            observationScope.currentJob?.let { job ->
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     job.cancelAndJoin()
                 } ?: job.cancel()
@@ -160,50 +187,56 @@ class UpdateCoordinator
 
             widgetUpdater.recover()
 
+            reconcileObservationState()
+
             ensureObservationStarted()
         }
 
         private fun ensureObservationStarted() {
-            // Check if already active
-            val currentJob = observationScope.currentJob
-            if (currentJob != null && currentJob.isActive) return
+            synchronized(this) {
+                tryReconcileObservationState()
 
-            // Setup already in progress?
-            val activeSetup = setupJob.get()
-            if (activeSetup != null && activeSetup.isActive) return
+                // Check if already active
+                val currentJob = observationScope.currentJob
+                if ((currentJob != null) && currentJob.isActive) return@synchronized
 
-            val newSetupJob =
-                scope.launch {
-                    try {
-                        val success =
-                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
-                                true
-                            } ?: false
+                // Setup already in progress?
+                val activeSetup = setupJob.get()
+                if ((activeSetup != null) && activeSetup.isActive) return@synchronized
 
-                        if (success) {
-                            AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
-                            setupObservation()
-                        } else {
-                            AppLogger.w("UpdateCoordinator: Timeout waiting for initial SIMs, starting with empty")
-                            setupObservation()
+                val newSetupJob =
+                    scope.launch {
+                        try {
+                            val success =
+                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                    usageStateRepository.observeSimCardUiModels().first { it.isNotEmpty() }
+                                    true
+                                } ?: false
+
+                            if (success) {
+                                AppLogger.d("UpdateCoordinator: initial SIM list received, starting observation")
+                                setupObservation()
+                            } else {
+                                AppLogger.w("UpdateCoordinator: Timeout waiting for initial SIMs, starting with empty")
+                                setupObservation()
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
+                            transitionStatus(
+                                TrackingStatus.Error(
+                                    TrackingStatus.ErrorType.UNKNOWN,
+                                    "Failed to start widget observation: ${e.message}",
+                                ),
+                            )
+                        } finally {
+                            setupJob.compareAndSet(currentCoroutineContext().job, null)
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
-                        transitionStatus(
-                            TrackingStatus.Error(
-                                TrackingStatus.ErrorType.UNKNOWN,
-                                "Failed to start widget observation: ${e.message}",
-                            ),
-                        )
-                    } finally {
-                        setupJob.compareAndSet(currentCoroutineContext().job, null)
                     }
-                }
 
-            setupJob.getAndSet(newSetupJob)?.cancel()
+                setupJob.getAndSet(newSetupJob)?.cancel()
+            }
         }
 
         @OptIn(FlowPreview::class)
@@ -234,15 +267,21 @@ class UpdateCoordinator
                             if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
                         }
 
-                val newJob =
-                    observationScope.observe(flow, handler) { snapshot ->
-                        processSnapshotSafe(snapshot, currentCoroutineContext().job)
+                var newJob: Job? = null
+                try {
+                    stateMutex.withLock {
+                        val job =
+                            observationScope.observe(flow, handler) { snapshot ->
+                                processSnapshotSafe(snapshot)
+                            }
+                        newJob = job
+                        currentObservationJob.set(job)
+                        monitoringJob.getAndSet(launchMonitoringJob(job))?.cancel()
+                        transitionStatus(TrackingStatus.Active)
                     }
-
-                stateMutex.withLock {
-                    currentObservationJob.set(newJob)
-                    newJob?.let { monitoringJob.getAndSet(launchMonitoringJob(it))?.cancel() }
-                    transitionStatus(TrackingStatus.Active)
+                } catch (e: CancellationException) {
+                    newJob?.cancel()
+                    throw e
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -299,26 +338,14 @@ class UpdateCoordinator
         }
 
         @Suppress("ThrowsCount")
-        private suspend fun processSnapshotSafe(
-            snapshot: GlobalSnapshot,
-            observationJob: Job,
-        ) {
+        private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
             try {
                 processSnapshot(snapshot)
             } catch (e: TerminalUpdateException) {
                 // Terminal failure from within processSnapshot. Rethrow to fail observation job.
                 throw e
             } catch (e: CancellationException) {
-                // Distinguish between takeover (forced update) and genuine cancellation.
-                // In takeover, performForcedUpdate already cleared currentUpdateJob.
-                val isTakeoverDetected = currentUpdateJob.get() == null && observationJob.isActive
-
-                if (isTakeoverDetected) {
-                    AppLogger.d("UpdateCoordinator: reactive update superseded by forced update, finishing iteration")
-                    // Do not rethrow to keep observation cycle alive.
-                } else {
-                    throw e
-                }
+                throw e
             } catch (
                 e: Exception,
             ) {
@@ -466,7 +493,8 @@ class UpdateCoordinator
             // This allows external calls (performForcedUpdate) to cancel current update
             // without interrupting the whole observation cycle.
             coroutineScope {
-                currentUpdateJob.set(currentCoroutineContext().job)
+                val updateJob = currentCoroutineContext().job
+                currentUpdateJob.set(updateJob)
                 try {
                     val result = performWidgetUpdate()
 
@@ -482,8 +510,18 @@ class UpdateCoordinator
                         // and trigger the monitoring-based restart with backoffs.
                         throw TerminalUpdateException("Terminal widget update failure")
                     }
+                } catch (e: CancellationException) {
+                    val isTakeover = takeoverUpdateJob.compareAndSet(updateJob, null)
+                    if (isTakeover) {
+                        AppLogger.d(
+                            "UpdateCoordinator: reactive update superseded by forced update, " +
+                                "finishing iteration",
+                        )
+                    } else {
+                        throw e
+                    }
                 } finally {
-                    currentUpdateJob.compareAndSet(currentCoroutineContext().job, null)
+                    currentUpdateJob.compareAndSet(updateJob, null)
                 }
             }
         }
@@ -653,6 +691,7 @@ class UpdateCoordinator
 
             // Cancel current reactive update if it's in progress.
             val oldJob = currentUpdateJob.getAndSet(null)
+            takeoverUpdateJob.set(oldJob)
             if (oldJob != null) {
                 oldJob.cancel()
                 // Wait for the cancelled job to finish to avoid coalescing in WidgetUpdater

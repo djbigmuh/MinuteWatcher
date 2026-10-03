@@ -9,7 +9,6 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.ListenableWorker
-import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
@@ -21,7 +20,6 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -38,7 +36,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 import java.util.concurrent.TimeUnit
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Tests verify that goAsync() contract is respected:
@@ -115,15 +112,10 @@ class BootReceiverTest {
             advanceUntilIdle()
             ShadowLooper.idleMainLooper()
 
-            var workInfos: List<WorkInfo> = emptyList()
-            repeat(20) {
-                workInfos =
-                    workManager
-                        .getWorkInfosForUniqueWork("INITIAL_SETUP")
-                        .get(1, TimeUnit.SECONDS)
-                if (workInfos.isNotEmpty()) return@repeat
-                delay(50.milliseconds)
-            }
+            val workInfos =
+                workManager
+                    .getWorkInfosForUniqueWork("INITIAL_SETUP")
+                    .get(1, TimeUnit.SECONDS)
 
             assertTrue("Work INITIAL_SETUP should be enqueued", workInfos.isNotEmpty())
             verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()

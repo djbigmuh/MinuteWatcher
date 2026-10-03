@@ -5,10 +5,10 @@ import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
@@ -58,13 +58,17 @@ class WidgetUpdaterErrorTest {
     @Test(timeout = 10000)
     fun `coalesced calls do not hang when update process throws Error`() =
         runTest {
+            val updateStartedSignal = CompletableDeferred<Unit>()
+            val finishSignal = CompletableDeferred<Unit>()
+
             val oomRenderer =
                 object : WidgetRenderer {
                     override suspend fun renderAll(
                         context: Context,
                         forceFull: Boolean,
                     ) {
-                        delay(100)
+                        updateStartedSignal.complete(Unit)
+                        finishSignal.await()
                         throw OutOfMemoryError("Simulated OOM")
                     }
                 }
@@ -75,24 +79,23 @@ class WidgetUpdaterErrorTest {
                 async {
                     try {
                         updater.updateAll()
-                    } catch (
-                        // @Suppress("SwallowedException") is required because test
-                        // catches expected exception from async job.
-                        @Suppress("SwallowedException") e: Throwable,
-                    ) {
-                        // The first call will rethrow the error, so we catch it here to avoid
-                        // failing the test prematurely.
+                    } catch (e: Throwable) {
+                        // The first call will rethrow the error, assert and return failure result
+                        assertEquals("Simulated OOM", e.message)
                         WidgetUpdateResult.Failure(reason = WidgetUpdateResult.FailureReason.TERMINAL)
                     }
                 }
 
-            delay(50) // Ensure first call is active and has entered startNewUpdate
+            withTimeoutOrNull(30.seconds) { updateStartedSignal.await() }
+                ?: throw AssertionError("Timed out waiting for updateStartedSignal")
 
             // Second call should coalesce and wait for the same deferred
             val secondCall =
                 async {
                     updater.updateAll()
                 }
+
+            finishSignal.complete(Unit)
 
             // We expect secondCall to complete because deferred SHOULD be
             // completed by startNewUpdate's catch(Throwable)

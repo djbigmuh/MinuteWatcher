@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStor
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -126,6 +127,7 @@ class TrafficInitialBaselineTest {
                 timeProvider,
                 networkStatsProvider,
                 mock(),
+                DataStoreRetryHelper(),
             )
         val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
         val simChangeHandler =

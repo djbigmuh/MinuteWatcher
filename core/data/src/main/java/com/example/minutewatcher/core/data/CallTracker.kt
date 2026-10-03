@@ -36,6 +36,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * Implementation of call tracking logic that monitors call events and records duration.
  * Uses a Mutex (via [CallMutexHolder]) to prevent race conditions during concurrent call events.
  *
+ * NOTE: This class and its methods are marked [open] solely to allow sub-classing in test doubles.
+ * Production code must not inherit from this class.
+ *
  * NOTE: Suppressing TooManyFunctions as this class acts as a central coordinator for call tracking,
  * delegating most logic to handlers but maintaining public API and status management.
  */
@@ -374,6 +377,10 @@ open class CallTracker
         /**
          * Clears stale call sessions after boot.
          *
+         * Waits for completion of any critical section holding [initMutex] (such as status refresh)
+         * rather than waiting for the entire initialization cycle, using [initMutex] to ensure
+         * thread-safe sequential access to tracking state.
+         *
          * Safe to call from any coroutine context.
          * **Contract:** This method must be called early in the boot chain to ensure
          * data consistency.
@@ -381,9 +388,7 @@ open class CallTracker
         open suspend fun onBootAwaited() {
             ensureStarted()
             try {
-                // Clear sessions under mutex protection.
-                // This doesn't wait for full initialization to avoid deadlock/hangs,
-                // but uses the same mutex to ensure sequential access to tracking state.
+                // Waits for initMutex holding critical sections before performing cleanup.
                 initMutex.withLock {
                     clearSessionsAndRefresh("boot cleanup")
                 }

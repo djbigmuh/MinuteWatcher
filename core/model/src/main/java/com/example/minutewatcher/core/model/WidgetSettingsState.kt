@@ -54,7 +54,7 @@ data class WidgetSettingsState(
                     layoutMode =
                         state.layoutMode.coerceIn(
                             Constants.Widget.MIN_LAYOUT_MODE,
-                            Constants.Widget.MAX_LAYOUT_MODE,
+                            Constants.Widget.MAX_SELECTABLE_LAYOUT_MODE,
                         ),
                     simArrangement =
                         state.simArrangement.coerceIn(

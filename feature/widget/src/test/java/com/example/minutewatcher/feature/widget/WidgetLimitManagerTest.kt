@@ -157,17 +157,15 @@ class WidgetLimitManagerTest {
         }
 
     @Test
-    // @Suppress("TooGenericExceptionThrown") is required for test exception simulation.
-    @Suppress("TooGenericExceptionThrown")
     fun `performProbeUpdate does NOT set limit exceeded on regular Exception`() =
         runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)
             clearInvocations(appSettingsRepository)
 
-            assertThrows(RuntimeException::class.java) {
+            assertThrows(IllegalStateException::class.java) {
                 runBlocking {
                     manager.performProbeUpdate(mock()) { _, _ ->
-                        throw RuntimeException("Error")
+                        throw IllegalStateException("Error")
                     }
                 }
             }

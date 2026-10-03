@@ -160,16 +160,20 @@ class AppLoggerTest {
             mock<Context> {
                 on { filesDir } doReturn testDir
             }
+        var lockHeldDuringDrain = false
         val capturingLogger =
             object : Logger {
-                val dLogs = mutableListOf<String>()
-                val wLogs = mutableListOf<String>()
-                val eLogs = mutableListOf<String>()
+                val dLogs = java.util.concurrent.CopyOnWriteArrayList<String>()
+                val wLogs = java.util.concurrent.CopyOnWriteArrayList<String>()
+                val eLogs = java.util.concurrent.CopyOnWriteArrayList<String>()
 
                 override fun d(
                     tag: String,
                     message: String,
                 ) {
+                    if (message.contains("[DRAIN]")) {
+                        lockHeldDuringDrain = lockHeldDuringDrain || Thread.holdsLock(AppLogger)
+                    }
                     dLogs.add(message)
                 }
 
@@ -178,6 +182,9 @@ class AppLoggerTest {
                     message: String,
                     throwable: Throwable?,
                 ) {
+                    if (message.contains("[DRAIN]")) {
+                        lockHeldDuringDrain = lockHeldDuringDrain || Thread.holdsLock(AppLogger)
+                    }
                     wLogs.add(message)
                 }
 
@@ -186,6 +193,9 @@ class AppLoggerTest {
                     message: String,
                     throwable: Throwable?,
                 ) {
+                    if (message.contains("[DRAIN]")) {
+                        lockHeldDuringDrain = lockHeldDuringDrain || Thread.holdsLock(AppLogger)
+                    }
                     eLogs.add(message)
                 }
             }
@@ -213,6 +223,7 @@ class AppLoggerTest {
         assertTrue("Debug drain entry in dLogs", hasDebugDrain)
         assertTrue("Warning drain entry in wLogs", hasWarnDrain)
         assertTrue("Error drain entry in eLogs", hasErrorDrain)
+        assertFalse("Drain logging must occur outside AppLogger monitor", lockHeldDuringDrain)
     }
 
     @Test

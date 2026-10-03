@@ -148,4 +148,192 @@ class UpdateCoordinatorResilienceTest {
 
             assertEquals("Should be Active after recovery", TrackingStatus.Active, coordinator.status.value)
         }
+
+    @Test
+    fun `recover during active setup registers observation and monitoring restarts on failure`() =
+        runTest {
+            val supervisorJob = kotlinx.coroutines.SupervisorJob()
+            val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+            val supervisorScope =
+                kotlinx.coroutines.CoroutineScope(
+                    testDispatcher + supervisorJob + kotlinx.coroutines.CoroutineExceptionHandler { _, _ -> },
+                )
+
+            val snapshot1 = createSnapshot(1000L, used = 10)
+            val snapshot2 = createSnapshot(2000L, used = 20)
+            val snapshotFlow = MutableStateFlow(createSnapshot(0L, used = 0))
+
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+
+            var callCount = 0
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                callCount++
+                if (callCount == 2) {
+                    WidgetUpdateResult.Failure(isRetryable = false, reason = WidgetUpdateResult.FailureReason.TERMINAL)
+                } else {
+                    WidgetUpdateResult.Success()
+                }
+            }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    supervisorScope,
+                )
+
+            // Immediately recover while setup is pending
+            coordinator.recover()
+
+            // Emit initial snapshot so observation activates
+            snapshotFlow.value = snapshot1
+            runCurrent()
+            testScheduler.advanceTimeBy(10.seconds)
+            runCurrent()
+
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+            assertEquals(1, callCount)
+
+            // Trigger terminal failure on second update
+            snapshotFlow.value = snapshot2
+            runCurrent()
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            runCurrent()
+
+            assertEquals(2, callCount)
+            assertTrue(coordinator.status.value is TrackingStatus.Error)
+
+            // Wait for restart delay (5s)
+            testScheduler.advanceTimeBy(10.seconds)
+            runCurrent()
+
+            // Monitoring should restart observation and succeed on subsequent attempt
+            assertEquals(3, callCount)
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+
+            supervisorJob.cancel()
+        }
+
+    @Test
+    fun `non takeover cancellation causes monitoring restart`() =
+        runTest {
+            val supervisorJob = kotlinx.coroutines.SupervisorJob()
+            val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+            val supervisorScope =
+                kotlinx.coroutines.CoroutineScope(
+                    testDispatcher + supervisorJob + kotlinx.coroutines.CoroutineExceptionHandler { _, _ -> },
+                )
+
+            val snapshot1 = createSnapshot(1000L, used = 10)
+            val snapshot2 = createSnapshot(2000L, used = 20)
+            val snapshotFlow = MutableStateFlow(snapshot1)
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+
+            var callCount = 0
+            whenever(widgetUpdater.updateAll()).thenAnswer {
+                callCount++
+                if (callCount == 2) {
+                    WidgetUpdateResult.Failure(isRetryable = false, reason = WidgetUpdateResult.FailureReason.TERMINAL)
+                } else {
+                    WidgetUpdateResult.Success()
+                }
+            }
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    supervisorScope,
+                )
+
+            testScheduler.advanceTimeBy(10.seconds)
+            runCurrent()
+            assertEquals(1, callCount)
+
+            snapshotFlow.value = snapshot2
+            runCurrent()
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            runCurrent()
+
+            assertEquals(2, callCount)
+            assertTrue(coordinator.status.value is TrackingStatus.Error)
+
+            testScheduler.advanceTimeBy(10.seconds)
+            runCurrent()
+
+            assertEquals(3, callCount)
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+
+            supervisorJob.cancel()
+        }
+
+    private fun createSnapshot(
+        timestamp: Long,
+        used: Long,
+    ) = GlobalSnapshot(
+        version = SchemaVersion(1, 0, 0),
+        timestamp = timestamp,
+        simSnapshots =
+            listOf(
+                com.example.minutewatcher.core.model.SimSnapshot(
+                    slot = 0,
+                    identity = "sim_0",
+                    operatorName = "Test",
+                    entities =
+                        mapOf(
+                            com.example.minutewatcher.core.model.PackageType.MINUTES to
+                                com.example.minutewatcher.core.model.SemanticEntity(
+                                    id = "e1",
+                                    simSlot = 0,
+                                    operatorName = "Test",
+                                    packageType = com.example.minutewatcher.core.model.PackageType.MINUTES,
+                                    limit = 100,
+                                    used = used,
+                                    remaining = 100 - used,
+                                    unit = com.example.minutewatcher.core.model.MeasurementUnit.MINUTES,
+                                    periodStart = 0,
+                                    periodEnd = 0,
+                                    lastUpdateTime = timestamp,
+                                    sourceType = com.example.minutewatcher.core.model.DataSourceType.SYSTEM,
+                                ),
+                        ),
+                    autoResetDay = 1,
+                ),
+            ),
+        capabilities = emptyList(),
+    )
+
+    @Test
+    fun `concurrent recover calls before dispatcher execution create single setup job`() =
+        runTest {
+            var simObserveCalls = 0
+            val simFlow = MutableStateFlow(listOf(mock<com.example.minutewatcher.core.model.SimCardUiModel>()))
+            whenever(usageStateRepository.observeSimCardUiModels()).thenAnswer {
+                simObserveCalls++
+                simFlow
+            }
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(snapshot))
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+
+            // Multiple recover calls before scheduler runs
+            coordinator.recover()
+            coordinator.recover()
+
+            testScheduler.advanceTimeBy(10.seconds)
+            runCurrent()
+
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+            assertTrue("SIM observe calls should be controlled without racing setup jobs", simObserveCalls <= 3)
+        }
 }

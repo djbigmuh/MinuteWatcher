@@ -1,21 +1,11 @@
 package com.example.minutewatcher.feature.settings.ui
 
-import com.example.minutewatcher.core.common.testing.MainDispatcherRule
-import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
-import com.example.minutewatcher.core.model.AppSettings
-import com.example.minutewatcher.core.model.GlobalSnapshot
-import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -24,77 +14,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.argThat
-import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-// @Suppress("LargeClass") is required because WidgetSettingsViewModelTest
-// tests all widget settings options and state transitions.
-@Suppress("LargeClass")
-class WidgetSettingsViewModelTest {
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
-
-    private val loader: WidgetSettingsLoader = mock()
-    private val saver: WidgetSettingsSaver = mock()
-    private val usageStateRepository: UsageStateRepository = mock()
-    private val appSettingsRepository: AppSettingsRepository = mock()
-
-    private lateinit var viewModel: WidgetSettingsViewModel
-
-    @Before
-    fun setup() {
-        val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
-        val snapshotFlow = MutableStateFlow(snapshot)
-        whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
-        whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
-
-        runBlocking {
-            whenever(loader.load()).thenReturn(WidgetSettingsState())
-            whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
-        }
-    }
-
-    private fun TestScope.initViewModel() {
-        viewModel = WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
-        advanceUntilIdle()
-    }
-
-    @Test
-    fun `init loads settings`() =
-        runTest {
-            initViewModel()
-            assertNotNull(viewModel.state.value.settings)
-            assertFalse(viewModel.state.value.isLoadError)
-            verify(loader).load()
-        }
-
-    @Test
-    fun `retryLoad re-attempts loading`() =
-        runTest {
-            whenever(loader.load()).thenThrow(IllegalStateException("Fail")).thenReturn(WidgetSettingsState())
-
-            val initialViewModel =
-                WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
-            advanceUntilIdle()
-            assertTrue(initialViewModel.state.value.isLoadError)
-
-            initialViewModel.retryLoad()
-            advanceUntilIdle()
-            assertFalse(initialViewModel.state.value.isLoadError)
-            assertNotNull(initialViewModel.state.value.settings)
-        }
-
+class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelTest() {
     @Test
     fun `saveAndNotify calls save and notifies`() =
         runTest {
@@ -138,56 +66,6 @@ class WidgetSettingsViewModelTest {
             gate.complete(Unit)
             advanceUntilIdle()
             assertTrue(secondSave.isCompleted)
-        }
-
-    @Test
-    fun `auto-save triggers after throttle delay`() =
-        runTest {
-            initViewModel()
-
-            viewModel.updateSettings { it.copy(transparency = 10) }
-            runCurrent()
-
-            verify(saver, never()).save(any(), any())
-
-            advanceTimeBy(3.seconds)
-            runCurrent()
-
-            verify(saver).save(any(), any())
-        }
-
-    @Test
-    fun `auto-save combines multiple updates`() =
-        runTest {
-            initViewModel()
-
-            viewModel.updateSettings { it.copy(transparency = 10) }
-            viewModel.updateSettings { it.copy(fontSize = 1) }
-            viewModel.updateSettings { it.copy(layoutMode = 2) }
-
-            advanceTimeBy(3.seconds)
-            runCurrent()
-
-            verify(saver, times(1)).save(any(), any())
-        }
-
-    @Test
-    fun `auto-save cancels pending save on manual save`() =
-        runTest {
-            initViewModel()
-
-            viewModel.updateSettings { it.copy(transparency = 10) }
-            runCurrent()
-
-            viewModel.saveAndNotify()
-            advanceUntilIdle()
-
-            verify(saver, times(1)).save(any(), any())
-
-            advanceTimeBy(3.seconds)
-            runCurrent()
-
-            verify(saver, times(1)).save(any(), any())
         }
 
     @Test
@@ -266,18 +144,6 @@ class WidgetSettingsViewModelTest {
         }
 
     @Test
-    fun `heavy load of updates does not crash`() =
-        runTest {
-            initViewModel()
-            repeat(100) { i ->
-                viewModel.updateSettings { it.copy(transparency = i % 100) }
-            }
-            advanceTimeBy(3.seconds)
-            runCurrent()
-            verify(saver, atLeastOnce()).save(any(), any())
-        }
-
-    @Test
     fun `save failure GENERAL updates state with reason`() =
         runTest {
             initViewModel()
@@ -311,23 +177,6 @@ class WidgetSettingsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(SaveResult.Failed(SaveFailureReason.TIMEOUT), viewModel.state.value.saveResult)
-        }
-
-    @Test
-    fun `auto-save correctly uses most recent state`() =
-        runTest {
-            initViewModel()
-
-            viewModel.updateSettings { it.copy(transparency = 10) }
-            advanceTimeBy(1.seconds)
-            viewModel.updateSettings { it.copy(transparency = 20) }
-            advanceTimeBy(1.seconds)
-            viewModel.updateSettings { it.copy(transparency = 30) }
-
-            advanceTimeBy(3.seconds)
-            runCurrent()
-
-            verify(saver).save(argThat { transparency == 30 }, any())
         }
 
     @Test

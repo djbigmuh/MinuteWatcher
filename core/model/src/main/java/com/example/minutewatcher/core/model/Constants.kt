@@ -89,6 +89,15 @@ object Constants {
         const val MAX_CONSECUTIVE_UPDATE_FAILURES = 5
 
         const val MIN_LAYOUT_MODE = 0
+
+        /**
+         * Upper bound for user-selectable widget layout modes (0..3: Single, Two, Three, Six lines).
+         * Note: Mode 4 (SIMPLE) is an internal render fallback mode when widget limits are exceeded,
+         * and is not selectable by the user in settings.
+         */
+        const val MAX_SELECTABLE_LAYOUT_MODE = 3
+
+        /** Upper bound for effective render layout modes (0..4), including internal fallback SIMPLE (4). */
         const val MAX_LAYOUT_MODE = 4
         const val DEFAULT_LAYOUT_MODE = 2
         const val MIN_SIM_ARRANGEMENT = 0

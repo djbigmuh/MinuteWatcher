@@ -177,12 +177,13 @@ class UsageCheckWorker
         }
 
         private suspend fun fetchAppSettingsWithRetry(): AppSettings? {
+            val timeoutMs = Constants.Flow.LONG_TIMEOUT_MS
             val appSettingsResult =
                 deps.appSettingsRepository.getAppSettings().firstWithTimeout() ?: run {
-                    AppLogger.w("UsageCheckWorker: AppSettings read timed out, retrying with 10s...")
+                    AppLogger.w("UsageCheckWorker: AppSettings read timed out, retrying with ${timeoutMs}ms...")
                     deps.appSettingsRepository
                         .getAppSettings()
-                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                        .firstWithTimeout(timeoutMs)
                 }
 
             return appSettingsResult ?: run {

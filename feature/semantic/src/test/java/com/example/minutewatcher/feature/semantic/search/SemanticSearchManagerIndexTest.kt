@@ -56,7 +56,9 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
             manager.indexSnapshot(snapshot)
 
             val lastPut = fakeWrapper.lastSession!!.putRequests.last()
-            assertTrue(lastPut.genericDocuments.isNotEmpty())
+            assertEquals(1, lastPut.genericDocuments.size)
+            assertEquals("sim_1_DATA", lastPut.genericDocuments[0].id)
+            assertEquals("UsageDocument", lastPut.genericDocuments[0].schemaType)
         }
 
     @Test

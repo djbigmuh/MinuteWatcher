@@ -579,7 +579,17 @@ class TrafficTracker
                             return@withLock
                         }
 
-                val currentRetryCount = baselineManager.getRetryCount(targetIdentity)
+                val retryResult = baselineManager.getRetryCount(targetIdentity)
+                if (retryResult.isFailure) {
+                    updateStatusOnError(
+                        startElapsed,
+                        "Timeout reading baseline retry count for $targetIdentity",
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    )
+                    return@withLock
+                }
+
+                val currentRetryCount = retryResult.getOrNull()
                 val statsResult = baselineManager.getCurrentMobileBytes(currentUsage.lastResetDate)
 
                 if (currentRetryCount != null) {

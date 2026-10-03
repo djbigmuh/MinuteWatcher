@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -127,6 +128,7 @@ class TrackerCancellationRegressionTest {
                 timeProvider,
                 networkStatsProvider,
                 dataChangeNotifier,
+                DataStoreRetryHelper(),
             )
         val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
         val simChangeHandler =

@@ -87,6 +87,10 @@ class WidgetSettingsViewModel
         @VisibleForTesting
         internal var lastSavedSettings: WidgetSettingsState? = null
 
+    @Volatile
+    @VisibleForTesting
+    internal var lastLoadedSettings: WidgetSettingsState? = null
+
         private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
         private val pendingUpdatesLock = Any()
         private val saveMutex = Mutex()
@@ -224,6 +228,7 @@ class WidgetSettingsViewModel
 
         private fun applyPendingUpdatesAndSet(loaded: WidgetSettingsState) {
             synchronized(pendingUpdatesLock) {
+                lastLoadedSettings = loaded
                 val currentSettings = state.value.settings
                 if (currentSettings != null && lastSavedSettings != null && currentSettings != lastSavedSettings) {
                     AppLogger.w(
@@ -353,9 +358,9 @@ class WidgetSettingsViewModel
 
             val currentState = state.value
             val currentSettings = currentState.settings
-            val lastSaved = lastSavedSettings
+            val baseline = lastSavedSettings ?: lastLoadedSettings
 
-            if (currentSettings != null && lastSaved != null && currentSettings != lastSaved) {
+            if (currentSettings != null && baseline != null && currentSettings != baseline) {
                 appScope.launch {
                     try {
                         withTimeoutOrNull(FLUSH_TIMEOUT) {

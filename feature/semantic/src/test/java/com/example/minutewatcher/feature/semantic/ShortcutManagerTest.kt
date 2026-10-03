@@ -345,14 +345,12 @@ class ShortcutManagerTest {
             assertTrue("Shortcuts should be removed", androidShortcutManager.dynamicShortcuts.isEmpty())
         }
 
-    // @Suppress("SameParameterValue") is required because helper function parameter is reused across test cases.
-    @Suppress("SameParameterValue")
     private fun createEntity(
-        slot: Int,
-        op: String,
-        packageType: PackageType,
-        limit: Long,
-        used: Long,
+        slot: Int = 0,
+        op: String = "MTS",
+        packageType: PackageType = PackageType.MINUTES,
+        limit: Long = 100L,
+        used: Long = 10L,
     ) = SemanticEntity(
         id = "id_${slot}_$packageType",
         simSlot = slot,

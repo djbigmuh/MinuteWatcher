@@ -198,8 +198,6 @@ abstract class SemanticSearchManagerTestFixtures {
         var putDocumentsResultCode: Int = AppSearchResult.RESULT_OK
         var queryResult: List<androidx.appsearch.app.SearchResult> = emptyList()
 
-        // @Suppress("ThrowsCount") is required for test double error simulation.
-        @Suppress("ThrowsCount")
         override suspend fun setSchema(request: SetSchemaRequest) {
             val exceptionCode =
                 when {
@@ -217,9 +215,7 @@ abstract class SemanticSearchManagerTestFixtures {
             }
 
             if (wrapper.failNextWithGenericError) {
-                // @Suppress("TooGenericExceptionThrown") is required for test double error simulation.
-                @Suppress("TooGenericExceptionThrown")
-                throw RuntimeException("Generic error")
+                throw IllegalStateException("Generic error")
             }
             schemaSet = true
             lastSchemaRequest = request

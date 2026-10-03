@@ -133,4 +133,46 @@ class MainBannerControllerTest {
             // Then: Banner should be GRANTED (hidden)
             assertEquals(PermissionUiState.GRANTED, controller.trackingBannerState.value.notificationPermissionState)
         }
+
+    @Test
+    fun `calculateRestartDelay produces exponential backoff and stops after limit`() =
+        runTest {
+            assertEquals(1000L, MainBannerController.calculateRestartDelay(1))
+            assertEquals(2000L, MainBannerController.calculateRestartDelay(2))
+            assertEquals(4000L, MainBannerController.calculateRestartDelay(3))
+            assertEquals(8000L, MainBannerController.calculateRestartDelay(4))
+            assertEquals(16000L, MainBannerController.calculateRestartDelay(5))
+            assertEquals(null, MainBannerController.calculateRestartDelay(6))
+        }
+
+    @Test
+    fun `observation failure triggers restart and emission resets restart count`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val statusFlow = MutableSharedFlow<Map<TrackingKey, TrackingStatus>>(replay = 1)
+            whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(statusFlow)
+
+            val controller = createController(backgroundScope)
+            backgroundScope.launch { controller.trackingStatus.collect {} }
+
+            statusFlow.emit(emptyMap())
+            runCurrent()
+
+            val failingFlow =
+                kotlinx.coroutines.flow.flow<Map<TrackingKey, TrackingStatus>> {
+                    throw IllegalStateException("Flow observation crash")
+                }
+            whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(failingFlow)
+
+            statusFlow.emit(mapOf(TrackingKey.APPSEARCH to TrackingStatus.Active))
+            runCurrent()
+
+            testScheduler.advanceTimeBy(1500L)
+            runCurrent()
+
+            whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(statusFlow)
+            statusFlow.emit(emptyMap())
+            advanceUntilIdle()
+
+            assertEquals(1000L, MainBannerController.calculateRestartDelay(1))
+        }
 }

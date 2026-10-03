@@ -28,8 +28,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainBannerController manages the state of tracking banners (errors and notifications).
@@ -77,7 +79,9 @@ class MainBannerController
             appSearchBannerDismissed.value = true
         }
 
+    @Volatile
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
+    private val consecutiveRestartCount = AtomicInteger(0)
 
         private val isObservationStarted = AtomicBoolean(false)
         private val observationScope =
@@ -182,6 +186,7 @@ class MainBannerController
             val job =
                 observationScope.observe(trackingStatus) { statusMap ->
                     currentCoroutineContext().ensureActive()
+                    consecutiveRestartCount.set(0)
 
                     val appsearch = statusMap[TrackingKey.APPSEARCH]
                     val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
@@ -195,11 +200,48 @@ class MainBannerController
                     }
                 }
 
-            job?.invokeOnCompletion { cause ->
-                if (cause != null && cause !is CancellationException) {
+            job.invokeOnCompletion { cause ->
+                if ((cause != null) && cause !is CancellationException) {
                     AppLogger.e("MainBannerController: Banner observation failed", cause)
                     isObservationStarted.set(false)
+                    handleObservationFailure(cause)
                 }
+            }
+        }
+
+    private fun handleObservationFailure(cause: Throwable) {
+        val count = consecutiveRestartCount.incrementAndGet()
+        val delayMs = calculateRestartDelay(count)
+        if (delayMs == null) {
+            AppLogger.e(
+                "MainBannerController: Banner observation failed $count consecutive times. " +
+                    "Stopping observation restarts.",
+                cause,
+            )
+            return
+        }
+
+        AppLogger.w(
+            "MainBannerController: Banner observation failed (attempt $count/$MAX_RESTART_ATTEMPTS), " +
+                "scheduling restart in ${delayMs}ms",
+            cause,
+        )
+
+        scope.launch {
+            kotlinx.coroutines.delay(delayMs.milliseconds)
+            ensureObservationStarted()
+        }
+    }
+
+    internal companion object {
+        const val MAX_RESTART_ATTEMPTS = 5
+        const val MAX_RESTART_DELAY_MS = 30_000L
+
+        internal fun calculateRestartDelay(attempt: Int): Long? {
+            if (attempt > MAX_RESTART_ATTEMPTS) return null
+            val exponent = (attempt - 1).coerceAtMost(30)
+            val delayMs = com.example.minutewatcher.core.model.Constants.Flow.RETRY_DELAY_MS * (1L shl exponent)
+            return delayMs.coerceAtMost(MAX_RESTART_DELAY_MS)
             }
         }
     }

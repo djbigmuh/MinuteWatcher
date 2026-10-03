@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
@@ -19,6 +20,7 @@ class TrafficBaselineManagerTest {
     private val simUsageResetRepository: SimUsageResetRepository = mock()
     private val timeProvider: TimeProvider = mock()
     private val networkStatsProvider: NetworkStatsProvider = mock()
+    private val dataStoreRetryHelper = DataStoreRetryHelper()
     private lateinit var manager: TrafficBaselineManager
 
     @Before
@@ -32,6 +34,7 @@ class TrafficBaselineManagerTest {
                 timeProvider,
                 networkStatsProvider,
                 mock(),
+                dataStoreRetryHelper,
             )
     }
 
@@ -40,7 +43,7 @@ class TrafficBaselineManagerTest {
         runTest {
             whenever(simUsageResetRepository.getBaselineRetryCount("id1")).thenReturn(flowOf(2))
             val count = manager.getRetryCount("id1")
-            assertEquals(2, count)
+            assertEquals(Result.success(2), count)
         }
 
     @Test

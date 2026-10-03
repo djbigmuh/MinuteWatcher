@@ -7,7 +7,6 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -73,8 +72,7 @@ class TrafficTargetResolverTest {
 
         assertTrue(result is TrafficTargetResolver.TargetResult.Failed)
         val failed = result as TrafficTargetResolver.TargetResult.Failed
-        assertNotNull(failed.message)
-        assertTrue(failed.message!!.contains("99"))
+        assertEquals("simSlotIndex 99 out of supported range", failed.message)
     }
 
     @Test

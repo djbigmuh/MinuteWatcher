@@ -13,7 +13,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
-import org.junit.Assert
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,6 +21,7 @@ import org.mockito.Mockito
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
@@ -113,11 +114,46 @@ class ReceiverAsyncTest {
                     latch.countDown()
                 }
                 val executed = latch.await(2, TimeUnit.SECONDS)
-                Assert.assertTrue(
+                assertTrue(
                     "Async block should execute on fallback dispatcher when entry point is unavailable",
                     executed,
                 )
                 verify(mockPendingResult, Mockito.timeout(2_000).times(1)).finish()
             }
+        }
+
+    @Test
+    fun `after block completion, created scope and supervisor job are cancelled`() =
+        runTest(testDispatcher) {
+            val mockPendingResult: BroadcastReceiver.PendingResult = mock()
+
+            val job =
+                goAsyncWithScope(context, mockPendingResult, dispatcher = testDispatcher) {
+                    // Success block
+                }
+
+            advanceUntilIdle()
+
+            assertTrue("Job should be completed/cancelled after completion", job.isCompleted)
+            verify(mockPendingResult, times(1)).finish()
+        }
+
+    @Test
+    fun `when EntryPoint is unavailable, fallback dispatcher is used and finish is called`() =
+        runTest(testDispatcher) {
+            val mockPendingResult: BroadcastReceiver.PendingResult = mock()
+            val nonHiltContext: Context = mock()
+            val mockAppContext: Context = mock()
+            whenever(nonHiltContext.applicationContext).thenReturn(mockAppContext)
+
+            val latch = CountDownLatch(1)
+            goAsyncWithScope(nonHiltContext, mockPendingResult, dispatcher = null) {
+                latch.countDown()
+            }
+
+            val executed = latch.await(3, TimeUnit.SECONDS)
+
+            assertTrue("Block should execute on fallback dispatcher", executed)
+            verify(mockPendingResult, Mockito.timeout(3_000).times(1)).finish()
         }
 }

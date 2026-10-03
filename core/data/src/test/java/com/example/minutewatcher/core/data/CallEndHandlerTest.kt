@@ -19,7 +19,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class CallEndHandlerUnitTest {
+class CallEndHandlerTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val timeProvider: TimeProvider = mock()
     private val attributionResolver: CallAttributionResolver = mock()

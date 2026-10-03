@@ -25,12 +25,24 @@ class WidgetSettingsStateTest {
 
         val validated = WidgetSettingsState.validate(initial)
 
-        assertEquals(Constants.Widget.MAX_LAYOUT_MODE, validated.layoutMode)
+        assertEquals(Constants.Widget.MAX_SELECTABLE_LAYOUT_MODE, validated.layoutMode)
         assertEquals(Constants.Widget.MIN_SIM_ARRANGEMENT, validated.simArrangement)
         assertEquals(Constants.Widget.MAX_TRANSPARENCY, validated.transparency)
         assertEquals(Constants.Widget.MAX_FONT_SIZE, validated.fontSize)
         assertEquals(simStates, validated.simStates)
         assertTrue(validated.widgetLimitExceeded)
+    }
+
+    @Test
+    fun `validate clamps layoutMode 4 or above to MAX_SELECTABLE_LAYOUT_MODE`() {
+        val initialMode4 = WidgetSettingsState(layoutMode = 4)
+        val validatedMode4 = WidgetSettingsState.validate(initialMode4)
+        assertEquals(Constants.Widget.MAX_SELECTABLE_LAYOUT_MODE, validatedMode4.layoutMode)
+
+        for (mode in Constants.Widget.MIN_LAYOUT_MODE..Constants.Widget.MAX_SELECTABLE_LAYOUT_MODE) {
+            val state = WidgetSettingsState(layoutMode = mode)
+            assertEquals(mode, WidgetSettingsState.validate(state).layoutMode)
+        }
     }
 
     @Test

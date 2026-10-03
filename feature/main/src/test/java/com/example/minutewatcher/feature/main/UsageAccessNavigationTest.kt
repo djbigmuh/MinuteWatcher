@@ -123,10 +123,21 @@ class UsageAccessNavigationTest {
         advanceUntilIdle()
     }
 
-    // @Suppress("LongMethod") is required for test ViewModel construction with mocked dependencies.
-    @Suppress("LongMethod")
     private fun createViewModel(scope: CoroutineScope): MainViewModel {
+        val controllers = createControllers(scope)
+        val initController = createInitController(controllers.refresh)
         val dialogController = MainDialogController(savedStateHandle)
+
+        return MainViewModel(
+            controllers = controllers,
+            dialogController = dialogController,
+            initController = initController,
+            timeProvider = timeProvider,
+            savedStateHandle = savedStateHandle,
+        )
+    }
+
+    private fun createControllers(scope: CoroutineScope): MainViewModelControllers {
         val bannerController =
             MainBannerController(
                 trackingStatusRepository = { trackingStatusRepository },
@@ -155,49 +166,38 @@ class UsageAccessNavigationTest {
                 simIdentityRepository = simIdentityRepository,
                 simLimitsRepository = simLimitsRepository,
                 usageUseCase = usageUseCase,
-                dataChangeNotifier = mock<com.example.minutewatcher.core.domain.DataChangeNotifier>(),
+                dataChangeNotifier = mock(),
                 ioDispatcher = testDispatcher,
                 scope = scope,
             )
-
         val resumeController =
             MainResumeController(
                 timeProvider = timeProvider,
                 savedStateHandle = savedStateHandle,
             )
 
-        val autoResetScheduler =
-            com.example.minutewatcher.feature.main.controller.AutoResetScheduler(
-                mock(),
-                autoResetUseCase,
-                timeProvider,
-            )
-        val initController =
-            com.example.minutewatcher.feature.main.controller.MainInitializationController(
-                refreshController = refreshController,
-                autoResetScheduler = autoResetScheduler,
-                timeProvider = timeProvider,
-                ioDispatcher = testDispatcher,
-            )
-
-        val controllers =
-            MainViewModelControllers(
-                banner = bannerController,
-                refresh = refreshController,
-                settings = settingsController,
-                simData = simDataController,
-                resume = resumeController,
-                widgetObservationRecovery = { updateCoordinator },
-            )
-
-        return MainViewModel(
-            controllers = controllers,
-            dialogController = dialogController,
-            initController = initController,
-            timeProvider = timeProvider,
-            savedStateHandle = savedStateHandle,
+        return MainViewModelControllers(
+            banner = bannerController,
+            refresh = refreshController,
+            settings = settingsController,
+            simData = simDataController,
+            resume = resumeController,
+            widgetObservationRecovery = { updateCoordinator },
         )
     }
+
+    private fun createInitController(refreshController: MainSimRefreshController) =
+        com.example.minutewatcher.feature.main.controller.MainInitializationController(
+            refreshController = refreshController,
+            autoResetScheduler =
+                com.example.minutewatcher.feature.main.controller.AutoResetScheduler(
+                    mock(),
+                    autoResetUseCase,
+                    timeProvider,
+                ),
+            timeProvider = timeProvider,
+            ioDispatcher = testDispatcher,
+        )
 
     private fun createMockSimCard() =
         com.example.minutewatcher.core.model.SimCardUiModel(

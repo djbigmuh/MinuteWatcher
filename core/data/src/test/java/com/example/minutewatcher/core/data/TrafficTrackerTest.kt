@@ -9,6 +9,7 @@ import android.telephony.SubscriptionInfo
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -698,6 +699,52 @@ class TrafficTrackerTest {
             verify(simUsageResetRepository).cleanupBaselineRetries(eq(emptySet()))
         }
 
+    @Test
+    fun `performTrafficUpdate handles timeout reading baseline retry count`() =
+        runTest {
+            val tracker = startTracker()
+            whenever(simUsageResetRepository.getBaselineRetryCount(any())).thenReturn(MutableSharedFlow())
+
+            val updateJob = launch { tracker.updateTrafficUsage() }
+            runCurrent()
+
+            testScheduler.advanceTimeBy(10.seconds)
+            runCurrent()
+            withTimeoutOrNull(30.seconds) { updateJob.join() }
+                ?: throw AssertionError("Timed out waiting for updateJob")
+
+            val status = tracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorCode.TIMEOUT, (status as TrackingStatus.Error).code)
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
+        }
+
+    @Test
+    fun `performTrafficUpdate handles null baseline retry count as normal update path`() =
+        runTest {
+            val tracker = startTracker()
+            whenever(simUsageResetRepository.getBaselineRetryCount(any())).thenReturn(flowOf(null))
+
+            tracker.updateTrafficUsage()
+            runCurrent()
+
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+        }
+
+    @Test
+    fun `performTrafficUpdate increments retry count when stats unavailable and retry count under limit`() =
+        runTest {
+            val tracker = startTracker()
+            whenever(simUsageResetRepository.getBaselineRetryCount("sim_0")).thenReturn(flowOf(1))
+            whenever(networkStatsProvider.queryMobileBytes(any(), any()))
+                .thenReturn(StatsResult.Error(java.io.IOException("Stats unavailable")))
+
+            tracker.updateTrafficUsage()
+            runCurrent()
+
+            verify(simUsageResetRepository).setBaselineRetryCount("sim_0", 2)
+        }
+
     private fun createTracker(scope: CoroutineScope): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
@@ -708,6 +755,7 @@ class TrafficTrackerTest {
                 timeProvider,
                 networkStatsProvider,
                 dataChangeNotifier,
+                DataStoreRetryHelper(),
             )
         val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
         val simChangeHandler =

@@ -9,6 +9,7 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -31,13 +32,14 @@ private const val RECEIVER_ASYNC_TIMEOUT_MS = 8_000L
  * @param pendingResult The [BroadcastReceiver.PendingResult] obtained from [BroadcastReceiver.goAsync].
  * @param dispatcher Optional dispatcher override for testing.
  * @param block The suspend block to execute. Receives application context.
+ * @return The launched [Job] for deterministic tracking and scope completion.
  */
 fun goAsyncWithScope(
     context: Context,
     pendingResult: BroadcastReceiver.PendingResult,
     dispatcher: CoroutineDispatcher? = null,
     block: suspend (appContext: Context) -> Unit,
-) {
+): Job {
     val appContext = context.applicationContext
     val finalDispatcher =
         dispatcher ?: try {
@@ -46,13 +48,20 @@ fun goAsyncWithScope(
                     appContext,
                     CommonEntryPoint::class.java,
                 ).ioDispatcher()
-        } catch (e: Exception) {
-            // Fallback for tests not using Hilt or missing CommonEntryPoint
-            AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher", e)
+        } catch (e: IllegalStateException) {
+            // Fallback when Hilt entry point is not accessible in production or uninitialized contexts
+            AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher fallback", e)
+            IoDispatcherFallback.io
+        } catch (e: IllegalArgumentException) {
+            // Fallback when Hilt entry point is not accessible in production or uninitialized contexts
+            AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher fallback", e)
             IoDispatcherFallback.io
         }
 
-    CoroutineScope(finalDispatcher + SupervisorJob()).launch {
+    val supervisorJob = SupervisorJob()
+    val scope = CoroutineScope(finalDispatcher + supervisorJob)
+
+    return scope.launch {
         try {
             val completed =
                 withTimeoutOrNull(RECEIVER_ASYNC_TIMEOUT_MS.milliseconds) {
@@ -67,7 +76,11 @@ fun goAsyncWithScope(
         } catch (e: Exception) {
             AppLogger.e("Receiver async block failed", e)
         } finally {
-            pendingResult.finish()
+            try {
+                pendingResult.finish()
+            } finally {
+                supervisorJob.cancel()
+            }
         }
     }
 }

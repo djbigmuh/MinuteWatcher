@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.BuildConfig
+import com.example.minutewatcher.core.common.util.AppLogger.closeWriter
+import com.example.minutewatcher.core.common.util.AppLogger.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -189,6 +191,7 @@ object AppLogger {
     }
 
     private fun processLogEntry(entry: LogEntry) {
+        val drainedEntries = mutableListOf<LogEntry>()
         synchronized(this) {
             val dir = logDir
             if (!isFileLoggingEnabled || isShutdown || dir == null) return
@@ -204,7 +207,7 @@ object AppLogger {
                 val activeWriter = writer
                 if (activeWriter == null) {
                     consecutiveWriteFailures++
-                    handleWriteFailure("failed to open writer")
+                    handleWriteFailureLocked("failed to open writer", drainedEntries)
                 } else {
                     val timestamp = dateFormat.format(entry.timestamp)
                     activeWriter.write("$timestamp ${entry.level}/$TAG: ${entry.message}\n")
@@ -215,25 +218,33 @@ object AppLogger {
                 closeWriter()
                 consecutiveWriteFailures++
                 Log.e(TAG, "AppLogger: failed to write log to file (failure $consecutiveWriteFailures)", e)
-                handleWriteFailure("write exception")
+                handleWriteFailureLocked("write exception", drainedEntries)
             }
         }
-    }
 
-    private fun handleWriteFailure(reason: String) {
-        if (consecutiveWriteFailures >= MAX_WRITE_FAILURES) {
-            Log.e(TAG, "AppLogger: too many failures ($reason), disabling file logging for this session")
-            isFileLoggingEnabled = false
-            closeWriter()
-            // Drain the channel to Logcat
-            while (true) {
-                val next = logChannel.tryReceive().getOrNull() ?: break
+        if (drainedEntries.isNotEmpty()) {
+            for (next in drainedEntries) {
                 val drainMessage = "[DRAIN] ${next.level}/$TAG: ${next.message}"
                 when (next.level) {
                     "W" -> logger.w(TAG, drainMessage)
                     "E" -> logger.e(TAG, drainMessage)
                     else -> logger.d(TAG, drainMessage)
                 }
+            }
+        }
+    }
+
+    private fun handleWriteFailureLocked(
+        reason: String,
+        drainedEntries: MutableList<LogEntry>,
+    ) {
+        if (consecutiveWriteFailures >= MAX_WRITE_FAILURES) {
+            Log.e(TAG, "AppLogger: too many failures ($reason), disabling file logging for this session")
+            isFileLoggingEnabled = false
+            closeWriter()
+            while (true) {
+                val next = logChannel.tryReceive().getOrNull() ?: break
+                drainedEntries.add(next)
             }
         }
     }

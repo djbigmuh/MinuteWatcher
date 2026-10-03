@@ -17,7 +17,7 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * MainResumeController handles activity resume logic and stale data checks.
  *
- * Safe to call from any coroutine context.
+ * Expected to be invoked on the Main thread during Activity/ViewModel resume.
  */
 class MainResumeController
     @Inject
@@ -34,7 +34,8 @@ class MainResumeController
          * If monotonic clocks were reset (detected via negative time difference after reboot),
          * the debounce is considered expired and execution continues immediately.
          *
-         * **Thread Safety:** Safe to call from any thread; internal logic runs in the provided scope.
+         * **Thread Safety:** Must be invoked on the Main thread (from Activity's [onResume]).
+         * State persistence is backed by [SavedStateHandle].
          */
         fun onActivityResume(
             scope: CoroutineScope,

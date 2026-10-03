@@ -4,16 +4,15 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
-import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Manages traffic baseline (reset, retry, probe).
@@ -35,11 +34,20 @@ class TrafficBaselineManager
         private val timeProvider: TimeProvider,
         private val networkStatsProvider: NetworkStatsProvider,
         private val dataChangeNotifier: DataChangeNotifier,
+        private val dataStoreRetryHelper: DataStoreRetryHelper,
     ) {
-        suspend fun getRetryCount(identity: String): Int? =
-            simUsageResetRepository
-                .getBaselineRetryCount(identity)
-                .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+    /**
+     * Reads the baseline retry count for the given [identity].
+     *
+     * @param identity SIM identity.
+     * @return [Result.success] containing `null` if no retry count is set,
+     * [Result.success] containing `Int` if a retry count is present,
+     * or [Result.failure] if reading from DataStore failed after retries.
+     */
+    suspend fun getRetryCount(identity: String): Result<Int?> =
+        dataStoreRetryHelper.readWithRetry("baselineRetryCount") {
+            simUsageResetRepository.getBaselineRetryCount(identity)
+        }
 
         suspend fun setRetryCount(
             identity: String,
@@ -137,7 +145,7 @@ class TrafficBaselineManager
         }
 
         private suspend fun incrementRetryCount(identity: String) {
-            val count = getRetryCount(identity) ?: 0
+            val count = getRetryCount(identity).getOrDefault(null) ?: 0
             setRetryCount(identity, count + 1)
         }
 

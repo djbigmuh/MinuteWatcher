@@ -77,7 +77,7 @@ class WidgetSettingsSaverTest {
 
             verify(loader).saveGeneralSettings(
                 argThat {
-                    this.layoutMode <= Constants.Widget.MAX_LAYOUT_MODE
+                    this.layoutMode <= Constants.Widget.MAX_SELECTABLE_LAYOUT_MODE
                 },
             )
         }

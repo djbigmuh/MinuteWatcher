@@ -265,8 +265,9 @@ object OperatorResolver {
     /**
      * Checks if the operator name is specific and valid.
      *
-     * **Validity:** a name is considered valid if it is not an inactive SIM
-     * (empty or "null") and does not match the generic "SIM N" pattern.
+     * **Validity:** a name is considered invalid if it is an empty string, null reference,
+     * or literal string "null" (as determined by [SimUtils.isInactiveSim]), or if it matches
+     * the generic "SIM N" pattern.
      *
      * @param name Operator name to check.
      * @return True if the name is specific and can be used as is.

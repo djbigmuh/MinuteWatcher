@@ -9,12 +9,14 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -196,5 +198,23 @@ class WidgetSettingsScreenTest {
         }
 
         composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
+    }
+
+    @Test
+    fun selectableLayoutModesMatchResourceArraySizeAndAreNonEmpty() {
+        val layoutModes = context.resources.getStringArray(R.array.layout_modes)
+        val selectableCount = Constants.Widget.MAX_SELECTABLE_LAYOUT_MODE - Constants.Widget.MIN_LAYOUT_MODE + 1
+        assertEquals(
+            "Number of selectable layout modes must equal layout_modes array length",
+            selectableCount,
+            layoutModes.size,
+        )
+
+        for (i in Constants.Widget.MIN_LAYOUT_MODE..Constants.Widget.MAX_SELECTABLE_LAYOUT_MODE) {
+            val state = WidgetSettingsState(layoutMode = i)
+            val validated = WidgetSettingsState.validate(state)
+            val label = layoutModes.getOrNull(validated.layoutMode).orEmpty()
+            assertTrue("Layout mode $i must produce a non-empty label", label.isNotEmpty())
+        }
     }
 }

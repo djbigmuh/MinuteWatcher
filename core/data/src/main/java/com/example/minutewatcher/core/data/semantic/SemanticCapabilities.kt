@@ -1,6 +1,5 @@
 package com.example.minutewatcher.core.data.semantic
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import com.example.minutewatcher.core.common.util.PermissionManager
@@ -36,17 +35,17 @@ class SemanticCapabilities
          * On API 31+, we check for the presence of the system AppSearch service.
          * On older versions (26+), we rely on bundled LocalStorage which is available on all
          * supported API levels.
-         *
-         * Suppress WrongConstant as Context.APP_SEARCH_SERVICE is guarded by API 31 check.
          */
-        @SuppressLint("WrongConstant")
         private fun isAppSearchSupported(): Boolean =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                context.getSystemService(Context.APP_SEARCH_SERVICE) != null
+                getAppSearchSystemService() != null
             } else {
                 // LocalStorage fallback for older versions (26+)
                 true
             }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.S)
+    private fun getAppSearchSystemService(): Any? = context.getSystemService(Context.APP_SEARCH_SERVICE)
 
         private companion object {
             private const val FEATURE_TELEPHONY_MULTISIM = "android.hardware.telephony.multisim"

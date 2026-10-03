@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -18,16 +19,14 @@ import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -40,20 +39,34 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.mockito.stubbing.Answer
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficTrackerRegressionTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private class FakeSimUsageResetRepository(
+        val delegate: SimUsageResetRepository = mock(),
+    ) : SimUsageResetRepository by delegate {
+        var setLastTotalBytesDelayMs: Long = 0L
+
+        override suspend fun setLastTotalBytes(
+            identity: String,
+            bytes: Long,
+        ) {
+            if (setLastTotalBytesDelayMs > 0) {
+                delay(setLastTotalBytesDelayMs)
+            } else {
+                delegate.setLastTotalBytes(identity, bytes)
+            }
+        }
+    }
+
     private val networkStatsProvider: NetworkStatsProvider = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
-    private val simUsageResetRepository: SimUsageResetRepository = mock()
+    private val simUsageResetRepositoryDelegate: SimUsageResetRepository = mock()
+    private val simUsageResetRepository = FakeSimUsageResetRepository(simUsageResetRepositoryDelegate)
     private val callSessionRepository: CallSessionRepository = mock()
     private val permissionManager: PermissionManager = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
@@ -65,11 +78,14 @@ class TrafficTrackerRegressionTest {
             currentUptime = 100000L,
         )
 
+    private var hasUsageStatsPermission = true
+
     @Before
     fun setup() {
         initTestLogger()
+        hasUsageStatsPermission = true
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-        whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
+        whenever(permissionManager.hasUsageStatsPermission()).thenAnswer { hasUsageStatsPermission }
         whenever(permissionManager.isTelephonySupported()).thenReturn(true)
         whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
         whenever(permissionStateNotifier.changes).thenReturn(MutableStateFlow(Unit))
@@ -102,21 +118,17 @@ class TrafficTrackerRegressionTest {
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0")))
             whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(5000L))
-            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
-            whenever(simUsageResetRepository.getBaselineRetryCount("sim_0")).thenReturn(MutableStateFlow(1))
+            whenever(simUsageResetRepositoryDelegate.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
+            whenever(simUsageResetRepositoryDelegate.getBaselineRetryCount("sim_0")).thenReturn(MutableStateFlow(1))
 
-            whenever(simUsageResetRepository.setLastTotalBytes(eq("sim_0"), any())).thenAnswer(
-                stubSuspend {
-                    delay((Constants.Flow.SHORT_TIMEOUT_MS + 1000).milliseconds)
-                },
-            )
+            simUsageResetRepository.setLastTotalBytesDelayMs = Constants.Flow.SHORT_TIMEOUT_MS + 1000
 
             tracker.updateTrafficUsage()
 
             val status = tracker.status.value
             assertTrue("Expected Error status with TIMEOUT code, but was $status", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorCode.TIMEOUT, (status as TrackingStatus.Error).code)
-            verify(simUsageResetRepository, never()).setBaselineRetryCount(eq("sim_0"), eq(null))
+            verify(simUsageResetRepositoryDelegate, never()).setBaselineRetryCount(eq("sim_0"), eq(null))
         }
 
     @Test
@@ -125,8 +137,10 @@ class TrafficTrackerRegressionTest {
             val permissionChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
             whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)
 
+            var hasUsageStatsPermission = false
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+            whenever(permissionManager.hasUsageStatsPermission()).thenAnswer { hasUsageStatsPermission }
+            whenever(permissionManager.isTelephonySupported()).thenReturn(true)
 
             val activeSims =
                 listOf(
@@ -145,32 +159,31 @@ class TrafficTrackerRegressionTest {
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0")))
             whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
-            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
-            whenever(simUsageResetRepository.getBaselineRetryCount("sim_0")).thenReturn(flowOf(null))
+            whenever(simUsageResetRepositoryDelegate.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
+            whenever(simUsageResetRepositoryDelegate.getBaselineRetryCount("sim_0")).thenReturn(flowOf(null))
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(5000L))
 
             val tracker = createTracker(backgroundScope)
+            tracker.updateTrafficUsage()
+            advanceUntilIdle()
 
-            withTimeout(5000.milliseconds) {
-                while (true) {
-                    val status = tracker.status.value
-                    if (status is TrackingStatus.Error &&
-                        status.type == TrackingStatus.ErrorType.PERMISSION_MISSING
-                    ) {
-                        break
-                    }
-                    delay(20.milliseconds)
-                }
-            }
+            val initialStatus = tracker.status.value
+            assertTrue(
+                "Expected PERMISSION_MISSING error, but was $initialStatus",
+                initialStatus is TrackingStatus.Error &&
+                    initialStatus.type == TrackingStatus.ErrorType.PERMISSION_MISSING,
+            )
 
-            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
+            hasUsageStatsPermission = true
             permissionChanges.emit(Unit)
+            tracker.updateTrafficUsage()
+            advanceUntilIdle()
 
-            withTimeout(5000.milliseconds) {
-                while (tracker.status.value !is TrackingStatus.Active) {
-                    delay(20.milliseconds)
-                }
-            }
+            val updatedStatus = tracker.status.value
+            assertTrue(
+                "Expected Active status after permission grant, but was $updatedStatus",
+                updatedStatus is TrackingStatus.Active,
+            )
 
             verify(networkStatsProvider, atLeastOnce()).queryMobileBytes(any(), any())
         }
@@ -206,26 +219,6 @@ class TrafficTrackerRegressionTest {
             )
         }
 
-    private fun <T> stubSuspend(block: suspend () -> T): Answer<Any?> =
-        Answer { invocation ->
-            // @Suppress("UNCHECKED_CAST") is required for Mockito continuation parameter casting in test.
-            @Suppress("UNCHECKED_CAST")
-            val continuation = invocation.rawArguments.last() as Continuation<T>
-            val job =
-                CoroutineScope(continuation.context).launch {
-                    try {
-                        val result = block()
-                        continuation.resumeWith(Result.success(result))
-                    } catch (e: Throwable) {
-                        continuation.resumeWith(Result.failure(e))
-                    }
-                }
-            continuation.context[Job]?.invokeOnCompletion {
-                job.cancel()
-            }
-            COROUTINE_SUSPENDED
-        }
-
     private fun createTracker(scope: CoroutineScope): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
@@ -236,6 +229,7 @@ class TrafficTrackerRegressionTest {
                 timeProvider,
                 networkStatsProvider,
                 dataChangeNotifier,
+                DataStoreRetryHelper(),
             )
         val deltaCalculator = TrafficDeltaCalculator(simUsageResetRepository)
         val simChangeHandler =
