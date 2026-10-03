@@ -108,7 +108,7 @@ class AppSearchErrorHandler
 
             return if (failures >= MAX_CONSECUTIVE_INDEX_FAILURES) {
                 AppLogger.e(
-                    "SemanticSearchManager: $failures consecutive indexing failures. " +
+                    "AppSearchErrorHandler: $failures consecutive indexing failures. " +
                         "Status set to Error, but future snapshots will still be attempted.",
                 )
                 TrackingStatus.Error(

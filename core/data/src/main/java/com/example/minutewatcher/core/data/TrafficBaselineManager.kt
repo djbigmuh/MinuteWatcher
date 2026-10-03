@@ -73,7 +73,7 @@ class TrafficBaselineManager
          *
          * @param startTime must be a valid timestamp (greater than 0).
          * Typically this is the `lastResetDate` of the SIM usage.
-         * @throws IllegalArgumentException if [startTime] is 0 or negative.
+         * If [startTime] is 0 or negative, returns [StatsResult.Error] with [IllegalArgumentException] as cause.
          */
         fun getCurrentMobileBytes(startTime: Long): StatsResult {
             if (startTime <= 0L) {
@@ -131,7 +131,7 @@ class TrafficBaselineManager
                     }
                 }
             } catch (e: SecurityException) {
-                AppLogger.e("SecurityException in TrafficTracker", e)
+                AppLogger.e("TrafficBaselineManager: SecurityException during baseline reset", e)
                 updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING, e.message))
             } catch (e: CancellationException) {
                 throw e
