@@ -8,7 +8,6 @@ import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,36 +15,32 @@ import javax.inject.Singleton
  * Implementation of [SimLimitsRepository] using [DataStore].
  *
  * Manages minutes and traffic limits for SIM identities.
- * AOSP DataStore compliant.
+ * AOSP DataStore compliant via [BaseDataStoreRepository].
  * Safe to call from any coroutine context.
  */
 @Singleton
 class SimLimitsRepositoryImpl
     @Inject
     constructor(
-        @SimDataStore private val dataStore: DataStore<Preferences>,
-    ) : SimLimitsRepository {
+        @SimDataStore dataStore: DataStore<Preferences>,
+    ) : BaseDataStoreRepository(dataStore),
+        SimLimitsRepository {
         // DataStore keys are an implementation detail. The public repository API must not expose them.
         // This complies with the Dependency Inversion Principle.
-
-        private fun <T> get(
-            key: Preferences.Key<T>,
-            defaultValue: T,
-        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
         /**
          * Returns a flow of the monthly minutes limit for the given identity.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getMonthlyLimit(identity: String): Flow<Int> = get(DataStoreKeys.monthlyLimitKey(identity), 0)
+        override fun getMonthlyLimit(identity: String): Flow<Int> = getData(DataStoreKeys.monthlyLimitKey(identity), 0)
 
         /**
          * Returns a flow of the monthly traffic limit in MB for the given identity.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getTrafficLimit(identity: String): Flow<Int> = get(DataStoreKeys.trafficLimitKey(identity), 0)
+        override fun getTrafficLimit(identity: String): Flow<Int> = getData(DataStoreKeys.trafficLimitKey(identity), 0)
 
         /**
          * Updates limits for the given identity.
@@ -79,14 +74,14 @@ class SimLimitsRepositoryImpl
          * Safe to call from any coroutine context.
          */
         override fun getAutoReset(identity: String): Flow<Boolean> =
-            get(DataStoreKeys.autoResetKey(identity), defaultValue = false)
+            getData(DataStoreKeys.autoResetKey(identity), defaultValue = false)
 
         /**
          * Returns a flow of the day of the month when automatic reset occurs.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getAutoResetDay(identity: String): Flow<Int> = get(DataStoreKeys.autoResetDayKey(identity), 1)
+        override fun getAutoResetDay(identity: String): Flow<Int> = getData(DataStoreKeys.autoResetDayKey(identity), 1)
 
         /**
          * Updates automatic reset settings for the given identity.

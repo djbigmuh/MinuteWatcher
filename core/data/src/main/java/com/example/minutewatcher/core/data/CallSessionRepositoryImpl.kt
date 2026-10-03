@@ -18,7 +18,7 @@ import javax.inject.Singleton
  * Implementation of [CallSessionRepository] using [DataStore].
  *
  * Tracks transient call session data (start times, identities) for attribution.
- * AOSP DataStore compliant.
+ * AOSP DataStore compliant via [BaseDataStoreRepository].
  * Safe to call from any coroutine context.
  *
  * NOTE: This repository manages all transient call session metadata
@@ -28,22 +28,18 @@ import javax.inject.Singleton
 class CallSessionRepositoryImpl
     @Inject
     constructor(
-        @AppDataStore private val dataStore: DataStore<Preferences>,
-    ) : CallSessionRepository {
+        @AppDataStore dataStore: DataStore<Preferences>,
+    ) : BaseDataStoreRepository(dataStore),
+        CallSessionRepository {
         // DataStore keys are an implementation detail. The public repository API must not expose them.
         // This complies with the Dependency Inversion Principle.
-
-        private fun <T> get(
-            key: Preferences.Key<T>,
-            defaultValue: T,
-        ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
         /**
          * Returns the subId of the last used data SIM.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getLastDataSubId(): Flow<Int> = get(DataStoreKeys.LAST_DATA_SUB_ID, -1)
+        override fun getLastDataSubId(): Flow<Int> = getData(DataStoreKeys.LAST_DATA_SUB_ID, -1)
 
         /**
          * Updates the subId of the last used data SIM.
@@ -99,21 +95,21 @@ class CallSessionRepositoryImpl
          *
          * Safe to call from any coroutine context.
          */
-        override fun getCallStartTime(subId: Int): Flow<Long> = get(DataStoreKeys.callStartTimeKey(subId), 0L)
+        override fun getCallStartTime(subId: Int): Flow<Long> = getData(DataStoreKeys.callStartTimeKey(subId), 0L)
 
         /**
          * Returns the device boot time recorded when the call started on the given subId.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getBootTime(subId: Int): Flow<Long> = get(DataStoreKeys.bootTimeKey(subId), 0L)
+        override fun getBootTime(subId: Int): Flow<Long> = getData(DataStoreKeys.bootTimeKey(subId), 0L)
 
         /**
          * Returns the device uptime recorded when the call started on the given subId.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getUptime(subId: Int): Flow<Long> = get(DataStoreKeys.uptimeKey(subId), 0L)
+        override fun getUptime(subId: Int): Flow<Long> = getData(DataStoreKeys.uptimeKey(subId), 0L)
 
         /**
          * Returns the stable SIM identity associated with the active call on the given subId.
