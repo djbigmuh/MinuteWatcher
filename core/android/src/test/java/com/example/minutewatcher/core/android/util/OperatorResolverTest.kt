@@ -63,19 +63,19 @@ class OperatorResolverTest {
     }
 
     @Test
-    fun testResolve_ByDisplayName() {
+    fun `resolve by display name`() {
         val result = OperatorResolver.resolve(context, "My Operator", emptyList(), 0)
         assertEquals("My Operator", result)
     }
 
     @Test
-    fun testResolve_ByMccMnc_MTS() {
+    fun `resolve by MccMnc MTS`() {
         val result = OperatorResolver.resolve(context, "", listOf("25001"), 0)
         assertEquals("MTS", result)
     }
 
     @Test
-    fun testResolve_ByMccMnc_Beeline() {
+    fun `resolve by MccMnc Beeline`() {
         val result = OperatorResolver.resolve(context, "", listOf("25099"), 1)
         assertEquals("Beeline", result)
     }
@@ -87,37 +87,37 @@ class OperatorResolverTest {
     }
 
     @Test
-    fun testResolve_Unknown() {
+    fun `resolve unknown`() {
         val result = OperatorResolver.resolve(context, "", listOf("99999"), 0)
         assertEquals("Operator with mcc MCC:999 MNC:99", result)
     }
 
     @Test
-    fun testResolve_Empty() {
+    fun `resolve empty`() {
         val result = OperatorResolver.resolve(context, "", emptyList(), 1)
         assertEquals("Operator 2", result)
     }
 
     @Test
-    fun testResolve_Rostelecom() {
+    fun `resolve Rostelecom`() {
         val result = OperatorResolver.resolve(context, "", listOf("25039"), 0)
         assertEquals("Rostelecom", result)
     }
 
     @Test
-    fun testResolve_A1() {
+    fun `resolve A1`() {
         val result = OperatorResolver.resolve(context, "", listOf("23201"), 0)
         assertEquals("A1", result)
     }
 
     @Test
-    fun testResolve_Three() {
+    fun `resolve Three`() {
         val result = OperatorResolver.resolve(context, "", listOf("23205"), 0)
         assertEquals("Three", result)
     }
 
     @Test
-    fun testResolve_Movistar() {
+    fun `resolve Movistar`() {
         val result = OperatorResolver.resolve(context, "", listOf("21407"), 0)
         assertEquals("Movistar", result)
     }
@@ -144,14 +144,14 @@ class OperatorResolverTest {
     }
 
     @Test
-    fun testResolve_Success() {
+    fun `resolve success`() {
         val candidates = listOf("2501", "25001", "250001")
         val result = OperatorResolver.resolve(context, "", candidates, 0)
         assertEquals("MTS", result)
     }
 
     @Test
-    fun testResolve_FallbackToGeneric() {
+    fun `resolve fallback to generic`() {
         val candidates = listOf("99901", "9991", "999001")
         val result = OperatorResolver.resolve(context, "", candidates, 0)
         assertEquals("Operator with mcc MCC:999 MNC:01", result)

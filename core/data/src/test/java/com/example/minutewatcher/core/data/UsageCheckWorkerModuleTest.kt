@@ -99,7 +99,7 @@ class UsageCheckWorkerModuleTest {
     }
 
     @Test
-    fun testDoWork_Success() =
+    fun `doWork success`() =
         runTest {
             val context = ApplicationProvider.getApplicationContext<Context>()
             val worker =

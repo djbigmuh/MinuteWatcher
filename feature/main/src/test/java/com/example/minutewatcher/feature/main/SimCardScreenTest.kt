@@ -21,7 +21,7 @@ class SimCardScreenTest {
         createComposeRule()
 
     @Test
-    fun emptyState_isDisplayed() {
+    fun `empty state is displayed`() {
         composeTestRule.setContent {
             EmptyState(onGrantPermission = {})
         }
@@ -31,7 +31,7 @@ class SimCardScreenTest {
     }
 
     @Test
-    fun errorState_isDisplayedWithMessage() {
+    fun `error state is displayed with message`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val expectedText = context.getString(R.string.refresh_error)
         composeTestRule.setContent {

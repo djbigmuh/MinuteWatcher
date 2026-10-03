@@ -95,7 +95,7 @@ class UsageMonitorReceiverTest {
     }
 
     @Test
-    fun testOnReceiveEnqueuesCallEventWork() =
+    fun `onReceive enqueues call event work`() =
         runTest {
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
             val receiver =
@@ -127,7 +127,7 @@ class UsageMonitorReceiverTest {
         }
 
     @Test
-    fun testOnReceiveUnknownSubIdEnqueuesWork() =
+    fun `onReceive unknown subId enqueues work`() =
         runTest {
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
             val receiver =
@@ -158,7 +158,7 @@ class UsageMonitorReceiverTest {
         }
 
     @Test
-    fun testOnReceiveRingingStateDoesNotEnqueueWork() =
+    fun `onReceive ringing state does not enqueue work`() =
         runTest {
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
             val receiver =
@@ -189,7 +189,7 @@ class UsageMonitorReceiverTest {
         }
 
     @Test
-    fun testOnReceiveMaintainsGlobalOrder() =
+    fun `onReceive maintains global order`() =
         runTest {
             val mockPendingResult1 = mock(BroadcastReceiver.PendingResult::class.java)
             val mockPendingResult2 = mock(BroadcastReceiver.PendingResult::class.java)
@@ -236,7 +236,7 @@ class UsageMonitorReceiverTest {
         }
 
     @Test
-    fun testOnReceiveNullStateDoesNotEnqueueWork() =
+    fun `onReceive null state does not enqueue work`() =
         runTest {
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
             val receiver =

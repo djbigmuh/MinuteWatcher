@@ -33,7 +33,7 @@ class SimLimitComposeDialogTest {
     private val defaultLocale = Locale.US
 
     @Test
-    fun resetLimits_showsConfirmationDialog() {
+    fun `reset limits shows confirmation dialog`() {
         var resetCalled = false
         val context = ApplicationProvider.getApplicationContext<Context>()
 
@@ -189,7 +189,7 @@ class SimLimitComposeDialogTest {
     }
 
     @Test
-    fun confirmWithEmptyInput_showsValidationErrorAndDoesNotCallConfirm() {
+    fun `confirm with empty input shows validation error and does not call confirm`() {
         var confirmCalled = false
         val context = ApplicationProvider.getApplicationContext<Context>()
 

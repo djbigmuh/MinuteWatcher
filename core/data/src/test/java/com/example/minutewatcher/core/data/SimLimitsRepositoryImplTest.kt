@@ -52,7 +52,7 @@ class SimLimitsRepositoryImplTest {
         }
 
     @Test
-    fun testUpdateSimLimitsAndGetUsage() =
+    fun `update SIM limits and get usage`() =
         runTest {
             val usageRepo =
                 SimUsageRepositoryImpl(

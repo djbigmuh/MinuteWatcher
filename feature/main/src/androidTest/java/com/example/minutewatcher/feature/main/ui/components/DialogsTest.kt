@@ -24,7 +24,7 @@ class DialogsTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
-    fun testSimLimitDialog_InputValidation() {
+    fun simLimitDialogInputValidation() {
         var onConfirmCalled = false
         val setLimitText = context.getString(R.string.set_minutes_limit)
         val setButtonText = context.getString(R.string.set_button)
@@ -58,7 +58,7 @@ class DialogsTest {
     }
 
     @Test
-    fun testSimLimitDialog_DecimalTrafficInput() {
+    fun simLimitDialogDecimalTrafficInput() {
         var capturedTrafficMb = -1
         val setTrafficText = context.getString(R.string.set_traffic_limit)
         val setButtonText = context.getString(R.string.set_button)

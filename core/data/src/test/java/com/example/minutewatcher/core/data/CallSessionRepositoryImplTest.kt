@@ -33,7 +33,7 @@ class CallSessionRepositoryImplTest {
     }
 
     @Test
-    fun testClearAllCallSessions_RemovesExpectedKeys() =
+    fun `clear all call sessions removes expected keys`() =
         runTest {
             val repository = CallSessionRepositoryImpl(dataStore)
 
@@ -62,7 +62,7 @@ class CallSessionRepositoryImplTest {
         }
 
     @Test
-    fun testGetActiveCallSubIds() =
+    fun `get active call subIds`() =
         runTest {
             val repository = CallSessionRepositoryImpl(dataStore)
 
@@ -77,7 +77,7 @@ class CallSessionRepositoryImplTest {
         }
 
     @Test
-    fun testSaveCallSession_WritesAllFieldsAtomically() =
+    fun `save call session writes all fields atomically`() =
         runTest {
             val repository = CallSessionRepositoryImpl(dataStore)
             val subId = 1
@@ -97,7 +97,7 @@ class CallSessionRepositoryImplTest {
         }
 
     @Test
-    fun testClearCallSession_RemovesAllFieldsAtomically() =
+    fun `clear call session removes all fields atomically`() =
         runTest {
             val repository = CallSessionRepositoryImpl(dataStore)
             val subId = 1

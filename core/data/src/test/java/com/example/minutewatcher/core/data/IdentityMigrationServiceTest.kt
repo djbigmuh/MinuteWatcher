@@ -60,7 +60,7 @@ class IdentityMigrationServiceTest {
     }
 
     @Test
-    fun testMigration() =
+    fun `migrates legacy preferences to modern format`() =
         runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
@@ -147,7 +147,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testHasLegacyData() =
+    fun `has legacy data`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 
@@ -171,7 +171,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testMigrationSlot1() =
+    fun `migration slot 1`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_1")
@@ -198,7 +198,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testHasLegacyData_Patterns() =
+    fun `has legacy data patterns`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 
@@ -230,7 +230,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testHasLegacyData_IgnoresActiveIdentities() =
+    fun `has legacy data ignores active identities`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 
@@ -246,7 +246,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testHasLegacyData_SchemaVersionCheck() =
+    fun `has legacy data schema version check`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 
@@ -263,7 +263,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testMigration_CleansUpMappingMarkers() =
+    fun `migration cleans up mapping markers`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val subId = 5
@@ -304,7 +304,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testMigration_ConflictPreservesModernValueAndBacksUpLegacy() =
+    fun `migration conflict preserves modern value and backs up legacy`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
@@ -446,7 +446,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testConcurrentMigrationDoesNotCorruptData() =
+    fun `concurrent migration does not corrupt data`() =
         runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
             val legacyKey = intPreferencesKey("test_key_sim_0")
@@ -484,7 +484,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun testMigration_FailureLoggedAndReported() =
+    fun `migration failure logged and reported`() =
         testScope.runTest {
             val service = IdentityMigrationService(appDataStore, simDataStore)
 

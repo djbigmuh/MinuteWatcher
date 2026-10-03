@@ -5,7 +5,7 @@ import org.junit.Test
 
 class WidgetLayoutModeTest {
     @Test
-    fun testFromValue() {
+    fun `from value`() {
         assertEquals(WidgetLayoutMode.SINGLE_LINE, WidgetLayoutMode.fromValue(0))
         assertEquals(WidgetLayoutMode.TWO_LINES, WidgetLayoutMode.fromValue(1))
         assertEquals(WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.fromValue(2))
@@ -14,7 +14,7 @@ class WidgetLayoutModeTest {
     }
 
     @Test
-    fun testFromValue_Default() {
+    fun `from value default`() {
         assertEquals(WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.fromValue(-1))
         assertEquals(WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.fromValue(100))
     }

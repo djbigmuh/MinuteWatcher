@@ -98,7 +98,7 @@ class SimIdentityRepositoryImplResolutionTest {
     private fun createTestDataStore(): DataStore<Preferences> = InMemoryPreferencesDataStore()
 
     @Test
-    fun testActiveSimInSlot1_ReturnsCorrectSlotIndexInUsage() =
+    fun `active SIM in slot 1 returns correct slot index in usage`() =
         runTest(testDispatcher) {
             val ds = createTestDataStore()
             val identityRepo =
@@ -138,7 +138,7 @@ class SimIdentityRepositoryImplResolutionTest {
         }
 
     @Test
-    fun testGetIdentity_DoesNotTriggerEditWhenUnchanged() =
+    fun `getIdentity does not trigger edit when unchanged`() =
         runTest(testDispatcher) {
             val ds = createTestDataStore()
             val identityRepo =
@@ -171,7 +171,7 @@ class SimIdentityRepositoryImplResolutionTest {
         }
 
     @Test(expected = IllegalStateException::class)
-    fun testGetSimIdentity_Throws_WhenPermissionsMissing() =
+    fun `getSimIdentity throws when permissions missing`() =
         runTest(testDispatcher) {
             val ds = createTestDataStore()
             val identityRepo =
@@ -193,7 +193,7 @@ class SimIdentityRepositoryImplResolutionTest {
         }
 
     @Test
-    fun testObserveActiveSims_HandlesSaveIdentityError() =
+    fun `observeActiveSims handles save identity error`() =
         runTest(testDispatcher) {
             val mockDataStore: DataStore<Preferences> = mock()
             whenever(mockDataStore.data)

@@ -73,7 +73,7 @@ class WidgetSettingsScreenTest {
         )
 
     @Test
-    fun loadingState_isDisplayed() {
+    fun `loading state is displayed`() {
         composeTestRule.setContent {
             WidgetSettingsScreen(
                 viewModel = viewModel,
@@ -88,7 +88,7 @@ class WidgetSettingsScreenTest {
     }
 
     @Test
-    fun errorState_isDisplayed() {
+    fun `error state is displayed`() {
         whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(isLoadError = true)))
 
         composeTestRule.setContent {
@@ -103,7 +103,7 @@ class WidgetSettingsScreenTest {
     }
 
     @Test
-    fun settingsContent_isDisplayed() {
+    fun `settings content is displayed`() {
         whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
 
         composeTestRule.setContent {

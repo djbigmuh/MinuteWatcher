@@ -95,7 +95,7 @@ class BootReceiverTest {
     }
 
     @Test
-    fun testOnReceiveEnqueuesWork() =
+    fun `onReceive enqueues work`() =
         runTest {
             val mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
             val receiver =

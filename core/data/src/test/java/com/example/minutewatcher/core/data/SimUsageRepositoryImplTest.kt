@@ -245,7 +245,7 @@ class SimUsageRepositoryImplTest {
         }
 
     @Test
-    fun testRolloverLogic_AccumulatesRemainingMinutes() =
+    fun `rollover logic accumulates remaining minutes`() =
         runTest {
             val limitsRepo = SimLimitsRepositoryImpl(dataStore)
             val identity = "test_sim"
@@ -266,7 +266,7 @@ class SimUsageRepositoryImplTest {
         }
 
     @Test
-    fun testRolloverLogic_AccumulatesRemainingTraffic() =
+    fun `rollover logic accumulates remaining traffic`() =
         runTest {
             val limitsRepo = SimLimitsRepositoryImpl(dataStore)
             val identity = "test_sim"
@@ -287,7 +287,7 @@ class SimUsageRepositoryImplTest {
         }
 
     @Test
-    fun testManualReset_ClearsEverythingEvenWithRollover() =
+    fun `manual reset clears everything even with rollover`() =
         runTest {
             val limitsRepo = SimLimitsRepositoryImpl(dataStore)
             val identity = "test_sim"

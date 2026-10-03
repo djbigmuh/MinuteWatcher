@@ -69,7 +69,7 @@ class MainBannerControllerTest {
 
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun testBannerReactions() =
+    fun `banner reactions`() =
         runTest(mainDispatcherRule.testDispatcher) {
             val controller = createController(backgroundScope)
 

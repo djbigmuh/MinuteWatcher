@@ -53,7 +53,7 @@ class MainSettingsControllerTest {
         )
 
     @Test
-    fun setTheme_does_not_crash_on_IOException() {
+    fun `setTheme does not crash on IOException`() {
         runTest {
             withTimeout(5.seconds) {
                 doAnswer { throw IOException() }.whenever(appSettingsRepository).updateAppSettings(any())
@@ -65,7 +65,7 @@ class MainSettingsControllerTest {
     }
 
     @Test
-    fun setLanguage_does_not_crash_on_IOException() {
+    fun `setLanguage does not crash on IOException`() {
         runTest {
             withTimeout(5.seconds) {
                 doAnswer { throw IOException() }.whenever(appSettingsRepository).updateAppSettings(any())
@@ -77,7 +77,7 @@ class MainSettingsControllerTest {
     }
 
     @Test
-    fun completeOnboarding_does_not_crash_on_IOException() {
+    fun `completeOnboarding does not crash on IOException`() {
         runTest {
             withTimeout(5.seconds) {
                 doAnswer { throw IOException() }.whenever(appSettingsRepository).updateAppSettings(any())
@@ -89,7 +89,7 @@ class MainSettingsControllerTest {
     }
 
     @Test
-    fun dismissWidgetError_does_not_crash_on_IOException() {
+    fun `dismissWidgetError does not crash on IOException`() {
         runTest {
             withTimeout(5.seconds) {
                 doAnswer { throw IOException() }.whenever(appSettingsRepository).updateAppSettings(any())
@@ -101,7 +101,7 @@ class MainSettingsControllerTest {
     }
 
     @Test
-    fun dismissInaccurateCalls_does_not_crash_on_IOException() {
+    fun `dismissInaccurateCalls does not crash on IOException`() {
         runTest {
             withTimeout(5.seconds) {
                 doAnswer { throw IOException() }.whenever(appSettingsRepository).updateAppSettings(any())
@@ -113,7 +113,7 @@ class MainSettingsControllerTest {
     }
 
     @Test
-    fun setNotificationPermissionRequested_does_not_crash_on_IOException() {
+    fun `setNotificationPermissionRequested does not crash on IOException`() {
         runTest {
             withTimeout(5.seconds) {
                 doAnswer { throw IOException() }.whenever(appSettingsRepository).updateAppSettings(any())
@@ -125,7 +125,7 @@ class MainSettingsControllerTest {
     }
 
     @Test
-    fun setPhonePermissionRequested_does_not_crash_on_IOException() {
+    fun `setPhonePermissionRequested does not crash on IOException`() {
         runTest {
             withTimeout(5.seconds) {
                 doAnswer { throw IOException() }.whenever(appSettingsRepository).updateAppSettings(any())
@@ -137,7 +137,7 @@ class MainSettingsControllerTest {
     }
 
     @Test
-    fun cancellation_is_not_suppressed() {
+    fun `cancellation is not suppressed`() {
         runTest {
             withTimeout(5.seconds) {
                 var wasCancelled = false

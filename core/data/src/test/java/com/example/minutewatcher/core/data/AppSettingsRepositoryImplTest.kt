@@ -42,7 +42,7 @@ class AppSettingsRepositoryImplTest {
     }
 
     @Test
-    fun testDefaultValues() =
+    fun `default values`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
             val settings = repository.getAppSettings().first()
@@ -56,7 +56,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testUpdateAppSettings_AtomicUpdate() =
+    fun `update app settings atomic update`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
@@ -74,7 +74,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testUpdateAppSettings_PreservesOtherFields() =
+    fun `update app settings preserves other fields`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
@@ -95,7 +95,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testUpdateAppSettings_SavesOnboardingCompleted() =
+    fun `update app settings saves onboarding completed`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
@@ -107,7 +107,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testConcurrentUpdates() =
+    fun `concurrent updates`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
@@ -132,7 +132,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testFlowEmitsUpdatedValue() =
+    fun `flow emits updated value`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
             val settingsList = mutableListOf<AppSettings>()
@@ -154,7 +154,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testGetAppSettings_ReturnsFreshDataWithoutSubscribers() =
+    fun `get app settings returns fresh data without subscribers`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
@@ -171,7 +171,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testUpdateAppSettings_ThrowsException_DoesNotModifyDataStore() =
+    fun `update app settings throws exception does not modify DataStore`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
@@ -193,7 +193,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testUpdateAppSettings_RedundantUpdate_DoesNotEmit() =
+    fun `update app settings redundant update does not emit`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
             val settingsList = mutableListOf<AppSettings>()
@@ -222,7 +222,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testGetAppSettings_SuspendsUntilLoaded() =
+    fun `get app settings suspends until loaded`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
             val settingsList = mutableListOf<AppSettings>()
@@ -242,7 +242,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testGetAppSettings_FiltersNotLoaded() =
+    fun `get app settings filters not loaded`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
             val settingsList = mutableListOf<AppSettings>()
@@ -271,7 +271,7 @@ class AppSettingsRepositoryImplTest {
         }
 
     @Test
-    fun testObserveAppSettings_DoesNotFilter() =
+    fun `observe app settings does not filter`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
             // observeAppSettings() returns appSettingsState, which is a StateFlow

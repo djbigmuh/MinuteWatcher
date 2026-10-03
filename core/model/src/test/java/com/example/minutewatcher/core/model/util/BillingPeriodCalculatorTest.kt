@@ -10,7 +10,7 @@ class BillingPeriodCalculatorTest {
     private val zoneId = ZoneId.of("UTC")
 
     @Test
-    fun testCalculate_StartOfMonth() {
+    fun `calculate start of month`() {
         // Reset day 1, now is Jan 10
         val now = createMillis(2026, 1, 10)
         val info = BillingPeriodCalculator.calculate(1, now, zoneId)
@@ -21,7 +21,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_MidMonth() {
+    fun `calculate mid month`() {
         // Reset day 15, now is Jan 20
         val now = createMillis(2026, 1, 20)
         val info = BillingPeriodCalculator.calculate(15, now, zoneId)
@@ -31,7 +31,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_PreviousMonth() {
+    fun `calculate previous month`() {
         // Reset day 15, now is Jan 10
         val now = createMillis(2026, 1, 10)
         val info = BillingPeriodCalculator.calculate(15, now, zoneId)
@@ -42,7 +42,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_LeapYear_Feb() {
+    fun `calculate leap year Feb`() {
         // Reset day 29, now is Feb 28 2024 (Leap year)
         // resetDayActual = min(29, 29) = 29.
         // now.dayOfMonth (28) < 29 is true.
@@ -56,7 +56,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_NonLeapYear_Feb_Reset31() {
+    fun `calculate non leap year Feb reset 31`() {
         // Reset day 31, now is March 5 2025
         // currentYearMonth = March (31 days). resetDayActual = min(31, 31) = 31.
         // now.dayOfMonth (5) < 31 is true.
@@ -71,7 +71,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_31stOnShortMonth() {
+    fun `calculate 31st on short month`() {
         // Reset day 31, now is April 30
         // April has 30 days. resetDayActual = min(31, 30) = 30.
         // now.dayOfMonth (30) < 30 is false.
@@ -85,7 +85,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_31stOnMay1st() {
+    fun `calculate 31st on May 1st`() {
         // Reset day 31, now is May 1st
         // May has 31 days. resetDayActual = 31.
         // 1 < 31 is true.
@@ -100,7 +100,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_CrossingYearBoundary() {
+    fun `calculate crossing year boundary`() {
         // Reset day 25, now is Jan 5 2026
         val now = createMillis(2026, 1, 5)
         val info = BillingPeriodCalculator.calculate(25, now, zoneId)
@@ -112,7 +112,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_LeapYear_Feb29_Start() {
+    fun `calculate leap year Feb 29 start`() {
         // Reset day 31, now is Feb 29 2024 (Leap year)
         // Feb has 29 days. resetDayActual = 29.
         // 29 < 29 is false.
@@ -126,7 +126,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_31stOnFeb28th_NonLeap() {
+    fun `calculate 31st on Feb 28th non leap`() {
         // Reset day 31, now is Feb 28 2026
         // Feb has 28 days. resetDayActual = 28.
         // 28 < 28 is false.
@@ -140,7 +140,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testDaysRemaining_CorrectOnShortMonth() {
+    fun `days remaining correct on short month`() {
         // Reset 31, now is Feb 28 (non-leap)
         // Period is Feb 28 to March 31.
         val now = createMillis(2026, 2, 28)
@@ -155,7 +155,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_31stOnFeb29th_Leap() {
+    fun `calculate 31st on Feb 29th leap`() {
         // Reset 31, now is Feb 29 2024 (Leap)
         // lengthOfMonth = 29. resetDayActual = 29.
         // 29 < 29 is false.
@@ -169,7 +169,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_ResetDayZero() {
+    fun `calculate reset day zero`() {
         // resetDay = 0 should be treated as 1
         val now = createMillis(2026, 1, 10)
         val info = BillingPeriodCalculator.calculate(0, now, zoneId)
@@ -179,7 +179,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_ResetDayNegative() {
+    fun `calculate reset day negative`() {
         // resetDay = -5 should be treated as 1
         val now = createMillis(2026, 1, 10)
         val info = BillingPeriodCalculator.calculate(-5, now, zoneId)
@@ -189,7 +189,7 @@ class BillingPeriodCalculatorTest {
     }
 
     @Test
-    fun testCalculate_ResetDayTooHigh() {
+    fun `calculate reset day too high`() {
         // resetDay = 32 should be treated as 31
         val now = createMillis(2026, 1, 10)
         val info = BillingPeriodCalculator.calculate(32, now, zoneId)

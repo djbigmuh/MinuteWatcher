@@ -52,7 +52,7 @@ class WorkSchedulerTest {
     }
 
     @Test
-    fun scheduleInitialSetup_forceFalse_enqueuesWorkWithKeepPolicy() {
+    fun `scheduleInitialSetup with force false enqueues work with keep policy`() {
         workScheduler.scheduleInitialSetup(force = false).result.get()
 
         val workInfos = workManager.getWorkInfosForUniqueWork(WorkScheduler.INITIAL_SETUP_WORK_NAME).get()
@@ -69,7 +69,7 @@ class WorkSchedulerTest {
     }
 
     @Test
-    fun scheduleInitialSetup_forceTrue_replacesWorkWithReplacePolicy() {
+    fun `scheduleInitialSetup with force true replaces work with replace policy`() {
         workScheduler.scheduleInitialSetup(force = false).result.get()
 
         val firstWorkInfos = workManager.getWorkInfosForUniqueWork(WorkScheduler.INITIAL_SETUP_WORK_NAME).get()
@@ -89,7 +89,7 @@ class WorkSchedulerTest {
     }
 
     @Test
-    fun schedulePeriodicUsageCheck_enqueuesPeriodicWork() {
+    fun `schedulePeriodicUsageCheck enqueues periodic work`() {
         workScheduler.schedulePeriodicUsageCheck().result.get()
 
         val workInfos = workManager.getWorkInfosForUniqueWork(WorkScheduler.USAGE_CHECK_WORK_NAME).get()

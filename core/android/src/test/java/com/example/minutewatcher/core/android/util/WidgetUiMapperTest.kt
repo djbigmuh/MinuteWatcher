@@ -40,7 +40,7 @@ class WidgetUiMapperTest {
         )
 
     @Test
-    fun testSnapshotToUiState_Basic() {
+    fun `snapshot to ui state basic`() {
         val snapshot = buildBasicSnapshot()
         val settings = buildBasicSettings()
 
@@ -136,7 +136,7 @@ class WidgetUiMapperTest {
     }
 
     @Test
-    fun testSnapshotToUiState_EmptySnapshot() {
+    fun `snapshot to ui state empty snapshot`() {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
@@ -168,7 +168,7 @@ class WidgetUiMapperTest {
     }
 
     @Test
-    fun testSnapshotToUiState_ManualAdjustment() {
+    fun `snapshot to ui state manual adjustment`() {
         val snapshot = buildManualAdjustmentSnapshot()
         val settings =
             buildBasicSettings().copy(
@@ -233,7 +233,7 @@ class WidgetUiMapperTest {
         )
 
     @Test
-    fun testSnapshotToUiState_LightBackground() {
+    fun `snapshot to ui state light background`() {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
@@ -270,7 +270,7 @@ class WidgetUiMapperTest {
     }
 
     @Test
-    fun testSnapshotToUiState_HidesEmptyTraffic() {
+    fun `snapshot to ui state hides empty traffic`() {
         val snapshot = buildEmptyTrafficSnapshot()
         val settings = buildSixLinesSettings()
 
@@ -357,7 +357,7 @@ class WidgetUiMapperTest {
         )
 
     @Test
-    fun testTransparencyMapping() {
+    fun `transparency mapping`() {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())
         val settings =
             WidgetSettingsState(
@@ -392,7 +392,7 @@ class WidgetUiMapperTest {
     }
 
     @Test
-    fun testWidgetLimitExceeded_OverridesLayoutToSimple() {
+    fun `widget limit exceeded overrides layout to simple`() {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
@@ -422,7 +422,7 @@ class WidgetUiMapperTest {
     }
 
     @Test
-    fun testShowSimLogic_WhenConfigMissing() {
+    fun `show SIM logic when config missing`() {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
@@ -461,7 +461,7 @@ class WidgetUiMapperTest {
     }
 
     @Test
-    fun testMinutesText_DisplaysDashWhenLimitIsZeroAndUsedIsNonZero() {
+    fun `minutes text displays dash when limit is zero and used is non zero`() {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
@@ -518,7 +518,7 @@ class WidgetUiMapperTest {
     }
 
     @Test
-    fun testMinutesText_DisplaysRemainingValueWhenLimitIsSet() {
+    fun `minutes text displays remaining value when limit is set`() {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
