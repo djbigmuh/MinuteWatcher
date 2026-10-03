@@ -79,9 +79,9 @@ class MainBannerController
             appSearchBannerDismissed.value = true
         }
 
-    @Volatile
+        @Volatile
         private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
-    private val consecutiveRestartCount = AtomicInteger(0)
+        private val consecutiveRestartCount = AtomicInteger(0)
 
         private val isObservationStarted = AtomicBoolean(false)
         private val observationScope =
@@ -209,39 +209,39 @@ class MainBannerController
             }
         }
 
-    private fun handleObservationFailure(cause: Throwable) {
-        val count = consecutiveRestartCount.incrementAndGet()
-        val delayMs = calculateRestartDelay(count)
-        if (delayMs == null) {
-            AppLogger.e(
-                "MainBannerController: Banner observation failed $count consecutive times. " +
-                    "Stopping observation restarts.",
+        private fun handleObservationFailure(cause: Throwable) {
+            val count = consecutiveRestartCount.incrementAndGet()
+            val delayMs = calculateRestartDelay(count)
+            if (delayMs == null) {
+                AppLogger.e(
+                    "MainBannerController: Banner observation failed $count consecutive times. " +
+                        "Stopping observation restarts.",
+                    cause,
+                )
+                return
+            }
+
+            AppLogger.w(
+                "MainBannerController: Banner observation failed (attempt $count/$MAX_RESTART_ATTEMPTS), " +
+                    "scheduling restart in ${delayMs}ms",
                 cause,
             )
-            return
+
+            scope.launch {
+                kotlinx.coroutines.delay(delayMs.milliseconds)
+                ensureObservationStarted()
+            }
         }
 
-        AppLogger.w(
-            "MainBannerController: Banner observation failed (attempt $count/$MAX_RESTART_ATTEMPTS), " +
-                "scheduling restart in ${delayMs}ms",
-            cause,
-        )
+        internal companion object {
+            const val MAX_RESTART_ATTEMPTS = 5
+            const val MAX_RESTART_DELAY_MS = 30_000L
 
-        scope.launch {
-            kotlinx.coroutines.delay(delayMs.milliseconds)
-            ensureObservationStarted()
-        }
-    }
-
-    internal companion object {
-        const val MAX_RESTART_ATTEMPTS = 5
-        const val MAX_RESTART_DELAY_MS = 30_000L
-
-        internal fun calculateRestartDelay(attempt: Int): Long? {
-            if (attempt > MAX_RESTART_ATTEMPTS) return null
-            val exponent = (attempt - 1).coerceAtMost(30)
-            val delayMs = com.example.minutewatcher.core.model.Constants.Flow.RETRY_DELAY_MS * (1L shl exponent)
-            return delayMs.coerceAtMost(MAX_RESTART_DELAY_MS)
+            internal fun calculateRestartDelay(attempt: Int): Long? {
+                if (attempt > MAX_RESTART_ATTEMPTS) return null
+                val exponent = (attempt - 1).coerceAtMost(30)
+                val delayMs = com.example.minutewatcher.core.model.Constants.Flow.RETRY_DELAY_MS * (1L shl exponent)
+                return delayMs.coerceAtMost(MAX_RESTART_DELAY_MS)
             }
         }
     }

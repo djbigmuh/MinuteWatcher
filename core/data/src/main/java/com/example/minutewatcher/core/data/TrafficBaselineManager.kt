@@ -36,18 +36,18 @@ class TrafficBaselineManager
         private val dataChangeNotifier: DataChangeNotifier,
         private val dataStoreRetryHelper: DataStoreRetryHelper,
     ) {
-    /**
-     * Reads the baseline retry count for the given [identity].
-     *
-     * @param identity SIM identity.
-     * @return [Result.success] containing `null` if no retry count is set,
-     * [Result.success] containing `Int` if a retry count is present,
-     * or [Result.failure] if reading from DataStore failed after retries.
-     */
-    suspend fun getRetryCount(identity: String): Result<Int?> =
-        dataStoreRetryHelper.readWithRetry("baselineRetryCount") {
-            simUsageResetRepository.getBaselineRetryCount(identity)
-        }
+        /**
+         * Reads the baseline retry count for the given [identity].
+         *
+         * @param identity SIM identity.
+         * @return [Result.success] containing `null` if no retry count is set,
+         * [Result.success] containing `Int` if a retry count is present,
+         * or [Result.failure] if reading from DataStore failed after retries.
+         */
+        suspend fun getRetryCount(identity: String): Result<Int?> =
+            dataStoreRetryHelper.readWithRetry("baselineRetryCount") {
+                simUsageResetRepository.getBaselineRetryCount(identity)
+            }
 
         suspend fun setRetryCount(
             identity: String,

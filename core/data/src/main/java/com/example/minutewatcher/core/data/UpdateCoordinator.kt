@@ -103,35 +103,35 @@ class UpdateCoordinator
         private val monitoringJob = AtomicReference<Job?>(null)
         private val currentObservationJob = AtomicReference<Job?>(null)
         private val currentUpdateJob = AtomicReference<Job?>(null)
-    private val takeoverUpdateJob = AtomicReference<Job?>(null)
+        private val takeoverUpdateJob = AtomicReference<Job?>(null)
 
         init {
             ensureObservationStarted()
         }
 
-    private suspend fun reconcileObservationState() =
-        stateMutex.withLock {
-            reconcileObservationStateLocked()
-        }
-
-    private fun reconcileObservationStateLocked() {
-        val currentJob = observationScope.currentJob
-        if ((currentJob != null) && currentJob.isActive && (currentObservationJob.get() !== currentJob)) {
-            currentObservationJob.set(currentJob)
-            monitoringJob.getAndSet(launchMonitoringJob(currentJob))?.cancel()
-            transitionStatus(TrackingStatus.Active)
-        }
-    }
-
-    private fun tryReconcileObservationState() {
-        if (stateMutex.tryLock()) {
-            try {
+        private suspend fun reconcileObservationState() =
+            stateMutex.withLock {
                 reconcileObservationStateLocked()
-            } finally {
-                stateMutex.unlock()
+            }
+
+        private fun reconcileObservationStateLocked() {
+            val currentJob = observationScope.currentJob
+            if ((currentJob != null) && currentJob.isActive && (currentObservationJob.get() !== currentJob)) {
+                currentObservationJob.set(currentJob)
+                monitoringJob.getAndSet(launchMonitoringJob(currentJob))?.cancel()
+                transitionStatus(TrackingStatus.Active)
             }
         }
-    }
+
+        private fun tryReconcileObservationState() {
+            if (stateMutex.tryLock()) {
+                try {
+                    reconcileObservationStateLocked()
+                } finally {
+                    stateMutex.unlock()
+                }
+            }
+        }
 
         /**
          * Recovers widget observation state.

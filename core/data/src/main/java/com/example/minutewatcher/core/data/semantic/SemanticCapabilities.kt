@@ -44,8 +44,8 @@ class SemanticCapabilities
                 true
             }
 
-    @androidx.annotation.RequiresApi(Build.VERSION_CODES.S)
-    private fun getAppSearchSystemService(): Any? = context.getSystemService(Context.APP_SEARCH_SERVICE)
+        @androidx.annotation.RequiresApi(Build.VERSION_CODES.S)
+        private fun getAppSearchSystemService(): Any? = context.getSystemService(Context.APP_SEARCH_SERVICE)
 
         private companion object {
             private const val FEATURE_TELEPHONY_MULTISIM = "android.hardware.telephony.multisim"

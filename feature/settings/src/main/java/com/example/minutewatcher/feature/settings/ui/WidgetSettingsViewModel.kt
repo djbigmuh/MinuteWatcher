@@ -87,9 +87,9 @@ class WidgetSettingsViewModel
         @VisibleForTesting
         internal var lastSavedSettings: WidgetSettingsState? = null
 
-    @Volatile
-    @VisibleForTesting
-    internal var lastLoadedSettings: WidgetSettingsState? = null
+        @Volatile
+        @VisibleForTesting
+        internal var lastLoadedSettings: WidgetSettingsState? = null
 
         private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
         private val pendingUpdatesLock = Any()
