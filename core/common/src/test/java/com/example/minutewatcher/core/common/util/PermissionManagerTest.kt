@@ -21,19 +21,43 @@ import org.mockito.kotlin.whenever
 class PermissionManagerTest {
     private val context: Context = mock()
     private val subscriptionManager: SubscriptionManager = mock()
+    private val appOps: AppOpsManager = mock()
     private lateinit var permissionManager: PermissionManager
 
     @Before
     fun setup() {
         initTestLogger(context)
         whenever(context.packageName).thenReturn("com.example.minutewatcher")
+        whenever(context.getOpPackageName()).thenReturn("com.example.minutewatcher")
         whenever(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)).thenReturn(subscriptionManager)
+        whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
+        whenever(context.getSystemService(AppOpsManager::class.java)).thenReturn(appOps)
         permissionManager = PermissionManager(context, subscriptionManager)
     }
 
     @After
     fun tearDown() {
         AppLogger.resetForTest()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun stubAppOpsMode(mode: Int) {
+        whenever(appOps.checkOpNoThrow(any(), any(), any())).thenReturn(mode)
+        whenever(appOps.unsafeCheckOpNoThrow(any(), any(), any())).thenReturn(mode)
+        whenever(appOps.noteOpNoThrow(any(), any(), any())).thenReturn(mode)
+        whenever(appOps.noteProxyOpNoThrow(any(), any())).thenReturn(mode)
+        whenever(appOps.noteProxyOp(any(), any())).thenReturn(mode)
+        whenever(appOps.checkOp(any(), any(), any())).thenReturn(mode)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun stubAppOpsException(e: Throwable) {
+        whenever(appOps.checkOpNoThrow(any(), any(), any())).thenThrow(e)
+        whenever(appOps.unsafeCheckOpNoThrow(any(), any(), any())).thenThrow(e)
+        whenever(appOps.noteOpNoThrow(any(), any(), any())).thenThrow(e)
+        whenever(appOps.noteProxyOpNoThrow(any(), any())).thenThrow(e)
+        whenever(appOps.noteProxyOp(any(), any())).thenThrow(e)
+        whenever(appOps.checkOp(any(), any(), any())).thenThrow(e)
     }
 
     @Test
@@ -116,30 +140,21 @@ class PermissionManagerTest {
 
     @Test
     fun `hasUsageStatsPermission returns true when allowed`() {
-        val appOps: AppOpsManager = mock()
-        whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
-        whenever(appOps.checkOpNoThrow(eq(AppOpsManager.OPSTR_GET_USAGE_STATS), any(), any()))
-            .thenReturn(AppOpsManager.MODE_ALLOWED)
+        stubAppOpsMode(AppOpsManager.MODE_ALLOWED)
 
         assertTrue(permissionManager.hasUsageStatsPermission())
     }
 
     @Test
     fun `hasUsageStatsPermission returns false when ignored`() {
-        val appOps: AppOpsManager = mock()
-        whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
-        whenever(appOps.checkOpNoThrow(eq(AppOpsManager.OPSTR_GET_USAGE_STATS), any(), any()))
-            .thenReturn(AppOpsManager.MODE_IGNORED)
+        stubAppOpsMode(AppOpsManager.MODE_IGNORED)
 
         assertFalse(permissionManager.hasUsageStatsPermission())
     }
 
     @Test
     fun `hasUsageStatsPermission returns false when exception occurs`() {
-        val appOps: AppOpsManager = mock()
-        whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
-        whenever(appOps.checkOpNoThrow(eq(AppOpsManager.OPSTR_GET_USAGE_STATS), any(), any()))
-            .thenThrow(RuntimeException("Test error"))
+        stubAppOpsException(RuntimeException("Test error"))
 
         assertFalse(permissionManager.hasUsageStatsPermission())
     }
@@ -228,12 +243,7 @@ class PermissionManagerTest {
             }
         AppLogger.init(context, capturingLogger)
 
-        val appOps: AppOpsManager = mock()
-        whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
-
-        var currentOpMode = AppOpsManager.MODE_ALLOWED
-        whenever(appOps.checkOpNoThrow(eq(AppOpsManager.OPSTR_GET_USAGE_STATS), any(), any()))
-            .thenAnswer { currentOpMode }
+        stubAppOpsMode(AppOpsManager.MODE_ALLOWED)
 
         repeat(5) {
             permissionManager.hasUsageStatsPermission()
@@ -242,7 +252,7 @@ class PermissionManagerTest {
         assertEquals(1, capturedLogs.size)
         assertEquals("Usage stats permission state: Granted", capturedLogs.first())
 
-        currentOpMode = AppOpsManager.MODE_IGNORED
+        stubAppOpsMode(AppOpsManager.MODE_IGNORED)
         repeat(5) {
             permissionManager.hasUsageStatsPermission()
         }

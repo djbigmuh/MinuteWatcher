@@ -8,20 +8,13 @@ import android.os.Build
 import android.os.Process
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
+import androidx.core.app.AppOpsManagerCompat
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Utility for managing and checking Android system permissions.
- *
- * **Thread safety:** All methods are safe to call from any thread.
- * System service access is handled by the Android Framework.
- *
- * **Logging Contract:** Permission state is logged once when changed, rather than on every check.
- */
 @Singleton
 class PermissionManager
     @Inject
@@ -33,9 +26,6 @@ class PermissionManager
         private val notificationPermissionState = AtomicReference<Boolean?>(null)
         private val usageStatsPermissionState = AtomicReference<Boolean?>(null)
 
-        /**
-         * Returns true if the device supports telephony services (SIM cards).
-         */
         fun isTelephonySupported(): Boolean =
             subscriptionManager != null &&
                 context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
@@ -50,13 +40,6 @@ class PermissionManager
             return granted
         }
 
-        // @Suppress("MissingPermission") is required because Lint does not recognize
-        // the explicit check performed via ContextCompat.checkSelfPermission.
-
-        /**
-         * Returns an empty list if [Manifest.permission.READ_PHONE_STATE] is missing or [SubscriptionManager]
-         * is unavailable. Otherwise reads active subscription info list from [SubscriptionManager].
-         */
         @Suppress("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> {
             val manager = subscriptionManager
@@ -74,10 +57,6 @@ class PermissionManager
             }
         }
 
-        /**
-         * Returns -1 if [Manifest.permission.READ_PHONE_STATE] is missing or [SubscriptionManager]
-         * is unavailable. Otherwise reads default voice subscription ID from [SubscriptionManager].
-         */
         fun getDefaultVoiceSubscriptionId(): Int {
             val manager = subscriptionManager
             val hasPermission = hasPhoneStatePermission()
@@ -94,10 +73,6 @@ class PermissionManager
             }
         }
 
-        /**
-         * Returns -1 if [Manifest.permission.READ_PHONE_STATE] is missing or [SubscriptionManager]
-         * is unavailable. Otherwise reads default data subscription ID from [SubscriptionManager].
-         */
         fun getDefaultDataSubscriptionId(): Int {
             val manager = subscriptionManager
             val hasPermission = hasPhoneStatePermission()
@@ -129,30 +104,19 @@ class PermissionManager
         }
 
         fun hasUsageStatsPermission(): Boolean {
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
             val mode =
                 try {
-                    // @Suppress("DEPRECATION") handles API 29+ unsafeCheckOpNoThrow deprecation warnings
-                    // and API < 29 checkOpNoThrow.
-                    @Suppress("DEPRECATION")
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        appOps.unsafeCheckOpNoThrow(
-                            AppOpsManager.OPSTR_GET_USAGE_STATS,
-                            Process.myUid(),
-                            context.packageName,
-                        )
-                    } else {
-                        appOps.checkOpNoThrow(
-                            AppOpsManager.OPSTR_GET_USAGE_STATS,
-                            Process.myUid(),
-                            context.packageName,
-                        )
-                    }
+                    AppOpsManagerCompat.checkOrNoteProxyOp(
+                        context,
+                        Process.myUid(),
+                        AppOpsManager.OPSTR_GET_USAGE_STATS,
+                        context.packageName,
+                    )
                 } catch (e: Exception) {
                     AppLogger.e("PermissionManager: Failed to check GET_USAGE_STATS op", e)
-                    AppOpsManager.MODE_IGNORED
+                    AppOpsManagerCompat.MODE_IGNORED
                 }
-            val granted = mode == AppOpsManager.MODE_ALLOWED
+            val granted = mode == AppOpsManagerCompat.MODE_ALLOWED
             logPermissionStateChange("Usage stats", usageStatsPermissionState, granted)
             return granted
         }
