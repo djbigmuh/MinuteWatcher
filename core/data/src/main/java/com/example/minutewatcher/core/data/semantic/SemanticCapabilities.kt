@@ -1,7 +1,9 @@
 package com.example.minutewatcher.core.data.semantic
 
+import android.app.appsearch.AppSearchManager
 import android.content.Context
 import android.os.Build
+import androidx.annotation.RequiresApi
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.model.AppCapability
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -32,8 +34,9 @@ class SemanticCapabilities
         /**
          * Returns true if AppSearch is likely supported on this device.
          *
-         * On API 31+, we check for the presence of the system AppSearch service.
-         * On older versions (26+), we rely on bundled LocalStorage which is available on all
+         * On API 31+, support is determined by the presence of the system AppSearchManager
+         * obtained via a typed system service lookup.
+         * On older versions (26-30), we rely on bundled LocalStorage which is available on all
          * supported API levels.
          */
         private fun isAppSearchSupported(): Boolean =
@@ -44,8 +47,9 @@ class SemanticCapabilities
                 true
             }
 
-        @androidx.annotation.RequiresApi(Build.VERSION_CODES.S)
-        private fun getAppSearchSystemService(): Any? = context.getSystemService(Context.APP_SEARCH_SERVICE)
+        @RequiresApi(Build.VERSION_CODES.S)
+        private fun getAppSearchSystemService(): AppSearchManager? =
+            context.getSystemService(AppSearchManager::class.java)
 
         private companion object {
             private const val FEATURE_TELEPHONY_MULTISIM = "android.hardware.telephony.multisim"
