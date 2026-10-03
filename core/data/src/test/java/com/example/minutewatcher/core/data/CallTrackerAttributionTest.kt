@@ -205,7 +205,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
 
             whenever(
                 telephonyManager.callStateForSubscription,
-            ).thenReturn(android.telephony.TelephonyManager.CALL_STATE_OFFHOOK)
+            ).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
 
             // Act: End call with unknown subId
             callTracker.onCallEnded(-1)

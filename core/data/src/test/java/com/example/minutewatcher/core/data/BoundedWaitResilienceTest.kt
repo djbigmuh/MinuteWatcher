@@ -3,9 +3,11 @@ package com.example.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
@@ -71,14 +73,14 @@ class BoundedWaitResilienceTest {
                     override val data = MutableSharedFlow<Preferences>()
 
                     override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
-                        kotlinx.coroutines.delay(100.seconds)
+                        delay(100.seconds)
                         return mock()
                     }
                 }
 
             val service = IdentityMigrationService(hangingDataStore, hangingDataStore)
 
-            val simInfo: com.example.minutewatcher.core.model.ActiveSimInfo =
+            val simInfo: ActiveSimInfo =
                 mock {
                     on { slotIndex } doReturn 0
                     on { identity } doReturn SimIdentity("real", 1, 0, IdentitySource.ICCID, true)
@@ -99,7 +101,7 @@ class BoundedWaitResilienceTest {
                     override val data = MutableSharedFlow<Preferences>()
 
                     override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
-                        kotlinx.coroutines.delay(100.seconds)
+                        delay(100.seconds)
                         return mock()
                     }
                 }

@@ -4,8 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.BuildConfig
-import com.example.minutewatcher.core.common.util.AppLogger.closeWriter
-import com.example.minutewatcher.core.common.util.AppLogger.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

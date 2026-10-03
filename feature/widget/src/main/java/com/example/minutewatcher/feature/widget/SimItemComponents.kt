@@ -9,6 +9,7 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -24,13 +25,13 @@ import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.example.minutewatcher.core.android.ui.SimLayoutRender
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
+import androidx.glance.unit.ColorProvider as IColorProvider
 
 /**
  * Renders a single SIM card in widget.
@@ -152,14 +153,14 @@ private fun resolveTextColor(
     uiState: WidgetUiState,
     sim: SimUiState,
     component: SimLayoutComponent.Text,
-): ColorProvider =
+): IColorProvider =
     if (uiState.useSystemColors && (component.color == sim.textColor)) {
         GlanceTheme.colors.onSurface
     } else if (uiState.useSystemColors && (component.color == sim.secondaryTextColor)) {
         GlanceTheme.colors.onSurfaceVariant
     } else {
         val composeColor = Color(component.color)
-        androidx.glance.color.ColorProvider(day = composeColor, night = composeColor)
+        ColorProvider(day = composeColor, night = composeColor)
     }
 
 /**

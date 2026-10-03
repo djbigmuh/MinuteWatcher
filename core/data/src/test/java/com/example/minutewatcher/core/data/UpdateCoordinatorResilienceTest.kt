@@ -7,16 +7,26 @@ import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.domain.WidgetUpdater
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.DataSourceType
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.MeasurementUnit
+import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimCardUiModel
+import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -152,11 +162,11 @@ class UpdateCoordinatorResilienceTest {
     @Test
     fun `recover during active setup registers observation and monitoring restarts on failure`() =
         runTest {
-            val supervisorJob = kotlinx.coroutines.SupervisorJob()
-            val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+            val supervisorJob = SupervisorJob()
+            val testDispatcher = StandardTestDispatcher(testScheduler)
             val supervisorScope =
-                kotlinx.coroutines.CoroutineScope(
-                    testDispatcher + supervisorJob + kotlinx.coroutines.CoroutineExceptionHandler { _, _ -> },
+                CoroutineScope(
+                    testDispatcher + supervisorJob + CoroutineExceptionHandler { _, _ -> },
                 )
 
             val snapshot1 = createSnapshot(1000L, used = 10)
@@ -218,11 +228,11 @@ class UpdateCoordinatorResilienceTest {
     @Test
     fun `non takeover cancellation causes monitoring restart`() =
         runTest {
-            val supervisorJob = kotlinx.coroutines.SupervisorJob()
-            val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+            val supervisorJob = SupervisorJob()
+            val testDispatcher = StandardTestDispatcher(testScheduler)
             val supervisorScope =
-                kotlinx.coroutines.CoroutineScope(
-                    testDispatcher + supervisorJob + kotlinx.coroutines.CoroutineExceptionHandler { _, _ -> },
+                CoroutineScope(
+                    testDispatcher + supervisorJob + CoroutineExceptionHandler { _, _ -> },
                 )
 
             val snapshot1 = createSnapshot(1000L, used = 10)
@@ -277,26 +287,26 @@ class UpdateCoordinatorResilienceTest {
         timestamp = timestamp,
         simSnapshots =
             listOf(
-                com.example.minutewatcher.core.model.SimSnapshot(
+                SimSnapshot(
                     slot = 0,
                     identity = "sim_0",
                     operatorName = "Test",
                     entities =
                         mapOf(
-                            com.example.minutewatcher.core.model.PackageType.MINUTES to
-                                com.example.minutewatcher.core.model.SemanticEntity(
+                            PackageType.MINUTES to
+                                SemanticEntity(
                                     id = "e1",
                                     simSlot = 0,
                                     operatorName = "Test",
-                                    packageType = com.example.minutewatcher.core.model.PackageType.MINUTES,
+                                    packageType = PackageType.MINUTES,
                                     limit = 100,
                                     used = used,
                                     remaining = 100 - used,
-                                    unit = com.example.minutewatcher.core.model.MeasurementUnit.MINUTES,
+                                    unit = MeasurementUnit.MINUTES,
                                     periodStart = 0,
                                     periodEnd = 0,
                                     lastUpdateTime = timestamp,
-                                    sourceType = com.example.minutewatcher.core.model.DataSourceType.SYSTEM,
+                                    sourceType = DataSourceType.SYSTEM,
                                 ),
                         ),
                     autoResetDay = 1,
@@ -309,7 +319,7 @@ class UpdateCoordinatorResilienceTest {
     fun `concurrent recover calls before dispatcher execution create single setup job`() =
         runTest {
             var simObserveCalls = 0
-            val simFlow = MutableStateFlow(listOf(mock<com.example.minutewatcher.core.model.SimCardUiModel>()))
+            val simFlow = MutableStateFlow(listOf(mock<SimCardUiModel>()))
             whenever(usageStateRepository.observeSimCardUiModels()).thenAnswer {
                 simObserveCalls++
                 simFlow

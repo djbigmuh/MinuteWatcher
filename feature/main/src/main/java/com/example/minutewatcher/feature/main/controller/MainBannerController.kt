@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.main.TrackingBannerState
@@ -17,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -228,7 +230,7 @@ class MainBannerController
             )
 
             scope.launch {
-                kotlinx.coroutines.delay(delayMs.milliseconds)
+                delay(delayMs.milliseconds)
                 ensureObservationStarted()
             }
         }
@@ -236,11 +238,12 @@ class MainBannerController
         internal companion object {
             const val MAX_RESTART_ATTEMPTS = 5
             const val MAX_RESTART_DELAY_MS = 30_000L
+            private const val MAX_BACKOFF_EXPONENT = 30
 
             internal fun calculateRestartDelay(attempt: Int): Long? {
                 if (attempt > MAX_RESTART_ATTEMPTS) return null
-                val exponent = (attempt - 1).coerceAtMost(30)
-                val delayMs = com.example.minutewatcher.core.model.Constants.Flow.RETRY_DELAY_MS * (1L shl exponent)
+                val exponent = (attempt - 1).coerceAtMost(MAX_BACKOFF_EXPONENT)
+                val delayMs = Constants.Flow.RETRY_DELAY_MS * (1L shl exponent)
                 return delayMs.coerceAtMost(MAX_RESTART_DELAY_MS)
             }
         }

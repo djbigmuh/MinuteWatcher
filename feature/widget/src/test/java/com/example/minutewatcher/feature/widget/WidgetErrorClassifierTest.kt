@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.widget
 
+import android.os.TransactionTooLargeException
 import com.example.minutewatcher.core.common.util.initTestLogger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -17,14 +18,14 @@ class WidgetErrorClassifierTest {
 
     @Test
     fun `isRemoteViewsLimitException returns true when cause is TransactionTooLargeException`() {
-        val cause = android.os.TransactionTooLargeException()
+        val cause = TransactionTooLargeException()
         val e = IllegalArgumentException("Too large", cause)
         assertTrue(classifier.isRemoteViewsLimitException(e))
     }
 
     @Test
     fun `isRemoteViewsLimitException returns true when deeply nested cause is TransactionTooLargeException`() {
-        val cause = android.os.TransactionTooLargeException()
+        val cause = TransactionTooLargeException()
         val inner = RuntimeException("Inner", cause)
         val e = IllegalArgumentException("Outer", inner)
         assertTrue(classifier.isRemoteViewsLimitException(e))
@@ -38,7 +39,7 @@ class WidgetErrorClassifierTest {
 
     @Test
     fun `classifyUpdateError returns LimitExceeded for TransactionTooLargeException`() {
-        val cause = android.os.TransactionTooLargeException()
+        val cause = TransactionTooLargeException()
         val e = IllegalArgumentException("Too large", cause)
 
         val result = classifier.classifyUpdateError(e, isFullAttempt = true)

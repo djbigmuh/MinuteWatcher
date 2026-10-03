@@ -3,6 +3,7 @@ package com.example.minutewatcher
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -73,7 +74,7 @@ class BootReceiverTest {
         val config =
             Configuration
                 .Builder()
-                .setMinimumLoggingLevel(android.util.Log.DEBUG)
+                .setMinimumLoggingLevel(Log.DEBUG)
                 .setWorkerFactory(
                     object : WorkerFactory() {
                         override fun createWorker(

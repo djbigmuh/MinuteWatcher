@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -82,7 +83,7 @@ private fun TrafficHeader(onShowTrafficInfo: () -> Unit) {
 
 @Composable
 private fun TrafficUsageRow(
-    context: android.content.Context,
+    context: Context,
     model: SimCardUiModel,
 ) {
     val locale =
@@ -124,7 +125,7 @@ private fun TrafficUsageRow(
 
 @Composable
 private fun TrafficRemainingRow(
-    context: android.content.Context,
+    context: Context,
     model: SimCardUiModel,
     statusColor: Color,
     onAdjustTraffic: () -> Unit,

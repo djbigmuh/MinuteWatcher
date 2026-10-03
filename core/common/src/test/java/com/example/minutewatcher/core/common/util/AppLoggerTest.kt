@@ -13,6 +13,7 @@ import org.junit.rules.TemporaryFolder
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 
 class AppLoggerTest {
     @get:Rule
@@ -163,9 +164,9 @@ class AppLoggerTest {
         var lockHeldDuringDrain = false
         val capturingLogger =
             object : Logger {
-                val dLogs = java.util.concurrent.CopyOnWriteArrayList<String>()
-                val wLogs = java.util.concurrent.CopyOnWriteArrayList<String>()
-                val eLogs = java.util.concurrent.CopyOnWriteArrayList<String>()
+                val dLogs = CopyOnWriteArrayList<String>()
+                val wLogs = CopyOnWriteArrayList<String>()
+                val eLogs = CopyOnWriteArrayList<String>()
 
                 override fun d(
                     tag: String,

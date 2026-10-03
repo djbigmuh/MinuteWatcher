@@ -5,13 +5,17 @@ import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -34,21 +38,13 @@ class SimVisibilityTest {
     private val subscriptionManager: SubscriptionManager = mock()
     private val permissionManager: PermissionManager = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
-    private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository =
+    private val appSettingsRepository: AppSettingsRepository =
         mock {
-            on { observeAppSettings() } doReturn
-                kotlinx.coroutines.flow.MutableStateFlow(
-                    com.example.minutewatcher.core.model
-                        .AppSettings(),
-                )
+            on { observeAppSettings() } doReturn MutableStateFlow(AppSettings())
         }
     private val dataStore: DataStore<Preferences> =
         mock {
-            on { data } doReturn
-                flowOf(
-                    androidx.datastore.preferences.core
-                        .emptyPreferences(),
-                )
+            on { data } doReturn flowOf(emptyPreferences())
         }
     private val seedRepository: SimIdentitySeedRepository =
         mock {

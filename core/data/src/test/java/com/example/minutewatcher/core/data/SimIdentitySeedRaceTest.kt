@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import android.content.Context
+import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -127,7 +128,7 @@ class SimIdentitySeedRaceTest {
                 ),
             )
 
-            val mockSubInfo = mock<android.telephony.SubscriptionInfo>()
+            val mockSubInfo = mock<SubscriptionInfo>()
             whenever(mockSubInfo.subscriptionId).thenReturn(1)
             whenever(mockSubInfo.simSlotIndex).thenReturn(0)
             whenever(mockSubInfo.iccId).thenReturn("icc_1")

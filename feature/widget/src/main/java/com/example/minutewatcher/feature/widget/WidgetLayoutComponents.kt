@@ -32,6 +32,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
+import android.graphics.Color as AndroidColor
 import androidx.glance.unit.ColorProvider as IColorProvider
 
 /**
@@ -230,7 +231,7 @@ internal fun SimSeparator(
             GlanceTheme.colors.outline
         } else {
             val color =
-                Color(uiState.simUiStates.firstOrNull()?.secondaryTextColor ?: android.graphics.Color.GRAY)
+                Color(uiState.simUiStates.firstOrNull()?.secondaryTextColor ?: AndroidColor.GRAY)
                     .copy(alpha = Constants.Widget.SEPARATOR_ALPHA)
             ColorProvider(day = color, night = color)
         }

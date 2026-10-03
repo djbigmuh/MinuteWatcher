@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.common.util
 
+import android.os.SystemClock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,7 +18,7 @@ class SystemTimeProvider
     constructor() : TimeProvider {
         override fun now(): Long = System.currentTimeMillis()
 
-        override fun elapsedRealtime(): Long = android.os.SystemClock.elapsedRealtime()
+        override fun elapsedRealtime(): Long = SystemClock.elapsedRealtime()
 
-        override fun uptimeMillis(): Long = android.os.SystemClock.uptimeMillis()
+        override fun uptimeMillis(): Long = SystemClock.uptimeMillis()
     }

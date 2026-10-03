@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
+import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.MigrationFlagsRepository
 import com.example.minutewatcher.core.domain.PermissionRepository
 import com.example.minutewatcher.core.domain.RefreshResult
@@ -39,8 +40,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -58,7 +61,7 @@ abstract class MainViewModelTestFixtures {
      * propagation of state changes through the complex reactive chain.
      */
     @get:Rule
-    val mainDispatcherRule = MainDispatcherRule(kotlinx.coroutines.test.UnconfinedTestDispatcher())
+    val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
 
     @get:Rule
     val singletonResetRule = SingletonResetRule()
@@ -77,7 +80,7 @@ abstract class MainViewModelTestFixtures {
     protected val settingsUseCase: SettingsUseCase = mock()
     protected val dataChangeNotifier: DataChangeNotifier = mock()
     protected val updateCoordinator: WidgetUpdateCoordinator = mock()
-    protected val dataRefreshNotifier: com.example.minutewatcher.core.domain.DataRefreshNotifier = mock()
+    protected val dataRefreshNotifier: DataRefreshNotifier = mock()
     protected val permissionRepository: PermissionRepository = mock()
     protected val seedRepository: SimIdentitySeedRepository = mock()
     protected val trackingRecoveryController: TrackingRecoveryController = mock()
@@ -88,7 +91,7 @@ abstract class MainViewModelTestFixtures {
     protected val usageStatsPermissionFlow = MutableStateFlow(false)
     protected val notificationPermissionFlow = MutableStateFlow(false)
     protected val refreshFlow =
-        MutableSharedFlow<com.example.minutewatcher.core.domain.DataRefreshNotifier.RefreshEvent>(replay = 1)
+        MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(replay = 1)
 
     @Before
     open fun setup() {
@@ -102,7 +105,7 @@ abstract class MainViewModelTestFixtures {
         whenever(permissionRepository.usageStatsPermissionGranted).thenReturn(usageStatsPermissionFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(notificationPermissionFlow)
         whenever(seedRepository.isEphemeralSeedActive).thenReturn(MutableStateFlow(false))
-        whenever(migrationFlagsRepository.isInitialSetupCompleted()).thenReturn(kotlinx.coroutines.flow.flowOf(true))
+        whenever(migrationFlagsRepository.isInitialSetupCompleted()).thenReturn(flowOf(true))
 
         whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(MutableStateFlow(emptyMap()))
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(MutableStateFlow(emptyList()))
@@ -140,7 +143,7 @@ abstract class MainViewModelTestFixtures {
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
 
         // Default successful refresh for initializeApp
-        kotlinx.coroutines.runBlocking {
+        runBlocking {
             whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(initialSnapshot))
         }

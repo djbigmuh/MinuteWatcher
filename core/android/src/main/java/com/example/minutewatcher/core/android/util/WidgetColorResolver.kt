@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.android.util
 
 import android.graphics.Color
+import androidx.core.graphics.ColorUtils
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.util.UsageColors
 import com.example.minutewatcher.core.model.util.UsageStatus
@@ -33,9 +34,7 @@ object WidgetColorResolver {
     }
 
     fun resolveNoDataColor(backgroundColor: Int): Int {
-        val luminance =
-            androidx.core.graphics.ColorUtils
-                .calculateLuminance(backgroundColor)
+        val luminance = ColorUtils.calculateLuminance(backgroundColor)
         return if (luminance > Constants.UI.LUMINANCE_THRESHOLD) {
             Color.BLACK
         } else {

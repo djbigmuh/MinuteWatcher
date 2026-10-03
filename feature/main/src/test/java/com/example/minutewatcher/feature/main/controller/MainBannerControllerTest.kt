@@ -15,6 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -158,7 +159,7 @@ class MainBannerControllerTest {
             runCurrent()
 
             val failingFlow =
-                kotlinx.coroutines.flow.flow<Map<TrackingKey, TrackingStatus>> {
+                flow<Map<TrackingKey, TrackingStatus>> {
                     throw IllegalStateException("Flow observation crash")
                 }
             whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(failingFlow)

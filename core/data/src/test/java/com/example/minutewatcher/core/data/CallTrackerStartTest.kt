@@ -151,7 +151,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.getCallStartTime(any()))
                 .thenReturn(
                     flow {
-                        throw java.io.IOException("Disk full")
+                        throw IOException("Disk full")
                     },
                 )
 

@@ -4,6 +4,8 @@ import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.feature.semantic.ShortcutApplier
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.SystemShortcutApplier
+import com.example.minutewatcher.feature.semantic.search.AppSearchWrapper
+import com.example.minutewatcher.feature.semantic.search.AppSearchWrapperImpl
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import dagger.Binds
 import dagger.Module
@@ -33,7 +35,5 @@ internal interface SemanticModule {
 
     @Binds
     @Singleton
-    fun bindAppSearchWrapper(
-        impl: com.example.minutewatcher.feature.semantic.search.AppSearchWrapperImpl,
-    ): com.example.minutewatcher.feature.semantic.search.AppSearchWrapper
+    fun bindAppSearchWrapper(impl: AppSearchWrapperImpl): AppSearchWrapper
 }

@@ -1,5 +1,7 @@
 package com.example.minutewatcher.core.data
 
+import android.telephony.SubscriptionInfo
+import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -11,6 +13,7 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
@@ -147,7 +150,7 @@ class SimIdentityRepositoryImplPersistenceTest {
                     scope = backgroundScope,
                 )
 
-            val results = mutableListOf<List<com.example.minutewatcher.core.model.ActiveSimInfo>>()
+            val results = mutableListOf<List<ActiveSimInfo>>()
             val job =
                 launch {
                     repository.observeActiveSims().toList(results)
@@ -192,7 +195,7 @@ class SimIdentityRepositoryImplPersistenceTest {
                     on { changes } doReturn permissionChanges
                 }
 
-            val subscriptionManager = mock<android.telephony.SubscriptionManager>()
+            val subscriptionManager = mock<SubscriptionManager>()
 
             val discoveryDeps =
                 SimDiscoveryDependencies(
@@ -208,7 +211,7 @@ class SimIdentityRepositoryImplPersistenceTest {
                 }
 
             // SIM info for slot 0
-            val subInfo = mock<android.telephony.SubscriptionInfo>()
+            val subInfo = mock<SubscriptionInfo>()
             whenever(subInfo.simSlotIndex).thenReturn(0)
             whenever(subInfo.subscriptionId).thenReturn(101)
             whenever(subInfo.iccId).thenReturn("iccid_initial")
@@ -238,7 +241,7 @@ class SimIdentityRepositoryImplPersistenceTest {
             assertTrue("Expected icc_ prefix, got ${id1.stableId}", id1.stableId.startsWith("icc_"))
 
             // 2. Change SIM info
-            val subInfo2 = mock<android.telephony.SubscriptionInfo>()
+            val subInfo2 = mock<SubscriptionInfo>()
             whenever(subInfo2.simSlotIndex).thenReturn(0)
             whenever(subInfo2.subscriptionId).thenReturn(101)
             whenever(subInfo2.iccId).thenReturn("iccid_updated")

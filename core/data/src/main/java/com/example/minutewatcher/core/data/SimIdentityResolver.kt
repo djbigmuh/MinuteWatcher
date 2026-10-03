@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.SimIdentity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
@@ -116,7 +117,7 @@ internal class SimIdentityResolver
                 } ?: run {
                     AppLogger.w("SimIdentityResolver: persistence write timed out for slot $slot")
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
