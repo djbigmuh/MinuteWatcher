@@ -1,8 +1,13 @@
 package com.example.minutewatcher.core.data
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.common.testing.AppLoggerResetRule
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.Logger
+import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
@@ -27,6 +32,9 @@ import kotlin.time.Duration.Companion.seconds
 class BoundedWaitResilienceTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @get:Rule
+    val loggerResetRule = AppLoggerResetRule()
 
     @Test(expected = IOException::class)
     fun `saveSimIdentitiesInfo throws IOException on DataStore hang`() =
@@ -96,6 +104,23 @@ class BoundedWaitResilienceTest {
     @Test
     fun `markSchemaCurrent does not throw but logs error on hang`() =
         runTest {
+            val errorLogs = mutableListOf<String>()
+            val capturingLogger =
+                object : Logger by NoOpLogger() {
+                    override fun e(
+                        tag: String,
+                        message: String,
+                        throwable: Throwable?,
+                    ) {
+                        errorLogs.add(message)
+                    }
+                }
+            val mockContext: Context =
+                mock {
+                    on { filesDir } doReturn null
+                }
+            AppLogger.init(mockContext, capturingLogger)
+
             val hangingDataStore =
                 object : DataStore<Preferences> {
                     override val data = MutableSharedFlow<Preferences>()
@@ -109,5 +134,11 @@ class BoundedWaitResilienceTest {
 
             // Act & Assert: should not throw
             service.markSchemaCurrent()
+
+            val hasTimeoutLog =
+                errorLogs.any {
+                    it.contains("Timeout") || it.contains("timed out")
+                }
+            assertTrue("Expected timeout error log in AppLogger", hasTimeoutLog)
         }
 }

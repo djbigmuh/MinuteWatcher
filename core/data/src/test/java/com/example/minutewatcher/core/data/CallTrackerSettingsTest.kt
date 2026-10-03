@@ -106,7 +106,7 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
-    @Test(expected = CancellationException::class)
+    @Test
     fun `readWithRetry propagates CancellationException without retry`() =
         runTest(testDispatcher) {
             setupCommonMocks()
@@ -120,7 +120,16 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
                 flow<AppSettings> { throw CancellationException("Intentional cancellation") }
             }
 
-            // Act
-            callTracker.onCallStarted(subId = 1)
+            // Act & Assert
+            var thrown: CancellationException? = null
+            try {
+                callTracker.onCallStarted(subId = 1)
+            } catch (e: CancellationException) {
+                thrown = e
+            }
+
+            assertNotNull("CancellationException should be thrown", thrown)
+            assertEquals("Intentional cancellation", thrown?.message)
+            assertEquals(1, attempts)
         }
 }

@@ -10,6 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -124,6 +125,10 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterTest() {
 
             whenever(renderer.renderAll(any(), any())).thenThrow(OutOfMemoryError("Out of memory"))
 
-            updater.updateAll()
+            try {
+                updater.updateAll()
+            } finally {
+                verify(renderer, times(1)).renderAll(any(), any())
+            }
         }
 }
