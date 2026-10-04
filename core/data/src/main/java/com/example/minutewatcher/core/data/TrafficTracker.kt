@@ -63,18 +63,18 @@ class TrafficTracker
         private val deps: TrafficTrackerDependencies,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
-    private val simIdentityRepository get() = deps.simIdentityRepository
-    private val simUsageRepository get() = deps.simUsageRepository
-    private val simUsageResetRepository get() = deps.simUsageResetRepository
-    private val permissionManager get() = deps.permissionManager
-    private val baselineManager get() = deps.baselineManager
-    private val deltaCalculator get() = deps.deltaCalculator
-    private val simChangeHandler get() = deps.simChangeHandler
-    private val targetResolver get() = deps.targetResolver
-    private val permissionChecker get() = deps.permissionChecker
-    private val permissionStateNotifier get() = deps.permissionStateNotifier
-    private val dataChangeNotifier get() = deps.dataChangeNotifier
-    private val timeProvider get() = deps.timeProvider
+        private val simIdentityRepository get() = deps.simIdentityRepository
+        private val simUsageRepository get() = deps.simUsageRepository
+        private val simUsageResetRepository get() = deps.simUsageResetRepository
+        private val permissionManager get() = deps.permissionManager
+        private val baselineManager get() = deps.baselineManager
+        private val deltaCalculator get() = deps.deltaCalculator
+        private val simChangeHandler get() = deps.simChangeHandler
+        private val targetResolver get() = deps.targetResolver
+        private val permissionChecker get() = deps.permissionChecker
+        private val permissionStateNotifier get() = deps.permissionStateNotifier
+        private val dataChangeNotifier get() = deps.dataChangeNotifier
+        private val timeProvider get() = deps.timeProvider
         override val key: TrackingKey = TrackingKey.TRAFFIC
 
         @VisibleForTesting

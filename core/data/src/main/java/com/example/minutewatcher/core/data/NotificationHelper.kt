@@ -33,15 +33,15 @@ class NotificationHelper
         private val navigationProvider: NavigationProvider,
         private val permissionManager: PermissionManager,
     ) {
-    private val notificationManager: NotificationManager? =
-        try {
-            context.getSystemService(NotificationManager::class.java)
-        } catch (e: Exception) {
-            AppLogger.w("Failed to obtain NotificationManager: ${e.message}")
-            null
-        }
+        private val notificationManager: NotificationManager? =
+            try {
+                context.getSystemService(NotificationManager::class.java)
+            } catch (e: Exception) {
+                AppLogger.w("Failed to obtain NotificationManager: ${e.message}")
+                null
+            }
 
-    private var hasLoggedMissingService = false
+        private var hasLoggedMissingService = false
 
         init {
             createNotificationChannel()
