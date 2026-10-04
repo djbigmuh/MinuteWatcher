@@ -15,7 +15,7 @@ class WidgetErrorClassifier
     @Inject
     constructor() {
         fun classifyUpdateError(
-            e: Throwable,
+            e: Exception,
             isFullAttempt: Boolean,
         ): UpdateResult =
             when (e) {
@@ -47,11 +47,6 @@ class WidgetErrorClassifier
                         AppLogger.e("Widget update failed with RuntimeException: ${e.message}", e)
                         UpdateResult.GenericFailure(isRetryable = true)
                     }
-                }
-
-                is Error -> {
-                    AppLogger.e("JVM Error updating widgets: ${e.message}", e)
-                    UpdateResult.GenericFailure(isRetryable = false)
                 }
 
                 else -> {
