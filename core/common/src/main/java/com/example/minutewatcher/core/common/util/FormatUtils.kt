@@ -103,7 +103,7 @@ object FormatUtils {
             context.resources
                 .configuration
                 .locales
-                .get(0) ?: Locale.getDefault()
+                .get(0)
         } catch (e: Exception) {
             AppLogger.w("FormatUtils: Failed to get locale from context, using default", e)
             Locale.getDefault()
