@@ -222,9 +222,7 @@ object OperatorResolver {
         if (isValidSpecificName(operatorName)) return operatorName
 
         val database = loadDb(context)
-        val searchResult = findInDatabase(database, candidates)
-
-        val resKey = searchResult.first
+        val resKey = findInDatabase(database, candidates)
 
         val resolved =
             if (resKey != null) {
@@ -240,16 +238,16 @@ object OperatorResolver {
     private fun findInDatabase(
         database: Map<String, String>,
         candidates: List<String>,
-    ): Pair<String?, String?> {
+    ): String? {
         for (code in candidates) {
             if (code.isNotEmpty() && code != "00000") {
                 val key = database[code]
                 if (key != null) {
-                    return key to code
+                    return key
                 }
             }
         }
-        return null to null
+        return null
     }
 
     private fun logUnknownCandidates(candidates: List<String>) {
