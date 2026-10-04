@@ -41,6 +41,7 @@ class NotificationHelper
                 null
             }
 
+        @Volatile
         private var hasLoggedMissingService = false
 
         init {
