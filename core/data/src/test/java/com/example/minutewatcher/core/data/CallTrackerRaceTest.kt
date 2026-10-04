@@ -22,6 +22,8 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -32,6 +34,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerRaceTest {
@@ -138,8 +141,6 @@ class CallTrackerRaceTest {
             whenever(timeProvider.elapsedRealtime()).thenReturn(2000L)
             whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
 
-            // handleCallStartInternal only reads getCallStartTime and getBootTime via combine().
-            // getUptime is used only in loadCallSessionData (endCall path) and is not needed here.
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L), flowOf(1000L))
             whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L), flowOf(2000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
@@ -152,19 +153,15 @@ class CallTrackerRaceTest {
                         tracker.onCallStarted(1)
                     }
                 }
-            jobs.joinAll()
+            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
+                ?: fail("Timed out waiting for concurrent call starts to complete")
             advanceUntilIdle()
 
-            // Since internalActiveSessions is removed, each call to onCallStarted will read from DataStore
-            // to check if a session is already active. Mutex ensures they happen one by one.
-            verify(callSessionRepository, times(10)).getCallStartTime(1).let { _ -> }
+            // Session state is read from storage during each start event.
+            // Start critical section is serialized via a shared mutex, processing concurrent events sequentially.
+            // Only the first event writes the session, as subsequent events observe a non-zero start time.
+            verify(callSessionRepository, times(10)).getCallStartTime(1)
 
-            // API compliance: on AOSP DataStore.edit serializes writes.
-            // callMutex in CallTracker further serializes read-modify-write at the app level.
-            // Test verifies that concurrent calls do not result in double session writes.
-            // Verification: saveCallSession called exactly once for subId=1,
-            // as the mutex serializes access and only the first call
-            // should write the session (others will see startTime != 0).
             verify(callSessionRepository, times(1)).saveCallSession(
                 eq(1),
                 argThat { this > 0L },

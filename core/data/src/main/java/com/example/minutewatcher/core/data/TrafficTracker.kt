@@ -60,7 +60,7 @@ internal class TrafficUpdateTimeoutException(
 class TrafficTracker
     @Inject
     constructor(
-        val deps: TrafficTrackerDependencies,
+        private val deps: TrafficTrackerDependencies,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
     private val simIdentityRepository get() = deps.simIdentityRepository

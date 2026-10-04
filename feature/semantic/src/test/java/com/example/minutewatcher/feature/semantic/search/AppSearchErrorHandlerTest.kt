@@ -11,18 +11,13 @@ class AppSearchErrorHandlerTest {
     private val errorHandler = AppSearchErrorHandler()
 
     @Test
-    fun `handleInitializationError classifies IllegalStateException with not supported as UNKNOWN`() {
-        val exception = IllegalStateException("AppSearch is not supported")
-        val status = errorHandler.handleInitializationError(exception)
-        // String parsing is removed, so it should be UNKNOWN now
-        assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
-    }
-
-    @Test
-    fun `handleInitializationError classifies generic IllegalStateException as UNKNOWN`() {
-        val exception = IllegalStateException("Random error")
-        val status = errorHandler.handleInitializationError(exception)
-        assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+    fun `handleInitializationError classifies IllegalStateException as UNKNOWN regardless of message text`() {
+        val messages = listOf("AppSearch is not supported", "Random error")
+        for (msg in messages) {
+            val exception = IllegalStateException(msg)
+            val status = errorHandler.handleInitializationError(exception)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+        }
     }
 
     @Test

@@ -9,10 +9,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
@@ -215,7 +218,8 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
                         manager.indexSnapshot(snapshot)
                     }
                 }
-            jobs.joinAll()
+            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
+                ?: fail("Timed out waiting for concurrent indexSnapshot calls")
 
             // Verify that indexing was performed only once
             val session = fakeWrapper.lastSession
@@ -244,7 +248,8 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
                         manager.indexSnapshot(createTestSnapshot(101L + i))
                     }
                 }
-            jobs.joinAll()
+            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
+                ?: fail("Timed out waiting for concurrent indexSnapshot calls with invalid schema")
 
             // 4. Verify only ONE additional session was created (total 2)
             assertEquals(2, fakeWrapper.createdSessions)

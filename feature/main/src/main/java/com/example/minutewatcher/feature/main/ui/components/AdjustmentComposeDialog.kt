@@ -1,3 +1,4 @@
+// File contains state class AdjustmentInputState alongside composables; class name intentionally differs from filename.
 @file:Suppress("MatchingDeclarationName")
 
 package com.example.minutewatcher.feature.main.ui.components

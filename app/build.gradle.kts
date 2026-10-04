@@ -96,7 +96,6 @@ dependencies {
     baselineProfile(project(":baselineprofile"))
 
     coreLibraryDesugaring(libs.desugarJdkLibs)
-    implementation(libs.skydovesColorpickerview)
 
     // Hilt
     implementation(libs.daggerHiltAndroid)

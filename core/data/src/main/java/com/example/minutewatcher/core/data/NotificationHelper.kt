@@ -18,6 +18,13 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Helper class for managing and sending application usage notifications.
+ *
+ * Defensive contract: Notification delivery and helper initialization must never
+ * cause the application to crash. All platform calls to [NotificationManager] are
+ * safely handled.
+ */
 @Singleton
 class NotificationHelper
     @Inject
@@ -26,20 +33,29 @@ class NotificationHelper
         private val navigationProvider: NavigationProvider,
         private val permissionManager: PermissionManager,
     ) {
-        private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val notificationManager: NotificationManager? =
+        try {
+            context.getSystemService(NotificationManager::class.java)
+        } catch (e: Exception) {
+            AppLogger.w("Failed to obtain NotificationManager: ${e.message}")
+            null
+        }
+
+    private var hasLoggedMissingService = false
 
         init {
             createNotificationChannel()
         }
 
         private fun createNotificationChannel() {
+            val manager = notificationManager ?: return
             val channel =
                 NotificationChannel(
                     Constants.Notifications.CHANNEL_ID,
                     context.getString(R.string.notification_channel_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 )
-            notificationManager.createNotificationChannel(channel)
+            manager.createNotificationChannel(channel)
         }
 
         /**
@@ -55,6 +71,15 @@ class NotificationHelper
             simSlot: Int,
             type: Int,
         ) {
+            val manager = notificationManager
+            if (manager == null) {
+                if (!hasLoggedMissingService) {
+                    hasLoggedMissingService = true
+                    AppLogger.w("NotificationManager is unavailable; skipping notification")
+                }
+                return
+            }
+
             try {
                 if (!permissionManager.hasNotificationPermission() || !areNotificationsEnabledSafe()) {
                     return
@@ -88,7 +113,7 @@ class NotificationHelper
                         .build()
 
                 val notificationId = BASE_NOTIFICATION_ID + (simSlot * SLOT_OFFSET) + type
-                notificationManager.notify(notificationId, notification)
+                manager.notify(notificationId, notification)
             } catch (e: SecurityException) {
                 AppLogger.w("Notification permission denied: ${e.message}")
             } catch (e: RuntimeException) {

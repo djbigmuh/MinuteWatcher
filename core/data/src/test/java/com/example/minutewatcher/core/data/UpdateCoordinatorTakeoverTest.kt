@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -142,8 +143,10 @@ class UpdateCoordinatorTakeoverTest {
             widgetUpdater.releaseHangingUpdate()
             runCurrent()
 
-            forcedJob1.join()
-            forcedJob2.join()
+            withTimeoutOrNull(30.seconds) {
+                forcedJob1.join()
+                forcedJob2.join()
+            } ?: fail("Timed out waiting for forced updates to complete")
 
             val callCountAfterForced = widgetUpdater.callCount
 

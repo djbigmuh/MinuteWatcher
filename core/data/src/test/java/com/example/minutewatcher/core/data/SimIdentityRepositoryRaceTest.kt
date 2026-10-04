@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -264,7 +265,8 @@ class SimIdentityRepositoryRaceTest {
                         repository.getSimIdentity(0).stableId
                     }
                 }
-            jobs.joinAll()
+            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
+                ?: fail("Timed out waiting for concurrent SIM identity resolution")
 
             // Because of the mutex and caching, resolution should be stable.
             // Persistence.saveSimIdentitiesInfo should be called, which in turn calls migrationService if needed.
@@ -332,7 +334,8 @@ class SimIdentityRepositoryRaceTest {
                         results.add(repository.getSimIdentity(0))
                     }
                 }
-            jobs.joinAll()
+            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
+                ?: fail("Timed out waiting for concurrent SIM identity calls for same slot")
 
             assertEquals(10, results.size)
             val first = results[0]

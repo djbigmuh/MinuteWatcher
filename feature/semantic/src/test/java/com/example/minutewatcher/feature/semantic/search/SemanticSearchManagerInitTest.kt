@@ -89,43 +89,24 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `initialization with IllegalStateException containing not supported now sets DATABASE_ERROR status`() =
+    fun `initialization with IllegalStateException sets DATABASE_ERROR status regardless of message text`() =
         runTest(testDispatcher) {
-            val manager = createManager(appScope)
-            fakeWrapper.failSessionCreationWith = IllegalStateException("AppSearch is not supported on this device")
+            val messages = listOf("AppSearch is not supported on this device", "Something went wrong")
+            for (msg in messages) {
+                val manager = createManager(appScope)
+                fakeWrapper.failSessionCreationWith = IllegalStateException(msg)
 
-            val flow = MutableStateFlow(createSnapshotWithOneSim())
-            manager.initialize(flow)
-            testScheduler.advanceUntilIdle()
+                val flow = MutableStateFlow(createSnapshotWithOneSim())
+                manager.initialize(flow)
+                testScheduler.advanceUntilIdle()
 
-            val status = manager.status.value
-            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
-            // String parsing is removed, so it's no longer NOT_SUPPORTED.
-            // SemanticSearchManager wraps it into IndexingFailure -> DATABASE_ERROR.
-            assertEquals(
-                TrackingStatus.ErrorType.DATABASE_ERROR,
-                (status as TrackingStatus.Error).type,
-            )
-        }
-
-    @Test
-    fun `initialization with generic IllegalStateException sets DATABASE_ERROR status due to indexing wrap`() =
-        runTest(testDispatcher) {
-            val manager = createManager(appScope)
-            fakeWrapper.failSessionCreationWith = IllegalStateException("Something went wrong")
-
-            val flow = MutableStateFlow(createSnapshotWithOneSim())
-            manager.initialize(flow)
-            testScheduler.advanceUntilIdle()
-
-            val status = manager.status.value
-            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
-            // It's DATABASE_ERROR because SemanticSearchManager wraps initialization failure
-            // into IndexingFailure if it's not NOT_SUPPORTED.
-            assertEquals(
-                TrackingStatus.ErrorType.DATABASE_ERROR,
-                (status as TrackingStatus.Error).type,
-            )
+                val status = manager.status.value
+                assertTrue("Expected Error status for '$msg', but was $status", status is TrackingStatus.Error)
+                assertEquals(
+                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    (status as TrackingStatus.Error).type,
+                )
+            }
         }
 
     @Test

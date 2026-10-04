@@ -22,9 +22,11 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -35,6 +37,7 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import android.content.pm.ShortcutManager as AndroidShortcutManager
 
 @RunWith(RobolectricTestRunner::class)
@@ -241,7 +244,8 @@ class ShortcutManagerTest {
                         }
                     }
                 }
-            jobs.joinAll()
+            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
+                ?: fail("Timed out waiting for concurrent shortcut manager operations")
             advanceUntilIdle()
 
             assertTrue(shortcutManager.status.value is TrackingStatus.Active)

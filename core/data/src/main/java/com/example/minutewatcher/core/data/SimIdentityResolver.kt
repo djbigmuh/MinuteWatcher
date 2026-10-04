@@ -22,7 +22,6 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
-@Suppress("ReturnCount", "ThrowsCount")
 internal class SimIdentityResolver
     @Inject
     constructor(
@@ -38,6 +37,7 @@ internal class SimIdentityResolver
          * @throws SeedUnavailableException if identity seed is unavailable within timeout.
          * @throws IOException if DataStore access fails during persistence.
          */
+        @Suppress("ReturnCount")
         suspend fun getSimIdentity(
             slot: Int,
             activeSimsCache: StateFlow<List<ActiveSimInfo>>,

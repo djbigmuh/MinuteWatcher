@@ -61,9 +61,11 @@ data class WidgetSettingsUiState(
  * NOTE: TooManyFunctions is suppressed: methods map 1:1 to settings screen
  * UI actions and form the screen's command surface.
  *
- * @property loader Loader for widget settings.
- * @property saver Saver for widget settings.
- * @param usageStateRepository Repository for observed usage state snapshots.
+ * @param loader Loader for widget settings.
+ * @param saver Saver for widget settings.
+ * @param appSettingsRepository Repository for global application settings.
+ * @param appScope Application scope used to complete pending saves on ViewModel clearance.
+ * @param usageStateRepository Repository for observed usage state snapshots for widget preview.
  */
 @HiltViewModel
 @Suppress("TooManyFunctions")

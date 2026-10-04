@@ -30,6 +30,8 @@ class PermissionManagerUsageStatsApiTest {
         permissionManager = PermissionManager(context, null)
     }
 
+    // @Suppress("DEPRECATION") is required because AppOpsManager.checkOpNoThrow
+    // and OPSTR_GET_USAGE_STATS are deprecated in API 29+.
     @Test
     @Suppress("DEPRECATION")
     fun `hasUsageStatsPermission returns true when allowed`() {
@@ -41,6 +43,8 @@ class PermissionManagerUsageStatsApiTest {
         assertTrue(permissionManager.hasUsageStatsPermission())
     }
 
+    // @Suppress("DEPRECATION") is required because AppOpsManager.checkOpNoThrow
+    // and OPSTR_GET_USAGE_STATS are deprecated in API 29+.
     @Test
     @Suppress("DEPRECATION")
     fun `hasUsageStatsPermission returns false when ignored`() {
@@ -52,6 +56,8 @@ class PermissionManagerUsageStatsApiTest {
         assertFalse(permissionManager.hasUsageStatsPermission())
     }
 
+    // @Suppress("DEPRECATION") is required because AppOpsManager.checkOpNoThrow
+    // and OPSTR_GET_USAGE_STATS are deprecated in API 29+.
     @Test
     @Suppress("DEPRECATION")
     fun `hasUsageStatsPermission returns false when exception occurs`() {
@@ -63,6 +69,8 @@ class PermissionManagerUsageStatsApiTest {
         assertFalse(permissionManager.hasUsageStatsPermission())
     }
 
+    // @Suppress("DEPRECATION") is required because AppOpsManager.checkOpNoThrow
+    // and OPSTR_GET_USAGE_STATS are deprecated in API 29+.
     @Test
     @Suppress("DEPRECATION")
     fun `hasUsageStatsPermission returns false by default when mode is not allowed`() {

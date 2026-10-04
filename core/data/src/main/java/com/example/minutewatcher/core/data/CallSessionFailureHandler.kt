@@ -17,23 +17,17 @@ internal object CallSessionFailureHandler {
         }
 
         val isTimeout = error is DataStoreReadTimeoutException
-        val defaultMessage =
+        val message =
             if (isTimeout) {
                 "Timeout reading session data for subId $subId"
             } else {
                 "Failed to read session data for subId $subId"
             }
 
-        val logMessage =
-            if (isTimeout) {
-                "Timeout reading session data for subId $subId"
-            } else {
-                "Failed to read session data for subId $subId"
-            }
-        AppLogger.e(logMessage, error)
+        AppLogger.e(message, error)
 
         val code = if (isTimeout) TrackingStatus.ErrorCode.TIMEOUT else null
-        val statusMessage = error?.message ?: defaultMessage
+        val statusMessage = error?.message ?: message
 
         context.updateStatus(
             TrackingStatus.Error(

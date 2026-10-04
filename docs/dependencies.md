@@ -27,7 +27,8 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 ### 5. Detekt (Alpha)
 - **Version**: `2.0.0-alpha.6`
 - **Reason**: Required for compatibility with Gradle 9.x and modern JDKs until the stable 2.x branch is released.
-- **Plan**: Upgrade to the stable 2.x release once available; revise `config/detekt/detekt.yml` for new and deprecated rules; verify `buildUponDefaultConfig` behavior; remove related `@Suppress("UnstableApiUsage")` annotations if the affected APIs stabilize.
+- **Plan**: Upgrade to the stable 2.x release once available; revise `config/detekt/detekt.yml` for new and deprecated
+  rules; verify `buildUponDefaultConfig` behavior.
 
 ---
 

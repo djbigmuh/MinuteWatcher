@@ -1,5 +1,3 @@
-@file:Suppress("TooManyFunctions")
-
 package com.example.minutewatcher.core.data.di
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -17,6 +15,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  * of truth for the DataStore schema within the module. Decomposition is counterproductive
  * as it would fragment the schema definition.
  */
+@Suppress("TooManyFunctions")
 internal object DataStoreKeys {
     // App settings (SettingsKeys)
     val APP_THEME = intPreferencesKey("app_theme")

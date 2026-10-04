@@ -54,4 +54,24 @@ class NotificationHelperTest {
         assertEquals("Title", notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString())
         assertEquals("Message", notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString())
     }
+
+    @Test
+    fun `sendUsageNotification handles null NotificationManager gracefully without throwing`() {
+        val nullServiceContext =
+            object : android.content.ContextWrapper(context) {
+                override fun getSystemService(name: String): Any? = null
+
+                override fun getSystemServiceName(serviceClass: Class<*>): String? = null
+            }
+
+        whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+
+        val nullServiceHelper = NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
+
+        nullServiceHelper.sendUsageNotification("Title", "Message", 0, 1)
+        nullServiceHelper.sendUsageNotification("Title", "Message", 0, 1)
+
+        val shadowNotificationManager = org.robolectric.Shadows.shadowOf(notificationManager)
+        assertEquals(0, shadowNotificationManager.allNotifications.size)
+    }
 }

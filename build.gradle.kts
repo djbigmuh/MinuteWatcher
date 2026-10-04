@@ -20,9 +20,10 @@ subprojects {
     apply(plugin = "dev.detekt")
 
     extensions.configure<DetektExtension>("detekt") {
-        // Lint baseline captures ONLY pre-existing issues.
-        // New code MUST NOT be added to the baseline — fix issues at the source.
-        // When refactoring a file, remove its entries from the baseline first.
+        // Detekt baseline contains ONLY pre-existing issues.
+        // New issues MUST NOT be added to the baseline — fix them at the source.
+        // Regenerating or expanding the baseline during routine edits is forbidden;
+        // increasing the entry count is grounds for rejecting a change.
         config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
         baseline.set(file("$projectDir/detekt-baseline.xml"))
         buildUponDefaultConfig.set(true)

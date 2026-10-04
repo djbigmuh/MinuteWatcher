@@ -40,6 +40,8 @@ class PermissionManagerTest {
         AppLogger.resetForTest()
     }
 
+    // @Suppress("DEPRECATION") is required because legacy AppOpsManager methods
+    // (checkOpNoThrow, checkOp, noteOp) are deprecated in API 29+.
     @Suppress("DEPRECATION")
     private fun stubAppOpsMode(mode: Int) {
         whenever(appOps.checkOpNoThrow(any(), any(), any())).thenReturn(mode)
@@ -50,6 +52,8 @@ class PermissionManagerTest {
         whenever(appOps.checkOp(any(), any(), any())).thenReturn(mode)
     }
 
+    // @Suppress("DEPRECATION") is required because legacy AppOpsManager methods
+    // (checkOpNoThrow, checkOp, noteOp) are deprecated in API 29+.
     @Suppress("DEPRECATION")
     private fun stubAppOpsException(e: Throwable) {
         whenever(appOps.checkOpNoThrow(any(), any(), any())).thenThrow(e)

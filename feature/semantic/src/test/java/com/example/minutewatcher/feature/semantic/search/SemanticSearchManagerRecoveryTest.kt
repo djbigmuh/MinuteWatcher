@@ -7,9 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
@@ -134,7 +137,8 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
                         }
                     }
                 }
-            jobs.joinAll()
+            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
+                ?: fail("Timed out waiting for concurrent initialize and recover operations")
             testScheduler.advanceUntilIdle()
 
             assertTrue(manager.status.value is TrackingStatus.Ready)

@@ -213,9 +213,7 @@ class SimIdentityRepositorySeedTest {
             val initialId = identityRepo.getSimIdentity(0)
             assertTrue("Should return identity using fallback", initialId.stableId.isNotEmpty())
 
-            // 3. (Deleted stale cache verification as cache is no longer populated with fallbacks)
-
-            // 4. Transition to Real seed
+            // 3. Transition to Real seed
             val mockSubInfo = mock<SubscriptionInfo>()
             whenever(mockSubInfo.subscriptionId).thenReturn(1)
             whenever(mockSubInfo.simSlotIndex).thenReturn(0)
@@ -227,7 +225,7 @@ class SimIdentityRepositorySeedTest {
             identityRepo.getActiveIdentities().first { it.isNotEmpty() }
             testScheduler.advanceUntilIdle()
 
-            // 5. Cache should be cleared, call should return real identity
+            // 4. Cache should be cleared, call should return real identity
             val id3 = identityRepo.getSimIdentity(0)
             assertTrue("Should return real ID now, got ${id3.stableId}", id3.stableId.startsWith("icc_"))
         }
@@ -286,8 +284,7 @@ class SimIdentityRepositorySeedTest {
             identityRepo.getActiveIdentities().first { it.isNotEmpty() }
             testScheduler.advanceUntilIdle()
 
-            // 4. Trigger identity observation to initiate migration (if needed by implementation)
-            // or simply verify the call if transition to real seed triggers it automatically.
+            // 4. Trigger identity observation to initiate migration
             identityRepo.getSimIdentity(0)
 
             // 5. Verify migration was called for the new identity

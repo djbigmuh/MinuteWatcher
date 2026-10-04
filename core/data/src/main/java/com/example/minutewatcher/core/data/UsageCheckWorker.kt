@@ -86,8 +86,6 @@ class UsageCheckWorker
                 Result.failure()
             }
 
-        // @Suppress("ReturnCount") is required for early exits on permission checks and timeouts.
-        @Suppress("ReturnCount")
         private suspend fun checkUsageAndNotify(): Result {
             deps.trafficTracker.updateTrafficUsage()
 

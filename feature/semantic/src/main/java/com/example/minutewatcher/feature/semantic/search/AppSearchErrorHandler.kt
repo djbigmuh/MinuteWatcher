@@ -79,7 +79,6 @@ class AppSearchErrorHandler
             }
         }
 
-        @Suppress("ReturnCount")
         fun handleIndexFailure(
             currentStatus: TrackingStatus,
             errorOverride: String? = null,

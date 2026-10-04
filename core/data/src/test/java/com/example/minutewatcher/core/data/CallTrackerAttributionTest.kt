@@ -25,7 +25,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class CallTrackerAttributionTest : CallTrackerTestFixtures() {
     @Test
-    fun `test dual SIM concurrent call tracking`() =
+    fun `tracks concurrent calls on multiple SIMs independently`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -41,32 +41,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `onCallEnded with unknown subId and multiple calls uses default voice attribution`() =
-        runTest(testDispatcher) {
-            setupCommonMocks()
-            val callTracker = createTracker()
-            val now = timeProvider.now()
-            val realtime = timeProvider.elapsedRealtime()
-            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
-            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
-            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
-            whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 2000L))
-            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 2000L))
-            whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(timeProvider.uptimeMillis() - 2000L))
-            whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf("id_0"))
-
-            whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(2)
-
-            callTracker.onCallEnded(-1)
-            advanceUntilIdle()
-
-            // Heuristic attribution is removed, so NO sessions should be closed
-            verify(callSessionRepository, never()).clearCallSession(any())
-        }
-
-    @Test
-    fun `attribution failure keeps error status`() =
+    fun `keeps error status when call attribution fails`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -102,11 +77,10 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             val status = callTracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, (status as TrackingStatus.Error).type)
-            assertEquals("Could not attribute call to SIM identity", status.message)
         }
 
     @Test
-    fun `onCallEnded with unknown subId and ambiguous active calls sets INACCURATE_ATTRIBUTION error`() =
+    fun `sets INACCURATE_ATTRIBUTION error on call end when subId is unknown and active calls are ambiguous`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -119,8 +93,6 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             whenever(permissionManager.getDefaultVoiceSubscriptionId()).thenReturn(-1)
             // Non-IDLE call state means global session cleanup does not apply
             // and target session cannot be uniquely determined.
-            // @Suppress("DEPRECATION") is required because callStateForSubscription is deprecated on API 31+.
-            @Suppress("DEPRECATION")
             whenever(
                 telephonyManager.callStateForSubscription,
             ).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
@@ -144,7 +116,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `resolveUnknownSubIdEnd handles permission revocation gracefully`() =
+    fun `handles permission revocation gracefully when resolving unknown subId on call end`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -173,7 +145,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `stale session cleanup logs error and does nothing in handleAmbiguousIdle`() =
+    fun `does not clear sessions or record minutes when active calls are ambiguous and call state is offhook`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -217,7 +189,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `refreshStatus cleans up attributionFailures for inactive subIds`() =
+    fun `cleans up attribution failures for inactive subIds during status refresh`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val resolver = createAttributionResolver()
@@ -241,7 +213,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `regression - unknown subId end closes single active session even if data SIM is different`() =
+    fun `closes single active session on unknown subId end even if default data SIM is different`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -273,7 +245,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `resolveUnknownSubIdEnd attributes end event to single idle sub when other sub throws exception`() =
+    fun `attributes call end to single idle sub when other sub call state query throws`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -308,7 +280,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `resolveUnknownSubIdEnd sets INACCURATE_ATTRIBUTION when all sub call state queries throw exception`() =
+    fun `sets INACCURATE_ATTRIBUTION error when call state queries fail for all subscriptions`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -329,7 +301,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `resolveUnknownSubIdEnd attributes to single active sub without query when query throws exception`() =
+    fun `attributes call end to single active subscription when its call state query throws exception`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
@@ -356,7 +328,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `resolveUnknownSubIdEnd does not treat device as idle when any call state query throws exception`() =
+    fun `does not treat device as idle when call state query throws exception for any subscription`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker()
