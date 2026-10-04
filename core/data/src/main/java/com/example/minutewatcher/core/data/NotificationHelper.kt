@@ -64,6 +64,7 @@ class NotificationHelper
          *
          * Defensive contract: notification delivery should never cause app crash.
          * Platform implementations of NotificationManager may throw various RuntimeExceptions.
+         * Suppressing TooGenericExceptionCaught as RuntimeException is caught defensively.
          */
         @Suppress("TooGenericExceptionCaught")
         fun sendUsageNotification(
@@ -127,6 +128,7 @@ class NotificationHelper
          *
          * Defensive contract: checking notification status should never cause app crash.
          * Platform implementations of NotificationManagerCompat may throw various RuntimeExceptions.
+         * Suppressing TooGenericExceptionCaught as RuntimeException is caught defensively.
          */
         @Suppress("TooGenericExceptionCaught")
         private fun areNotificationsEnabledSafe(): Boolean =

@@ -281,6 +281,7 @@ open class CallTracker
          *
          * **Thread Safety:** Safe to call from any coroutine context. Holds internal mutex
          * during DataStore operations.
+         * Suppressing ReturnCount as refreshStatus returns early on sticky errors or missing permissions.
          */
         @Suppress("ReturnCount")
         override suspend fun refreshStatus(force: Boolean) {

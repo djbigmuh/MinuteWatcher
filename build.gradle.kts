@@ -49,9 +49,7 @@ subprojects {
             html.required.set(true)
         }
     }
-}
 
-subprojects {
     tasks.withType<Test>().configureEach {
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")

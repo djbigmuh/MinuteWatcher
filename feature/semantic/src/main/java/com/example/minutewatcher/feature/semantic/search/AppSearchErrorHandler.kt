@@ -126,6 +126,7 @@ class AppSearchErrorHandler
             }
         }
 
+        // ThrowsCount: throwIfErrors throws specific exceptions depending on which operations failed.
         @Suppress("ThrowsCount")
         fun throwIfErrors(
             putEx: Exception?,

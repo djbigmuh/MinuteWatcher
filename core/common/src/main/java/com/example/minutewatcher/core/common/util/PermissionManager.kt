@@ -40,6 +40,7 @@ class PermissionManager
             return granted
         }
 
+        // MissingPermission: hasPhoneStatePermission() check is performed before accessing activeSubscriptionInfoList.
         @Suppress("MissingPermission")
         fun getActiveSubscriptions(): List<SubscriptionInfo> {
             val manager = subscriptionManager

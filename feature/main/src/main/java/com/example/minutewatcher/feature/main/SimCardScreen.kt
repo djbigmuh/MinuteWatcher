@@ -48,6 +48,7 @@ fun SimCardScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     lastOperationError?.let { error ->
+        // SpreadOperator: vararg arguments are required by Compose stringResource API.
         @Suppress("SpreadOperator")
         val message = stringResource(error.messageRes, *error.args.toTypedArray())
         LaunchedEffect(error) {
