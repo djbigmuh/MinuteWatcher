@@ -13,10 +13,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -147,5 +150,160 @@ class CallEventWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             verifyNoInteractions(callTracker)
+        }
+
+    @Test
+    fun `doWork retries on unexpected exception when runAttemptCount is less than MAX_EVENT_RUN_ATTEMPTS`() =
+        runTest {
+            whenever(callTracker.onCallStarted(any(), any())).thenThrow(RuntimeException("Unexpected error"))
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, "OFFHOOK")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, 1)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, 100L)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .setRunAttemptCount(0)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `doWork fails on unexpected exception when runAttemptCount reaches MAX_EVENT_RUN_ATTEMPTS`() =
+        runTest {
+            whenever(callTracker.onCallStarted(any(), any())).thenThrow(RuntimeException("Unexpected error"))
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, "OFFHOOK")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, 1)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, 100L)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .setRunAttemptCount(CallEventWorker.MAX_EVENT_RUN_ATTEMPTS)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+        }
+
+    @Test
+    fun `doWork retries on SecurityException when runAttemptCount is less than MAX_EVENT_RUN_ATTEMPTS`() =
+        runTest {
+            whenever(callTracker.onCallStarted(any(), any())).thenThrow(SecurityException("Permission denied"))
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, "OFFHOOK")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, 1)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, 100L)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .setRunAttemptCount(0)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `doWork fails on SecurityException when runAttemptCount reaches MAX_EVENT_RUN_ATTEMPTS`() =
+        runTest {
+            whenever(callTracker.onCallStarted(any(), any())).thenThrow(SecurityException("Permission denied"))
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, "OFFHOOK")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, 1)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, 100L)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .setRunAttemptCount(CallEventWorker.MAX_EVENT_RUN_ATTEMPTS)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+        }
+
+    @Test
+    fun `doWork retries on IOException even when runAttemptCount reaches MAX_EVENT_RUN_ATTEMPTS`() =
+        runTest {
+            whenever(callTracker.onCallStarted(any(), any())).thenAnswer { throw IOException("IO error") }
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, "OFFHOOK")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, 1)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, 100L)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .setRunAttemptCount(CallEventWorker.MAX_EVENT_RUN_ATTEMPTS)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
         }
 }

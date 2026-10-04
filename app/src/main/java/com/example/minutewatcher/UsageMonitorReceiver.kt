@@ -50,10 +50,17 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
     /**
      * Processes the phone state change and enqueues a [CallEventWorker] to handle it.
      *
-     * We use a single global chain [UNIQUE_WORK_NAME] with [ExistingWorkPolicy.APPEND_OR_REPLACE]
-     * to guarantee that all call events across all subscriptions are processed in the strict order
-     * they were received. If a previous worker in the chain fails, subsequent events will still
-     * be enqueued and executed, preventing the chain from being permanently blocked.
+     * - All call events are processed in a single global unique chain [UNIQUE_WORK_NAME] using
+     *   [ExistingWorkPolicy.APPEND_OR_REPLACE] to preserve reception order.
+     * - Event timestamp is captured in input data via [SystemClock.elapsedRealtime], ensuring
+     *   execution delay or retries do not distort call duration calculations.
+     * - On [androidx.work.ListenableWorker.Result.retry], enqueued subsequent events wait for the
+     *   current worker to complete, preserving processing order.
+     * - If a worker finishes with [androidx.work.ListenableWorker.Result.failure], WorkManager cancels
+     *   enqueued dependents of that work chain. Events enqueued AFTER the chain transitions to a terminal
+     *   state start a new chain.
+     * - Orphaned call sessions are cleaned up upon device reboot and when a stale session is detected
+     *   by the next call start event.
      */
     private suspend fun processPhoneStateChange(
         appContext: Context,

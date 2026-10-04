@@ -34,21 +34,51 @@ class CallEventWorker
 
                 Result.success()
             } catch (e: SecurityException) {
-                AppLogger.e("CallEventWorker: Permission error", e)
-                Result.failure()
+                if (runAttemptCount < MAX_EVENT_RUN_ATTEMPTS) {
+                    AppLogger.w(
+                        "CallEventWorker: Permission error, retrying. Attempt: $runAttemptCount",
+                        e,
+                    )
+                    Result.retry()
+                } else {
+                    AppLogger.e(
+                        "CallEventWorker: Permission error, max attempts reached ($runAttemptCount)",
+                        e,
+                    )
+                    Result.failure()
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
                 AppLogger.w("CallEventWorker: IO error, retrying. Attempt: $runAttemptCount. Message: ${e.message}")
                 Result.retry()
             } catch (e: Exception) {
-                AppLogger.e("CallEventWorker failed with unexpected error", e)
-                Result.failure()
+                if (runAttemptCount < MAX_EVENT_RUN_ATTEMPTS) {
+                    AppLogger.w(
+                        "CallEventWorker failed with unexpected error, retrying. Attempt: $runAttemptCount",
+                        e,
+                    )
+                    Result.retry()
+                } else {
+                    AppLogger.e(
+                        "CallEventWorker failed with unexpected error, max attempts reached ($runAttemptCount)",
+                        e,
+                    )
+                    Result.failure()
+                }
             }
 
         companion object {
             const val EXTRA_STATE = "state"
             const val EXTRA_SUB_ID = "subId"
             const val EXTRA_EVENT_ELAPSED_REALTIME = "eventElapsedRealtime"
+
+            /**
+             * Maximum number of retry attempts for transient or unexpected errors before considering the work failed.
+             *
+             * Retries are limited so that transient errors do not break the event chain order,
+             * while deterministic errors do not block the chain indefinitely.
+             */
+            const val MAX_EVENT_RUN_ATTEMPTS = 3
         }
     }
