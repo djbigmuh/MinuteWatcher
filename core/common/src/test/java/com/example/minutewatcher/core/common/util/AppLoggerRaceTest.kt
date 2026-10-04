@@ -58,21 +58,30 @@ class AppLoggerRaceTest {
         val latch = CountDownLatch(1)
         val startLatch = CountDownLatch(threadCount)
         val completedLatch = CountDownLatch(threadCount)
+        val exceptions = ConcurrentLinkedQueue<Throwable>()
 
         repeat(threadCount) { threadIdx ->
             Thread {
-                startLatch.countDown()
-                assertTrue("Timed out waiting for release latch", latch.await(10, TimeUnit.SECONDS))
-                repeat(logsPerThread) { logIdx ->
-                    AppLogger.d("Thread $threadIdx log $logIdx")
+                try {
+                    startLatch.countDown()
+                    if (!latch.await(10, TimeUnit.SECONDS)) {
+                        exceptions.add(AssertionError("Timed out waiting for release latch in thread $threadIdx"))
+                    }
+                    repeat(logsPerThread) { logIdx ->
+                        AppLogger.d("Thread $threadIdx log $logIdx")
+                    }
+                } catch (t: Throwable) {
+                    exceptions.add(t)
+                } finally {
+                    completedLatch.countDown()
                 }
-                completedLatch.countDown()
             }.start()
         }
 
         assertTrue("Timed out waiting for start latch", startLatch.await(10, TimeUnit.SECONDS))
         latch.countDown() // Start all threads at once
         assertTrue("Logging should complete", completedLatch.await(10, TimeUnit.SECONDS))
+        assertTrue("No exceptions in worker threads: $exceptions", exceptions.isEmpty())
 
         val raceCompletionMarker = "RACE_TEST_COMPLETED_MARKER"
         waitForLogMarker(raceCompletionMarker)
@@ -85,61 +94,62 @@ class AppLoggerRaceTest {
         assertTrue("Should contain logs from different threads", content.contains("Thread 19 log 99"))
     }
 
-    @Test
-    fun `concurrent logging with lifecycle resets does not throw uncaught exceptions and keeps file logging active`() {
-        val threadCount = 10
-        val logsPerThread = 200
-        val lifecycleIterations = 20
-
-        val startLatch = CountDownLatch(threadCount + 1)
-        val readyLatch = CountDownLatch(1)
-        val completedLatch = CountDownLatch(threadCount + 1)
-
-        val exceptions = ConcurrentLinkedQueue<Throwable>()
-
-        repeat(threadCount) { threadIdx ->
-            Thread {
-                try {
-                    startLatch.countDown()
-                    assertTrue("Timed out waiting for ready latch", readyLatch.await(10, TimeUnit.SECONDS))
-                    repeat(logsPerThread) { logIdx ->
-                        when (logIdx % 3) {
-                            0 -> AppLogger.d("Thread $threadIdx debug $logIdx")
-                            1 -> AppLogger.w("Thread $threadIdx warn $logIdx")
-                            else -> AppLogger.e("Thread $threadIdx error $logIdx")
-                        }
-                    }
-                } catch (t: Throwable) {
-                    exceptions.add(t)
-                } finally {
-                    completedLatch.countDown()
-                }
-            }.start()
-        }
-
+    private fun runWorkerThread(
+        startLatch: CountDownLatch,
+        readyLatch: CountDownLatch,
+        completedLatch: CountDownLatch,
+        exceptions: ConcurrentLinkedQueue<Throwable>,
+        threadName: String,
+        block: () -> Unit,
+    ) {
         Thread {
             try {
                 startLatch.countDown()
-                assertTrue("Timed out waiting for ready latch", readyLatch.await(10, TimeUnit.SECONDS))
-                repeat(lifecycleIterations) { iter ->
-                    if (iter % 2 == 0) {
-                        AppLogger.initForTest(logDir, enabled = true)
-                    } else {
-                        AppLogger.resetForTest()
-                    }
-                    Thread.sleep(2)
+                if (!readyLatch.await(10, TimeUnit.SECONDS)) {
+                    exceptions.add(AssertionError("Timed out waiting for ready latch in $threadName"))
                 }
-                AppLogger.initForTest(logDir, enabled = true)
+                block()
             } catch (t: Throwable) {
                 exceptions.add(t)
             } finally {
                 completedLatch.countDown()
             }
         }.start()
+    }
+
+    @Test
+    fun `concurrent logging with lifecycle resets does not throw uncaught exceptions and keeps file logging active`() {
+        val threadCount = 10
+        val logsPerThread = 200
+        val lifecycleIterations = 20
+        val startLatch = CountDownLatch(threadCount + 1)
+        val readyLatch = CountDownLatch(1)
+        val completedLatch = CountDownLatch(threadCount + 1)
+        val exceptions = ConcurrentLinkedQueue<Throwable>()
+
+        repeat(threadCount) { threadIdx ->
+            runWorkerThread(startLatch, readyLatch, completedLatch, exceptions, "thread $threadIdx") {
+                repeat(logsPerThread) { logIdx ->
+                    val msg = "Thread $threadIdx log $logIdx"
+                    when (logIdx % 3) {
+                        0 -> AppLogger.d(msg)
+                        1 -> AppLogger.w(msg)
+                        else -> AppLogger.e(msg)
+                    }
+                }
+            }
+        }
+
+        runWorkerThread(startLatch, readyLatch, completedLatch, exceptions, "lifecycle thread") {
+            repeat(lifecycleIterations) { iter ->
+                if (iter % 2 == 0) AppLogger.initForTest(logDir, enabled = true) else AppLogger.resetForTest()
+                Thread.sleep(2)
+            }
+            AppLogger.initForTest(logDir, enabled = true)
+        }
 
         assertTrue("Timed out waiting for start latch", startLatch.await(10, TimeUnit.SECONDS))
         readyLatch.countDown()
-
         assertTrue("All threads should finish within timeout", completedLatch.await(15, TimeUnit.SECONDS))
         assertTrue("No uncaught exceptions should occur: $exceptions", exceptions.isEmpty())
 
