@@ -15,7 +15,7 @@ import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetSettingsViewModelFlushTest : BaseWidgetSettingsViewModelTest() {
+class WidgetSettingsViewModelFlushTest : BaseWidgetSettingsViewModelFixture() {
     @Test
     fun `onCleared flushes unsaved changes when no prior save occurred`() =
         runTest {

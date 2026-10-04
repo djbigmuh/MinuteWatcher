@@ -19,7 +19,7 @@ import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterTest() {
+class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `updateAll coalesces concurrent calls`() =
         runTest {

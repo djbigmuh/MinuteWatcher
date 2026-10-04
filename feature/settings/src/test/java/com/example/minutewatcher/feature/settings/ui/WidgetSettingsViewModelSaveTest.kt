@@ -22,7 +22,7 @@ import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelTest() {
+class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
     @Test
     fun `saveAndNotify calls save and notifies`() =
         runTest {

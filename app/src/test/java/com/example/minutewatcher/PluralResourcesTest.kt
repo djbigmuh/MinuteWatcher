@@ -7,12 +7,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import org.w3c.dom.Node
 import java.io.File
 import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
 
 @RunWith(RobolectricTestRunner::class)
+@Config(application = MinuteWatcherTestApp::class)
 class PluralResourcesTest {
     private val locales = listOf("en", "ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
 

@@ -41,7 +41,7 @@ class FakeAppSettingsRepository(
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-abstract class BaseWidgetUpdaterTest {
+abstract class BaseWidgetUpdaterFixture {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 

@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = TestMinuteWatcherApp::class)
+@Config(application = MinuteWatcherTestApp::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReceiverAsyncTest {
     private lateinit var context: Context

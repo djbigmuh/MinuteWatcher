@@ -21,7 +21,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetUpdaterLimitStateMachineTest : BaseWidgetUpdaterTest() {
+class WidgetUpdaterLimitStateMachineTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `updateAll calls performWidgetUpdate twice when LimitExceeded occurs`() =
         runTest {

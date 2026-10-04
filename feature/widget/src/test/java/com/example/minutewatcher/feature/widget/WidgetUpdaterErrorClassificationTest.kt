@@ -15,7 +15,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterTest() {
+class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `isRemoteViewsLimitException returns false for generic IllegalArgumentException`() {
         val updater =

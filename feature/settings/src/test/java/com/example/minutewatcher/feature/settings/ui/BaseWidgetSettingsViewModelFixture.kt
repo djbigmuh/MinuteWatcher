@@ -20,7 +20,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
-abstract class BaseWidgetSettingsViewModelTest {
+abstract class BaseWidgetSettingsViewModelFixture {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 

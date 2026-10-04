@@ -10,12 +10,14 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import org.xmlpull.v1.XmlPullParser
 
 /**
  * Verifies consistency and completeness of cloud backup and device transfer configuration rules.
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(application = MinuteWatcherTestApp::class)
 class BackupRulesConsistencyTest {
     private lateinit var context: Context
 

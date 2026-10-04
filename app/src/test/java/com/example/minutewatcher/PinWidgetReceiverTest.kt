@@ -24,7 +24,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = TestMinuteWatcherApp::class)
+@Config(application = MinuteWatcherTestApp::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class PinWidgetReceiverTest {
     @get:Rule

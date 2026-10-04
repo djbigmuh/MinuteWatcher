@@ -12,7 +12,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetSettingsViewModelLoadTest : BaseWidgetSettingsViewModelTest() {
+class WidgetSettingsViewModelLoadTest : BaseWidgetSettingsViewModelFixture() {
     @Test
     fun `init loads settings`() =
         runTest {

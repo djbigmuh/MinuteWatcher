@@ -13,7 +13,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetUpdaterRenderModeTest : BaseWidgetUpdaterTest() {
+class WidgetUpdaterRenderModeTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `updateAll calls renderer with correct parameters`() =
         runTest {

@@ -7,8 +7,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(application = MinuteWatcherTestApp::class)
 class ResourceResolutionTest {
     @Test
     fun `ic_language and ic_palette resolve in core resources context`() {

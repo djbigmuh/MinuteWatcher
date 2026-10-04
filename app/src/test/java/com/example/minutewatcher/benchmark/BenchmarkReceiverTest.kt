@@ -10,7 +10,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
-import com.example.minutewatcher.TestMinuteWatcherApp
+import com.example.minutewatcher.MinuteWatcherTestApp
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,7 +32,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = TestMinuteWatcherApp::class)
+@Config(application = MinuteWatcherTestApp::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class BenchmarkReceiverTest {
     @get:Rule

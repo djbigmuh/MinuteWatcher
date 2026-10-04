@@ -15,7 +15,7 @@ import org.mockito.kotlin.verify
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetSettingsViewModelAutoSaveTest : BaseWidgetSettingsViewModelTest() {
+class WidgetSettingsViewModelAutoSaveTest : BaseWidgetSettingsViewModelFixture() {
     @Test
     fun `auto-save triggers after throttle delay`() =
         runTest {

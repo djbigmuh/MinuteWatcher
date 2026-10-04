@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit
  * This is strict Android lifecycle compliance, not optional.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = TestMinuteWatcherApp::class)
+@Config(application = MinuteWatcherTestApp::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class UsageMonitorReceiverTest {
     @get:Rule
