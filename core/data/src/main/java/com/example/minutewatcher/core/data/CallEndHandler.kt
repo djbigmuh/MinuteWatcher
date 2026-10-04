@@ -381,6 +381,13 @@ internal class CallEndHandler
                 }
 
                 else -> {
+                    if (data.savedIdentityResult.isFailure) {
+                        AppLogger.w(
+                            "CallTracker: saved session identity unavailable for subId $subId, " +
+                                "resolving with active SIMs",
+                            data.savedIdentityResult.exceptionOrNull(),
+                        )
+                    }
                     val savedIdentity = data.savedIdentityResult.getOrNull()
                     val (targetIdentity, isFallbackUsed) =
                         attributionResolver.resolveTargetIdentity(

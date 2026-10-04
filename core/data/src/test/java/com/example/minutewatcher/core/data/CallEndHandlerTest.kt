@@ -11,6 +11,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -248,5 +249,28 @@ class CallEndHandlerTest {
                 eq(false),
             )
             verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
+        }
+
+    @Test
+    fun `endCall resolves current identity when saved identity read fails with IOException`() =
+        runTest {
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(
+                flow { throw IOException("Read identity error") },
+            )
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(3000L))
+
+            whenever(timeProvider.elapsedRealtime()).thenReturn(65000L)
+            whenever(timeProvider.uptimeMillis()).thenReturn(63000L)
+
+            whenever(attributionResolver.resolveTargetIdentity(eq(1), eq(null))).thenReturn("id_1" to true)
+
+            val result = handler.endCall(1, eventElapsedRealtime = -1L, notify = true, context = context)
+
+            verify(settingsHandler).writeCallDuration(eq("id_1"), eq(1), eq(true), eq(true), eq("1000|5000"))
+            verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
+            assertTrue(result)
         }
 }
