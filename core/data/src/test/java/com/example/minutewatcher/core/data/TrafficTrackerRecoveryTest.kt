@@ -50,22 +50,24 @@ class TrafficTrackerRecoveryTest {
         whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
     }
 
-    private fun createTracker(scope: TestScope): TrafficTracker =
-        TrafficTracker(
-            simIdentityRepository = simIdentityRepository,
-            simUsageRepository = simUsageRepository,
-            simUsageResetRepository = simUsageResetRepository,
-            permissionManager = permissionManager,
-            baselineManager = baselineManager,
-            deltaCalculator = deltaCalculator,
-            simChangeHandler = simChangeHandler,
-            targetResolver = targetResolver,
-            permissionChecker = permissionChecker,
-            permissionStateNotifier = permissionStateNotifier,
-            dataChangeNotifier = mock(),
-            timeProvider = FixedTimeProvider(),
-            scope = scope.backgroundScope,
-        )
+    private fun createTracker(scope: TestScope): TrafficTracker {
+        val deps =
+            createTrafficTrackerDependencies(
+                simIdentityRepository = simIdentityRepository,
+                simUsageRepository = simUsageRepository,
+                simUsageResetRepository = simUsageResetRepository,
+                permissionManager = permissionManager,
+                baselineManager = baselineManager,
+                deltaCalculator = deltaCalculator,
+                simChangeHandler = simChangeHandler,
+                targetResolver = targetResolver,
+                permissionChecker = permissionChecker,
+                permissionStateNotifier = permissionStateNotifier,
+                dataChangeNotifier = mock(),
+                timeProvider = FixedTimeProvider(),
+            )
+        return TrafficTracker(deps, scope.backgroundScope)
+    }
 
     @Test
     fun `automatic recovery observers do not trigger concurrent initializations`() =

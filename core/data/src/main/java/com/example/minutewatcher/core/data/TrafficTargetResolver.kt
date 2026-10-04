@@ -24,19 +24,19 @@ class TrafficTargetResolver
                 val target: TargetInfo,
             ) : TargetResult
 
-            object NoActiveSims : TargetResult
+            data object NoActiveSims : TargetResult
 
             /**
              * No default data SIM is selected in the system (e.g., mobile data is off).
              * This is a normal state, not a firmware error.
              */
-            object NoDefaultData : TargetResult
+            data object NoDefaultData : TargetResult
 
             /**
              * Input data was obtained at different points in time and is mutually inconsistent.
              * This is a transient state that is re-evaluated on the next active SIMs flow emission.
              */
-            object StaleInput : TargetResult
+            data object StaleInput : TargetResult
 
             /**
              * Target SIM resolution failed due to an error unrelated to input staleness.

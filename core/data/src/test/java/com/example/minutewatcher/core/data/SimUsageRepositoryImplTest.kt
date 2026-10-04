@@ -107,6 +107,22 @@ class SimUsageRepositoryImplTest {
         }
 
     @Test
+    fun `incrementMinutesUsedForCall returns false for blank identity without writing to storage`() =
+        runTest {
+            val emptyResult = repository.incrementMinutesUsedForCall("", 10, "1000|5000")
+            assertFalse("Empty identity should return false", emptyResult)
+
+            val blankResult = repository.incrementMinutesUsedForCall("   ", 10, "1000|5000")
+            assertFalse("Blank identity should return false", blankResult)
+
+            val repeatResult = repository.incrementMinutesUsedForCall("   ", 10, "1000|5000")
+            assertFalse("Repeated call with blank identity should return false", repeatResult)
+
+            val prefs = dataStore.data.first()
+            assertTrue("Storage should contain no keys for blank identity", prefs.asMap().isEmpty())
+        }
+
+    @Test
     fun `resetSimUsageIfDue initializes window when date is missing`() =
         runTest {
             val identity = "test_sim"

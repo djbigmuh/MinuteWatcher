@@ -58,18 +58,38 @@ object SimIdentityUtils {
 
     fun getMccMnc(info: SubscriptionInfo): String = mccMncCandidates(info).firstOrNull().orEmpty()
 
+    /**
+     * Creates a [SimIdentity] from a [SubscriptionInfo].
+     *
+     * If ICCID is missing (null or blank), the identity is constructed based on subscription ID
+     * and always has `isStable = false` regardless of the [isStable] parameter value,
+     * as subscription ID-based identities are inherently unstable across SIM re-insertions.
+     */
     fun createIdentityFromInfo(
         info: SubscriptionInfo,
         seed: String,
         isStable: Boolean = true,
     ): SimIdentity = createIdentity(info.subscriptionId, info.simSlotIndex, info.iccId, seed, isStable)
 
+    /**
+     * Creates a [SimIdentity] from an [ActiveSimInfo].
+     *
+     * If ICCID is missing (null or blank), the identity is constructed based on subscription ID
+     * and always has `isStable = false` regardless of the [isStable] parameter value,
+     * as subscription ID-based identities are inherently unstable across SIM re-insertions.
+     */
     fun createIdentityFromInfo(
         info: ActiveSimInfo,
         seed: String,
         isStable: Boolean = true,
     ): SimIdentity = createIdentity(info.subscriptionId, info.slotIndex, info.iccId, seed, isStable)
 
+    /**
+     * Constructs a [SimIdentity].
+     *
+     * If [iccId] is missing (null or blank), the identity is constructed based on subscription ID
+     * and always has `isStable = false` regardless of the [isStable] parameter value.
+     */
     private fun createIdentity(
         subscriptionId: Int,
         slotIndex: Int,

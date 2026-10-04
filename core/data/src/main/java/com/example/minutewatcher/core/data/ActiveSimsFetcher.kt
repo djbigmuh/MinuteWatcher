@@ -27,12 +27,15 @@ internal class ActiveSimsFetcher
         /**
          * Fetches active SIMs with exponential backoff retry logic.
          *
-         * Retries only transient storage errors (IOException).
-         * Programming errors (like NPE) are rethrown immediately without retry.
+         * [IOException] occurring during persistence operations are retried with
+         * exponential delay. After retry attempts are exhausted, the exception is caught and
+         * converted to [SimDiscoveryResult.Failed] with [SimDiscoveryFailureReason.STORAGE_ERROR].
+         *
+         * [CancellationException] is always rethrown.
          *
          * @param seed The identity seed result.
-         * @return Discovery result containing list of active SIM info or error state.
-         * @throws IOException if terminal storage error occurs.
+         * @return Discovery result containing list of active SIM info or [SimDiscoveryResult.Failed]
+         * with [SimDiscoveryFailureReason.STORAGE_ERROR] on terminal storage error.
          */
         suspend fun fetchActiveSimsWithRetry(seed: SeedResult): SimDiscoveryResult {
             var retryDelay = Constants.Flow.RETRY_DELAY_MS

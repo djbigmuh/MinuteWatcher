@@ -261,7 +261,12 @@ internal class CallEndHandler
             context: CallTrackingContext,
         ): Boolean {
             if (data.startTimeResult.isFailure) {
-                handleReadStartTimeFailure(subId, data.startTimeResult.exceptionOrNull(), context)
+                CallSessionFailureHandler.handleReadStartTimeFailure(
+                    subId,
+                    data.startTimeResult.exceptionOrNull(),
+                    context,
+                    sessionCleaner,
+                )
                 return false
             }
             val startTime = data.startTimeResult.getOrThrow()
@@ -411,21 +416,6 @@ internal class CallEndHandler
             startTimeMillis: Long,
             startElapsedRealtime: Long,
         ): String = "$startTimeMillis|$startElapsedRealtime"
-
-        private suspend fun handleReadStartTimeFailure(
-            subId: Int,
-            error: Throwable?,
-            context: CallTrackingContext,
-        ) {
-            (error as? CancellationException)?.let { throw it }
-            val message = "Timeout reading session data for subId $subId"
-            AppLogger.e(message, error)
-            val code = if (error is DataStoreReadTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
-            context.updateStatus(
-                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message, code = code),
-            )
-            sessionCleaner.cleanupCounters(subId, context)
-        }
 
         private fun calculateDurationMinutes(seconds: Int): Int =
             ((seconds + Constants.Time.SECONDS_IN_MINUTE) - 1) / Constants.Time.SECONDS_IN_MINUTE

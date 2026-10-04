@@ -145,21 +145,22 @@ class TrafficOvercountTest {
                 simIdentityRepository,
                 baselineManager,
             )
-        return TrafficTracker(
-            simIdentityRepository,
-            simUsageRepository,
-            simUsageResetRepository,
-            permissionManager,
-            baselineManager,
-            deltaCalculator,
-            simChangeHandler,
-            TrafficTargetResolver(permissionManager),
-            TrafficPermissionChecker(permissionManager),
-            permissionStateNotifier,
-            dataChangeNotifier,
-            timeProvider,
-            appScope,
-        )
+        val deps =
+            createTrafficTrackerDependencies(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                permissionManager,
+                baselineManager,
+                deltaCalculator,
+                simChangeHandler,
+                TrafficTargetResolver(permissionManager),
+                TrafficPermissionChecker(permissionManager),
+                permissionStateNotifier,
+                dataChangeNotifier,
+                timeProvider,
+            )
+        return TrafficTracker(deps, appScope)
     }
 
     private fun TestScope.startTracker(): TrafficTracker {

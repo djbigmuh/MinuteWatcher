@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.Constants.SimConstants
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -13,9 +14,10 @@ import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.SemanticMapper
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Handles snapshot indexing and stale package type cleanup.
@@ -95,28 +97,28 @@ open class SnapshotIndexer
                     .asSequence()
                     .map { it.name }
                     .toSet()
-            val savedTypes = dataStore.data.first()[KEY_PACKAGE_TYPES] ?: emptySet()
+
+            val prefs =
+                dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: run {
+                    AppLogger.w("SnapshotIndexer: DataStore read timeout during cleanupStalePackageTypes")
+                    return
+                }
+            val savedTypes = prefs[KEY_PACKAGE_TYPES] ?: emptySet()
 
             val staleTypes = savedTypes - currentTypes
-            if (staleTypes.isEmpty()) {
-                updateSavedTypes(currentTypes, savedTypes)
-                return
-            }
-
-            AppLogger.d("SnapshotIndexer: cleaning up stale package types: $staleTypes")
-            if (!sessionManager.ensureSession(updateStatus)) {
-                updateSavedTypes(currentTypes, savedTypes)
-                return
-            }
-
-            val staleIds = getStaleIds(currentTypes, savedTypes)
-            if (staleIds.isNotEmpty()) {
-                try {
-                    sessionManager.session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("SnapshotIndexer: failed to remove stale documents", e)
+            if (staleTypes.isNotEmpty()) {
+                AppLogger.d("SnapshotIndexer: cleaning up stale package types: $staleTypes")
+                if (sessionManager.ensureSession(updateStatus)) {
+                    val staleIds = getStaleIds(currentTypes, savedTypes)
+                    if (staleIds.isNotEmpty()) {
+                        try {
+                            sessionManager.session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.w("SnapshotIndexer: failed to remove stale documents", e)
+                        }
+                    }
                 }
             }
 
@@ -128,8 +130,20 @@ open class SnapshotIndexer
             savedTypes: Set<String>,
         ) {
             if (savedTypes != currentTypes) {
-                dataStore.edit { prefs ->
-                    prefs[KEY_PACKAGE_TYPES] = currentTypes
+                try {
+                    val updated =
+                        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                            dataStore.edit { prefs ->
+                                prefs[KEY_PACKAGE_TYPES] = currentTypes
+                            }
+                        }
+                    if (updated == null) {
+                        AppLogger.w("SnapshotIndexer: DataStore write timeout during updateSavedTypes")
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("SnapshotIndexer: DataStore write failed during updateSavedTypes", e)
                 }
             }
         }

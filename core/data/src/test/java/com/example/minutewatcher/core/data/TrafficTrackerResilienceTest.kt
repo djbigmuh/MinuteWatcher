@@ -50,22 +50,24 @@ class TrafficTrackerResilienceTest {
         whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow())
     }
 
-    private fun createTracker(scope: TestScope): TrafficTracker =
-        TrafficTracker(
-            simIdentityRepository = simIdentityRepository,
-            simUsageRepository = simUsageRepository,
-            simUsageResetRepository = simUsageResetRepository,
-            permissionManager = permissionManager,
-            baselineManager = baselineManager,
-            deltaCalculator = deltaCalculator,
-            simChangeHandler = simChangeHandler,
-            targetResolver = targetResolver,
-            permissionChecker = permissionChecker,
-            permissionStateNotifier = permissionStateNotifier,
-            dataChangeNotifier = mock(),
-            timeProvider = timeProvider,
-            scope = scope.backgroundScope,
-        )
+    private fun createTracker(scope: TestScope): TrafficTracker {
+        val deps =
+            createTrafficTrackerDependencies(
+                simIdentityRepository = simIdentityRepository,
+                simUsageRepository = simUsageRepository,
+                simUsageResetRepository = simUsageResetRepository,
+                permissionManager = permissionManager,
+                baselineManager = baselineManager,
+                deltaCalculator = deltaCalculator,
+                simChangeHandler = simChangeHandler,
+                targetResolver = targetResolver,
+                permissionChecker = permissionChecker,
+                permissionStateNotifier = permissionStateNotifier,
+                dataChangeNotifier = mock(),
+                timeProvider = timeProvider,
+            )
+        return TrafficTracker(deps, scope.backgroundScope)
+    }
 
     @Test
     fun `initialization retries up to 3 times on general exceptions`() =

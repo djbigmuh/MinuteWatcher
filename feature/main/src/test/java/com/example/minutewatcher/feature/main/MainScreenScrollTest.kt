@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.SimCardUiModel
@@ -25,6 +25,8 @@ import org.robolectric.annotation.Config
 class MainScreenScrollTest {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    private val mockViewModel: MainViewModel = mock()
 
     @Test
     fun `scrolls to highlighted slot once and ignores subsequent updates`() {
@@ -57,7 +59,7 @@ class MainScreenScrollTest {
             MainScreenContent(
                 uiState = uiState.value,
                 paddingValues = PaddingValues(0.dp),
-                viewModel = mock(),
+                viewModel = mockViewModel,
                 trackingBannerState = TrackingBannerState(),
                 highlightedSlot = highlightedSlot.value,
                 actions = actions,
@@ -122,7 +124,7 @@ class MainScreenScrollTest {
             MainScreenContent(
                 uiState = uiState.value,
                 paddingValues = PaddingValues(0.dp),
-                viewModel = mock(),
+                viewModel = mockViewModel,
                 trackingBannerState = TrackingBannerState(),
                 highlightedSlot = highlightedSlot.value,
                 actions = actions,

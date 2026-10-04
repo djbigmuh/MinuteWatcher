@@ -3,16 +3,9 @@ package com.example.minutewatcher.core.data
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.common.util.PermissionManager
-import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.InvalidSlotException
-import com.example.minutewatcher.core.domain.PermissionStateNotifier
-import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimNotFoundException
-import com.example.minutewatcher.core.domain.SimUsageRepository
-import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
@@ -63,24 +56,25 @@ internal class TrafficUpdateTimeoutException(
  * delegating to specialized components while maintaining the primary tracking lifecycle.
  */
 @Singleton
-@Suppress("LongParameterList", "TooManyFunctions", "LargeClass")
+@Suppress("TooManyFunctions", "LargeClass")
 class TrafficTracker
     @Inject
     constructor(
-        private val simIdentityRepository: SimIdentityRepository,
-        private val simUsageRepository: SimUsageRepository,
-        private val simUsageResetRepository: SimUsageResetRepository,
-        private val permissionManager: PermissionManager,
-        private val baselineManager: TrafficBaselineManager,
-        private val deltaCalculator: TrafficDeltaCalculator,
-        private val simChangeHandler: TrafficSimChangeHandler,
-        private val targetResolver: TrafficTargetResolver,
-        private val permissionChecker: TrafficPermissionChecker,
-        private val permissionStateNotifier: PermissionStateNotifier,
-        private val dataChangeNotifier: DataChangeNotifier,
-        private val timeProvider: TimeProvider,
+        val deps: TrafficTrackerDependencies,
         @ApplicationScope private val scope: CoroutineScope,
     ) : TrackingStatusProvider {
+    private val simIdentityRepository get() = deps.simIdentityRepository
+    private val simUsageRepository get() = deps.simUsageRepository
+    private val simUsageResetRepository get() = deps.simUsageResetRepository
+    private val permissionManager get() = deps.permissionManager
+    private val baselineManager get() = deps.baselineManager
+    private val deltaCalculator get() = deps.deltaCalculator
+    private val simChangeHandler get() = deps.simChangeHandler
+    private val targetResolver get() = deps.targetResolver
+    private val permissionChecker get() = deps.permissionChecker
+    private val permissionStateNotifier get() = deps.permissionStateNotifier
+    private val dataChangeNotifier get() = deps.dataChangeNotifier
+    private val timeProvider get() = deps.timeProvider
         override val key: TrackingKey = TrackingKey.TRAFFIC
 
         @VisibleForTesting

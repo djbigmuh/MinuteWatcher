@@ -137,7 +137,12 @@ internal class CallStartHandler
             context: CallTrackingContext,
         ): Boolean {
             if (data.startTimeResult.isFailure) {
-                handleStartTimeFailure(targetSubId, data.startTimeResult.exceptionOrNull(), context)
+                CallSessionFailureHandler.handleReadStartTimeFailure(
+                    targetSubId,
+                    data.startTimeResult.exceptionOrNull(),
+                    context,
+                    sessionCleaner,
+                )
                 return false
             }
             val startTime = data.startTimeResult.getOrThrow()
@@ -206,21 +211,6 @@ internal class CallStartHandler
                 }
             }
             return isStale
-        }
-
-        private suspend fun handleStartTimeFailure(
-            targetSubId: Int,
-            error: Throwable?,
-            context: CallTrackingContext,
-        ) {
-            (error as? CancellationException)?.let { throw it }
-            val message = "Timeout reading session data for subId $targetSubId"
-            AppLogger.e(message, error)
-            val code = if (error is DataStoreReadTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
-            context.updateStatus(
-                TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, error?.message ?: message, code = code),
-            )
-            sessionCleaner.cleanupCounters(targetSubId, context)
         }
 
         /**

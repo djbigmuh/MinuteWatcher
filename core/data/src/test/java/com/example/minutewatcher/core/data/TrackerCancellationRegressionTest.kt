@@ -139,20 +139,21 @@ class TrackerCancellationRegressionTest {
             )
         val targetResolver = TrafficTargetResolver(permissionManager)
 
-        return TrafficTracker(
-            simIdentityRepository,
-            simUsageRepository,
-            simUsageResetRepository,
-            permissionManager,
-            baselineManager,
-            deltaCalculator,
-            simChangeHandler,
-            targetResolver,
-            TrafficPermissionChecker(permissionManager),
-            permissionStateNotifier,
-            dataChangeNotifier,
-            timeProvider,
-            scope,
-        )
+        val deps =
+            createTrafficTrackerDependencies(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                permissionManager,
+                baselineManager,
+                deltaCalculator,
+                simChangeHandler,
+                targetResolver,
+                TrafficPermissionChecker(permissionManager),
+                permissionStateNotifier,
+                dataChangeNotifier,
+                timeProvider,
+            )
+        return TrafficTracker(deps, scope)
     }
 }

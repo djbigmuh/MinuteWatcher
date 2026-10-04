@@ -79,8 +79,8 @@ class TrafficTrackerCancellationTest {
             },
         )
 
-        trafficTracker =
-            TrafficTracker(
+        val deps =
+            createTrafficTrackerDependencies(
                 simIdentityRepository,
                 simUsageRepository,
                 simUsageResetRepository,
@@ -93,8 +93,9 @@ class TrafficTrackerCancellationTest {
                 permissionStateNotifier,
                 dataChangeNotifier,
                 timeProvider,
-                backgroundScope,
             )
+
+        trafficTracker = TrafficTracker(deps, backgroundScope)
 
         testDispatcher.scheduler.advanceUntilIdle()
         runCurrent()

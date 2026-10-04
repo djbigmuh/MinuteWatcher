@@ -122,6 +122,13 @@ open class SimIdentityDiscovery
 
         /**
          * Discovers active SIM cards and returns a structured result.
+         *
+         * The [isStable] parameter applies to ICCID-based identities. If a SIM card lacks an ICCID,
+         * its identity is constructed from its subscription ID and is assigned `isStable = false`.
+         *
+         * @param seed Secret seed for hashing ICCID.
+         * @param isStable Whether real/stable identity seed was used.
+         * @return [SimDiscoveryResult] representing the discovery outcome.
          */
         open fun discoverSims(
             seed: String,

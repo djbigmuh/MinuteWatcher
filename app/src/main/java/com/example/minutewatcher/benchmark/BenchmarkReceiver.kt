@@ -3,35 +3,59 @@ package com.example.minutewatcher.benchmark
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.VisibleForTesting
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.BenchmarkPopulateWorker
+import com.example.minutewatcher.goAsyncWithScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.guava.await
 
 /**
  * Receiver to populate mock data for benchmarking.
  * Usage: adb shell am broadcast -a com.example.minutewatcher.benchmark.POPULATE_DATA --ei sim_count 2
  */
-class BenchmarkReceiver : BroadcastReceiver() {
+open class BenchmarkReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,
         intent: Intent,
     ) {
-        if (intent.action == ACTION_POPULATE_DATA) {
-            val simCount = intent.getIntExtra(EXTRA_SIM_COUNT, 1)
+        if (intent.action != ACTION_POPULATE_DATA) return
 
-            val workRequest =
-                OneTimeWorkRequestBuilder<BenchmarkPopulateWorker>()
-                    .setInputData(BenchmarkPopulateWorker.createInputData(simCount))
-                    .build()
+        val pendingResult = acquirePendingResult()
+        goAsyncWithScope(context, pendingResult, dispatcher = asyncDispatcher()) { _ ->
+            try {
+                val simCount = intent.getIntExtra(EXTRA_SIM_COUNT, 1)
 
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
-                workRequest,
-            )
+                val workRequest =
+                    OneTimeWorkRequestBuilder<BenchmarkPopulateWorker>()
+                        .setInputData(BenchmarkPopulateWorker.createInputData(simCount))
+                        .build()
+
+                WorkManager
+                    .getInstance(context)
+                    .enqueueUniqueWork(
+                        WORK_NAME,
+                        ExistingWorkPolicy.REPLACE,
+                        workRequest,
+                    ).result
+                    .await()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("BenchmarkReceiver: Failed to enqueue benchmark populate work", e)
+            }
         }
     }
+
+    @VisibleForTesting
+    protected open fun acquirePendingResult(): PendingResult = goAsync()
+
+    @VisibleForTesting
+    protected open fun asyncDispatcher(): CoroutineDispatcher? = null
 
     companion object {
         const val ACTION_POPULATE_DATA = "com.example.minutewatcher.benchmark.POPULATE_DATA"

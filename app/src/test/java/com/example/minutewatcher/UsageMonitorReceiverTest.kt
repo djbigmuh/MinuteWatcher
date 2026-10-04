@@ -109,7 +109,7 @@ class UsageMonitorReceiverTest {
                 Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
                     .apply {
                         putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_OFFHOOK)
-                        putExtra("subscription", 1)
+                        putExtra(UsageMonitorReceiver.EXTRA_SUBSCRIPTION, 1)
                     }
 
             receiver.onReceive(context, intent)
@@ -210,7 +210,7 @@ class UsageMonitorReceiverTest {
                 Intent(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
                     .apply {
                         putExtra(TelephonyManager.EXTRA_STATE, TelephonyManager.EXTRA_STATE_OFFHOOK)
-                        putExtra("subscription", 1)
+                        putExtra(UsageMonitorReceiver.EXTRA_SUBSCRIPTION, 1)
                     }
 
             val intentIdle =

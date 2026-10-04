@@ -78,22 +78,23 @@ object TrackingBannerMapper {
         statusMap: Map<TrackingKey, TrackingStatus>,
         isStorageDegraded: Boolean,
     ): Boolean {
-        val widgetError =
-            statusMap.getOrDefault(TrackingKey.WIDGET_OBSERVATION, TrackingStatus.Idle) as? TrackingStatus.Error
-        val settingsError =
-            statusMap.getOrDefault(TrackingKey.APP_SETTINGS, TrackingStatus.Idle) as? TrackingStatus.Error
-        val usageError =
-            statusMap.getOrDefault(TrackingKey.USAGE_STATE, TrackingStatus.Idle) as? TrackingStatus.Error
+        if (isStorageDegraded) return true
 
-        val isDatabaseError =
-            widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
-                settingsError?.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
-                usageError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
+        val widgetError = statusMap[TrackingKey.WIDGET_OBSERVATION] as? TrackingStatus.Error
+        val settingsError = statusMap[TrackingKey.APP_SETTINGS] as? TrackingStatus.Error
+        val usageError = statusMap[TrackingKey.USAGE_STATE] as? TrackingStatus.Error
 
-        val isSizeLimitError =
-            widgetError?.code == TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT ||
-                widgetError?.type == TrackingStatus.ErrorType.NOT_SUPPORTED
-        return (isDatabaseError && !isSizeLimitError) || isStorageDegraded
+        val isWidgetObservationFailed =
+            widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR &&
+                widgetError.code != TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT
+
+        val isSettingsFailed =
+            settingsError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
+
+        val isUsageFailed =
+            usageError?.type == TrackingStatus.ErrorType.DATABASE_ERROR
+
+        return isWidgetObservationFailed || isSettingsFailed || isUsageFailed
     }
 
     private fun determinePhonePermissionState(

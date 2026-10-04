@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -185,5 +186,91 @@ class SwipeGestureModifierTest {
         }
 
         assertEquals(0, callbackCount)
+    }
+
+    @Test
+    fun `swipe boundary test just below threshold does not trigger and just above threshold triggers`() {
+        var callbackCount = 0
+        var touchSlop = 0f
+        val threshold = 40.dp
+
+        composeTestRule.setContent {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .onHorizontalSwipe(
+                            direction = HorizontalSwipeDirection.LEFT_TO_RIGHT,
+                            threshold = threshold,
+                        ) { callbackCount++ },
+            )
+        }
+
+        composeTestRule.onRoot().performTouchInput {
+            touchSlop = viewConfiguration.touchSlop
+        }
+
+        val thresholdPx = with(composeTestRule.density) { threshold.toPx() }
+
+        // 1. Swipe 1px below threshold (distance = touchSlop + thresholdPx - 1f)
+        composeTestRule.onRoot().performTouchInput {
+            val startX = 100f
+            val endX = startX + touchSlop + thresholdPx - 1f
+            swipe(
+                start = Offset(startX, 200f),
+                end = Offset(endX, 200f),
+                durationMillis = 200,
+            )
+        }
+        assertEquals(0, callbackCount)
+
+        // 2. Swipe 1px above threshold (distance = touchSlop + thresholdPx + 1f)
+        composeTestRule.onRoot().performTouchInput {
+            val startX = 100f
+            val endX = startX + touchSlop + thresholdPx + 1f
+            swipe(
+                start = Offset(startX, 200f),
+                end = Offset(endX, 200f),
+                durationMillis = 200,
+            )
+        }
+        assertEquals(1, callbackCount)
+    }
+
+    @Test
+    fun `updating onSwipe lambda between compositions calls updated lambda when gesture triggers`() {
+        var firstLambdaCalled = false
+        var secondLambdaCalled = false
+
+        val onSwipeState = mutableStateOf<() -> Unit>({ firstLambdaCalled = true })
+
+        composeTestRule.setContent {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .onHorizontalSwipe(
+                            direction = HorizontalSwipeDirection.LEFT_TO_RIGHT,
+                            threshold = 40.dp,
+                            onSwipe = onSwipeState.value,
+                        ),
+            )
+        }
+
+        // Update lambda state to second lambda
+        onSwipeState.value = { secondLambdaCalled = true }
+        composeTestRule.waitForIdle()
+
+        // Perform swipe
+        composeTestRule.onRoot().performTouchInput {
+            swipe(
+                start = Offset(100f, 200f),
+                end = Offset(300f, 200f),
+                durationMillis = 200,
+            )
+        }
+
+        assertEquals(false, firstLambdaCalled)
+        assertEquals(true, secondLambdaCalled)
     }
 }

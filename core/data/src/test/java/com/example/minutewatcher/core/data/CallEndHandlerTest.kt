@@ -1,11 +1,14 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.data.util.DataStoreReadTimeoutException
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -17,6 +20,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallEndHandlerTest {
@@ -203,5 +207,46 @@ class CallEndHandlerTest {
 
             verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
             verify(settingsHandler, never()).writeCallDuration(any(), any(), any(), any(), any())
+        }
+
+    @Test
+    fun `endCall handles non-timeout read failure`() =
+        runTest {
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(
+                flow { throw IOException("Read error") },
+            )
+
+            handler.endCall(1, eventElapsedRealtime = -1L, notify = true, context = context)
+
+            verify(context).updateStatus(
+                eq(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, "Read error", code = null)),
+                eq(false),
+            )
+            verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
+        }
+
+    @Test
+    fun `endCall handles timeout read failure`() =
+        runTest {
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+            val timeoutException = DataStoreReadTimeoutException("getCallStartTime")
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(
+                flow { throw timeoutException },
+            )
+
+            handler.endCall(1, eventElapsedRealtime = -1L, notify = true, context = context)
+
+            verify(context).updateStatus(
+                eq(
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        timeoutException.message,
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    ),
+                ),
+                eq(false),
+            )
+            verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
         }
 }

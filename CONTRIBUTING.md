@@ -73,7 +73,9 @@ For AI-assisted development and auditing, we use `.\MAKE_AUDIT_DUMP.bat`.
 ---
 
 ### AppSearch Note
-On devices without AppSearch (LineageOS, CalyxOS without GMS), semantic search is automatically disabled. An error banner is not displayed for errors of type `NOT_SUPPORTED`.
+
+Semantic search indexing uses bundled LocalStorage. In case of runtime indexing failures on a device, the status is set
+to `NOT_SUPPORTED`. An error banner is not displayed for errors of type `NOT_SUPPORTED`.
 
 ## Non-Stable Dependencies
 As a general rule, we prefer stable releases. However, some non-stable versions (Beta/Alpha) are currently used for specific reasons:

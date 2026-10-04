@@ -182,20 +182,22 @@ class EphemeralSeedGatingTest {
             assertNull("Should not resolve identity if it is unstable", resolved)
         }
 
-    private fun createTracker(scope: CoroutineScope): TrafficTracker =
-        TrafficTracker(
-            simIdentityRepository,
-            simUsageRepository,
-            simUsageResetRepository,
-            permissionManager,
-            baselineManager,
-            deltaCalculator,
-            simChangeHandler,
-            targetResolver,
-            permissionChecker,
-            permissionStateNotifier,
-            dataChangeNotifier,
-            timeProvider,
-            scope,
-        )
+    private fun createTracker(scope: CoroutineScope): TrafficTracker {
+        val deps =
+            createTrafficTrackerDependencies(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                permissionManager,
+                baselineManager,
+                deltaCalculator,
+                simChangeHandler,
+                targetResolver,
+                permissionChecker,
+                permissionStateNotifier,
+                dataChangeNotifier,
+                timeProvider,
+            )
+        return TrafficTracker(deps, scope)
+    }
 }

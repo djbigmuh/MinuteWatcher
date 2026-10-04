@@ -77,6 +77,9 @@ class SimUsageRepositoryImpl
             deltaMinutes: Int,
             callSignature: String,
         ): Boolean {
+            if (identity.isBlank()) {
+                return false
+            }
             var result = false
             dataStore.edit { prefs ->
                 val lastSignature = prefs[DataStoreKeys.lastCountedCallSignatureKey(identity)]

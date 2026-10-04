@@ -11,6 +11,7 @@ import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.minutewatcher.UsageMonitorReceiver.Companion.UNIQUE_WORK_NAME
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.CallEventWorker
 import kotlinx.coroutines.CancellationException
@@ -73,7 +74,7 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
         // Extract subId only from the documented AOSP extra "subscription"
         // (corresponds to AOSP PhoneConstants.SUBSCRIPTION_KEY).
         // If the key is missing, subId defaults to -1, which is handled downstream by standard attribution.
-        val subId = intent.getIntExtra("subscription", -1)
+        val subId = intent.getIntExtra(EXTRA_SUBSCRIPTION, -1)
 
         if (subId == -1) {
             AppLogger.w("UsageMonitorReceiver: subId not found in intent extras")
@@ -105,6 +106,12 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        /**
+         * Documented AOSP extra key for subscription ID in [TelephonyManager.ACTION_PHONE_STATE_CHANGED] broadcasts.
+         * Corresponds to AOSP `PhoneConstants.SUBSCRIPTION_KEY`.
+         */
+        const val EXTRA_SUBSCRIPTION = "subscription"
+
         private const val UNIQUE_WORK_NAME = "CALL_EVENT_CHAIN"
         private const val CALL_EVENT_BACKOFF_SECONDS = 30L
     }

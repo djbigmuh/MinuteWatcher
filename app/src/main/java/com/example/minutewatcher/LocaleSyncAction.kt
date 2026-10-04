@@ -1,13 +1,13 @@
 package com.example.minutewatcher
 
 internal sealed interface LocaleSyncAction {
-    object None : LocaleSyncAction
+    data object None : LocaleSyncAction
 
     data class AdoptSystem(
         val tags: String,
     ) : LocaleSyncAction
 
-    object FollowSystem : LocaleSyncAction
+    data object FollowSystem : LocaleSyncAction
 
     data class RestoreSaved(
         val language: String,

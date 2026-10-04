@@ -240,21 +240,22 @@ class TrafficTrackerRegressionTest {
             )
         val targetResolver = TrafficTargetResolver(permissionManager)
 
-        return TrafficTracker(
-            simIdentityRepository = simIdentityRepository,
-            simUsageRepository = simUsageRepository,
-            simUsageResetRepository = simUsageResetRepository,
-            permissionManager = permissionManager,
-            baselineManager = baselineManager,
-            deltaCalculator = deltaCalculator,
-            simChangeHandler = simChangeHandler,
-            targetResolver = targetResolver,
-            permissionChecker = TrafficPermissionChecker(permissionManager),
-            permissionStateNotifier = permissionStateNotifier,
-            dataChangeNotifier = dataChangeNotifier,
-            timeProvider = timeProvider,
-            scope = scope,
-        )
+        val deps =
+            createTrafficTrackerDependencies(
+                simIdentityRepository = simIdentityRepository,
+                simUsageRepository = simUsageRepository,
+                simUsageResetRepository = simUsageResetRepository,
+                permissionManager = permissionManager,
+                baselineManager = baselineManager,
+                deltaCalculator = deltaCalculator,
+                simChangeHandler = simChangeHandler,
+                targetResolver = targetResolver,
+                permissionChecker = TrafficPermissionChecker(permissionManager),
+                permissionStateNotifier = permissionStateNotifier,
+                dataChangeNotifier = dataChangeNotifier,
+                timeProvider = timeProvider,
+            )
+        return TrafficTracker(deps, scope)
     }
 
     private fun createSimUsage(identity: String) =

@@ -18,7 +18,7 @@ sealed interface StatsResult {
         val exception: Exception,
     ) : StatsResult
 
-    object Unavailable : StatsResult
+    data object Unavailable : StatsResult
 }
 
 /**

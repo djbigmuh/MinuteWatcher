@@ -136,21 +136,22 @@ class TrafficInitialBaselineTest {
                 simIdentityRepository,
                 baselineManager,
             )
-        return TrafficTracker(
-            simIdentityRepository,
-            simUsageRepository,
-            simUsageResetRepository,
-            permissionManager,
-            baselineManager,
-            deltaCalculator,
-            simChangeHandler,
-            TrafficTargetResolver(permissionManager),
-            TrafficPermissionChecker(permissionManager),
-            permissionStateNotifier,
-            mock(),
-            timeProvider,
-            appScope,
-        )
+        val deps =
+            createTrafficTrackerDependencies(
+                simIdentityRepository,
+                simUsageRepository,
+                simUsageResetRepository,
+                permissionManager,
+                baselineManager,
+                deltaCalculator,
+                simChangeHandler,
+                TrafficTargetResolver(permissionManager),
+                TrafficPermissionChecker(permissionManager),
+                permissionStateNotifier,
+                mock(),
+                timeProvider,
+            )
+        return TrafficTracker(deps, appScope)
     }
 
     @Test

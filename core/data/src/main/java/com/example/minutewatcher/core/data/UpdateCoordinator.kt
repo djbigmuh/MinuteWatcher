@@ -691,8 +691,8 @@ class UpdateCoordinator
 
             // Cancel current reactive update if it's in progress.
             val oldJob = currentUpdateJob.getAndSet(null)
-            takeoverUpdateJob.set(oldJob)
             if (oldJob != null) {
+                takeoverUpdateJob.set(oldJob)
                 oldJob.cancel()
                 // Wait for the cancelled job to finish to avoid coalescing in WidgetUpdater
                 withContext(NonCancellable) {

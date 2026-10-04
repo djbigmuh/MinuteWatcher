@@ -1,15 +1,19 @@
 package com.example.minutewatcher.core.data.semantic
 
-import android.app.appsearch.AppSearchManager
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.model.AppCapability
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Provides capabilities supported by the app.
+ *
+ * AppSearch indexing uses the bundled LocalStorage backend which is available
+ * across all supported API levels. Actual runtime availability is handled at runtime;
+ * if indexing fails, the device is assigned NOT_SUPPORTED error status.
+ */
 @Singleton
 class SemanticCapabilities
     @Inject
@@ -25,31 +29,11 @@ class SemanticCapabilities
                 AppCapability("MINUTES_TRACKING", telephonySupported, "Support for voice calls tracking"),
                 AppCapability("DATA_TRACKING", telephonySupported, "Support for mobile data usage tracking"),
                 AppCapability("DUAL_SIM", multiSimSupported, "Support for multiple SIM cards"),
-                AppCapability("APP_SEARCH", isAppSearchSupported(), "System search indexing via AppSearch"),
+                AppCapability("APP_SEARCH", true, "System search indexing via AppSearch"),
                 AppCapability("DYNAMIC_SHORTCUTS", true, "Dynamic shortcuts with usage info"),
                 AppCapability("QUICK_SETTINGS_TILE", true, "Quick Settings Tile for rapid check"),
             )
         }
-
-        /**
-         * Returns true if AppSearch is likely supported on this device.
-         *
-         * On API 31+, support is determined by the presence of the system AppSearchManager
-         * obtained via a typed system service lookup.
-         * On older versions (26-30), we rely on bundled LocalStorage which is available on all
-         * supported API levels.
-         */
-        private fun isAppSearchSupported(): Boolean =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                getAppSearchSystemService() != null
-            } else {
-                // LocalStorage fallback for older versions (26+)
-                true
-            }
-
-        @RequiresApi(Build.VERSION_CODES.S)
-        private fun getAppSearchSystemService(): AppSearchManager? =
-            context.getSystemService(AppSearchManager::class.java)
 
         private companion object {
             private const val FEATURE_TELEPHONY_MULTISIM = "android.hardware.telephony.multisim"

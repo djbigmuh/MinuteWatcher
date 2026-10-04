@@ -12,33 +12,22 @@ import com.example.minutewatcher.core.model.util.UsageStatus
  * and "No data" color.
  */
 object WidgetColorResolver {
-    fun resolveTextColors(backgroundLuminance: Double): Pair<Int, Int> {
-        val textColor = if (backgroundLuminance > Constants.UI.LUMINANCE_THRESHOLD) Color.BLACK else Color.WHITE
-        val secondaryTextColor =
-            if (backgroundLuminance >
-                Constants.UI.LUMINANCE_THRESHOLD
-            ) {
-                Color.DKGRAY
-            } else {
-                Color.LTGRAY
-            }
-        return textColor to secondaryTextColor
-    }
+    private fun isDarkBackground(luminance: Double): Boolean = luminance <= Constants.UI.LUMINANCE_THRESHOLD
+
+    fun resolveTextColors(backgroundLuminance: Double): Pair<Int, Int> =
+        if (isDarkBackground(backgroundLuminance)) {
+            Color.WHITE to Color.LTGRAY
+        } else {
+            Color.BLACK to Color.DKGRAY
+        }
 
     fun getStatusColor(
         status: UsageStatus,
         backgroundLuminance: Double,
-    ): Int {
-        val isDark = backgroundLuminance < Constants.UI.LUMINANCE_THRESHOLD
-        return UsageColors.get(status, isDark)
-    }
+    ): Int = UsageColors.get(status, isDarkBackground(backgroundLuminance))
 
     fun resolveNoDataColor(backgroundColor: Int): Int {
         val luminance = ColorUtils.calculateLuminance(backgroundColor)
-        return if (luminance > Constants.UI.LUMINANCE_THRESHOLD) {
-            Color.BLACK
-        } else {
-            Color.WHITE
-        }
+        return if (isDarkBackground(luminance)) Color.WHITE else Color.BLACK
     }
 }

@@ -330,6 +330,121 @@ class TrackingBannerMapperTest {
         assertFalse(state.observationFailed)
     }
 
+    @Test
+    fun `mapToBannerState observationFailed on NOT_SUPPORTED widget and DATABASE_ERROR settings`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.WIDGET_OBSERVATION to
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.NOT_SUPPORTED,
+                                code = TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT,
+                            ),
+                        TrackingKey.APP_SETTINGS to
+                            TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertTrue(state.observationFailed)
+    }
+
+    @Test
+    fun `mapToBannerState observationFailed on NOT_SUPPORTED widget and DATABASE_ERROR usage`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.WIDGET_OBSERVATION to
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.NOT_SUPPORTED,
+                                code = TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT,
+                            ),
+                        TrackingKey.USAGE_STATE to
+                            TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertTrue(state.observationFailed)
+    }
+
+    @Test
+    fun `mapToBannerState observationFailed false on widget DATABASE_ERROR with WIDGET_SIZE_LIMIT`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.WIDGET_OBSERVATION to
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                code = TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT,
+                            ),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state.observationFailed)
+    }
+
+    @Test
+    fun `mapToBannerState observationFailed true on widget DATABASE_ERROR without code`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.WIDGET_OBSERVATION to
+                            TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertTrue(state.observationFailed)
+    }
+
+    @Test
+    fun `mapToBannerState observationFailed false on widget NOT_SUPPORTED with WIDGET_SIZE_LIMIT`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.WIDGET_OBSERVATION to
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.NOT_SUPPORTED,
+                                code = TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT,
+                            ),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state.observationFailed)
+    }
+
+    @Test
+    fun `mapToBannerState observationFailed true on isStorageDegraded true with empty map`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+                isStorageDegraded = true,
+            )
+        assertTrue(state.observationFailed)
+    }
+
     private fun mapToBannerStateWithAppSearch(
         statusMap: Map<TrackingKey, TrackingStatus>,
         retryCount: Int = 0,
