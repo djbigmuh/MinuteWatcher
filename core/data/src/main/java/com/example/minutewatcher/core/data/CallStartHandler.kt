@@ -216,6 +216,8 @@ internal class CallStartHandler
         /**
          * Finalizes the call start process by optionally refreshing the tracker status.
          *
+         * Returns early if status refresh is not required.
+         *
          * **Cleanup invariant:** This block does not rethrow exceptions, including [CancellationException].
          * The cancellation of the outer scope should be checked by the caller.
          */
@@ -223,11 +225,10 @@ internal class CallStartHandler
             shouldRefreshStatus: Boolean,
             context: CallTrackingContext,
         ) {
+            if (!shouldRefreshStatus) return
             withContext(NonCancellable) {
                 try {
-                    if (shouldRefreshStatus) {
-                        context.refreshStatus(false)
-                    }
+                    context.refreshStatus(false)
                 } catch (e: Exception) {
                     AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
                 }
