@@ -57,9 +57,9 @@ To maintain test execution speed and minimize overhead, we follow a strict SDK c
 - **UI Infrastructure Pinning**: Pinning SDK 35 for Compose UI/Espresso tests is permitted when required due to test framework infrastructure limitations (e.g. Espresso InputManager reflection on API > 35 in Robolectric). Accompany the `@Config` with a comment: `// UI-infra SDK pin: <reason>`.
 - **Pure Logic**: Tests for classes that do not depend on Android framework (no `android.*` imports) must use the standard JUnit runner, not `RobolectricTestRunner`.
 
-## Continuous Integration
+## Pre-Commit Verification
 
-The following command should pass before any PR is merged:
+The following command must pass locally before completing a task and committing:
 
 ```bash
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew ktlintCheck detekt lintDebug testDebugUnitTest :app:assembleDebug

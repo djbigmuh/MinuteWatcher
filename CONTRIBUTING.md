@@ -82,7 +82,7 @@ As a general rule, we prefer stable releases. However, some non-stable versions 
 
 - **Baseline Profile (RC)**, **Robolectric (Beta)** and **Detekt (Alpha)** are explicitly permitted until stable
   versions with equivalent fixes are available.
-- Before introducing a new non-stable dependency, please discuss it in an issue and document the reason in `libs.versions.toml`.
+- Before introducing a new non-stable dependency, agree its addition with the project owner and document the reason in `docs/dependencies.md` and as a comment in `gradle/libs.versions.toml`.
 
 ## Version Management
 
