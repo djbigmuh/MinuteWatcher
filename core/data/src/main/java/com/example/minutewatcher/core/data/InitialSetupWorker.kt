@@ -65,7 +65,9 @@ class InitialSetupWorker
         }
 
         private suspend fun performSetupSteps() {
-            deps.usageUseCase.refreshOperatorInfo()
+            withTimeoutOrNull(REFRESH_OPERATOR_TIMEOUT_MS.milliseconds) {
+                deps.usageUseCase.refreshOperatorInfo()
+            } ?: AppLogger.w("InitialSetupWorker: refreshOperatorInfo timed out after ${REFRESH_OPERATOR_TIMEOUT_MS}ms")
 
             if (inputData.getBoolean(EXTRA_TRIGGERED_BY_BOOT, false)) {
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
@@ -238,5 +240,13 @@ class InitialSetupWorker
             const val EXTRA_TRIGGERED_BY_BOOT = "triggered_by_boot"
             private const val MAX_MIGRATION_ATTEMPTS = 3
             private const val WORKER_TIMEOUT_MS = 120_000L
+
+            /**
+             * Maximum time allocated for refreshing operator info during initial setup.
+             *
+             * Updating operator names is not a critical step and must not consume the overall
+             * worker budget during storage degradation.
+             */
+            private const val REFRESH_OPERATOR_TIMEOUT_MS = 30_000L
         }
     }

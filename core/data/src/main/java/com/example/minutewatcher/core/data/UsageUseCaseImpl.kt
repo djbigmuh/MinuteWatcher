@@ -47,7 +47,6 @@ class UsageUseCaseImpl
          *
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore write fails.
-         * @throws SecurityException if SIM permissions are missing.
          * @throws CancellationException if the process is cancelled.
          */
         override suspend fun refreshOperatorInfo() {

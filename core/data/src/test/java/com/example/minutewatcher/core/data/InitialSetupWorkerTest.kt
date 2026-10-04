@@ -29,7 +29,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -454,14 +456,15 @@ class InitialSetupWorkerTest {
                     trafficTracker = deps.trafficTracker,
                     simIdentityRepository = deps.simIdentityRepository,
                     migrationFlagsRepository = deps.migrationFlagsRepository,
-                    usageStateRepository = deps.usageStateRepository,
-                    autoResetUseCase = deps.autoResetUseCase,
-                    usageUseCase =
-                        object : FakeUsageUseCase() {
-                            override suspend fun refreshOperatorInfo() {
-                                delay(1000000L)
+                    usageStateRepository =
+                        object : FakeUsageStateRepository() {
+                            override suspend fun refresh(): RefreshResult {
+                                delay(1_000_000L)
+                                return RefreshResult.Success(mock())
                             }
                         },
+                    autoResetUseCase = deps.autoResetUseCase,
+                    usageUseCase = deps.usageUseCase,
                     migrationService = deps.migrationService,
                     dataChangeNotifier = deps.dataChangeNotifier,
                     workScheduler = deps.workScheduler,
@@ -485,8 +488,8 @@ class InitialSetupWorkerTest {
             assertEquals(ListenableWorker.Result.retry(), result)
         }
 
-    @Test(expected = CancellationException::class)
-    fun `doWork propagates external cancellation`() =
+    @Test
+    fun `doWork succeeds and continues setup steps when refreshOperatorInfo times out`() =
         runTest {
             val testDeps =
                 InitialSetupWorkerDependencies(
@@ -499,9 +502,52 @@ class InitialSetupWorkerTest {
                     usageUseCase =
                         object : FakeUsageUseCase() {
                             override suspend fun refreshOperatorInfo() {
-                                delay(1000000L)
+                                delay(1_000_000L)
                             }
                         },
+                    migrationService = deps.migrationService,
+                    dataChangeNotifier = deps.dataChangeNotifier,
+                    workScheduler = deps.workScheduler,
+                    permissionManager = deps.permissionManager,
+                )
+
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, testDeps)
+                        },
+                    ).build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(workScheduler).schedulePeriodicUsageCheck()
+            verify(migrationFlagsRepository).setInitialSetupCompleted(true)
+        }
+
+    @Test(expected = CancellationException::class)
+    fun `doWork propagates external cancellation`() =
+        runTest {
+            val testDeps =
+                InitialSetupWorkerDependencies(
+                    callTracker = deps.callTracker,
+                    trafficTracker = deps.trafficTracker,
+                    simIdentityRepository = deps.simIdentityRepository,
+                    migrationFlagsRepository = deps.migrationFlagsRepository,
+                    usageStateRepository =
+                        object : FakeUsageStateRepository() {
+                            override suspend fun refresh(): RefreshResult {
+                                delay(1_000_000L)
+                                return RefreshResult.Success(mock())
+                            }
+                        },
+                    autoResetUseCase = deps.autoResetUseCase,
+                    usageUseCase = deps.usageUseCase,
                     migrationService = deps.migrationService,
                     dataChangeNotifier = deps.dataChangeNotifier,
                     workScheduler = deps.workScheduler,
@@ -610,6 +656,17 @@ class InitialSetupWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
         }
+
+    private open class FakeUsageStateRepository : UsageStateRepository {
+        override fun observeSimCardUiModels(): Flow<List<com.example.minutewatcher.core.model.SimCardUiModel>> =
+            flowOf(emptyList())
+
+        override fun observeSnapshot(): StateFlow<GlobalSnapshot> = MutableStateFlow(mock())
+
+        override fun isDataLoaded(): Boolean = true
+
+        override suspend fun refresh(): RefreshResult = RefreshResult.Success(mock())
+    }
 
     private open class FakeUsageUseCase : UsageUseCase {
         override suspend fun refreshOperatorInfo() {
