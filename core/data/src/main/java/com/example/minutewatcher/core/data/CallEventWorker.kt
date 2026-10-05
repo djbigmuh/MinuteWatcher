@@ -50,8 +50,13 @@ class CallEventWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                AppLogger.w("CallEventWorker: IO error, retrying. Attempt: $runAttemptCount. Message: ${e.message}")
-                Result.retry()
+                if (runAttemptCount < MAX_EVENT_RUN_ATTEMPTS) {
+                    AppLogger.w("CallEventWorker: IO error, retrying. Attempt: $runAttemptCount. Message: ${e.message}")
+                    Result.retry()
+                } else {
+                    AppLogger.e("CallEventWorker: IO error, max attempts reached ($runAttemptCount)", e)
+                    Result.failure()
+                }
             } catch (e: Exception) {
                 if (runAttemptCount < MAX_EVENT_RUN_ATTEMPTS) {
                     AppLogger.w(
@@ -74,13 +79,9 @@ class CallEventWorker
             const val EXTRA_EVENT_ELAPSED_REALTIME = "eventElapsedRealtime"
 
             /**
-             * Maximum number of retry attempts for SecurityException and unexpected errors
-             * before considering work failed.
-             *
-             * IOException is retried unconditionally without attempt limit because storage degradation
-             * is considered transient. Call events are processed in a unique WorkManager chain with timestamps
-             * captured in input data, ensuring call durations remain accurate once storage recovers.
-             * Retry frequency is constrained by WorkManager's exponential backoff.
+             * Maximum number of retry attempts for recoverable errors (SecurityException, IOException,
+             * and unexpected errors) before work completes with [Result.failure]. New call events re-create
+             * the chain thanks to APPEND_OR_REPLACE policy in UsageMonitorReceiver.
              */
             const val MAX_EVENT_RUN_ATTEMPTS = 3
         }

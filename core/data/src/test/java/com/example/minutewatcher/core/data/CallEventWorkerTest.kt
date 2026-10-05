@@ -277,7 +277,38 @@ class CallEventWorkerTest {
         }
 
     @Test
-    fun `doWork retries on IOException even when runAttemptCount reaches MAX_EVENT_RUN_ATTEMPTS`() =
+    fun `doWork retries on IOException when runAttemptCount is less than MAX_EVENT_RUN_ATTEMPTS`() =
+        runTest {
+            whenever(callTracker.onCallStarted(any(), any())).thenAnswer { throw IOException("IO error") }
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, "OFFHOOK")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, 1)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, 100L)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .setRunAttemptCount(0)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `doWork fails on IOException when runAttemptCount reaches MAX_EVENT_RUN_ATTEMPTS`() =
         runTest {
             whenever(callTracker.onCallStarted(any(), any())).thenAnswer { throw IOException("IO error") }
             val inputData =
@@ -304,6 +335,6 @@ class CallEventWorkerTest {
 
             val result = worker.doWork()
 
-            assertEquals(ListenableWorker.Result.retry(), result)
+            assertEquals(ListenableWorker.Result.failure(), result)
         }
 }
