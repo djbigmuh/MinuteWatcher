@@ -21,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -71,7 +72,7 @@ class UsageTileService : TileService() {
         job =
             applicationScope.launch(mainImmediateDispatcher) {
                 semanticRepository.snapshot
-                    .collect {
+                    .collectLatest {
                         try {
                             updateTile()
                         } catch (e: CancellationException) {
