@@ -400,7 +400,6 @@ class CallTracker
 
         override suspend fun recover() {
             ensureStarted()
-            startPermissionObserver()
             try {
                 initMutex.withLock {
                     clearSessionsAndRefresh("recovery")
