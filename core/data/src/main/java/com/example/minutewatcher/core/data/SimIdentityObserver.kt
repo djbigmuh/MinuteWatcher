@@ -107,9 +107,7 @@ internal class SimIdentityObserver
             generalAttempt.set(0)
             transitionStatus(TrackingStatus.Idle, force = true)
 
-            // Trigger seed re-generation/check on recovery
             scope.launch {
-                generateSeedWithRetry()
                 manualTrigger.emit(Unit)
             }
         }
