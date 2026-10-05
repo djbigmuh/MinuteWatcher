@@ -120,7 +120,7 @@ object SimIdentityUtils {
         seed: String,
     ): String {
         val md = MessageDigest.getInstance("SHA-256")
-        val bytes = md.digest((input + seed).toByteArray())
+        val bytes = md.digest((input + seed).toByteArray(Charsets.UTF_8))
         return bytes.joinToString("") { "%02x".format(Locale.US, it) }
     }
 }
