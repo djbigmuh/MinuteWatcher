@@ -2,6 +2,7 @@ package com.example.minutewatcher
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -20,24 +21,49 @@ object MainActivityNavigator {
     }
 
     fun openAppSettings(context: Context) {
-        context.startActivity(NavigationIntentFactory.getAppSettingsIntent(context))
+        val intent = NavigationIntentFactory.getAppSettingsIntent(context)
+        if (context.packageManager.resolveActivity(intent, 0) != null) {
+            try {
+                context.startActivity(intent)
+            } catch (e: ActivityNotFoundException) {
+                AppLogger.e("AppSettings activity not found", e)
+            }
+        } else {
+            AppLogger.e("No activity resolved for AppSettings intent")
+        }
     }
 
     fun openUsageAccessSettings(context: Context) {
         // Priority: "Usage Access" screen for the specific app.
-        try {
-            context.startActivity(NavigationIntentFactory.getUsageAccessSettingsIntent(context))
-            return
-        } catch (e: Exception) {
-            AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
+        val usageIntent = NavigationIntentFactory.getUsageAccessSettingsIntent(context)
+        if (context.packageManager.resolveActivity(usageIntent, 0) != null) {
+            try {
+                context.startActivity(usageIntent)
+                return
+            } catch (e: ActivityNotFoundException) {
+                AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
+            } catch (e: Exception) {
+                AppLogger.w("Package-scoped usage access settings failed, trying generic list", e)
+            }
+        } else {
+            AppLogger.w("Package-scoped usage access settings intent not resolved, trying generic list")
         }
+
         // Fallback: generic list of apps with usage access.
-        try {
-            context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            return
-        } catch (e: Exception) {
-            AppLogger.e("Usage access settings not found, opening app details", e)
+        val genericIntent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        if (context.packageManager.resolveActivity(genericIntent, 0) != null) {
+            try {
+                context.startActivity(genericIntent)
+                return
+            } catch (e: ActivityNotFoundException) {
+                AppLogger.e("Usage access settings activity not found, opening app details", e)
+            } catch (e: Exception) {
+                AppLogger.e("Usage access settings failed, opening app details", e)
+            }
+        } else {
+            AppLogger.e("Generic usage access settings intent not resolved, opening app details")
         }
+
         openAppSettings(context)
     }
 
