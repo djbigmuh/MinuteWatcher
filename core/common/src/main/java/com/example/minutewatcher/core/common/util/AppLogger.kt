@@ -117,7 +117,7 @@ object AppLogger {
             logger.d(TAG, message)
             logToFile("D", message)
         } catch (e: Exception) {
-            Log.w(TAG, "AppLogger.d failed: $message", e)
+            runCatching { logger.w(TAG, "AppLogger.d failed: $message", e) }
         }
     }
 
@@ -135,7 +135,7 @@ object AppLogger {
                 }
             logToFile("W", fullMessage)
         } catch (e: Exception) {
-            Log.w(TAG, "AppLogger.w failed: $message", e)
+            runCatching { logger.w(TAG, "AppLogger.w failed: $message", e) }
         }
     }
 
@@ -153,7 +153,7 @@ object AppLogger {
                 }
             logToFile("E", fullMessage)
         } catch (e: Exception) {
-            Log.e(TAG, "AppLogger.e failed: $message", e)
+            runCatching { logger.e(TAG, "AppLogger.e failed: $message", e) }
         }
     }
 
