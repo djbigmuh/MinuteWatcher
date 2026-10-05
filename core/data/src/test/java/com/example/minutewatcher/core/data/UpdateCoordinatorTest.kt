@@ -118,7 +118,6 @@ class UpdateCoordinatorTest {
                 TrackingStatus.Active,
                 coordinator.status.value,
             )
-
             supervisorJob.cancel()
         }
     }
@@ -511,4 +510,23 @@ class UpdateCoordinatorTest {
             verify(widgetUpdater, times(3)).updateAll()
         }
     }
+
+    @Test
+    fun `recover triggers new snapshot and keeps observation status active`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            testScheduler.runCurrent()
+
+            coordinator.recover()
+            val s1 = createSnapshot(timestamp = 2000L, content = "AfterRecover")
+            snapshotFlow.emit(s1)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+        }
 }

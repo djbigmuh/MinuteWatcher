@@ -115,6 +115,10 @@ class UpdateCoordinator
             }
 
         private fun reconcileObservationStateLocked() {
+            val setup = setupJob.get()
+            if (setup != null && setup.isActive) {
+                return
+            }
             val currentJob = observationScope.currentJob
             if ((currentJob != null) && currentJob.isActive && (currentObservationJob.get() !== currentJob)) {
                 currentObservationJob.set(currentJob)
