@@ -23,7 +23,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.controller.MainPermissionController
 import com.example.minutewatcher.core.common.di.IoDispatcher
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -153,8 +152,8 @@ class MainActivity : AppCompatActivity() {
 
     private inner class PermissionHandler {
         val phoneLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-                handlePhoneResult(granted)
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+                handlePhoneResult()
             }
 
         val notificationLauncher =
@@ -162,23 +161,7 @@ class MainActivity : AppCompatActivity() {
                 handleNotificationResult()
             }
 
-        private fun handlePhoneResult(granted: Boolean) {
-            if (granted) {
-                // WorkManager.enqueue() performs disk I/O internally.
-                // Injected ioDispatcher prevents potential ANR on slow storage.
-                lifecycleScope.launch(ioDispatcher) {
-                    try {
-                        workScheduler.scheduleInitialSetup(force = false)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        AppLogger.e(
-                            "MainActivity: Failed to schedule background work after phone permission granted",
-                            e,
-                        )
-                    }
-                }
-            }
+        private fun handlePhoneResult() {
             checkPermissionChanges()
         }
 
