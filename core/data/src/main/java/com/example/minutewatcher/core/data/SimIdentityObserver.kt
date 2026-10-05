@@ -369,7 +369,6 @@ internal class SimIdentityObserver
         ): Boolean {
             val currentAttempt = generalAttempt.incrementAndGet()
             return if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
-                generalAttempt.set(0)
                 AppLogger.e(
                     "SimIdentityObserver: physicalActiveSims discovery stopped " +
                         "after $currentAttempt consecutive logical failures: $reason",
