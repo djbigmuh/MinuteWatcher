@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -110,6 +111,11 @@ class MainViewModel
                         usageAccess = usageDialog,
                         onboardingDialogShowing = onboardingDialog,
                     )
+                }.distinctUntilChanged { old, new ->
+                    old.settings.onboardingCompleted == new.settings.onboardingCompleted &&
+                        old.settings.isLoaded == new.settings.isLoaded &&
+                        old.usageAccess == new.usageAccess &&
+                        old.onboardingDialogShowing == new.onboardingDialogShowing
                 }.collect { data ->
                     val onboardingCompleted = data.settings.onboardingCompleted
                     val isSettingsLoaded = data.settings.isLoaded

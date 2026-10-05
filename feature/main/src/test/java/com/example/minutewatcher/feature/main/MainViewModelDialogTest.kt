@@ -186,4 +186,22 @@ class MainViewModelDialogTest : MainViewModelTestFixtures() {
                 )
             assertEquals(true, viewModel.showOnboardingDialog.value)
         }
+
+    @Test
+    fun `emitting same onboarding state with different attribute values does not retrigger dialog`() =
+        testScope.runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = false, isLoaded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val viewModel = createViewModel(backgroundScope)
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+
+            settingsFlow.value =
+                AppSettings(
+                    onboardingCompleted = false,
+                    isLoaded = true,
+                    inaccurateCallAttributionsCount = 5,
+                )
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+        }
 }
