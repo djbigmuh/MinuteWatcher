@@ -58,7 +58,7 @@ class WidgetLimitManager
             exceededUpdateCounter.incrementAndGet()
         }
 
-    fun resetCounter() {
+        fun resetCounter() {
             exceededUpdateCounter.set(0L)
         }
 
@@ -69,9 +69,9 @@ class WidgetLimitManager
             cachedLimitExceeded = value
         }
 
-    fun isLimitExceeded(): Boolean? = cachedLimitExceeded
+        fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
-    suspend fun setWidgetLimitExceeded(value: Boolean) {
+        suspend fun setWidgetLimitExceeded(value: Boolean) {
             cachedLimitExceeded = value
             try {
                 appSettingsRepository.updateAppSettings {

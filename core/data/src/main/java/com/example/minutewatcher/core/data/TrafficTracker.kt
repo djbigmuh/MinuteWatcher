@@ -160,31 +160,31 @@ class TrafficTracker
             }
         }
 
-    private fun handlePermissionChange() {
-        val bothGranted =
-            permissionManager.hasPhoneStatePermission() &&
-                permissionManager.hasUsageStatsPermission()
-        val previousGranted = bothPermissionsGranted.getAndSet(bothGranted)
-        if (bothGranted) {
-            if (!previousGranted) {
-                AppLogger.d("TrafficTracker: permissions granted transition detected, updating traffic")
+        private fun handlePermissionChange() {
+            val bothGranted =
+                permissionManager.hasPhoneStatePermission() &&
+                    permissionManager.hasUsageStatsPermission()
+            val previousGranted = bothPermissionsGranted.getAndSet(bothGranted)
+            if (bothGranted) {
+                if (!previousGranted) {
+                    AppLogger.d("TrafficTracker: permissions granted transition detected, updating traffic")
+                    launchTrafficUpdate("permission transition triggered update failed")
+                }
+                checkAndScheduleAutoRecovery("permission change")
+            } else if (previousGranted) {
+                AppLogger.d("TrafficTracker: permissions revoked transition detected, updating traffic")
                 launchTrafficUpdate("permission transition triggered update failed")
             }
-            checkAndScheduleAutoRecovery("permission change")
-        } else if (previousGranted) {
-            AppLogger.d("TrafficTracker: permissions revoked transition detected, updating traffic")
-            launchTrafficUpdate("permission transition triggered update failed")
         }
-    }
 
-    private fun launchTrafficUpdate(errorMessage: String) {
-        scope.launch {
-            try {
-                updateTrafficUsage()
+        private fun launchTrafficUpdate(errorMessage: String) {
+            scope.launch {
+                try {
+                    updateTrafficUsage()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                AppLogger.e("TrafficTracker: $errorMessage", e)
+                    AppLogger.e("TrafficTracker: $errorMessage", e)
                 }
             }
         }
