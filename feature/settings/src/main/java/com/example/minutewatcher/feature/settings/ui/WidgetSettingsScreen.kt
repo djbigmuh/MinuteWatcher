@@ -31,12 +31,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.minutewatcher.core.android.ui.HorizontalSwipeDirection
 import com.example.minutewatcher.core.android.ui.onHorizontalSwipe
+import com.example.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
 import com.example.minutewatcher.core.android.util.WidgetStringsFactory
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.model.Constants
@@ -72,7 +74,10 @@ fun WidgetSettingsScreen(
             Modifier
                 .fillMaxSize()
                 .onHorizontalSwipe(
-                    HorizontalSwipeDirection.LEFT_TO_RIGHT,
+                    resolveNavigationSwipeDirection(
+                        navigateForward = false,
+                        isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl,
+                    ),
                     Constants.UI.SWIPE_NAVIGATION_THRESHOLD_DP.dp,
                 ) { onBack() },
     ) {

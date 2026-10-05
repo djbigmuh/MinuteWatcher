@@ -18,6 +18,30 @@ enum class HorizontalSwipeDirection {
     RIGHT_TO_LEFT,
 }
 
+/**
+ * Resolves the physical horizontal swipe direction based on whether the action is navigating forward
+ * or backward and whether the current layout direction is right-to-left (RTL).
+ *
+ * Truth Table:
+ * - [navigateForward] = true,  [isRtl] = false -> [HorizontalSwipeDirection.RIGHT_TO_LEFT]
+ * - [navigateForward] = true,  [isRtl] = true  -> [HorizontalSwipeDirection.LEFT_TO_RIGHT]
+ * - [navigateForward] = false, [isRtl] = false -> [HorizontalSwipeDirection.LEFT_TO_RIGHT]
+ * - [navigateForward] = false, [isRtl] = true  -> [HorizontalSwipeDirection.RIGHT_TO_LEFT]
+ *
+ * @param navigateForward `true` if swiping to navigate forward (next screen), `false` if navigating backward.
+ * @param isRtl `true` if the layout direction is Right-to-Left, `false` otherwise.
+ * @return The resolved [HorizontalSwipeDirection] for the swipe gesture.
+ */
+fun resolveNavigationSwipeDirection(
+    navigateForward: Boolean,
+    isRtl: Boolean,
+): HorizontalSwipeDirection =
+    if (navigateForward) {
+        if (isRtl) HorizontalSwipeDirection.LEFT_TO_RIGHT else HorizontalSwipeDirection.RIGHT_TO_LEFT
+    } else {
+        if (isRtl) HorizontalSwipeDirection.RIGHT_TO_LEFT else HorizontalSwipeDirection.LEFT_TO_RIGHT
+    }
+
 fun Modifier.onHorizontalSwipe(
     direction: HorizontalSwipeDirection,
     threshold: Dp,

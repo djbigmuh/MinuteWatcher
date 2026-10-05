@@ -9,11 +9,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.minutewatcher.core.android.ui.HorizontalSwipeDirection
 import com.example.minutewatcher.core.android.ui.onHorizontalSwipe
+import com.example.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
 import com.example.minutewatcher.core.model.Constants
 
 /**
@@ -65,7 +67,10 @@ fun SimCardScreen(
             Modifier
                 .fillMaxSize()
                 .onHorizontalSwipe(
-                    HorizontalSwipeDirection.RIGHT_TO_LEFT,
+                    resolveNavigationSwipeDirection(
+                        navigateForward = true,
+                        isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl,
+                    ),
                     Constants.UI.SWIPE_NAVIGATION_THRESHOLD_DP.dp,
                 ) { actions.onOpenSettings() },
         topBar = {
