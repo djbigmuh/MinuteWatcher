@@ -168,12 +168,12 @@ class TrafficTracker
             if (bothGranted) {
                 if (!previousGranted) {
                     AppLogger.d("TrafficTracker: permissions granted transition detected, updating traffic")
-                    launchTrafficUpdate("permission transition triggered update failed")
+                    launchTrafficUpdate("Traffic update after permissions granted transition failed")
                 }
                 checkAndScheduleAutoRecovery("permission change")
             } else if (previousGranted) {
                 AppLogger.d("TrafficTracker: permissions revoked transition detected, updating traffic")
-                launchTrafficUpdate("permission transition triggered update failed")
+                launchTrafficUpdate("Traffic update after permissions revoked transition failed")
             }
         }
 
