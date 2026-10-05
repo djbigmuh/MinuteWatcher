@@ -12,6 +12,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ fun MainScreenContent(
     var isRefreshing by remember { mutableStateOf(false) }
 
     val currentUiState by rememberUpdatedState(uiState)
+    val currentActionsState = rememberUpdatedState(actions)
 
     // Wait for the highlighted slot to appear in the loaded data (including gradual SIM discovery).
     // Scroll once and finish the effect. Wait terminates automatically if highlightedSlot is reset.
@@ -72,7 +74,7 @@ fun MainScreenContent(
                 callbacks =
                     rememberTrackingBannerCallbacks(
                         viewModel = viewModel,
-                        actions = actions,
+                        actionsState = currentActionsState,
                     ),
             )
 
@@ -81,7 +83,7 @@ fun MainScreenContent(
                     uiState = uiState,
                     listState = listState,
                     viewModel = viewModel,
-                    onGrantPhonePermission = actions.onGrantPhonePermission,
+                    onGrantPhonePermission = { currentActionsState.value.onGrantPhonePermission() },
                 )
             }
         }
@@ -91,19 +93,19 @@ fun MainScreenContent(
 @Composable
 private fun rememberTrackingBannerCallbacks(
     viewModel: MainViewModel,
-    actions: SimCardScreenActions,
+    actionsState: State<SimCardScreenActions>,
 ): TrackingBannerCallbacks =
-    remember(viewModel, actions) {
+    remember(viewModel) {
         TrackingBannerCallbacks(
-            onGrantPhonePermission = actions.onGrantPhonePermission,
-            onShowUsageAccessDialog = actions.onShowUsageAccessDialog,
-            onOpenAppSettings = actions.onOpenAppSettings,
+            onGrantPhonePermission = { actionsState.value.onGrantPhonePermission() },
+            onShowUsageAccessDialog = { actionsState.value.onShowUsageAccessDialog() },
+            onOpenAppSettings = { actionsState.value.onOpenAppSettings() },
             onRetryAppSearch = viewModel::retryAppSearch,
             onDismissAppSearch = viewModel::dismissAppSearch,
             onRetryCalls = viewModel::retryCalls,
             onRetryShortcuts = viewModel::retryShortcuts,
             onRetryTraffic = viewModel::retryTraffic,
-            onGrantNotificationPermission = actions.onGrantNotificationPermission,
+            onGrantNotificationPermission = { actionsState.value.onGrantNotificationPermission() },
             onDismissWidgetError = viewModel::dismissWidgetError,
             onDismissInaccurateCalls = viewModel::dismissInaccurateCalls,
             onRetryWidgetObservation = { viewModel.retryWidgetObservation() },
