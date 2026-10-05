@@ -75,6 +75,9 @@ class UsageCheckWorker
                 checkUsageAndNotify()
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: TrafficUpdateTimeoutException) {
+                AppLogger.w("UsageCheckWorker: Traffic update timed out, retrying. ${e.message}")
+                Result.retry()
             } catch (e: IOException) {
                 AppLogger.w("UsageCheckWorker: Network or storage error, retrying. ${e.message}")
                 Result.retry()

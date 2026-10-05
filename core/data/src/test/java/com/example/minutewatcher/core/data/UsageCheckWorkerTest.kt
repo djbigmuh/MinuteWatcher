@@ -269,6 +269,19 @@ class UsageCheckWorkerTest {
             verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
         }
 
+    @Test
+    fun `doWork returns retry when TrafficUpdateTimeoutException is thrown`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            whenever(trafficTracker.updateTrafficUsage()).thenAnswer {
+                throw TrafficUpdateTimeoutException(startElapsed = 1000L)
+            }
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
     private companion object {
         private const val NOTIFICATION_TYPE_MINUTES = 0
         private const val NOTIFICATION_TYPE_TRAFFIC = 1
