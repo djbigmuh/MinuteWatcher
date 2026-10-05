@@ -117,18 +117,18 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
             verify(renderer).renderAll(any(), any())
         }
 
-    @Test(expected = OutOfMemoryError::class)
-    fun `updateAll throws Error and does not retry`() =
+    @Test
+    fun `updateAll returns terminal failure and does not retry when renderer throws Error`() =
         runTest {
             val updater = createUpdater(backgroundScope)
             appSettingsRepository.settingsFlow.value = AppSettings(widgetLimitExceeded = false)
 
             whenever(renderer.renderAll(any(), any())).thenThrow(OutOfMemoryError("Out of memory"))
 
-            try {
-                updater.updateAll()
-            } finally {
-                verify(renderer, times(1)).renderAll(any(), any())
-            }
+            val result = updater.updateAll()
+            advanceUntilIdle()
+
+            assertFalse("updateAll should return failure when renderer throws Error", result.isSuccess)
+            verify(renderer, times(1)).renderAll(any(), any())
         }
 }

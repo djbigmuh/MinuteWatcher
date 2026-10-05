@@ -77,13 +77,7 @@ class WidgetUpdaterErrorTest {
             // First call starts the update
             val firstCall =
                 async {
-                    try {
-                        updater.updateAll()
-                    } catch (e: Throwable) {
-                        // The first call will rethrow the error, assert and return failure result
-                        assertEquals("Simulated OOM", e.message)
-                        WidgetUpdateResult.Failure(reason = WidgetUpdateResult.FailureReason.TERMINAL)
-                    }
+                    updater.updateAll()
                 }
 
             withTimeoutOrNull(30.seconds) { updateStartedSignal.await() }
@@ -97,9 +91,16 @@ class WidgetUpdaterErrorTest {
 
             finishSignal.complete(Unit)
 
-            // We expect secondCall to complete because deferred SHOULD be
-            // completed by startNewUpdate's catch(Throwable)
-            // If it hangs, the test will timeout.
+            val result1 =
+                withTimeoutOrNull(30.seconds) { firstCall.await() }
+                    ?: throw AssertionError("Timed out waiting for firstCall")
+
+            assertTrue(
+                "First call should return terminal failure without throwing. Result was: $result1",
+                result1 is WidgetUpdateResult.Failure,
+            )
+            assertEquals(WidgetUpdateResult.FailureReason.TERMINAL, (result1 as WidgetUpdateResult.Failure).reason)
+
             val result2 =
                 withTimeoutOrNull(30.seconds) { secondCall.await() }
                     ?: throw AssertionError("Timed out waiting for secondCall")
@@ -110,8 +111,5 @@ class WidgetUpdaterErrorTest {
             )
             assertEquals(WidgetUpdateResult.FailureReason.TERMINAL, (result2 as WidgetUpdateResult.Failure).reason)
             assertTrue("Result should be marked as coalesced", result2.wasCoalesced)
-
-            withTimeoutOrNull(30.seconds) { firstCall.await() }
-                ?: throw AssertionError("Timed out waiting for firstCall")
         }
 }

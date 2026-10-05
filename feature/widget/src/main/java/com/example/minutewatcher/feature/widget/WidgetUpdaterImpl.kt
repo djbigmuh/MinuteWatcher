@@ -122,14 +122,14 @@ class WidgetUpdaterImpl
                 @Suppress("TooGenericExceptionCaught") e: Throwable,
             ) {
                 AppLogger.e("WidgetUpdater: unexpected throwable during update", e)
-                deferred.complete(
+                val failure =
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
                         isRetryable = false,
                         reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                    ),
-                )
-                throw e
+                    )
+                deferred.complete(failure)
+                failure
             } finally {
                 activeUpdate.compareAndSet(deferred, null)
             }
