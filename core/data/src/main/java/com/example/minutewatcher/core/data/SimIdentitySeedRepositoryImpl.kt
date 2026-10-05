@@ -153,9 +153,11 @@ internal class SimIdentitySeedRepositoryImpl
 
         private suspend fun clearEphemeralStateOnPersistentRestored() {
             seedMutex.withLock {
-                AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
-                _isEphemeralSeedActive.value = false
-                cachedEphemeralSeed = null
+                if (_isEphemeralSeedActive.value || cachedEphemeralSeed != null) {
+                    AppLogger.d("SimIdentitySeedRepositoryImpl: Persistent seed restored, clearing ephemeral.")
+                    _isEphemeralSeedActive.value = false
+                    cachedEphemeralSeed = null
+                }
             }
         }
 
