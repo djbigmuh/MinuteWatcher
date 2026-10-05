@@ -280,4 +280,22 @@ class AppSettingsRepositoryImplTest {
             val loaded = repository.observeAppSettings().value
             assertEquals(true, loaded.isLoaded)
         }
+
+    @Test
+    fun `update app settings roundtrip permanently denied flags`() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+
+            repository.updateAppSettings {
+                it.copy(
+                    phonePermissionPermanentlyDenied = true,
+                    notificationPermissionPermanentlyDenied = true,
+                )
+            }
+            advanceUntilIdle()
+
+            val settings = repository.getAppSettings().first()
+            assertEquals(true, settings.phonePermissionPermanentlyDenied)
+            assertEquals(true, settings.notificationPermissionPermanentlyDenied)
+        }
 }

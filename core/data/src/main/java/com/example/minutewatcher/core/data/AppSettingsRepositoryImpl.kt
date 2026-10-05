@@ -182,6 +182,10 @@ class AppSettingsRepositoryImpl
             prefs[DataStoreKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
             prefs[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
             prefs[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE] = updated.wasPhonePermissionRequestedBefore
+            prefs[DataStoreKeys.PHONE_PERMISSION_PERMANENTLY_DENIED] =
+                updated.phonePermissionPermanentlyDenied
+            prefs[DataStoreKeys.NOTIFICATION_PERMISSION_PERMANENTLY_DENIED] =
+                updated.notificationPermissionPermanentlyDenied
             prefs[DataStoreKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
         }
 
@@ -219,6 +223,16 @@ class AppSettingsRepositoryImpl
                     read(
                         DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE,
                         current.wasPhonePermissionRequestedBefore,
+                    ),
+                phonePermissionPermanentlyDenied =
+                    read(
+                        DataStoreKeys.PHONE_PERMISSION_PERMANENTLY_DENIED,
+                        current.phonePermissionPermanentlyDenied,
+                    ),
+                notificationPermissionPermanentlyDenied =
+                    read(
+                        DataStoreKeys.NOTIFICATION_PERMISSION_PERMANENTLY_DENIED,
+                        current.notificationPermissionPermanentlyDenied,
                     ),
                 benchmarkSimCount = read(DataStoreKeys.BENCHMARK_SIM_COUNT, current.benchmarkSimCount),
             )

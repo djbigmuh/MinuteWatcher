@@ -60,7 +60,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
-                        wasPhonePermissionRequestedBefore = true,
+                        phonePermissionPermanentlyDenied = true,
                         onboardingCompleted = true,
                     ),
                 )
@@ -77,8 +77,8 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            // Since phonePermissionFlow.value = false and wasPhonePermissionRequestedBefore = true,
-            // it's derived as PERMANENTLY_DENIED now internally in mapper.
+            // Since phonePermissionFlow.value = false and phonePermissionPermanentlyDenied = true,
+            // it's derived as PERMANENTLY_DENIED internally in mapper.
             assertTrue(bannerState.phonePermissionState == PermissionUiState.PERMANENTLY_DENIED)
         }
 
@@ -143,7 +143,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val settingsFlow =
                 MutableStateFlow(
                     AppSettings(
-                        wasPhonePermissionRequestedBefore = false,
+                        phonePermissionPermanentlyDenied = false,
                         onboardingCompleted = true,
                     ),
                 )
@@ -162,10 +162,10 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             var bannerState = viewModel.trackingBannerState.value
             assertTrue(bannerState.phonePermissionState == PermissionUiState.NOT_REQUESTED)
 
-            // Case 2: Requested but denied
+            // Case 2: Permanently denied
             settingsFlow.value =
                 AppSettings(
-                    wasPhonePermissionRequestedBefore = true,
+                    phonePermissionPermanentlyDenied = true,
                     onboardingCompleted = true,
                 )
             advanceUntilIdle()
@@ -333,7 +333,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
                 MutableStateFlow(
                     AppSettings(
                         notifyLowMinutes = true,
-                        notificationPermissionRequested = true,
+                        notificationPermissionPermanentlyDenied = true,
                         onboardingCompleted = true,
                     ),
                 )
@@ -359,7 +359,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
                 MutableStateFlow(
                     AppSettings(
                         notifyLowMinutes = true,
-                        notificationPermissionRequested = false,
+                        notificationPermissionPermanentlyDenied = false,
                         onboardingCompleted = true,
                     ),
                 )

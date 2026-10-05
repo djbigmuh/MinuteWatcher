@@ -143,6 +143,38 @@ class MainSettingsController
             }
         }
 
+        /**
+         * Sets whether phone permission is permanently denied.
+         *
+         * @param denied `true` if permanently denied, `false` otherwise.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
+        fun setPhonePermissionPermanentlyDenied(denied: Boolean) {
+            launchSafely("setPhonePermissionPermanentlyDenied") {
+                appSettingsRepository.updateAppSettings {
+                    it.copy(phonePermissionPermanentlyDenied = denied)
+                }
+            }
+        }
+
+        /**
+         * Sets whether notification permission is permanently denied.
+         *
+         * @param denied `true` if permanently denied, `false` otherwise.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
+        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
+            launchSafely("setNotificationPermissionPermanentlyDenied") {
+                appSettingsRepository.updateAppSettings {
+                    it.copy(notificationPermissionPermanentlyDenied = denied)
+                }
+            }
+        }
+
         private fun launchSafely(
             operationName: String,
             block: suspend () -> Unit,

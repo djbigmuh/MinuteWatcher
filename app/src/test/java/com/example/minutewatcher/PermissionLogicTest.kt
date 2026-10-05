@@ -8,10 +8,10 @@ import org.junit.Test
 
 class PermissionLogicTest {
     @Test
-    fun `TrackingBannerMapper uses wasPhonePermissionRequestedBefore to determine DENIED state`() {
+    fun `TrackingBannerMapper uses phonePermissionPermanentlyDenied to determine DENIED state`() {
         val settings =
             AppSettings(
-                wasPhonePermissionRequestedBefore = true,
+                phonePermissionPermanentlyDenied = true,
                 onboardingCompleted = true,
             )
 
@@ -28,10 +28,10 @@ class PermissionLogicTest {
     }
 
     @Test
-    fun `TrackingBannerMapper uses wasPhonePermissionRequestedBefore to determine NOT_REQUESTED state`() {
+    fun `TrackingBannerMapper uses phonePermissionPermanentlyDenied to determine NOT_REQUESTED state`() {
         val settings =
             AppSettings(
-                wasPhonePermissionRequestedBefore = false,
+                phonePermissionPermanentlyDenied = false,
                 onboardingCompleted = true,
             )
 
@@ -48,12 +48,12 @@ class PermissionLogicTest {
     }
 
     @Test
-    fun `notification permission state is NOT_REQUESTED when notifyLowMinutes is enabled and not requested before`() {
+    fun `notification permission state is NOT_REQUESTED when not permanently denied`() {
         val settings =
             AppSettings(
                 onboardingCompleted = true,
                 notifyLowMinutes = true,
-                notificationPermissionRequested = false,
+                notificationPermissionPermanentlyDenied = false,
             )
 
         val state =
@@ -69,12 +69,12 @@ class PermissionLogicTest {
     }
 
     @Test
-    fun `notification permission state is PERMANENTLY_DENIED when notifyLowMinutes is enabled and requested before`() {
+    fun `notification permission state is PERMANENTLY_DENIED when permanently denied`() {
         val settings =
             AppSettings(
                 onboardingCompleted = true,
                 notifyLowMinutes = true,
-                notificationPermissionRequested = true,
+                notificationPermissionPermanentlyDenied = true,
             )
 
         val state =

@@ -142,23 +142,35 @@ class MainActivity : AppCompatActivity() {
 
     private inner class PermissionHandler {
         val phoneLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-                handlePhoneResult()
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                handlePhoneResult(granted)
             }
 
         val notificationLauncher =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-                handleNotificationResult()
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                handleNotificationResult(granted)
             }
 
-        private fun handlePhoneResult() {
+        private fun handlePhoneResult(granted: Boolean) {
+            val permanentlyDenied =
+                !granted &&
+                    !shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)
+            viewModel.setPhonePermissionPermanentlyDenied(if (granted) false else permanentlyDenied)
             checkPermissionChanges()
         }
 
-        private fun handleNotificationResult() {
+        private fun handleNotificationResult(granted: Boolean) {
             // API 33+ required for POST_NOTIFICATIONS runtime permission.
             // See: https://developer.android.com/training/notify-user/runtime-permissions
             // minSdk is 26, so this branch is reachable and required.
+            val permanentlyDenied =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    !granted &&
+                        !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    false
+                }
+            viewModel.setNotificationPermissionPermanentlyDenied(if (granted) false else permanentlyDenied)
             checkPermissionChanges()
         }
 

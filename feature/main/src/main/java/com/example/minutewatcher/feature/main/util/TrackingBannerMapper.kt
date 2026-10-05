@@ -28,7 +28,7 @@ object TrackingBannerMapper {
         val phonePermissionState =
             determinePhonePermissionState(
                 phoneGranted,
-                settings.wasPhonePermissionRequestedBefore && !phoneGranted,
+                settings.phonePermissionPermanentlyDenied && !phoneGranted,
             )
 
         val notificationPermissionState =
@@ -115,7 +115,7 @@ object TrackingBannerMapper {
         return when {
             granted -> PermissionUiState.GRANTED
             !showNotifications -> PermissionUiState.GRANTED
-            settings.notificationPermissionRequested -> PermissionUiState.PERMANENTLY_DENIED
+            settings.notificationPermissionPermanentlyDenied -> PermissionUiState.PERMANENTLY_DENIED
             else -> PermissionUiState.NOT_REQUESTED
         }
     }

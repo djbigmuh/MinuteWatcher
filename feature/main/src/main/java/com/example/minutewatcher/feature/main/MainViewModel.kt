@@ -153,6 +153,12 @@ class MainViewModel
 
         fun setPhonePermissionRequested() = controllers.settings.setPhonePermissionRequested()
 
+        fun setPhonePermissionPermanentlyDenied(denied: Boolean) =
+            controllers.settings.setPhonePermissionPermanentlyDenied(denied)
+
+        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) =
+            controllers.settings.setNotificationPermissionPermanentlyDenied(denied)
+
         fun completeOnboarding() {
             dialogController.setShowOnboardingDialog(show = false)
             controllers.settings.completeOnboarding()
