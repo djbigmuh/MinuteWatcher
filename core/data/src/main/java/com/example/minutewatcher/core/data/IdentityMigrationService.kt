@@ -95,6 +95,9 @@ class IdentityMigrationService
                     false
                 } else {
                     val appHasLegacy = appPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
+                    if (appHasLegacy) {
+                        return true
+                    }
                     val simPrefs =
                         simDataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
                             ?: run {
@@ -102,7 +105,7 @@ class IdentityMigrationService
                                 return null
                             }
                     val simHasLegacy = simPrefs.asMap().keys.any { it.isLegacyKey(activeIdentities) }
-                    appHasLegacy || simHasLegacy
+                    simHasLegacy
                 }
             } catch (e: CancellationException) {
                 throw e
