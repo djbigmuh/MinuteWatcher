@@ -9,17 +9,10 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * All methods are safe to call from any coroutine context.
  * Implementation must comply with AOSP DataStore best practices.
- * Operations are typically bounded by SHORT_TIMEOUT_MS.
+ * Timeout bounding for repository operations is the responsibility of callers
+ * (e.g. DataStoreRetryHelper, withTimeoutOrNull).
  */
 interface SimUsageResetRepository {
-    /**
-     * Resets SIM usage statistics.
-     *
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun resetSimUsage(identity: String)
-
     /**
      * Resets SIM usage statistics manually.
      *

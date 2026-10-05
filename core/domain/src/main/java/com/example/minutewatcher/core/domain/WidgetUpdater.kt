@@ -12,7 +12,7 @@ interface WidgetUpdater {
     /**
      * Triggers an update for all application widgets.
      *
-     * This operation is typically bounded by a timeout (e.g., SHORT_TIMEOUT_MS).
+     * This operation is bounded by [com.example.minutewatcher.core.model.Constants.Time.WIDGET_UPDATE_TIMEOUT_MS].
      *
      * @return [WidgetUpdateResult] indicating the outcome of the update.
      * @throws IOException if communication with the widget system fails.

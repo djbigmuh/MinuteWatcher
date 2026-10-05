@@ -37,14 +37,12 @@ import kotlin.time.Duration.Companion.milliseconds
  * Uses a Mutex (via [CallMutexHolder]) to prevent race conditions during concurrent call events.
  *
  * NOTE: This class and its methods are marked [open] solely to allow sub-classing in test doubles.
- * Production code must not inherit from this class.
- *
  * NOTE: Suppressing TooManyFunctions as this class acts as a central coordinator for call tracking,
  * delegating most logic to handlers but maintaining public API and status management.
  */
 @Singleton
 @Suppress("TooManyFunctions")
-open class CallTracker
+class CallTracker
     @Inject
     internal constructor(
         private val callSessionRepository: CallSessionRepository,
@@ -107,7 +105,7 @@ open class CallTracker
          *
          * This method is idempotent and thread-safe.
          */
-        open fun ensureStarted() {
+        fun ensureStarted() {
             val shouldStart =
                 synchronized(this) {
                     val current = trackerState.get()
@@ -386,7 +384,7 @@ open class CallTracker
          * **Contract:** This method must be called early in the boot chain to ensure
          * data consistency.
          */
-        open suspend fun onBootAwaited() {
+        suspend fun onBootAwaited() {
             ensureStarted()
             try {
                 // Waits for initMutex holding critical sections before performing cleanup.

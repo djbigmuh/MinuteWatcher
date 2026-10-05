@@ -74,10 +74,13 @@ class CallEventWorker
             const val EXTRA_EVENT_ELAPSED_REALTIME = "eventElapsedRealtime"
 
             /**
-             * Maximum number of retry attempts for transient or unexpected errors before considering the work failed.
+             * Maximum number of retry attempts for SecurityException and unexpected errors
+             * before considering work failed.
              *
-             * Retries are limited so that transient errors do not break the event chain order,
-             * while deterministic errors do not block the chain indefinitely.
+             * IOException is retried unconditionally without attempt limit because storage degradation
+             * is considered transient. Call events are processed in a unique WorkManager chain with timestamps
+             * captured in input data, ensuring call durations remain accurate once storage recovers.
+             * Retry frequency is constrained by WorkManager's exponential backoff.
              */
             const val MAX_EVENT_RUN_ATTEMPTS = 3
         }

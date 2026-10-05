@@ -22,6 +22,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -32,7 +33,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStartTest : CallTrackerTestFixtures() {
-    private val sessionCleaner: CallSessionCleaner = mock()
     private val settingsHandler: CallTrackingSettingsHandler = mock()
 
     @Before
@@ -209,49 +209,44 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `onCallStarted handles exception and still runs finally status refresh`() =
+    fun `successful onCallStarted triggers status refresh in finalize block`() =
         runTest(testDispatcher) {
             setupCommonMocks()
-            var refreshStatusCalled = false
-            val attributionResolver = createAttributionResolver()
-            val mutexHolder = createMutexHolder()
-            val tracker =
-                object : CallTracker(
-                    callSessionRepository = callSessionRepository,
-                    permissionManager = permissionManager,
-                    scope = testScope,
-                    attributionResolver = attributionResolver,
-                    startHandler =
-                        createStartHandler(
-                            attributionResolver,
-                            mutexHolder,
-                            createSessionCleaner(attributionResolver),
-                            createSettingsHandler(),
-                        ),
-                    endHandler =
-                        createEndHandler(
-                            attributionResolver,
-                            mutexHolder,
-                            createSessionCleaner(attributionResolver),
-                            createSettingsHandler(),
-                        ),
-                    sessionCleaner = sessionCleaner,
-                    permissionStateNotifier = permissionStateNotifier,
-                    callMutexHolder = mutexHolder,
-                ) {
-                    override suspend fun refreshStatus(force: Boolean) {
-                        refreshStatusCalled = true
-                        super.refreshStatus(force)
-                    }
-                }
-
-            whenever(callSessionRepository.getCallStartTime(1))
-                .thenReturn(flow { throw IllegalStateException("Simulated crash") })
-
-            tracker.onCallStarted(subId = 1)
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
             advanceUntilIdle()
 
-            assertTrue("refreshStatus should be called in finally block", refreshStatusCalled)
+            clearInvocations(callSessionRepository)
+
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
+
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            verify(callSessionRepository).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
+            verify(callSessionRepository, atLeastOnce()).getActiveCallSubIds()
+        }
+
+    @Test
+    fun `failed onCallStarted skips status refresh in finalize block`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            clearInvocations(callSessionRepository)
+
+            whenever(callSessionRepository.getCallStartTime(1))
+                .thenReturn(flow { throw IOException("Read error") })
+
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            verify(callSessionRepository, never()).getActiveCallSubIds()
         }
 
     @Test

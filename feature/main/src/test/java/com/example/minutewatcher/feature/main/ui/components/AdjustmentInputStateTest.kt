@@ -1,9 +1,13 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,5 +76,60 @@ class AdjustmentInputStateTest {
         assertEquals("12934", state.text.text)
         assertEquals(3, state.text.selection.start)
         assertEquals(3, state.text.selection.end)
+    }
+
+    private val dummySaverScope = SaverScope { true }
+
+    @Test
+    fun `saver saves and restores typed text and non empty errorText`() {
+        val original = AdjustmentInputState("100")
+        original.text = TextFieldValue("250", selection = TextRange(3))
+        original.errorText = "Invalid input"
+
+        @Suppress("UNCHECKED_CAST")
+        val saver = AdjustmentInputState.Saver as Saver<AdjustmentInputState, Any>
+        val saved = with(saver) { dummySaverScope.save(original) }
+        assertNotNull(saved)
+
+        val restored = saver.restore(saved!!)
+        assertNotNull(restored)
+        assertEquals("250", restored!!.text.text)
+        assertEquals("Invalid input", restored.errorText)
+    }
+
+    @Test
+    fun `saver restores null errorText when saved errorText is empty`() {
+        val original = AdjustmentInputState("100")
+        original.text = TextFieldValue("250")
+        original.errorText = null
+
+        @Suppress("UNCHECKED_CAST")
+        val saver = AdjustmentInputState.Saver as Saver<AdjustmentInputState, Any>
+        val saved = with(saver) { dummySaverScope.save(original) }
+        assertNotNull(saved)
+
+        val restored = saver.restore(saved!!)
+        assertNotNull(restored)
+        assertEquals("250", restored!!.text.text)
+        assertNull(restored.errorText)
+    }
+
+    @Test
+    fun `restored instance continues to handle onTextChange correctly`() {
+        val original = AdjustmentInputState("100")
+        original.text = TextFieldValue("250")
+        original.errorText = "Invalid input"
+
+        @Suppress("UNCHECKED_CAST")
+        val saver = AdjustmentInputState.Saver as Saver<AdjustmentInputState, Any>
+        val saved = with(saver) { dummySaverScope.save(original) }!!
+        val restored = saver.restore(saved)!!
+
+        assertEquals("Invalid input", restored.errorText)
+
+        restored.onTextChange(TextFieldValue("2505", selection = TextRange(4)), defaultLocale)
+
+        assertEquals("2505", restored.text.text)
+        assertNull(restored.errorText)
     }
 }

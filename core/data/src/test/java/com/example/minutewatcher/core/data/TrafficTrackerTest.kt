@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
@@ -70,7 +71,7 @@ class TrafficTrackerTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val permissionManager: PermissionManager = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
-    private val permissionChangesFlow = MutableSharedFlow<Unit>(replay = 1)
+    private val permissionChangesFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val dataChangeNotifier: DataChangeNotifier = mock()
     private val timeProvider =
         FixedTimeProvider(
@@ -174,9 +175,9 @@ class TrafficTrackerTest {
     }
 
     private fun TestScope.startTracker(): TrafficTracker {
-        val tracker = createTracker(backgroundScope)
         setupPermissionMocks()
         setupIdentityMocks()
+        val tracker = createTracker(backgroundScope)
         whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
         whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(500L))
 
@@ -743,6 +744,47 @@ class TrafficTrackerTest {
             runCurrent()
 
             verify(simUsageResetRepository).setBaselineRetryCount("sim_0", 2)
+        }
+
+    @Test
+    fun `permission revocation updates status to Error PERMISSION_MISSING`() =
+        runTest {
+            val tracker = startTracker()
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+            permissionChangesFlow.tryEmit(Unit)
+            runCurrent()
+            advanceUntilIdle()
+
+            val status = tracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
+    fun `permission re-grant recovers status from PERMISSION_MISSING to Active`() =
+        runTest {
+            val tracker = startTracker()
+            assertEquals(TrackingStatus.Active, tracker.status.value)
+
+            // Revoke permission
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+            permissionChangesFlow.tryEmit(Unit)
+            runCurrent()
+            advanceUntilIdle()
+
+            val errorStatus = tracker.status.value
+            assertTrue("Expected Error status, but was $errorStatus", errorStatus is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (errorStatus as TrackingStatus.Error).type)
+
+            // Re-grant permission
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
+            permissionChangesFlow.tryEmit(Unit)
+            runCurrent()
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
     private fun createTracker(scope: CoroutineScope): TrafficTracker {

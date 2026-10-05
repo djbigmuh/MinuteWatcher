@@ -51,7 +51,9 @@ We enforce strict static analysis. Every developer MUST run verification before 
 - **`.\VERIFY.bat`** or **`.\verify.ps1`**: Full verification (ktlint + detekt + lint + tests + build). Use before completing any task.
 
 Your code must pass:
-- **Detekt (2.0.0-alpha.6):** No new issues should be introduced. Baseline files are for legacy issues only and should be reduced over time.
+
+- **Detekt (2.0.0-alpha.6):** Baseline files are not used in the project. Any detekt or lint warning must be fixed
+  directly in the source code; adding suppressions via baseline files is strictly forbidden.
 - **Lint:** The build will fail on any lint error or warning. `MissingTranslation` is a fatal error.
 - **Ktlint:** Code style must follow the established Kotlin standards.
 

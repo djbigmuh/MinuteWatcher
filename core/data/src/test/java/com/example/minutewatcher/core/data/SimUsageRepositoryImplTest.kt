@@ -261,41 +261,24 @@ class SimUsageRepositoryImplTest {
         }
 
     @Test
-    fun `rollover logic accumulates remaining minutes`() =
-        runTest {
-            val limitsRepo = SimLimitsRepositoryImpl(dataStore)
-            val identity = "test_sim"
-
-            // 1. Setup limit and usage
-            limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
-            // 20 minutes remaining
-            repository.updateSimStats(identity, minutesUsed = 80, trafficUsedMb = 0f, manualAdjustment = 0)
-
-            // 2. Perform reset
-            repository.resetSimUsage(identity)
-
-            // 3. Verify rollover
-            val usage = repository.getSimUsage(identity).first()
-            assertEquals(0, usage.minutesUsed)
-            assertEquals(20, usage.manualAdjustment)
-            assertEquals(120, usage.minutesLimit + usage.manualAdjustment)
-        }
-
-    @Test
     fun `rollover logic accumulates remaining traffic`() =
         runTest {
             val limitsRepo = SimLimitsRepositoryImpl(dataStore)
             val identity = "test_sim"
+            val initialTime = 1704067200000L
 
-            // 1. Setup limit and usage (1GB limit = 1024MB)
+            // 1. Setup limit, initialize tracking window
             limitsRepo.updateSimLimits(identity, 100, 1024, rolloverEnabled = true)
-            // 0.5GB used, 0.5GB remaining
+            repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = initialTime)
+
+            // 2. Setup usage (1GB limit = 1024MB), 0.5GB used, 0.5GB remaining
             repository.updateSimStats(identity, minutesUsed = 0, trafficUsedMb = 512f, manualAdjustment = 0)
 
-            // 2. Perform reset
-            repository.resetSimUsage(identity)
+            // 3. Perform reset for next period
+            val nextPeriodTime = initialTime + 32 * 24 * 60 * 60 * 1000L
+            repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = nextPeriodTime)
 
-            // 3. Verify rollover
+            // 4. Verify rollover
             val usage = repository.getSimUsage(identity).first()
             assertEquals(0f, usage.trafficUsedMb)
             assertEquals(0.5f, usage.trafficAdjustmentGb)

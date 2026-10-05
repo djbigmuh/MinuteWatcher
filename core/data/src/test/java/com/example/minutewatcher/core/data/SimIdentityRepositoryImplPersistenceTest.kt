@@ -38,6 +38,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -273,17 +274,16 @@ class SimIdentityRepositoryImplPersistenceTest {
             val migrationStarted = CompletableDeferred<Unit>()
             val canFinishMigration = CompletableDeferred<Unit>()
 
-            val fakeMigrationService =
-                object : IdentityMigrationService(mock(), mock()) {
-                    override suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome {
-                        if (activeIdentity.stableId == "to_migrate") {
-                            migrationStarted.complete(Unit)
-                            withTimeoutOrNull(30.seconds) { canFinishMigration.await() }
-                                ?: throw AssertionError("Timed out waiting for canFinishMigration")
-                        }
-                        return MigrationOutcome(migrated = 1)
-                    }
+            val fakeMigrationService = mock<IdentityMigrationService>()
+            whenever(fakeMigrationService.migrateLegacyData(any())).doSuspendableAnswer { invocation ->
+                val activeIdentity = invocation.getArgument<SimIdentity>(0)
+                if (activeIdentity.stableId == "to_migrate") {
+                    migrationStarted.complete(Unit)
+                    withTimeoutOrNull(30.seconds) { canFinishMigration.await() }
+                        ?: throw AssertionError("Timed out waiting for canFinishMigration")
                 }
+                IdentityMigrationService.MigrationOutcome(migrated = 1)
+            }
 
             val persistence = SimIdentityPersistence(realDataStore, fakeMigrationService)
             val identity = SimIdentity("to_migrate", 101, 0, IdentitySource.ICCID, isStable = true)

@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.settings.ui
 
 import android.content.Context
+import android.content.DialogInterface
 import android.content.res.Configuration
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -8,6 +9,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
@@ -17,16 +20,22 @@ import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 import java.util.Locale
 
 // UI-infra SDK pin: Espresso InputManager reflection fails on SDK > 35 in Robolectric
@@ -216,5 +225,75 @@ class WidgetSettingsScreenTest {
             val label = layoutModes.getOrNull(validated.layoutMode).orEmpty()
             assertTrue("Layout mode $i must produce a non-empty label", label.isNotEmpty())
         }
+    }
+
+    @Test
+    fun clickingBackgroundColorRowShowsColorPickerDialog() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.custom_color)).performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        val dialog = ShadowDialog.getLatestDialog()
+        assertNotNull("Dialog must be displayed after clicking color row", dialog)
+        assertTrue("Dialog must be showing", dialog.isShowing)
+    }
+
+    @Test
+    fun confirmingColorPickerDialogCallsUpdateSettings() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.custom_color)).performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        val dialog = ShadowDialog.getLatestDialog() as? androidx.appcompat.app.AlertDialog
+        assertNotNull("Dialog must be displayed", dialog)
+
+        val positiveButton = dialog!!.getButton(DialogInterface.BUTTON_POSITIVE)
+        assertNotNull("Positive button must exist", positiveButton)
+        positiveButton.performClick()
+        composeTestRule.waitForIdle()
+
+        verify(viewModel).updateSettings(any())
+    }
+
+    @Test
+    fun cancellingColorPickerDialogDoesNotCallUpdateSettingsAndClosesDialog() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.custom_color)).performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        val dialog = ShadowDialog.getLatestDialog() as? androidx.appcompat.app.AlertDialog
+        assertNotNull("Dialog must be displayed", dialog)
+
+        val negativeButton = dialog!!.getButton(DialogInterface.BUTTON_NEGATIVE)
+        assertNotNull("Negative button must exist", negativeButton)
+        negativeButton.performClick()
+        composeTestRule.waitForIdle()
+
+        verify(viewModel, never()).updateSettings(any())
+        assertFalse("Dialog must be closed after cancelling", dialog.isShowing)
     }
 }

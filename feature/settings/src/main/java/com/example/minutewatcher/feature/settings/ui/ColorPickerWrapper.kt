@@ -29,12 +29,14 @@ fun ColorPickerWrapper(
     DisposableEffect(Unit) {
         val dialog =
             ColorPickerDialog
-                .Builder(context)
+                .Builder(context, R.style.Theme_MinuteWatcher)
                 .setTitle(R.string.color_background)
                 .setPositiveButton(
                     R.string.save_button,
                     ColorEnvelopeListener { envelope, _ ->
-                        onColorSelected(envelope.color)
+                        if (envelope != null) {
+                            onColorSelected(envelope.color)
+                        }
                         onDismiss()
                     },
                 ).setNegativeButton(R.string.cancel_button) { dialogInterface, _ ->

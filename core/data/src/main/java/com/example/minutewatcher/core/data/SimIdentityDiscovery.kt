@@ -24,7 +24,7 @@ import javax.inject.Singleton
  * Safe to call from any coroutine context.
  */
 @Singleton
-open class SimIdentityDiscovery
+class SimIdentityDiscovery
     @Inject
     constructor(
         private val discoveryDeps: SimDiscoveryDependencies,
@@ -38,7 +38,7 @@ open class SimIdentityDiscovery
          * Observes changes in SIM subscriptions.
          * Emits whenever subscriptions might have changed.
          */
-        open fun observeSubscriptionChanges(): Flow<Unit> =
+        fun observeSubscriptionChanges(): Flow<Unit> =
             callbackFlow {
                 val manager = subscriptionManager
                 if (manager == null) {
@@ -130,7 +130,7 @@ open class SimIdentityDiscovery
          * @param isStable Whether real/stable identity seed was used.
          * @return [SimDiscoveryResult] representing the discovery outcome.
          */
-        open fun discoverSims(
+        fun discoverSims(
             seed: String,
             isStable: Boolean = true,
         ): SimDiscoveryResult {

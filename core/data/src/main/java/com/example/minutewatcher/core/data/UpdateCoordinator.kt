@@ -475,7 +475,6 @@ class UpdateCoordinator
             return (INITIAL_RESTART_DELAY_MS * (1 shl exponent)).coerceAtMost(MAX_RESTART_DELAY_MS)
         }
 
-        @Suppress("ReturnCount")
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
             currentCoroutineContext().ensureActive()
 

@@ -13,8 +13,4 @@
 
     <!-- New semantic colors -->
     <color name="surface_container">#F3EDF7</color>
-
-    <color name="white">#FFFFFFFF</color>
-    <color name="light_gray">#FFCCCCCC</color>
-    <color name="dark_gray">#FF666666</color>
 </resources>

@@ -16,7 +16,7 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
-open class WidgetSettingsSaver
+class WidgetSettingsSaver
     @Inject
     constructor(
         private val loader: WidgetSettingsLoader,
@@ -31,7 +31,7 @@ open class WidgetSettingsSaver
          * @param skipSimSettings If true, SIM-specific settings are not saved.
          * @return [SaveResult] operation result.
          */
-        open suspend fun save(
+        suspend fun save(
             state: WidgetSettingsState,
             skipSimSettings: Boolean = false,
         ): SaveResult {

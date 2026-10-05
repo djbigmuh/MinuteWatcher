@@ -41,7 +41,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @Singleton
 @Suppress("TooManyFunctions")
-open class IdentityMigrationService
+class IdentityMigrationService
     @Inject
     constructor(
         @AppDataStore private val appDataStore: DataStore<Preferences>,
@@ -172,7 +172,7 @@ open class IdentityMigrationService
          * @throws CancellationException if the migration process is cancelled.
          * @throws Exception if a fatal error occurs during migration execution.
          */
-        open suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome =
+        suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome =
             migrationMutex.withLock {
                 try {
                     performMigration(activeIdentity)

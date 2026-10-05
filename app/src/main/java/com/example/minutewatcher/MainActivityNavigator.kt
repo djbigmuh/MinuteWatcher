@@ -43,6 +43,12 @@ object MainActivityNavigator {
 
     fun addWidgetToHomeScreen(context: Context) {
         val appWidgetManager = context.getSystemService(AppWidgetManager::class.java)
+        if (appWidgetManager == null) {
+            AppLogger.w("MainActivityNavigator: AppWidgetManager is unavailable on this device")
+            Toast.makeText(context, context.getString(R.string.widget_pin_unsupported), Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val myProvider = ComponentName(context, MinutesGlanceWidgetReceiver::class.java)
 
         val existingIds = appWidgetManager.getAppWidgetIds(myProvider)

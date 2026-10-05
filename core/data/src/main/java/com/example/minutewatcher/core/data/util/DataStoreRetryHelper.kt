@@ -26,7 +26,7 @@ internal class DataStoreReadTimeoutException(
  * **Thread safety:** Safe to call from any coroutine context.
  */
 @Singleton
-open class DataStoreRetryHelper
+class DataStoreRetryHelper
     @Inject
     constructor() {
         private class Emission<T>(
@@ -43,7 +43,7 @@ open class DataStoreRetryHelper
          * @param reader Lambda that returns a Flow to read from.
          * @return Result containing the value or the last exception.
          */
-        open suspend fun <T> readWithRetry(
+        suspend fun <T> readWithRetry(
             label: String,
             attempts: Int = DEFAULT_RETRY_ATTEMPTS,
             retryDelayMs: Long = DEFAULT_RETRY_DELAY_MS,

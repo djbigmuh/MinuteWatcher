@@ -238,7 +238,7 @@ class MainBannerController
         internal companion object {
             const val MAX_RESTART_ATTEMPTS = 5
             const val MAX_RESTART_DELAY_MS = 30_000L
-            private const val MAX_BACKOFF_EXPONENT = 30
+            private const val MAX_BACKOFF_EXPONENT = MAX_RESTART_ATTEMPTS - 1
 
             internal fun calculateRestartDelay(attempt: Int): Long? {
                 if (attempt > MAX_RESTART_ATTEMPTS) return null

@@ -28,6 +28,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -36,7 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class InitialSetupWorkerBootTest {
-    private val callTracker = FakeCallTracker()
+    private val bootCompleted = AtomicBoolean(false)
+    private val callTracker: CallTracker = mock()
     private val trafficTracker: TrafficTracker = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val migrationFlagsRepository: MigrationFlagsRepository = mock()
@@ -60,6 +62,10 @@ class InitialSetupWorkerBootTest {
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
         runTest {
+            whenever(callTracker.onBootAwaited()).doSuspendableAnswer {
+                delay(1000)
+                bootCompleted.set(true)
+            }
             whenever(usageStateRepository.refresh()).thenReturn(
                 RefreshResult.Success(
                     GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList()),
@@ -109,35 +115,7 @@ class InitialSetupWorkerBootTest {
 
             val result = worker.doWork()
 
-            assertTrue("onBootAwaited should have completed", callTracker.bootCompleted.get())
+            assertTrue("onBootAwaited should have completed", bootCompleted.get())
             assertEquals(ListenableWorker.Result.success(), result)
         }
-
-    private open class FakeCallTracker :
-        CallTracker(
-            mock(),
-            mock(),
-            mock(),
-            mock(),
-            mock(),
-            mock(),
-            mock(),
-            mock(),
-            mock(),
-        ) {
-        val bootCompleted = AtomicBoolean(false)
-
-        override suspend fun onBootAwaited() {
-            delay(1000)
-            bootCompleted.set(true)
-        }
-
-        override fun ensureStarted() {
-            // no-op
-        }
-
-        override suspend fun recover() {
-            // no-op
-        }
-    }
 }

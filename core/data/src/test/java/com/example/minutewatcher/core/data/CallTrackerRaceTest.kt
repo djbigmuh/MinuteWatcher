@@ -29,6 +29,7 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -71,21 +72,7 @@ class CallTrackerRaceTest {
     }
 
     private fun createTestTracker(): CallTracker {
-        val retryHelper =
-            object : DataStoreRetryHelper() {
-                override suspend fun <T> readWithRetry(
-                    label: String,
-                    attempts: Int,
-                    retryDelayMs: Long,
-                    attemptTimeoutMillis: Long,
-                    reader: () -> Flow<T>,
-                ): Result<T> =
-                    try {
-                        Result.success(reader().first())
-                    } catch (e: Exception) {
-                        Result.failure(e)
-                    }
-            }
+        val retryHelper = createMockRetryHelper()
         val attributionResolver =
             CallAttributionResolver(
                 simIdentityRepository,
@@ -130,6 +117,30 @@ class CallTrackerRaceTest {
             permissionStateNotifier = permissionStateNotifier,
             callMutexHolder = mutexHolder,
         )
+    }
+
+    private fun createMockRetryHelper(): DataStoreRetryHelper {
+        val retryHelper = mock<DataStoreRetryHelper>()
+        runBlocking {
+            whenever(
+                retryHelper.readWithRetry<Any>(
+                    label = any(),
+                    attempts = any(),
+                    retryDelayMs = any(),
+                    attemptTimeoutMillis = any(),
+                    reader = any(),
+                ),
+            ).doSuspendableAnswer { invocation ->
+                @Suppress("UNCHECKED_CAST")
+                val reader = invocation.getArgument<() -> Flow<Any>>(4)
+                try {
+                    Result.success(reader().first())
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            }
+        }
+        return retryHelper
     }
 
     @Test

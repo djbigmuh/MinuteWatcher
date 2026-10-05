@@ -25,7 +25,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Safe to call from any coroutine context.
  */
 @Singleton
-open class SnapshotIndexer
+class SnapshotIndexer
     @Inject
     constructor(
         private val appSearchWrapper: AppSearchWrapper,

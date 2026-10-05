@@ -199,9 +199,9 @@ class WidgetSettingsRepositoryTest {
         val identity =
             SimIdentity(
                 stableId = id,
-                subscriptionId = if (isStable) 100 + slot else null,
+                subscriptionId = 100 + slot,
                 slotIndex = slot,
-                source = if (isStable) IdentitySource.ICCID else IdentitySource.SLOT_FALLBACK,
+                source = if (isStable) IdentitySource.ICCID else IdentitySource.SUBSCRIPTION_ID,
                 isStable = isStable,
             )
         return ActiveSimInfo(

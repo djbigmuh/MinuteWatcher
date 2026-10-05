@@ -56,7 +56,7 @@ interface UsageStateRepository {
     /**
      * Forces a refresh of all usage data.
      *
-     * This operation is bounded by a timeout (e.g., SHORT_TIMEOUT_MS).
+     * This operation is bounded by [com.example.minutewatcher.core.model.Constants.Data.SNAPSHOT_TIMEOUT_MS].
      *
      * @return [RefreshResult] indicating success or timeout.
      * @throws IOException if storage or network access fails.

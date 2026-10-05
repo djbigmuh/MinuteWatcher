@@ -20,12 +20,7 @@ subprojects {
     apply(plugin = "dev.detekt")
 
     extensions.configure<DetektExtension>("detekt") {
-        // Detekt baseline contains ONLY pre-existing issues.
-        // New issues MUST NOT be added to the baseline — fix them at the source.
-        // Regenerating or expanding the baseline during routine edits is forbidden;
-        // increasing the entry count is grounds for rejecting a change.
         config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-        baseline.set(file("$projectDir/detekt-baseline.xml"))
         buildUponDefaultConfig.set(true)
         allRules.set(false)
     }

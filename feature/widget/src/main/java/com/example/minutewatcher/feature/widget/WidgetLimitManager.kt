@@ -18,7 +18,7 @@ import javax.inject.Singleton
  * Safe to call from any coroutine context.
  */
 @Singleton
-open class WidgetLimitManager
+class WidgetLimitManager
     @Inject
     constructor(
         private val appSettingsRepository: AppSettingsRepository,
@@ -45,7 +45,7 @@ open class WidgetLimitManager
          *
          * @return True if the current counter value indicates a probe should occur.
          */
-        open fun shouldProbe(): Boolean {
+        fun shouldProbe(): Boolean {
             val count = exceededUpdateCounter.get()
             return count > 0 && (count % PROBE_INTERVAL_UPDATES) == 0L
         }
@@ -54,24 +54,24 @@ open class WidgetLimitManager
          * Increments the update counter for exceeded states.
          * Should be called exactly once per update cycle when the limit is exceeded.
          */
-        open fun incrementUpdateCounter() {
+        fun incrementUpdateCounter() {
             exceededUpdateCounter.incrementAndGet()
         }
 
-        open fun resetCounter() {
+    fun resetCounter() {
             exceededUpdateCounter.set(0L)
         }
 
         /**
          * Updates the in-memory cache of the limit exceeded flag without writing to DataStore.
          */
-        open fun updateCache(value: Boolean) {
+        fun updateCache(value: Boolean) {
             cachedLimitExceeded = value
         }
 
-        open fun isLimitExceeded(): Boolean? = cachedLimitExceeded
+    fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
-        open suspend fun setWidgetLimitExceeded(value: Boolean) {
+    suspend fun setWidgetLimitExceeded(value: Boolean) {
             cachedLimitExceeded = value
             try {
                 appSettingsRepository.updateAppSettings {
@@ -87,9 +87,10 @@ open class WidgetLimitManager
         /**
          * Performs a probe update to check if the widget size limit is still exceeded.
          *
-         * **Contract:** This method must be called under the updateMutex in WidgetUpdaterImpl
-         * to prevent concurrent persistent state changes. Flag is only changed based on
-         * Success or LimitExceeded results.
+         * **Contract:** Probe updates must not execute concurrently with other widget updates;
+         * serialization is ensured by update coalescing in WidgetUpdaterImpl (single active update via
+         * coalescingMutex/activeUpdate), within which performProbeUpdate is invoked. Flag is only changed
+         * based on Success or LimitExceeded results.
          *
          * @param context The application context.
          * @param updateBlock The suspend block that performs the actual update.

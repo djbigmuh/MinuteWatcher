@@ -111,20 +111,7 @@ private fun ErrorState(
     onBack: () -> Unit,
 ) {
     Scaffold(
-        topBar = {
-            @OptIn(ExperimentalMaterial3Api::class)
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.settings_widget_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(id = R.string.navigate_up_content_desc),
-                        )
-                    }
-                },
-            )
-        },
+        topBar = { SettingsTopAppBar(onBack = onBack) },
     ) { paddingValues ->
         Box(
             modifier =
@@ -159,8 +146,67 @@ private fun WidgetSettingsContent(
 ) {
     var showColorPicker by remember { mutableStateOf(value = false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val resources = LocalResources.current
 
+    HandleSaveResultEffect(
+        saveResult = saveResult,
+        snackbarHostState = snackbarHostState,
+        viewModel = viewModel,
+    )
+
+    Scaffold(
+        topBar = { SettingsTopAppBar(onBack = onBack) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        bottomBar = {
+            BottomPreviewBar(
+                uiState = screenUiState,
+            )
+        },
+    ) { paddingValues ->
+        WidgetSettingsList(
+            modifier = Modifier.padding(paddingValues),
+            state = settings,
+            uiState = screenUiState,
+            viewModel = viewModel,
+        ) {
+            showColorPicker = true
+        }
+
+        if (showColorPicker) {
+            ColorPickerWrapper(
+                onColorSelected = { color ->
+                    viewModel.updateSettings { it.copy(backgroundColor = color) }
+                },
+                onDismiss = {
+                    showColorPicker = false
+                },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsTopAppBar(onBack: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(id = R.string.settings_widget_title)) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(id = R.string.navigate_up_content_desc),
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun HandleSaveResultEffect(
+    saveResult: SaveResult?,
+    snackbarHostState: SnackbarHostState,
+    viewModel: WidgetSettingsViewModel,
+) {
+    val resources = LocalResources.current
     val partialSuccessMessage = stringResource(id = R.string.settings_save_partial_success)
     val failedMessage = stringResource(id = R.string.settings_save_failed)
     val partialFailureGeneralMessage = stringResource(id = R.string.settings_save_partial_failure)
@@ -180,38 +226,6 @@ private fun WidgetSettingsContent(
             } finally {
                 viewModel.consumeSaveResult()
             }
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            @OptIn(ExperimentalMaterial3Api::class)
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.settings_widget_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(id = R.string.navigate_up_content_desc),
-                        )
-                    }
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        bottomBar = {
-            BottomPreviewBar(
-                uiState = screenUiState,
-            )
-        },
-    ) { paddingValues ->
-        WidgetSettingsList(
-            modifier = Modifier.padding(paddingValues),
-            state = settings,
-            uiState = screenUiState,
-            viewModel = viewModel,
-        ) {
-            showColorPicker = true
         }
     }
 }

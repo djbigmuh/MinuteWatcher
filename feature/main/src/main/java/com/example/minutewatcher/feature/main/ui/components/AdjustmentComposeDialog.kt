@@ -1,6 +1,3 @@
-// File contains state class AdjustmentInputState alongside composables; class name intentionally differs from filename.
-@file:Suppress("MatchingDeclarationName")
-
 package com.example.minutewatcher.feature.main.ui.components
 
 import androidx.compose.foundation.layout.Column
@@ -12,85 +9,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import com.example.minutewatcher.core.common.util.FormatUtils
-import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
 import java.util.Locale
-
-@Stable
-internal class AdjustmentInputState(
-    initialText: String,
-) {
-    var text by
-        mutableStateOf(
-            TextFieldValue(
-                text = initialText,
-                selection =
-                    if (NumberInputNormalizer.isZeroValue(initialText)) {
-                        TextRange(0, initialText.length)
-                    } else {
-                        TextRange.Zero
-                    },
-            ),
-        )
-    var errorText by mutableStateOf<String?>(null)
-    var selectAllPending = false
-
-    fun selectAll() {
-        text = text.copy(selection = TextRange(0, text.text.length))
-    }
-
-    fun onFocusChanged(isFocused: Boolean) {
-        if (isFocused) {
-            selectAllPending = true
-            selectAll()
-        } else {
-            selectAllPending = false
-        }
-    }
-
-    fun onTextChange(
-        newValue: TextFieldValue,
-        locale: Locale,
-    ) {
-        if (selectAllPending) {
-            selectAllPending = false
-            if (newValue.text == text.text) {
-                selectAll()
-                return
-            }
-        }
-
-        val processed = newValue
-        val normalized = NumberInputNormalizer.normalize(processed.text, locale)
-
-        val selection =
-            if (normalized == processed.text) {
-                TextRange(
-                    processed.selection.min.coerceIn(0, normalized.length),
-                    processed.selection.max.coerceIn(0, normalized.length),
-                )
-            } else {
-                TextRange(normalized.length)
-            }
-
-        text = processed.copy(text = normalized, selection = selection)
-        errorText = null
-    }
-}
 
 @Composable
 fun AdjustmentComposeDialog(
@@ -111,7 +40,7 @@ fun AdjustmentComposeDialog(
             }
         }
 
-    val state = remember(initialText) { AdjustmentInputState(initialText) }
+    val state = rememberSaveable(initialText, saver = AdjustmentInputState.Saver) { AdjustmentInputState(initialText) }
 
     val maxLimit = if (isMinutes) Constants.MAX_MINUTES_LIMIT.toFloat() else Constants.MAX_TRAFFIC_LIMIT_GB
 

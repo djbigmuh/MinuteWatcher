@@ -21,6 +21,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
@@ -63,19 +65,15 @@ class WidgetSettingsViewModelRaceTest {
             val canCompleteSave = CompletableDeferred<Unit>()
             val capturedStates = mutableListOf<WidgetSettingsState>()
 
-            val controlledSaver =
-                object : WidgetSettingsSaver(loader, mock()) {
-                    override suspend fun save(
-                        state: WidgetSettingsState,
-                        skipSimSettings: Boolean,
-                    ): SaveResult {
-                        capturedStates.add(state)
-                        saveStarted.complete(Unit)
-                        withTimeoutOrNull(30.seconds) { canCompleteSave.await() }
-                            ?: throw AssertionError("Timed out waiting for canCompleteSave in controlledSaver")
-                        return SaveResult.Success
-                    }
-                }
+            val controlledSaver = mock<WidgetSettingsSaver>()
+            whenever(controlledSaver.save(any(), any())).doSuspendableAnswer { invocation ->
+                val state = invocation.getArgument<WidgetSettingsState>(0)
+                capturedStates.add(state)
+                saveStarted.complete(Unit)
+                withTimeoutOrNull(30.seconds) { canCompleteSave.await() }
+                    ?: throw AssertionError("Timed out waiting for canCompleteSave in controlledSaver")
+                SaveResult.Success
+            }
 
             val vm =
                 WidgetSettingsViewModel(

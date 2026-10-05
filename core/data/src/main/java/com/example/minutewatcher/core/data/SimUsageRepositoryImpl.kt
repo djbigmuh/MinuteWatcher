@@ -144,22 +144,6 @@ class SimUsageRepositoryImpl
         }
 
         /**
-         * Resets SIM usage stats with rollover support.
-         *
-         * Guaranteed to be atomic via [resetMutex].
-         * Safe to call from any coroutine context.
-         * @throws java.io.IOException if write fails.
-         * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
-         */
-        override suspend fun resetSimUsage(identity: String) {
-            resetMutex.withLock {
-                dataStore.edit { prefs ->
-                    resetLogic.applyResetWithRollover(prefs, identity, timeProvider.now())
-                }
-            }
-        }
-
-        /**
          * Manually resets SIM usage stats to zero without rollover, zeroing manual adjustments as well.
          * See [SimUsage.manualAdjustment].
          *

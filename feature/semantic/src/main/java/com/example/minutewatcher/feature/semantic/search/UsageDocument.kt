@@ -77,8 +77,6 @@ class UsageDocument {
     @StringProperty
     var status: String = ""
 
-    // @Suppress("unused") is required for AppSearch reflection-based instantiation.
-
     /**
      * Required no-arg constructor for AppSearch.
      *
@@ -91,7 +89,6 @@ class UsageDocument {
      * **Custom ROM deviation:** if custom firmware does not provide
      * correct reflection for AppSearch — this is a custom firmware issue.
      */
-    @Suppress("unused")
     constructor()
 
     // UsageDocument is a DTO for AppSearch, flat schema requires all fields in one class.
