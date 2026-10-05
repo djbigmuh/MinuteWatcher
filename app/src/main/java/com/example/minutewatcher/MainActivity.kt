@@ -22,9 +22,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.controller.MainPermissionController
-import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.PermissionManager
-import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.Constants.IntentExtras
 import com.example.minutewatcher.feature.main.MainViewModel
@@ -33,9 +31,6 @@ import com.example.minutewatcher.feature.main.SimCardScreenActions
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -44,12 +39,7 @@ class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var permissionManager: PermissionManager
 
-    @Inject @IoDispatcher
-    lateinit var ioDispatcher: CoroutineDispatcher
-
     @Inject lateinit var permissionStateNotifier: PermissionStateNotifier
-
-    @Inject lateinit var workScheduler: WorkScheduler
 
     @Inject
     lateinit var permissionController: MainPermissionController
