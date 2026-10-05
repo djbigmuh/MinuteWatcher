@@ -44,7 +44,7 @@ class WidgetSettingsSaverResilienceTest {
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
-            val saver = WidgetSettingsSaver(controlledLoader, mock())
+            val saver = WidgetSettingsSaver(controlledLoader, mock(), backgroundScope)
 
             // 1. Start first save
             val firstSave =

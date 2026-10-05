@@ -49,7 +49,7 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
 
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
-            val realSaver = WidgetSettingsSaver(blockingLoader, mock())
+            val realSaver = WidgetSettingsSaver(blockingLoader, mock(), backgroundScope)
             whenever(loader.load()).thenReturn(WidgetSettingsState())
             val vm =
                 WidgetSettingsViewModel(loader, realSaver, appSettingsRepository, backgroundScope, usageStateRepository)

@@ -1,15 +1,16 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,6 +22,7 @@ class WidgetSettingsSaver
     constructor(
         private val loader: WidgetSettingsLoader,
         private val dataChangeNotifier: DataChangeNotifier,
+        @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val saveMutex = Mutex()
 
@@ -64,7 +66,7 @@ class WidgetSettingsSaver
                 saveGeneralSettings(validatedState)
                 val simResult = trySaveSimSettings(validatedState, skipSimSettings)
 
-                withContext(NonCancellable) {
+                scope.launch {
                     notifyDataChanged()
                 }
                 simResult
@@ -103,8 +105,6 @@ class WidgetSettingsSaver
                 } ?: run {
                     AppLogger.w("WidgetSettingsSaver: widget notification timed out, skipping")
                 }
-            } catch (e: CancellationException) {
-                AppLogger.w("WidgetSettingsSaver: widget notification cancelled, skipping", e)
             } catch (e: Exception) {
                 AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
             }
