@@ -21,12 +21,19 @@ object FormatUtils {
         gb: Float,
     ): String = "%.1f".format(locale, gb)
 
+    /**
+     * Formats MB amount as GB with unit (e.g., "1.5 GB" for US locale).
+     *
+     * @param context Context for string resources and locale configuration.
+     * @param mb MB amount.
+     * @return Formatted string with GB unit separated by a space.
+     */
     fun formatMbAsGb(
         context: Context,
         mb: Float,
     ): String {
         val locale = getLocale(context)
-        return "${formatTrafficGb(locale, mb / Constants.MB_PER_GB)}${context.getString(R.string.gb_abbr)}"
+        return "${formatTrafficGb(locale, mb / Constants.MB_PER_GB)} ${context.getString(R.string.gb_abbr)}"
     }
 
     fun formatTrafficDisplay(

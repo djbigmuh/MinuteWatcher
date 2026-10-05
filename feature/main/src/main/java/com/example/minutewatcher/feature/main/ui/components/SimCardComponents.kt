@@ -37,7 +37,7 @@ internal fun AdjustmentLabel(
     isPositive: Boolean,
 ) {
     Text(
-        text = "${stringResource(R.string.adjustment_mark)}: ${if (isPositive) "+" else ""}$value$unit",
+        text = "${stringResource(R.string.adjustment_mark)}: ${if (isPositive) "+" else ""}$value $unit",
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 4.dp, start = 4.dp),

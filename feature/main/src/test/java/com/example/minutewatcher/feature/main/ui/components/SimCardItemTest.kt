@@ -75,6 +75,23 @@ class SimCardItemTest {
         composeTestRule.onNodeWithText("+30", substring = true).assertIsDisplayed()
     }
 
+    @Test
+    fun `adjustment labels separate value and unit with space`() {
+        val model =
+            createMockSimCard(
+                manualAdjustment = 30,
+                trafficAdjustmentGb = 0.5f,
+                isTrafficLimitSet = true,
+            )
+
+        composeTestRule.setContent {
+            SimCardItem(model = model)
+        }
+
+        composeTestRule.onNodeWithText("+30 min.", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("+0.5 GB", substring = true).assertIsDisplayed()
+    }
+
     private fun createMockSimCard(
         trafficLimitMb: Int = 0,
         trafficAdjustmentGb: Float = 0f,

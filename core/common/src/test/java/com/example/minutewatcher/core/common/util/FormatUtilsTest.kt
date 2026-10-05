@@ -62,4 +62,36 @@ class FormatUtilsTest {
         val result = FormatUtils.formatMinutesDisplay(context, 100, 500, 0, true)
         assertEquals("Remaining: 100 / 500 min.", result)
     }
+
+    @Test
+    fun `formatMbAsGb separates value and unit with space for US locale`() {
+        val context = mock<Context>()
+        val resources = mock<Resources>()
+        val config = mock<Configuration>()
+        val localeList = LocaleList(Locale.US)
+
+        whenever(context.resources).thenReturn(resources)
+        whenever(resources.configuration).thenReturn(config)
+        whenever(config.locales).thenReturn(localeList)
+        whenever(context.getString(R.string.gb_abbr)).thenReturn("GB")
+
+        val result = FormatUtils.formatMbAsGb(context, 1536f)
+        assertEquals("1.5 GB", result)
+    }
+
+    @Test
+    fun `formatMbAsGb separates value and unit with space for Germany locale`() {
+        val context = mock<Context>()
+        val resources = mock<Resources>()
+        val config = mock<Configuration>()
+        val localeList = LocaleList(Locale.GERMANY)
+
+        whenever(context.resources).thenReturn(resources)
+        whenever(resources.configuration).thenReturn(config)
+        whenever(config.locales).thenReturn(localeList)
+        whenever(context.getString(R.string.gb_abbr)).thenReturn("GB")
+
+        val result = FormatUtils.formatMbAsGb(context, 1536f)
+        assertEquals("1,5 GB", result)
+    }
 }
