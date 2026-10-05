@@ -25,6 +25,7 @@ class MainResumeController
         private val timeProvider: TimeProvider,
         private val savedStateHandle: SavedStateHandle,
     ) {
+        private var resumeOuterJob: Job? = null
         private var resumeRefreshJob: Job? = null
 
         /**
@@ -54,48 +55,56 @@ class MainResumeController
             }
             savedStateHandle[KEY_LAST_RESUME_TIMESTAMP] = now
 
-            scope.launch {
-                resumeRefreshJob?.cancelAndJoin()
-                resumeRefreshJob =
-                    launch {
-                        if (initController.initializationState.value is InitializationState.Failed) {
-                            val lastRefreshElapsedBefore =
-                                savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
-                            AppLogger.d("onActivityResume: initialization failed previously, retrying...")
-                            initController.initializeApp(scope, lastRefreshElapsedBefore, onUpdateLastRefreshAt)
-                        }
+            val previousOuter = resumeOuterJob
+            resumeOuterJob =
+                scope.launch {
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        previousOuter?.cancelAndJoin()
+                    }
+                    resumeRefreshJob?.cancelAndJoin()
+                    resumeRefreshJob =
+                        launch {
+                            if (initController.initializationState.value is InitializationState.Failed) {
+                                val lastRefreshElapsedBefore =
+                                    savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
+                                AppLogger.d("onActivityResume: initialization failed previously, retrying...")
+                                initController.initializeApp(scope, lastRefreshElapsedBefore, onUpdateLastRefreshAt)
+                            }
 
-                        // If initialization is still in progress (including one just launched from Failed),
-                        // wait for its completion with LONG_TIMEOUT_MS.
-                        val state =
-                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                initController.initializationState.first {
-                                    it is InitializationState.Completed ||
-                                        it is InitializationState.Failed
+                            // If initialization is still in progress (including one just launched from Failed),
+                            // wait for its completion with LONG_TIMEOUT_MS.
+                            val state =
+                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                    initController.initializationState.first {
+                                        it is InitializationState.Completed ||
+                                            it is InitializationState.Failed
+                                    }
+                                }
+
+                            if (state !is InitializationState.Completed) {
+                                AppLogger.w(
+                                    "onActivityResume: initialization not complete after wait, skipping refresh",
+                                )
+                                return@launch
+                            }
+
+                            // Read refresh time and current time AFTER initialization is confirmed complete
+                            val lastRefreshElapsed =
+                                savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
+                            val currentTime = timeProvider.elapsedRealtime()
+
+                            val isStale =
+                                (lastRefreshElapsed == 0L) ||
+                                    (lastRefreshElapsed > currentTime) ||
+                                    (currentTime - lastRefreshElapsed > RESUME_REFRESH_THRESHOLD_MS)
+
+                            if (isStale) {
+                                if (onRefreshNeeded()) {
+                                    onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
                                 }
                             }
-
-                        if (state !is InitializationState.Completed) {
-                            AppLogger.w("onActivityResume: initialization not complete after wait, skipping refresh")
-                            return@launch
                         }
-
-                        // Read refresh time and current time AFTER initialization is confirmed complete
-                        val lastRefreshElapsed = savedStateHandle.get<Long>(MainViewModel.KEY_LAST_REFRESH_TIME) ?: 0L
-                        val currentTime = timeProvider.elapsedRealtime()
-
-                        val isStale =
-                            (lastRefreshElapsed == 0L) ||
-                                (lastRefreshElapsed > currentTime) ||
-                                (currentTime - lastRefreshElapsed > RESUME_REFRESH_THRESHOLD_MS)
-
-                        if (isStale) {
-                            if (onRefreshNeeded()) {
-                                onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
-                            }
-                        }
-                    }
-            }
+                }
         }
 
         companion object {

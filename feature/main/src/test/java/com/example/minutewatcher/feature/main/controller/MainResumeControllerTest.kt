@@ -264,4 +264,40 @@ class MainResumeControllerTest {
             assertTrue("Should allow execution after debounce expires", refreshCalled)
             assertEquals("Should update timestamp", now, savedStateHandle.get<Long>("last_resume_timestamp"))
         }
+
+    @Test
+    fun `concurrent onActivityResume calls cancel previous outer job and refresh count does not exceed one`() =
+        runTest {
+            val now = 100000L
+            whenever(timeProvider.elapsedRealtime()).thenReturn(now)
+            initializationState.value = InitializationState.Completed
+            savedStateHandle[MainViewModel.KEY_LAST_REFRESH_TIME] = 0L
+
+            var refreshCount = 0
+            val block: suspend () -> Boolean = {
+                refreshCount++
+                true
+            }
+
+            controller.onActivityResume(
+                scope = backgroundScope,
+                initController = initController,
+                onRefreshNeeded = block,
+                onUpdateLastRefreshAt = {},
+            )
+
+            // Clear timestamp to bypass debounce on second call
+            savedStateHandle["last_resume_timestamp"] = -1L
+
+            controller.onActivityResume(
+                scope = backgroundScope,
+                initController = initController,
+                onRefreshNeeded = block,
+                onUpdateLastRefreshAt = {},
+            )
+
+            runCurrent()
+
+            assertEquals("Refresh count should not exceed one", 1, refreshCount)
+        }
 }
