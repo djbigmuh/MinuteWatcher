@@ -48,6 +48,7 @@ object Constants {
      * DEBOUNCE_MS — debounce delay for reactive widget updates (ms).
      *   Prevents multiple updates during rapid data changes.
      * SIM_ARRANGEMENT_HORIZONTAL — horizontal SIM arrangement constant.
+     * SIM_ARRANGEMENT_VERTICAL — vertical SIM arrangement constant.
      * TRANSPARENCY_SYSTEM_COLORS_THRESHOLD — transparency threshold (0-100),
      *   above which system colors are used.
      *   Chosen as a balance between legibility and aesthetics.
@@ -71,6 +72,7 @@ object Constants {
         const val FONT_SIZE_MEDIUM = 14f
         const val DEBOUNCE_MS = 300L
         const val SIM_ARRANGEMENT_HORIZONTAL = 0
+        const val SIM_ARRANGEMENT_VERTICAL = 1
         const val TRANSPARENCY_SYSTEM_COLORS_THRESHOLD = 80
         const val PREEMPTIVE_LAYOUT_LIMIT_SIMS = 3
         const val MIN_SIMS_FOR_SEPARATOR = 2
@@ -100,8 +102,8 @@ object Constants {
         /** Upper bound for effective render layout modes (0..4), including internal fallback SIMPLE (4). */
         const val MAX_LAYOUT_MODE = 4
         const val DEFAULT_LAYOUT_MODE = 2
-        const val MIN_SIM_ARRANGEMENT = 0
-        const val MAX_SIM_ARRANGEMENT = 1
+        const val MIN_SIM_ARRANGEMENT = SIM_ARRANGEMENT_HORIZONTAL
+        const val MAX_SIM_ARRANGEMENT = SIM_ARRANGEMENT_VERTICAL
         const val MIN_TRANSPARENCY = 0
         const val MAX_TRANSPARENCY = 100
         const val DEFAULT_TRANSPARENCY = 50

@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.resources.R
 import kotlin.math.roundToInt
@@ -97,7 +98,12 @@ private fun SimArrangementSetting(
     val arrangements = stringArrayResource(id = R.array.sim_arrangements)
     OutlinedButton(
         onClick = {
-            val next = if (state.simArrangement == 0) 1 else 0
+            val next =
+                if (state.simArrangement == Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL) {
+                    Constants.Widget.SIM_ARRANGEMENT_VERTICAL
+                } else {
+                    Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL
+                }
             onUpdateSimArrangement(next)
         },
         modifier = Modifier.fillMaxWidth(),
