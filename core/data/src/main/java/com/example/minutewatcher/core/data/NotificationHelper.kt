@@ -83,7 +83,17 @@ class NotificationHelper
             }
 
             try {
-                if (!permissionManager.hasNotificationPermission() || !areNotificationsEnabledSafe()) {
+                val hasPermission = permissionManager.hasNotificationPermission()
+                val areEnabled = if (hasPermission) areNotificationsEnabledSafe() else false
+
+                if (!hasPermission || !areEnabled) {
+                    val reason =
+                        if (!hasPermission) {
+                            "notification permission not granted"
+                        } else {
+                            "notifications disabled for app"
+                        }
+                    AppLogger.d("Notification skipped: $reason")
                     return
                 }
 
