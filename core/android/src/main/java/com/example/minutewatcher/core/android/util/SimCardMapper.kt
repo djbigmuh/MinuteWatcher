@@ -28,8 +28,6 @@ object SimCardMapper {
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal val negativeLogged = ConcurrentHashMap<Int, String>()
 
-    private const val MAX_LOGGED_SIZE = Constants.SimConstants.MAX_SUPPORTED_SIM_SLOTS
-
     /**
      * Clears cache entries for slots that are no longer active.
      *
@@ -124,13 +122,11 @@ object SimCardMapper {
         var shouldLog = false
         negativeLogged.compute(slot) { _, currentIdentity ->
             if (hasNegativeValues) {
-                if (currentIdentity == usage.identity) {
-                    currentIdentity
-                } else if (currentIdentity != null || negativeLogged.size < MAX_LOGGED_SIZE) {
+                if (currentIdentity != usage.identity) {
                     shouldLog = true
                     usage.identity
                 } else {
-                    null
+                    currentIdentity
                 }
             } else {
                 null
