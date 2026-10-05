@@ -83,10 +83,6 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
         // If the key is missing, subId defaults to -1, which is handled downstream by standard attribution.
         val subId = intent.getIntExtra(EXTRA_SUBSCRIPTION, -1)
 
-        if (subId == -1) {
-            AppLogger.w("UsageMonitorReceiver: subId not found in intent extras")
-        }
-
         val data =
             Data
                 .Builder()
