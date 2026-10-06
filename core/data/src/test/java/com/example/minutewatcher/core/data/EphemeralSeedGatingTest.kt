@@ -198,6 +198,6 @@ class EphemeralSeedGatingTest {
                 dataChangeNotifier,
                 timeProvider,
             )
-        return TrafficTracker(deps, scope)
+        return TrafficTracker(deps, scope).apply { ensureStarted() }
     }
 }

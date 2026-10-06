@@ -255,7 +255,7 @@ class TrafficTrackerRegressionTest {
                 dataChangeNotifier = dataChangeNotifier,
                 timeProvider = timeProvider,
             )
-        return TrafficTracker(deps, scope)
+        return TrafficTracker(deps, scope).apply { ensureStarted() }
     }
 
     private fun createSimUsage(identity: String) =

@@ -151,7 +151,7 @@ class TrafficInitialBaselineTest {
                 mock(),
                 timeProvider,
             )
-        return TrafficTracker(deps, appScope)
+        return TrafficTracker(deps, appScope).apply { ensureStarted() }
     }
 
     @Test

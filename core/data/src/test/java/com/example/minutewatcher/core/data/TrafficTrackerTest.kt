@@ -38,6 +38,8 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -50,6 +52,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
@@ -823,8 +826,73 @@ class TrafficTrackerTest {
                 dataChangeNotifier = dataChangeNotifier,
                 timeProvider = timeProvider,
             )
-        return TrafficTracker(deps, scope)
+        return TrafficTracker(deps, scope).apply { ensureStarted() }
     }
+
+    @Test
+    fun `construction has no side effects and ensureStarted is idempotent`() =
+        runTest {
+            val localPermissionNotifier: PermissionStateNotifier = mock()
+            whenever(localPermissionNotifier.changes).thenReturn(flow { })
+            val localSimRepository: SimIdentityRepository = mock()
+            whenever(localSimRepository.observeActiveSims()).thenReturn(flow { })
+            val localPermissionManager: PermissionManager = mock()
+            whenever(localPermissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(localPermissionManager.hasUsageStatsPermission()).thenReturn(true)
+
+            val localChecker: TrafficPermissionChecker = mock()
+            whenever(localChecker.checkPermissions(any())).thenReturn(true)
+
+            val localTargetResolver: TrafficTargetResolver = mock()
+            whenever(localTargetResolver.resolve(any())).thenReturn(TrafficTargetResolver.TargetResult.NoActiveSims)
+
+            val localSimChangeHandler = TrafficSimChangeHandler(mock(), mock(), mock())
+
+            val deps =
+                createTrafficTrackerDependencies(
+                    simIdentityRepository = localSimRepository,
+                    simUsageRepository = mock(),
+                    simUsageResetRepository = mock(),
+                    permissionManager = localPermissionManager,
+                    baselineManager = mock(),
+                    deltaCalculator = mock(),
+                    simChangeHandler = localSimChangeHandler,
+                    targetResolver = localTargetResolver,
+                    permissionChecker = localChecker,
+                    permissionStateNotifier = localPermissionNotifier,
+                    dataChangeNotifier = mock(),
+                    timeProvider = FixedTimeProvider(),
+                )
+
+            val tracker = TrafficTracker(deps, backgroundScope)
+
+            // 1. Before ensureStarted(): no interaction with dependencies, initJob is null
+            assertNull("initJob should be null before ensureStarted", tracker.initJob.get())
+            verifyNoInteractions(localSimRepository)
+            verifyNoInteractions(localPermissionNotifier)
+
+            // 2. Call ensureStarted()
+            tracker.ensureStarted()
+            runCurrent()
+
+            assertNotNull("initJob should be set after ensureStarted", tracker.initJob.get())
+            @Suppress("UNUSED_EXPRESSION")
+            verify(localPermissionNotifier, times(1)).changes
+
+            // 3. Call ensureStarted() multiple times
+            val initialJob = tracker.initJob.get()
+            tracker.ensureStarted()
+            tracker.ensureStarted()
+            runCurrent()
+
+            assertEquals(
+                "initJob should not change on repeated ensureStarted calls",
+                initialJob,
+                tracker.initJob.get(),
+            )
+            @Suppress("UNUSED_EXPRESSION")
+            verify(localPermissionNotifier, times(1)).changes
+        }
 
     private fun createSimUsage(
         identity: String,

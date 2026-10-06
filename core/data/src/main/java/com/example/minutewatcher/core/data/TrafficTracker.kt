@@ -49,8 +49,8 @@ internal class TrafficUpdateTimeoutException(
  * Single-flight initialization is enforced via an atomic flag, ensuring cleanup upon cancellation
  * is completely non-blocking.
  *
- * **Lifecycle:** Initialization starts immediately upon construction in the `init` block.
- * Eager injection in the Application class ensures tracking is active early in the process lifecycle.
+ * **Lifecycle:** Construction of [TrafficTracker] has no side effects. Explicit initialization and recovery
+ * observers are started via [ensureStarted], which should be called from [android.app.Application.onCreate].
  *
  * NOTE: Suppressing TooManyFunctions as this class is the central orchestrator for traffic tracking,
  * delegating to specialized components while maintaining the primary tracking lifecycle.
@@ -96,6 +96,7 @@ class TrafficTracker
         private val updateMutex = Mutex()
         private val initializationFailed = AtomicBoolean(false)
         private val isInitializing = AtomicBoolean(false)
+        private val isObserversStarted = AtomicBoolean(false)
         private val bothPermissionsGranted = AtomicBoolean(false)
 
         @VisibleForTesting
@@ -111,7 +112,13 @@ class TrafficTracker
             isInitializing.set(false)
         }
 
-        init {
+        /**
+         * Explicitly starts the traffic tracking initialization and automatic recovery observers.
+         *
+         * This method is idempotent and thread-safe. Subsequent calls are no-ops.
+         * Should be called from Application.onCreate after dependencies are ready.
+         */
+        fun ensureStarted() {
             if (tryClaimInitialization()) {
                 scope.launch {
                     try {
@@ -121,7 +128,9 @@ class TrafficTracker
                     }
                 }
             }
-            startAutomaticRecoveryObservers()
+            if (isObserversStarted.compareAndSet(false, true)) {
+                startAutomaticRecoveryObservers()
+            }
         }
 
         @VisibleForTesting

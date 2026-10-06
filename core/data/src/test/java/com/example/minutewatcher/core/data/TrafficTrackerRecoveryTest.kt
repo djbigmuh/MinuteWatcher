@@ -66,7 +66,7 @@ class TrafficTrackerRecoveryTest {
                 dataChangeNotifier = mock(),
                 timeProvider = FixedTimeProvider(),
             )
-        return TrafficTracker(deps, scope.backgroundScope)
+        return TrafficTracker(deps, scope.backgroundScope).apply { ensureStarted() }
     }
 
     @Test

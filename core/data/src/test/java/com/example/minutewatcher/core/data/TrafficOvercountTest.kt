@@ -160,7 +160,7 @@ class TrafficOvercountTest {
                 dataChangeNotifier,
                 timeProvider,
             )
-        return TrafficTracker(deps, appScope)
+        return TrafficTracker(deps, appScope).apply { ensureStarted() }
     }
 
     private fun TestScope.startTracker(): TrafficTracker {

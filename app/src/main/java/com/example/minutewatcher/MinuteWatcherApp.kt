@@ -25,8 +25,7 @@ class MinuteWatcherApp :
     lateinit var callTracker: CallTracker
 
     /**
-     * Injected to eagerly start traffic tracking. Construction of [TrafficTracker]
-     * triggers its initialization logic in the init block.
+     * Injected to eagerly start traffic tracking in [onCreate].
      */
     @Inject
     lateinit var trafficTracker: TrafficTracker
@@ -39,6 +38,7 @@ class MinuteWatcherApp :
 
         // Eagerly start trackers to ensure they are ready for events and UI observation.
         callTracker.ensureStarted()
+        trafficTracker.ensureStarted()
 
         SemanticInitScheduler.schedule(WorkManager.getInstance(this))
 

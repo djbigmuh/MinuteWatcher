@@ -95,7 +95,7 @@ class TrafficTrackerCancellationTest {
                 timeProvider,
             )
 
-        trafficTracker = TrafficTracker(deps, backgroundScope)
+        trafficTracker = TrafficTracker(deps, backgroundScope).apply { ensureStarted() }
 
         testDispatcher.scheduler.advanceUntilIdle()
         runCurrent()

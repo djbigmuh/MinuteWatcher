@@ -41,4 +41,7 @@ internal fun createTrafficTrackerDependencies(
 internal fun createTrafficTracker(
     deps: TrafficTrackerDependencies,
     scope: CoroutineScope,
-): TrafficTracker = TrafficTracker(deps = deps, scope = scope)
+): TrafficTracker =
+    TrafficTracker(deps = deps, scope = scope).apply {
+        ensureStarted()
+    }
