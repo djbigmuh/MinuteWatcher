@@ -7,6 +7,7 @@ MinuteWatcher is an Android application designed to track your mobile carrier's 
 - **Multi-SIM Support**: Architecture supports up to 10 slots (used in benchmark mode). Real-world devices with up to 3 SIMs are supported with independent limits and optimized widget layouts.
 - **Customizable Widgets**: Multiple layout modes (including high-detail "Six Lines") with adjustable transparency, colors, and font sizes.
 - **Smart Tracking**: Automatically tracks voice calls and mobile data usage using system APIs.
+- **Always-on Display Summary**: optional persistent silent notification with remaining minutes and traffic; visible on the lock screen and on the Always-on Display of devices that show notifications there.
 - **Manual Adjustments**: Easily correct usage values if they drift from your carrier's actual data.
 - **Privacy First**: All data is stored locally. No third-party tracking or cloud uploads.
 - **Multi-language Support**: Supports 8+ languages, including RTL (Arabic) and CJK (Japanese, Chinese).
@@ -35,12 +36,19 @@ service (e.g., LineageOS or CalyxOS without Google Services).
 - An error banner is **not** displayed for `NOT_SUPPORTED` errors to ensure a clean UX on these devices.
 - For other recoverable issues (like database schema drift), the app attempts automatic recovery with limited retry attempts.
 
+### Always-on Display
+Android does not provide a public API to render custom application UI on a phone's ambient display (Always-on Display); documented ambient mode APIs exist only for Wear OS.
+- MinuteWatcher implements this feature using a documented ongoing silent notification with `IMPORTANCE_MIN`.
+- The visibility and layout of the summary on the Always-on Display depend on the device manufacturer and system settings (some devices show full notification content on AOD, while others show only an icon). This behavior is controlled by the system and OEM firmware.
+- MinuteWatcher does not use undocumented APIs or private system settings (`Settings.Secure`).
+- The summary displays lines only for SIM packages with configured limits. The feature is controlled via a toggle in the Notification Settings section.
+
 ## Permissions
 
 To provide accurate tracking, MinuteWatcher requires the following permissions:
 - **`READ_PHONE_STATE`**: Used to identify SIM cards (via Subscription ID) and detect active call states.
 - **`PACKAGE_USAGE_STATS`** (Usage Access): Required to query the system for mobile data consumption.
-- **`POST_NOTIFICATIONS`**: Used to send low-balance alerts for minutes and traffic.
+- **`POST_NOTIFICATIONS`**: Used to send low-balance alerts for minutes and traffic, as well as an optional persistent summary notification for the lock screen and Always-on Display.
 - **`RECEIVE_BOOT_COMPLETED`**: Allows the app to resume monitoring services automatically after a device reboot.
 
 ## Privacy & Security

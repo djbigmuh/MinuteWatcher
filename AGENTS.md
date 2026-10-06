@@ -7,6 +7,13 @@ This project is assisted by AI Agents.
 Semantic search indexing uses bundled LocalStorage. In case of runtime indexing failures on a device, the status is set
 to `NOT_SUPPORTED`. An error banner is not displayed for errors of type `NOT_SUPPORTED`.
 
+## Always-on Display Note
+
+The Always-on Display summary feature is implemented solely as a persistent silent ongoing notification via documented system APIs (`NotificationManager`, channel with `IMPORTANCE_MIN`).
+- Prohibited for this feature: reading undocumented settings (including `Settings.Secure`), using OEM-specific APIs, using `Notification.ProgressStyle`/Live Updates.
+- Ambient display rendering is determined entirely by the device OS and OEM firmware; firmware deviations from Google documentation are not considered app defects.
+- Availability checks rely exclusively on: `POST_NOTIFICATIONS` permission, `NotificationManagerCompat.areNotificationsEnabled()`, and the summary notification channel importance.
+
 ## Testing Strategy
 
 The project follows a comprehensive testing strategy documented in [docs/testing.md](docs/testing.md).
