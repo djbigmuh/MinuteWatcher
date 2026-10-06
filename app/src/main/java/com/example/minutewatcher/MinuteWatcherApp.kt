@@ -6,6 +6,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.data.AodSummaryController
 import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.service.worker.SemanticInitScheduler
@@ -30,6 +31,13 @@ class MinuteWatcherApp :
     @Inject
     lateinit var trafficTracker: TrafficTracker
 
+    /**
+     * Injected to explicitly start AOD summary notification controller observation in [onCreate].
+     * Constructor has no side effects.
+     */
+    @Inject
+    lateinit var aodSummaryController: AodSummaryController
+
     override fun onCreate() {
         super.onCreate()
         AppLogger.init(this)
@@ -41,6 +49,7 @@ class MinuteWatcherApp :
         trafficTracker.ensureStarted()
 
         SemanticInitScheduler.schedule(WorkManager.getInstance(this))
+        aodSummaryController.start()
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
