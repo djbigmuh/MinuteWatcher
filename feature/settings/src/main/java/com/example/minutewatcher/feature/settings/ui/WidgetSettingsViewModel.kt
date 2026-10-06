@@ -355,6 +355,22 @@ class WidgetSettingsViewModel
             }
         }
 
+        @VisibleForTesting
+        internal suspend fun performEmergencySave(currentSettings: WidgetSettingsState) {
+            try {
+                withTimeoutOrNull(FLUSH_TIMEOUT) {
+                    saveMutex.withLock {
+                        AppLogger.d("WidgetSettingsViewModel: Emergency flush in onCleared")
+                        executeSave(currentSettings)
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("WidgetSettingsViewModel: Emergency save failed", e)
+            }
+        }
+
         override fun onCleared() {
             autoSaveJob?.cancel()
 
@@ -365,14 +381,11 @@ class WidgetSettingsViewModel
             if (currentSettings != null && baseline != null && currentSettings != baseline) {
                 appScope.launch {
                     try {
-                        withTimeoutOrNull(FLUSH_TIMEOUT) {
-                            saveMutex.withLock {
-                                AppLogger.d("WidgetSettingsViewModel: Emergency flush in onCleared")
-                                executeSave(currentSettings)
-                            }
-                        }
+                        performEmergencySave(currentSettings)
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
-                        AppLogger.e("WidgetSettingsViewModel: Emergency save failed", e)
+                        AppLogger.e("WidgetSettingsViewModel: Emergency save background coroutine failed", e)
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.DataChangeNotifier
@@ -67,7 +68,13 @@ class WidgetSettingsSaver
                 val simResult = trySaveSimSettings(validatedState, skipSimSettings)
 
                 scope.launch {
-                    notifyDataChanged()
+                    try {
+                        notifyDataChanged()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.w("WidgetSettingsSaver: background notification failed", e)
+                    }
                 }
                 simResult
             } catch (e: CancellationException) {
@@ -98,13 +105,16 @@ class WidgetSettingsSaver
                 SaveResult.PartialFailure(emptyList())
             }
 
-        private suspend fun notifyDataChanged() {
+        @VisibleForTesting
+        internal suspend fun notifyDataChanged() {
             try {
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
                 } ?: run {
                     AppLogger.w("WidgetSettingsSaver: widget notification timed out, skipping")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
             }

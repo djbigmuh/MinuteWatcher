@@ -152,4 +152,19 @@ class WidgetSettingsSaverTest {
 
             verify(dataChangeNotifier, times(1)).notifyDataChanged(updateWidget = true, force = true)
         }
+
+    @Test
+    fun `notifyDataChanged rethrows CancellationException`() =
+        runTest {
+            val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
+            whenever(
+                dataChangeNotifier.notifyDataChanged(any(), any()),
+            ).thenThrow(kotlinx.coroutines.CancellationException("Notification cancelled"))
+
+            org.junit.Assert.assertThrows(kotlinx.coroutines.CancellationException::class.java) {
+                kotlinx.coroutines.runBlocking {
+                    saver.notifyDataChanged()
+                }
+            }
+        }
 }

@@ -204,4 +204,17 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
                 assertEquals("Cancelled", e.message)
             }
         }
+
+    @Test
+    fun `performEmergencySave rethrows CancellationException`() =
+        runTest {
+            initViewModel()
+            whenever(saver.save(any(), any())).thenThrow(CancellationException("Emergency save cancelled"))
+
+            org.junit.Assert.assertThrows(CancellationException::class.java) {
+                kotlinx.coroutines.runBlocking {
+                    viewModel.performEmergencySave(WidgetSettingsState())
+                }
+            }
+        }
 }
