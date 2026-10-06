@@ -326,7 +326,7 @@ internal class SimIdentityObserver
                 is SimDiscoveryResult.Available -> {
                     generalAttempt.set(0)
                     cancelRecovery()
-                    transitionStatus(TrackingStatus.Active)
+                    transitionStatus(TrackingStatus.Active, force = true)
                     emit(result.sims)
                 }
 

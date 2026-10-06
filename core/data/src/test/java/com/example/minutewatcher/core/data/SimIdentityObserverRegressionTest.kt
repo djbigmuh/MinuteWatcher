@@ -4,18 +4,25 @@ import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.SimDiscoveryResult
+import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityObserverRegressionTest {
@@ -89,5 +96,42 @@ class SimIdentityObserverRegressionTest {
                 "Expected SeedResult.Fallback for ephemeral seed, but got $result",
                 result is SeedResult.Fallback,
             )
+        }
+
+    @Test
+    fun `successful SIM discovery clears sticky PERMISSION_MISSING error status`() =
+        runTest(UnconfinedTestDispatcher()) {
+            whenever(seedRepository.seedFlow).thenReturn(MutableStateFlow("test_seed"))
+            whenever(seedRepository.getOrCreateSeedOrEphemeralFallback(any()))
+                .thenReturn(SeedResolutionResult.Persistent("test_seed"))
+
+            val subscriptionChanges = MutableSharedFlow<Unit>(replay = 1)
+            whenever(discovery.observeSubscriptionChanges()).thenReturn(subscriptionChanges)
+
+            whenever(fetcher.fetchActiveSimsWithRetry(any()))
+                .thenReturn(SimDiscoveryResult.PermissionMissing)
+
+            val observer = createObserver(backgroundScope)
+            val collectJob = launch { observer.activeSimsCache.collect { } }
+
+            subscriptionChanges.emit(Unit)
+            testScheduler.advanceTimeBy(1000.milliseconds)
+
+            val errorStatus = observer.status.value
+            assertTrue(
+                "Expected status to be Error PERMISSION_MISSING, but was $errorStatus",
+                errorStatus is TrackingStatus.Error &&
+                    errorStatus.type == TrackingStatus.ErrorType.PERMISSION_MISSING,
+            )
+
+            whenever(fetcher.fetchActiveSimsWithRetry(any()))
+                .thenReturn(SimDiscoveryResult.Available(emptyList()))
+
+            observer.emitManualTriggerForTest()
+            testScheduler.advanceTimeBy(1000.milliseconds)
+
+            assertEquals(TrackingStatus.Active, observer.status.value)
+
+            collectJob.cancel()
         }
 }
