@@ -152,6 +152,13 @@ object Constants {
     object Semantic {
         const val THROTTLE_MS = 30_000L
         const val SEARCH_INDEX_TIMEOUT_MS = 10_000L
+
+        /**
+         * Timeout waiting for initial loaded snapshot (ms).
+         * Bounded wait for the first snapshot with non-empty timestamp during semantic
+         * services initialization; matched to typical worker initialization budget.
+         */
+        const val INITIAL_SNAPSHOT_TIMEOUT_MS = 15_000L
     }
 
     /**

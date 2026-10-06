@@ -41,7 +41,7 @@ class SemanticInitializerWorker
 
             // Wait for the first meaningful snapshot to perform synchronous initialization.
             val initialSnapshot =
-                withTimeoutOrNull(Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(Constants.Semantic.INITIAL_SNAPSHOT_TIMEOUT_MS.milliseconds) {
                     snapshotFlow.first { it.timestamp != Constants.Data.EMPTY_TIMESTAMP }
                 }
 
