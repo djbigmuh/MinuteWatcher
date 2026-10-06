@@ -117,6 +117,8 @@
     <string name="notify_low_traffic_title">Уведомлять о малом остатке трафика</string>
     <string name="notification_channel_name">Мониторинг расхода</string>
     <string name="notification_channel_desc">Отслеживание расхода минут и трафика</string>
+    <string name="notification_channel_aod_summary_name">Сводка для Always-on Display</string>
+    <string name="notification_channel_aod_summary_desc">Постоянная бесшумная сводка остатка минут и трафика</string>
     <string name="notification_minutes_title">Расход минут %1$s</string>
     <string name="notification_minutes_body">%1$s расход минут! Осталось %2$s (%3$d%%). До конца месяца %4$s.</string>
     <string name="notification_traffic_title">Расход трафика %1$s</string>

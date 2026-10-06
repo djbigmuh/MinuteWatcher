@@ -117,6 +117,8 @@
     <string name="notify_low_traffic_title">Benachrichtigen bei niedrigem Datenvolumen</string>
     <string name="notification_channel_name">Verbrauchskontrolle</string>
     <string name="notification_channel_desc">Verfolgung von Minuten und Datenvolumen</string>
+    <string name="notification_channel_aod_summary_name">Always-on Display-Zusammenfassung</string>
+    <string name="notification_channel_aod_summary_desc">Dauerhafte lautlose Zusammenfassung von verbleibenden Minuten und Datenvolumen</string>
     <string name="notification_minutes_title">Minutenverbrauch %1$s</string>
     <string name="notification_minutes_body">%1$s Minutenverbrauch! Verbleibend %2$s (%3$d%%). Monat endet in %4$s.</string>
     <string name="notification_traffic_title">Datenverbrauch %1$s</string>

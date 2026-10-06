@@ -117,6 +117,8 @@
     <string name="notify_low_traffic_title">कम ट्रैफ़िक शेष होने पर सूचित करें</string>
     <string name="notification_channel_name">उपयोग निगरानी</string>
     <string name="notification_channel_desc">मिनट और ट्रैफ़िक उपयोग को ट्रैक करना</string>
+    <string name="notification_channel_aod_summary_name">ऑलवेज-ऑन डिस्प्ले सारांश</string>
+    <string name="notification_channel_aod_summary_desc">शेष मिनटों और डेटा का निरंतर मूक सारांश</string>
     <string name="notification_minutes_title">मिनट उपयोग %1$s</string>
     <string name="notification_minutes_body">%1$s मिनट उपयोग! शेष %2$s (%3$d%%)। महीना %4$s में समाप्त होता है।</string>
     <string name="notification_traffic_title">ट्रैफ़िक उपयोग %1$s</string>

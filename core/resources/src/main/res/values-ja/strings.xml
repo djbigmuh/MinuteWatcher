@@ -117,6 +117,8 @@
     <string name="notify_low_traffic_title">残り通信量が少なくなった時に通知</string>
     <string name="notification_channel_name">使用状況の監視</string>
     <string name="notification_channel_desc">通話時間と通信量の使用状況を追跡します</string>
+    <string name="notification_channel_aod_summary_name">Always-on Displayの概要</string>
+    <string name="notification_channel_aod_summary_desc">残りの通話時間と通信量の常時サイレント概要</string>
     <string name="notification_minutes_title">通話時間の使用状況 %1$s</string>
     <string name="notification_minutes_body">%1$s 通話時間を使用しています！残り %2$s (%3$d%%)。月末まであと %4$s。</string>
     <string name="notification_traffic_title">通信量の使用状況 %1$s</string>

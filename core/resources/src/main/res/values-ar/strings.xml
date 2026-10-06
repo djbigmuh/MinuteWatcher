@@ -121,6 +121,8 @@
     <string name="notify_low_traffic_title">تنبيه عند انخفاض حركة البيانات المتبقية</string>
     <string name="notification_channel_name">مراقبة الاستخدام</string>
     <string name="notification_channel_desc">تتبع استخدام الدقائق وحركة البيانات</string>
+    <string name="notification_channel_aod_summary_name">ملخص الشاشة الدائمة</string>
+    <string name="notification_channel_aod_summary_desc">ملخص صامت مستمر للدقائق وحركة البيانات المتبقية</string>
     <string name="notification_minutes_title">استخدام الدقائق %1$s</string>
     <string name="notification_minutes_body">%1$s استخدام الدقائق! المتبقي %2$s (%3$d%%). ينتهي الشهر خلال %4$s.</string>
     <string name="notification_traffic_title">استخدام البيانات %1$s</string>

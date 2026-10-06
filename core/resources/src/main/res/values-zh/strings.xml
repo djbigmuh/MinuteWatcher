@@ -117,6 +117,8 @@
     <string name="notify_low_traffic_title">流量不足时提醒</string>
     <string name="notification_channel_name">使用情况监控</string>
     <string name="notification_channel_desc">追踪通话分钟和流量使用情况</string>
+    <string name="notification_channel_aod_summary_name">息屏显示摘要</string>
+    <string name="notification_channel_aod_summary_desc">剩余分钟和流量的持续静音摘要</string>
     <string name="notification_minutes_title">%1$s 通话分钟使用情况</string>
     <string name="notification_minutes_body">%1$s 通话分钟使用！剩余 %2$s (%3$d%%)。本月还剩 %4$s。</string>
     <string name="notification_traffic_title">%1$s 流量使用情况</string>

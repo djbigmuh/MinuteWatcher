@@ -117,6 +117,8 @@
     <string name="notify_low_traffic_title">Notifier quand le trafic est faible</string>
     <string name="notification_channel_name">Surveillance de l\'utilisation</string>
     <string name="notification_channel_desc">Suivi des minutes et du trafic</string>
+    <string name="notification_channel_aod_summary_name">Résumé Always-on Display</string>
+    <string name="notification_channel_aod_summary_desc">Résumé silencieux permanent des minutes et du trafic restants</string>
     <string name="notification_minutes_title">Utilisation des minutes %1$s</string>
     <string name="notification_minutes_body">Utilisation des minutes %1$s ! Restant %2$s (%3$d%%). Fin du mois dans %4$s.</string>
     <string name="notification_traffic_title">Utilisation du trafic %1$s</string>

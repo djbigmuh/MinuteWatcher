@@ -55,8 +55,22 @@ class NotificationHelper
                     Constants.Notifications.CHANNEL_ID,
                     context.getString(R.string.notification_channel_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
-                )
+                ).apply {
+                    description = context.getString(R.string.notification_channel_desc)
+                }
+            val aodChannel =
+                NotificationChannel(
+                    Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
+                    context.getString(R.string.notification_channel_aod_summary_name),
+                    NotificationManager.IMPORTANCE_MIN,
+                ).apply {
+                    description = context.getString(R.string.notification_channel_aod_summary_desc)
+                    setSound(null, null)
+                    enableVibration(false)
+                    setShowBadge(false)
+                }
             manager.createNotificationChannel(channel)
+            manager.createNotificationChannel(aodChannel)
         }
 
         /**
@@ -133,6 +147,127 @@ class NotificationHelper
             }
         }
 
+        private fun isAodPostingAllowed(manager: NotificationManager): Boolean {
+            val hasPermission = permissionManager.hasNotificationPermission()
+            val aodChannel = manager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+            val channelBlocked = aodChannel != null && aodChannel.importance == NotificationManager.IMPORTANCE_NONE
+
+            return if (!hasPermission || !areNotificationsEnabledSafe()) {
+                val reason = if (!hasPermission) "permission not granted" else "disabled for app"
+                AppLogger.d("AOD summary notification skipped: $reason")
+                false
+            } else if (channelBlocked) {
+                AppLogger.d("AOD summary notification skipped: channel blocked")
+                false
+            } else {
+                true
+            }
+        }
+
+        /**
+         * Sends or updates the persistent silent Always-on Display summary notification.
+         *
+         * @return true if notification was posted successfully, false otherwise.
+         */
+        @Suppress("TooGenericExceptionCaught")
+        fun sendAodSummaryNotification(
+            title: String,
+            contentLine: String,
+            expandedText: String,
+        ): Boolean {
+            val manager =
+                notificationManager ?: run {
+                    if (!hasLoggedMissingService) {
+                        hasLoggedMissingService = true
+                        AppLogger.w("NotificationManager is unavailable; skipping AOD summary notification")
+                    }
+                    return false
+                }
+
+            return try {
+                if (isAodPostingAllowed(manager)) {
+                    val intent =
+                        Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        }
+
+                    val pendingIntent =
+                        PendingIntent.getActivity(
+                            context,
+                            AOD_SUMMARY_REQUEST_CODE,
+                            intent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                        )
+
+                    val notification =
+                        NotificationCompat
+                            .Builder(context, Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+                            .setContentTitle(title)
+                            .setContentText(contentLine)
+                            .setStyle(NotificationCompat.BigTextStyle().bigText(expandedText))
+                            .setSmallIcon(R.drawable.ic_notification)
+                            .setColor(ContextCompat.getColor(context, R.color.primary))
+                            .setOngoing(true)
+                            .setOnlyAlertOnce(true)
+                            .setShowWhen(false)
+                            .setCategory(NotificationCompat.CATEGORY_STATUS)
+                            .setContentIntent(pendingIntent)
+                            .build()
+
+                    manager.notify(AOD_SUMMARY_NOTIFICATION_ID, notification)
+                    true
+                } else {
+                    false
+                }
+            } catch (e: SecurityException) {
+                AppLogger.w("AOD summary notification permission denied: ${e.message}")
+                false
+            } catch (e: RuntimeException) {
+                AppLogger.e("Failed to send AOD summary notification (runtime error)", e)
+                false
+            }
+        }
+
+        /**
+         * Cancels the Always-on Display summary notification.
+         */
+        @Suppress("TooGenericExceptionCaught")
+        fun cancelAodSummaryNotification() {
+            val manager = notificationManager ?: return
+            try {
+                manager.cancel(AOD_SUMMARY_NOTIFICATION_ID)
+            } catch (e: SecurityException) {
+                AppLogger.w("Failed to cancel AOD summary notification: ${e.message}")
+            } catch (e: RuntimeException) {
+                AppLogger.e("Failed to cancel AOD summary notification (runtime error)", e)
+            }
+        }
+
+        /**
+         * Checks whether AOD summary notification can be posted.
+         *
+         * @return true if NotificationManager is available, notification permission is granted,
+         * notifications are enabled, and AOD summary channel exists and is not blocked.
+         */
+        @Suppress("TooGenericExceptionCaught")
+        fun isAodSummaryAvailable(): Boolean {
+            val manager = notificationManager ?: return false
+            return try {
+                if (!permissionManager.hasNotificationPermission() || !areNotificationsEnabledSafe()) {
+                    false
+                } else {
+                    val channel = manager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+                    channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE
+                }
+            } catch (e: SecurityException) {
+                AppLogger.w("Error checking AOD summary availability: SecurityException: ${e.message}")
+                false
+            } catch (e: RuntimeException) {
+                AppLogger.w("Error checking AOD summary availability: RuntimeException: ${e.message}")
+                false
+            }
+        }
+
         /**
          * Safely checks if notifications are enabled.
          *
@@ -156,5 +291,13 @@ class NotificationHelper
             private const val BASE_REQUEST_CODE = 100
             private const val BASE_NOTIFICATION_ID = 1000
             private const val SLOT_OFFSET = 10
+
+            /**
+             * Outside the range of existing usage notifications
+             * (BASE_NOTIFICATION_ID/BASE_REQUEST_CODE and slot offsets)
+             * to avoid collision.
+             */
+            const val AOD_SUMMARY_NOTIFICATION_ID = 900
+            const val AOD_SUMMARY_REQUEST_CODE = 90
         }
     }

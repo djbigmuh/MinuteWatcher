@@ -26,6 +26,7 @@ object Constants {
      */
     object Notifications {
         const val CHANNEL_ID = "usage_monitor_channel"
+        const val AOD_SUMMARY_CHANNEL_ID = "aod_summary_channel"
     }
 
     object UI {
