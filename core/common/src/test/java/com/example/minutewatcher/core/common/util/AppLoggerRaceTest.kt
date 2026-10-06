@@ -39,16 +39,12 @@ class AppLoggerRaceTest {
     ) {
         if (marker != null) {
             AppLogger.d(marker)
+            val logFile = File(logDir, "logs.txt")
+            pollUntil(timeoutMs, "Log marker '$marker' in logs.txt") {
+                logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
+            }
         }
-        pollUntil(timeoutMs, "Pending logs channel drain") {
-            !AppLogger.hasPendingLogsForTest()
-        }
-        if (marker == null) return
-
-        val logFile = File(logDir, "logs.txt")
-        pollUntil(timeoutMs, "Log marker '$marker' in logs.txt") {
-            logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
-        }
+        assertTrue("AppLogger quiescent state", AppLogger.awaitQuiescentForTest(timeoutMs))
     }
 
     @Test

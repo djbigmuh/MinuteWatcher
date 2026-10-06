@@ -145,9 +145,7 @@ class AppLoggerTest {
             AppLogger.d("Failing entry $i")
         }
 
-        pollUntil(message = "Worker drains after consecutive write failures") {
-            !AppLogger.hasPendingLogsForTest()
-        }
+        waitForChannelDrain()
 
         AppLogger.d("After failure entry")
         AppLogger.w("Warning after failure")
@@ -213,9 +211,7 @@ class AppLoggerTest {
             AppLogger.e("Error drain entry $i")
         }
 
-        pollUntil(message = "Worker drains channel entries after write failure threshold") {
-            !AppLogger.hasPendingLogsForTest()
-        }
+        waitForChannelDrain()
 
         val hasDebugDrain = capturingLogger.dLogs.any { it.contains("[DRAIN] D/") }
         val hasWarnDrain = capturingLogger.wLogs.any { it.contains("[DRAIN] W/") }
@@ -335,11 +331,10 @@ class AppLoggerTest {
         pollUntil(timeoutMs, "Log marker '$marker' in ${targetDir.name}/logs.txt") {
             logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
         }
+        assertTrue("AppLogger quiescent state", AppLogger.awaitQuiescentForTest(timeoutMs))
     }
 
     private fun waitForChannelDrain(timeoutMs: Long = 10000L) {
-        pollUntil(timeoutMs, "Pending logs channel drain") {
-            !AppLogger.hasPendingLogsForTest()
-        }
+        assertTrue("AppLogger quiescent state", AppLogger.awaitQuiescentForTest(timeoutMs))
     }
 }

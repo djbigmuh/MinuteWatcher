@@ -11,8 +11,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
@@ -20,6 +21,7 @@ import java.io.OutputStreamWriter
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Centralized logging utility.
@@ -27,15 +29,16 @@ import java.time.format.DateTimeFormatter
  * Guaranteed to be exception-safe for all public methods.
  *
  * **Invariants:**
- * - Worker file operations (file size checks, writer opening, writing, flushing, rotation, closing)
- *   and lifecycle methods ([init], [initForTest], [resetForTest], [shutdown], [closeWriter]) are serialized
- *   using the `synchronized(this)` monitor.
- * - During rotation, the active log file is neither deleted nor truncated until its contents have been
- *   successfully transferred to `logs.old.txt`.
- * - Consumes the log channel sequentially in FIFO order.
- * - Drains channel entries to [logger] retaining their original severity level upon file logging disablement.
- * - Opened lazily on first log entry and closed on file rotation, file logging disablement,
- *   [shutdown], or test state reset ([resetForTest], [initForTest], [init]).
+ * - Single worker coroutine consumes log channel sequentially in FIFO order.
+ * - Worker lifecycle changes ([init], [initForTest], [resetForTest], [shutdown]) synchronously stop
+ *   previous worker with a time-limited join ([WORKER_JOIN_TIMEOUT_MS]) performed outside state lock.
+ * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
+ * - In-flight entries counter ([hasPendingLogsForTest], [awaitQuiescentForTest]) tracks logs currently
+ *   being processed by worker.
+ * - Entries are enqueued only if file logging is enabled, not shutdown, and log directory is set.
+ * - Failed file writes and drained entries on write failure threshold are routed to [logger] with `[DRAIN]` prefix
+ *   outside state lock, guaranteeing no silent log losses.
+ * - Rotation and file write operations are serialized using `synchronized(this)` monitor.
  *
  * NOTE: Suppressing TooManyFunctions as this component manages complex multi-threaded
  * logging lifecycle, including coroutine-based worker, file rotation and test utilities.
@@ -49,6 +52,7 @@ object AppLogger {
     private const val LOG_QUEUE_CAPACITY = 8192
     private const val LOG_BUFFER_SIZE = 8192
     private const val MAX_WRITE_FAILURES = 3
+    private const val WORKER_JOIN_TIMEOUT_MS = 2_000L
 
     @Volatile
     private var isFileLoggingEnabled = BuildConfig.DEBUG
@@ -66,6 +70,9 @@ object AppLogger {
     private var writer: BufferedWriter? = null
 
     private var consecutiveWriteFailures = 0
+
+    private val inFlightCount = AtomicInteger(0)
+    private var workerGeneration = 0L
 
     private val logChannel =
         Channel<LogEntry>(
@@ -97,36 +104,98 @@ object AppLogger {
             consecutiveWriteFailures = 0
             logDir = context.filesDir
             logger = customLogger
-            ensureWorkerStarted()
+            isFileLoggingEnabled = BuildConfig.DEBUG
+        }
+        stopWorkerAndStartNewIfNeeded(startNew = true)
+    }
+
+    private fun stopWorkerAndStartNewIfNeeded(startNew: Boolean) {
+        val oldJob: Job?
+        val newGen: Long
+        synchronized(this) {
+            workerGeneration++
+            newGen = workerGeneration
+            oldJob = workerJob
+            workerJob = null
+        }
+
+        if (oldJob != null) {
+            oldJob.cancel()
+            runBlocking {
+                val joined =
+                    withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS) {
+                        oldJob.join()
+                    }
+                if (joined == null) {
+                    Log.w(TAG, "AppLogger: worker join timed out after $WORKER_JOIN_TIMEOUT_MS ms")
+                }
+            }
+        }
+
+        if (startNew) {
+            synchronized(this) {
+                if (isWorkerStartAllowed(newGen)) {
+                    workerJob =
+                        logScope.launch {
+                            runWorker(newGen)
+                        }
+                }
+            }
         }
     }
 
-    private fun ensureWorkerStarted() {
-        if (isFileLoggingEnabled && (workerJob == null || workerJob?.isActive == false)) {
-            workerJob =
-                logScope.launch {
-                    logChannel.receiveAsFlow().collect { entry ->
-                        processLogEntry(entry)
-                    }
-                }
+    private fun isWorkerStartAllowed(newGen: Long): Boolean {
+        if (!isFileLoggingEnabled || isShutdown) return false
+        return logDir != null && workerGeneration == newGen
+    }
+
+    private suspend fun runWorker(myGeneration: Long) {
+        while (isCurrentGeneration(myGeneration)) {
+            val entry = logChannel.receiveCatching().getOrNull() ?: break
+            handleReceivedEntry(entry, myGeneration)
         }
     }
+
+    private fun handleReceivedEntry(
+        entry: LogEntry,
+        myGeneration: Long,
+    ) {
+        inFlightCount.incrementAndGet()
+        try {
+            if (!isCurrentGeneration(myGeneration)) {
+                val returned = logChannel.trySend(entry).isSuccess
+                if (!returned) {
+                    Log.w(
+                        TAG,
+                        "AppLogger: failed to return log entry to channel " +
+                            "on obsolete worker generation, processing normally",
+                    )
+                    processLogEntry(entry)
+                }
+            } else {
+                processLogEntry(entry)
+            }
+        } finally {
+            inFlightCount.decrementAndGet()
+        }
+    }
+
+    private fun isCurrentGeneration(myGeneration: Long): Boolean =
+        synchronized(this) {
+            workerGeneration == myGeneration
+        }
 
     fun d(message: String) {
-        try {
-            logger.d(TAG, message)
-            logToFile("D", message)
-        } catch (e: Exception) {
-            runCatching { logger.w(TAG, "AppLogger.d failed: $message", e) }
-        }
+        runCatching { logger.d(TAG, message) }
+        runCatching { logToFile("D", message) }
     }
 
     fun w(
         message: String,
         throwable: Throwable? = null,
     ) {
-        try {
-            logger.w(TAG, message, throwable)
+        runCatching { logger.w(TAG, message, throwable) }
+        runCatching {
             val fullMessage =
                 if (throwable != null) {
                     "$message\n${throwable.stackTraceToString()}"
@@ -134,8 +203,6 @@ object AppLogger {
                     message
                 }
             logToFile("W", fullMessage)
-        } catch (e: Exception) {
-            runCatching { logger.w(TAG, "AppLogger.w failed: $message", e) }
         }
     }
 
@@ -143,8 +210,8 @@ object AppLogger {
         message: String,
         throwable: Throwable? = null,
     ) {
-        try {
-            logger.e(TAG, message, throwable)
+        runCatching { logger.e(TAG, message, throwable) }
+        runCatching {
             val fullMessage =
                 if (throwable != null) {
                     "$message\n${throwable.stackTraceToString()}"
@@ -152,8 +219,6 @@ object AppLogger {
                     message
                 }
             logToFile("E", fullMessage)
-        } catch (e: Exception) {
-            runCatching { logger.e(TAG, "AppLogger.e failed: $message", e) }
         }
     }
 
@@ -161,7 +226,7 @@ object AppLogger {
         level: String,
         message: String,
     ) {
-        if (!isFileLoggingEnabled || isShutdown) return
+        if (!isFileLoggingEnabled || isShutdown || logDir == null) return
         logChannel.trySend(LogEntry(level, message))
     }
 
@@ -205,6 +270,7 @@ object AppLogger {
                 val activeWriter = writer
                 if (activeWriter == null) {
                     consecutiveWriteFailures++
+                    drainedEntries.add(entry)
                     handleWriteFailureLocked("failed to open writer", drainedEntries)
                 } else {
                     val timestamp = dateFormat.format(entry.timestamp)
@@ -215,6 +281,7 @@ object AppLogger {
             } catch (e: Exception) {
                 closeWriter()
                 consecutiveWriteFailures++
+                drainedEntries.add(entry)
                 Log.e(TAG, "AppLogger: failed to write log to file (failure $consecutiveWriteFailures)", e)
                 handleWriteFailureLocked("write exception", drainedEntries)
             }
@@ -300,10 +367,8 @@ object AppLogger {
             isShutdown = true
             isFileLoggingEnabled = false
             closeWriter()
-            workerJob?.cancel()
-            workerJob = null
-            // We don't close the channel to avoid IllegalStateException on trySend
         }
+        stopWorkerAndStartNewIfNeeded(startNew = false)
     }
 
     @VisibleForTesting
@@ -314,17 +379,38 @@ object AppLogger {
             consecutiveWriteFailures = 0
             closeWriter()
             logDir = null
-            workerJob?.cancel()
-            workerJob = null
-            // Drain channel
-            while (logChannel.tryReceive().isSuccess) { // empty
+            logger = AndroidLogger()
+            while (logChannel.tryReceive().isSuccess) {
+                // Drain channel
             }
         }
+        stopWorkerAndStartNewIfNeeded(startNew = false)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @VisibleForTesting
-    fun hasPendingLogsForTest(): Boolean = !logChannel.isEmpty
+    fun hasPendingLogsForTest(): Boolean = !logChannel.isEmpty || inFlightCount.get() > 0
+
+    /**
+     * Waits for all pending logs in channel and in-flight processing to complete.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @VisibleForTesting
+    fun awaitQuiescentForTest(timeoutMs: Long = 10_000L): Boolean {
+        val startTime = System.currentTimeMillis()
+        val pollIntervalMs = 10L
+        var quiescent = logChannel.isEmpty && inFlightCount.get() == 0
+        while (!quiescent && System.currentTimeMillis() - startTime <= timeoutMs) {
+            try {
+                Thread.sleep(pollIntervalMs)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
+            }
+            quiescent = logChannel.isEmpty && inFlightCount.get() == 0
+        }
+        return quiescent
+    }
 
     /**
      * Initializes the logger for testing with full state reset.
@@ -342,8 +428,12 @@ object AppLogger {
             closeWriter()
             consecutiveWriteFailures = 0
             logDir = dir
+            logger = AndroidLogger()
             isFileLoggingEnabled = enabled
-            ensureWorkerStarted()
+            while (logChannel.tryReceive().isSuccess) {
+                // Drain channel
+            }
         }
+        stopWorkerAndStartNewIfNeeded(startNew = enabled)
     }
 }
