@@ -119,6 +119,9 @@
     <string name="notifications_title">التنبيهات</string>
     <string name="notify_low_minutes_title">تنبيه عند انخفاض الدقائق المتبقية</string>
     <string name="notify_low_traffic_title">تنبيه عند انخفاض حركة البيانات المتبقية</string>
+    <string name="aod_summary_title">ملخص الشاشة الدائمة</string>
+    <string name="aod_summary_description">إظهار إشعار صامت مستمر يتضمن الدقائق وحركة البيانات المتبقية. يظهر على شاشة القفل وعلى الشاشة الدائمة في الأجهزة التي تدعم ذلك.</string>
+    <string name="aod_summary_unavailable">قم بتمكين الإشعارات لاستخدام هذه الميزة</string>
     <string name="notification_channel_name">مراقبة الاستخدام</string>
     <string name="notification_channel_desc">تتبع استخدام الدقائق وحركة البيانات</string>
     <string name="notification_channel_aod_summary_name">ملخص الشاشة الدائمة</string>

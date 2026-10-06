@@ -115,6 +115,9 @@
     <string name="notifications_title">Уведомления</string>
     <string name="notify_low_minutes_title">Уведомлять о малом остатке минут</string>
     <string name="notify_low_traffic_title">Уведомлять о малом остатке трафика</string>
+    <string name="aod_summary_title">Сводка на Always-on Display</string>
+    <string name="aod_summary_description">Постоянное бесшумное уведомление с остатком минут и трафика. Видимо на экране блокировки, а на устройствах, которые показывают там уведомления, — и на Always-on Display.</string>
+    <string name="aod_summary_unavailable">Чтобы использовать эту функцию, включите уведомления</string>
     <string name="notification_channel_name">Мониторинг расхода</string>
     <string name="notification_channel_desc">Отслеживание расхода минут и трафика</string>
     <string name="notification_channel_aod_summary_name">Сводка для Always-on Display</string>

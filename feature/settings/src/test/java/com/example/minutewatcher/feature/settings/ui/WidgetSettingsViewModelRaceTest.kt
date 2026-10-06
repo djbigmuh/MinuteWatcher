@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.settings.ui
 
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.domain.AodSummaryAvailability
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -36,6 +37,7 @@ class WidgetSettingsViewModelRaceTest {
     private val saver: WidgetSettingsSaver = mock()
     private val usageStateRepository: UsageStateRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
+    private val aodSummaryAvailability: AodSummaryAvailability = mock()
 
     private lateinit var viewModel: WidgetSettingsViewModel
 
@@ -47,9 +49,17 @@ class WidgetSettingsViewModelRaceTest {
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
             whenever(loader.load()).thenReturn(WidgetSettingsState(fontSize = 4))
+            whenever(aodSummaryAvailability.isAodSummaryAvailable()).thenReturn(true)
 
             viewModel =
-                WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
+                WidgetSettingsViewModel(
+                    loader = loader,
+                    saver = saver,
+                    appSettingsRepository = appSettingsRepository,
+                    appScope = backgroundScope,
+                    usageStateRepository = usageStateRepository,
+                    aodSummaryAvailability = aodSummaryAvailability,
+                )
             advanceUntilIdle()
         }
 
@@ -77,11 +87,12 @@ class WidgetSettingsViewModelRaceTest {
 
             val vm =
                 WidgetSettingsViewModel(
-                    loader,
-                    controlledSaver,
-                    appSettingsRepository,
-                    backgroundScope,
-                    usageStateRepository,
+                    loader = loader,
+                    saver = controlledSaver,
+                    appSettingsRepository = appSettingsRepository,
+                    appScope = backgroundScope,
+                    usageStateRepository = usageStateRepository,
+                    aodSummaryAvailability = aodSummaryAvailability,
                 )
             advanceUntilIdle()
 

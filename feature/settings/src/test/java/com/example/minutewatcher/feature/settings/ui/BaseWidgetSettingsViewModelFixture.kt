@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.settings.ui
 
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.domain.AodSummaryAvailability
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -28,6 +29,7 @@ abstract class BaseWidgetSettingsViewModelFixture {
     protected val saver: WidgetSettingsSaver = mock()
     protected val usageStateRepository: UsageStateRepository = mock()
     protected val appSettingsRepository: AppSettingsRepository = mock()
+    protected val aodSummaryAvailability: AodSummaryAvailability = mock()
 
     protected lateinit var viewModel: WidgetSettingsViewModel
 
@@ -41,11 +43,20 @@ abstract class BaseWidgetSettingsViewModelFixture {
         runBlocking {
             whenever(loader.load()).thenReturn(WidgetSettingsState())
             whenever(saver.save(any(), any())).thenReturn(SaveResult.Success)
+            whenever(aodSummaryAvailability.isAodSummaryAvailable()).thenReturn(true)
         }
     }
 
     protected fun TestScope.initViewModel() {
-        viewModel = WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
+        viewModel =
+            WidgetSettingsViewModel(
+                loader = loader,
+                saver = saver,
+                appSettingsRepository = appSettingsRepository,
+                appScope = backgroundScope,
+                usageStateRepository = usageStateRepository,
+                aodSummaryAvailability = aodSummaryAvailability,
+            )
         advanceUntilIdle()
     }
 }

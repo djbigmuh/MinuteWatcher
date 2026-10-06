@@ -28,7 +28,14 @@ class WidgetSettingsViewModelLoadTest : BaseWidgetSettingsViewModelFixture() {
             whenever(loader.load()).thenThrow(IllegalStateException("Fail")).thenReturn(WidgetSettingsState())
 
             val initialViewModel =
-                WidgetSettingsViewModel(loader, saver, appSettingsRepository, backgroundScope, usageStateRepository)
+                WidgetSettingsViewModel(
+                    loader = loader,
+                    saver = saver,
+                    appSettingsRepository = appSettingsRepository,
+                    appScope = backgroundScope,
+                    usageStateRepository = usageStateRepository,
+                    aodSummaryAvailability = aodSummaryAvailability,
+                )
             advanceUntilIdle()
             assertTrue(initialViewModel.state.value.isLoadError)
 

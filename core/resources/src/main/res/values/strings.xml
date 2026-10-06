@@ -115,6 +115,9 @@
     <string name="notifications_title">Notifications</string>
     <string name="notify_low_minutes_title">Notify about low minutes remaining</string>
     <string name="notify_low_traffic_title">Notify about low traffic remaining</string>
+    <string name="aod_summary_title">Always-on Display summary</string>
+    <string name="aod_summary_description">Show a persistent silent notification with remaining minutes and traffic. Visible on the lock screen and, on devices that display notifications there, on the Always-on Display.</string>
+    <string name="aod_summary_unavailable">Enable notifications to use this feature</string>
     <string name="notification_channel_name">Usage Monitoring</string>
     <string name="notification_channel_desc">Tracking minutes and traffic usage</string>
     <string name="notification_channel_aod_summary_name">Always-on Display Summary</string>

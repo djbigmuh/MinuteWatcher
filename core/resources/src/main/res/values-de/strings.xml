@@ -115,6 +115,9 @@
     <string name="notifications_title">Benachrichtigungen</string>
     <string name="notify_low_minutes_title">Benachrichtigen bei niedrigem Minutenstand</string>
     <string name="notify_low_traffic_title">Benachrichtigen bei niedrigem Datenvolumen</string>
+    <string name="aod_summary_title">Always-on Display-Zusammenfassung</string>
+    <string name="aod_summary_description">Dauerhafte lautlose Benachrichtigung mit verbleibenden Minuten und Datenvolumen anzeigen. Auf dem Sperrbildschirm und bei unterstützten Geräten auf dem Always-on Display sichtbar.</string>
+    <string name="aod_summary_unavailable">Aktivieren Sie Benachrichtigungen, um diese Funktion zu nutzen</string>
     <string name="notification_channel_name">Verbrauchskontrolle</string>
     <string name="notification_channel_desc">Verfolgung von Minuten und Datenvolumen</string>
     <string name="notification_channel_aod_summary_name">Always-on Display-Zusammenfassung</string>

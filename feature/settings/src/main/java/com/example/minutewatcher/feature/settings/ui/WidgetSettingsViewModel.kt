@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.BaseViewModel
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.domain.AodSummaryAvailability
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
@@ -23,8 +24,10 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -59,13 +62,12 @@ data class WidgetSettingsUiState(
  * and [WidgetSettingsSaver].
  *
  * NOTE: TooManyFunctions is suppressed: methods map 1:1 to settings screen
- * UI actions and form the screen's command surface.
- *
  * @param loader Loader for widget settings.
  * @param saver Saver for widget settings.
  * @param appSettingsRepository Repository for global application settings.
  * @param appScope Application scope used to complete pending saves on ViewModel clearance.
  * @param usageStateRepository Repository for observed usage state snapshots for widget preview.
+ * @param aodSummaryAvailability Helper to check Always-on Display summary notification availability.
  */
 @HiltViewModel
 @Suppress("TooManyFunctions")
@@ -77,6 +79,7 @@ class WidgetSettingsViewModel
         appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val appScope: CoroutineScope,
         usageStateRepository: UsageStateRepository,
+        private val aodSummaryAvailability: AodSummaryAvailability,
     ) : BaseViewModel<WidgetSettingsUiState>(WidgetSettingsUiState()) {
         private val autoSaveTrigger =
             MutableSharedFlow<Unit>(
@@ -84,6 +87,9 @@ class WidgetSettingsViewModel
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
             )
         private var autoSaveJob: Job? = null
+
+        private val _aodSummaryAvailable = MutableStateFlow(false)
+        val aodSummaryAvailable: StateFlow<Boolean> = _aodSummaryAvailable.asStateFlow()
 
         @Volatile
         @VisibleForTesting
@@ -118,6 +124,24 @@ class WidgetSettingsViewModel
         init {
             loadSettings()
             setupAutoSave()
+            refreshAodSummaryAvailability()
+        }
+
+        /**
+         * Refreshes availability status of Always-on Display summary notification.
+         */
+        fun refreshAodSummaryAvailability() {
+            viewModelScope.launch {
+                try {
+                    val available = aodSummaryAvailability.isAodSummaryAvailable()
+                    _aodSummaryAvailable.value = available
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetSettingsViewModel: failed to check AOD summary availability", e)
+                    _aodSummaryAvailable.value = false
+                }
+            }
         }
 
         private fun setupAutoSave() {

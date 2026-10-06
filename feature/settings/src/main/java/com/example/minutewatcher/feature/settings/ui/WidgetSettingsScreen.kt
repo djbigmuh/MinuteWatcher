@@ -23,6 +23,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,9 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.minutewatcher.core.android.ui.onHorizontalSwipe
 import com.example.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
@@ -53,6 +57,9 @@ fun WidgetSettingsScreen(
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
+    val aodSummaryAvailable by viewModel.aodSummaryAvailable.collectAsStateWithLifecycle()
+
+    ObserveResumeEffect(viewModel)
 
     val context = LocalContext.current
     val strings = remember(context) { WidgetStringsFactory.create(context) }
@@ -95,6 +102,7 @@ fun WidgetSettingsScreen(
                     settings = settings,
                     screenUiState = screenUiState,
                     saveResult = uiState.saveResult,
+                    aodSummaryAvailable = aodSummaryAvailable,
                     viewModel = viewModel,
                     onBack = onBack,
                 )
@@ -146,6 +154,7 @@ private fun WidgetSettingsContent(
     settings: WidgetSettingsState,
     screenUiState: WidgetUiState?,
     saveResult: SaveResult?,
+    aodSummaryAvailable: Boolean,
     viewModel: WidgetSettingsViewModel,
     onBack: () -> Unit,
 ) {
@@ -171,6 +180,7 @@ private fun WidgetSettingsContent(
             modifier = Modifier.padding(paddingValues),
             state = settings,
             uiState = screenUiState,
+            aodSummaryAvailable = aodSummaryAvailable,
             viewModel = viewModel,
         ) {
             showColorPicker = true
@@ -262,6 +272,7 @@ private fun WidgetSettingsList(
     modifier: Modifier = Modifier,
     state: WidgetSettingsState,
     uiState: WidgetUiState?,
+    aodSummaryAvailable: Boolean,
     viewModel: WidgetSettingsViewModel,
     onShowColorPicker: () -> Unit,
 ) {
@@ -287,8 +298,10 @@ private fun WidgetSettingsList(
         NotificationSettingsSection(
             state = state,
             enabled = true,
+            aodSummaryAvailable = aodSummaryAvailable,
             onUpdateNotifyMinutes = { en -> viewModel.updateSettings { it.copy(notifyLowMinutes = en) } },
             onUpdateNotifyTraffic = { en -> viewModel.updateSettings { it.copy(notifyLowTraffic = en) } },
+            onUpdateAodSummary = { en -> viewModel.updateSettings { it.copy(aodSummaryEnabled = en) } },
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -299,5 +312,22 @@ private fun WidgetSettingsList(
             enabled = !state.simListLoadFailed,
             onUpdateSimSettings = viewModel::updateSimSettings,
         )
+    }
+}
+
+@Composable
+private fun ObserveResumeEffect(viewModel: WidgetSettingsViewModel) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    viewModel.refreshAodSummaryAvailability()
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 }

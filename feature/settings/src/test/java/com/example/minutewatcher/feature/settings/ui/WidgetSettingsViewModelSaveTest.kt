@@ -52,7 +52,14 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
             val realSaver = WidgetSettingsSaver(blockingLoader, mock(), backgroundScope)
             whenever(loader.load()).thenReturn(WidgetSettingsState())
             val vm =
-                WidgetSettingsViewModel(loader, realSaver, appSettingsRepository, backgroundScope, usageStateRepository)
+                WidgetSettingsViewModel(
+                    loader = loader,
+                    saver = realSaver,
+                    appSettingsRepository = appSettingsRepository,
+                    appScope = backgroundScope,
+                    usageStateRepository = usageStateRepository,
+                    aodSummaryAvailability = aodSummaryAvailability,
+                )
             advanceUntilIdle()
 
             launch { vm.saveAndNotify() }

@@ -71,6 +71,8 @@ class WidgetSettingsScreenTest {
             .doReturn(MutableStateFlow(WidgetSettingsUiState()))
         whenever(viewModel.snapshot)
             .doReturn(MutableStateFlow(createEmptySnapshot()))
+        whenever(viewModel.aodSummaryAvailable)
+            .doReturn(MutableStateFlow(true))
     }
 
     private fun createEmptySnapshot() =
@@ -224,6 +226,78 @@ class WidgetSettingsScreenTest {
             val validated = WidgetSettingsState.validate(state)
             val label = layoutModes.getOrNull(validated.layoutMode).orEmpty()
             assertTrue("Layout mode $i must produce a non-empty label", label.isNotEmpty())
+        }
+    }
+
+    @Test
+    fun aodSummaryTitleAndDescriptionDisplayed() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_title))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_description))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_unavailable))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun aodSummaryUnavailableTextDisplayedWhenAodSummaryAvailableIsFalse() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+        whenever(viewModel.aodSummaryAvailable).doReturn(MutableStateFlow(false))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_title))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_unavailable))
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun aodSummaryStringsAreNonEmptyInAllConfiguredLocales() {
+        val supportedLocales = listOf("en", "ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
+        val stringResIds =
+            listOf(
+                R.string.aod_summary_title,
+                R.string.aod_summary_description,
+                R.string.aod_summary_unavailable,
+                R.string.notification_channel_aod_summary_name,
+                R.string.notification_channel_aod_summary_desc,
+            )
+
+        supportedLocales.forEach { lang ->
+            val locale = Locale.forLanguageTag(lang)
+            val config = Configuration(context.resources.configuration)
+            config.setLocale(locale)
+            val localizedContext = context.createConfigurationContext(config)
+
+            stringResIds.forEach { resId ->
+                val strName = context.resources.getResourceEntryName(resId)
+                val valStr = localizedContext.getString(resId)
+                assertTrue("String $strName for locale $lang must not be empty", valStr.isNotEmpty())
+            }
         }
     }
 

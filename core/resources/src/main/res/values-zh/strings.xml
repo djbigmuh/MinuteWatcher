@@ -115,6 +115,9 @@
     <string name="notifications_title">通知</string>
     <string name="notify_low_minutes_title">通话分钟不足时提醒</string>
     <string name="notify_low_traffic_title">流量不足时提醒</string>
+    <string name="aod_summary_title">息屏显示摘要</string>
+    <string name="aod_summary_description">显示包含剩余分钟和流量的持续静音通知。在锁定屏幕上可见，在支持显示通知的设备上也在息屏显示上可见。</string>
+    <string name="aod_summary_unavailable">启用通知以使用此功能</string>
     <string name="notification_channel_name">使用情况监控</string>
     <string name="notification_channel_desc">追踪通话分钟和流量使用情况</string>
     <string name="notification_channel_aod_summary_name">息屏显示摘要</string>

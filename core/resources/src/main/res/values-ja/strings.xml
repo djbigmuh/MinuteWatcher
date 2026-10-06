@@ -115,6 +115,9 @@
     <string name="notifications_title">通知</string>
     <string name="notify_low_minutes_title">残り通話時間が少なくなった時に通知</string>
     <string name="notify_low_traffic_title">残り通信量が少なくなった時に通知</string>
+    <string name="aod_summary_title">Always-on Displayの概要</string>
+    <string name="aod_summary_description">残りの通話時間と通信量を表示する常時サイレント通知を表示します。ロック画面および対応端末のAlways-on Displayに表示されます。</string>
+    <string name="aod_summary_unavailable">この機能を使用するには通知を有効にしてください</string>
     <string name="notification_channel_name">使用状況の監視</string>
     <string name="notification_channel_desc">通話時間と通信量の使用状況を追跡します</string>
     <string name="notification_channel_aod_summary_name">Always-on Displayの概要</string>

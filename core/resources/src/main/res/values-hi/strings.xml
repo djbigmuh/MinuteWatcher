@@ -115,6 +115,9 @@
     <string name="notifications_title">सूचनाएं</string>
     <string name="notify_low_minutes_title">कम मिनट शेष होने पर सूचित करें</string>
     <string name="notify_low_traffic_title">कम ट्रैफ़िक शेष होने पर सूचित करें</string>
+    <string name="aod_summary_title">ऑलवेज-ऑन डिस्प्ले सारांश</string>
+    <string name="aod_summary_description">शेष मिनटों और डेटा के साथ एक निरंतर मूक अधिसूचना दिखाएं। लॉक स्क्रीन पर और समर्थित उपकरणों पर ऑलवेज-ऑन डिस्प्ले पर दिखाई देता है।</string>
+    <string name="aod_summary_unavailable">इस सुविधा का उपयोग करने के लिए सूचनाएं सक्षम करें</string>
     <string name="notification_channel_name">उपयोग निगरानी</string>
     <string name="notification_channel_desc">मिनट और ट्रैफ़िक उपयोग को ट्रैक करना</string>
     <string name="notification_channel_aod_summary_name">ऑलवेज-ऑन डिस्प्ले सारांश</string>

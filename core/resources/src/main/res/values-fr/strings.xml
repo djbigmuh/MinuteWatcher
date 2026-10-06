@@ -115,6 +115,9 @@
     <string name="notifications_title">Notifications</string>
     <string name="notify_low_minutes_title">Notifier quand les minutes sont faibles</string>
     <string name="notify_low_traffic_title">Notifier quand le trafic est faible</string>
+    <string name="aod_summary_title">Résumé Always-on Display</string>
+    <string name="aod_summary_description">Afficher une notification silencieuse permanente avec les minutes et le trafic restants. Visible sur l\'écran de verrouillage et sur l\'Always-on Display pour les appareils compatibles.</string>
+    <string name="aod_summary_unavailable">Activez les notifications pour utiliser cette fonctionnalité</string>
     <string name="notification_channel_name">Surveillance de l\'utilisation</string>
     <string name="notification_channel_desc">Suivi des minutes et du trafic</string>
     <string name="notification_channel_aod_summary_name">Résumé Always-on Display</string>

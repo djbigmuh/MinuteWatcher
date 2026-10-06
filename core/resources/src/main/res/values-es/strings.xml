@@ -115,6 +115,9 @@
     <string name="notifications_title">Notificaciones</string>
     <string name="notify_low_minutes_title">Notificar sobre pocos minutos restantes</string>
     <string name="notify_low_traffic_title">Notificar sobre poco tráfico restante</string>
+    <string name="aod_summary_title">Resumen en Always-on Display</string>
+    <string name="aod_summary_description">Muestra una notificación silenciosa persistente con los minutos y el tráfico restantes. Visible en la pantalla de bloqueo y, en dispositivos compatibles, en el Always-on Display.</string>
+    <string name="aod_summary_unavailable">Activa las notificaciones para usar esta función</string>
     <string name="notification_channel_name">Monitoreo de uso</string>
     <string name="notification_channel_desc">Seguimiento de uso de minutos y tráfico</string>
     <string name="notification_channel_aod_summary_name">Resumen de Always-on Display</string>
