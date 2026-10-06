@@ -58,4 +58,21 @@ class WidgetSettingsStateTest {
         assertFalse(validated.notifyLowMinutes)
         assertFalse(validated.notifyLowTraffic)
     }
+
+    @Test
+    fun `default aodSummaryEnabled is false`() {
+        val state = WidgetSettingsState()
+        assertFalse(state.aodSummaryEnabled)
+    }
+
+    @Test
+    fun `validate should preserve aodSummaryEnabled`() {
+        val initialEnabled = WidgetSettingsState(aodSummaryEnabled = true)
+        val validatedEnabled = WidgetSettingsState.validate(initialEnabled)
+        assertTrue(validatedEnabled.aodSummaryEnabled)
+
+        val initialDisabled = WidgetSettingsState(aodSummaryEnabled = false)
+        val validatedDisabled = WidgetSettingsState.validate(initialDisabled)
+        assertFalse(validatedDisabled.aodSummaryEnabled)
+    }
 }

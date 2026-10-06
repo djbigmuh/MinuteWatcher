@@ -36,6 +36,8 @@ internal object DataStoreKeys {
 
     val NOTIFY_LOW_TRAFFIC = booleanPreferencesKey("notify_low_traffic")
 
+    val AOD_SUMMARY_ENABLED = booleanPreferencesKey("aod_summary_enabled")
+
     val LAST_DATA_SUB_ID = intPreferencesKey("last_data_sub_id")
 
     val MIGRATION_V1_COMPLETED = booleanPreferencesKey("migration_v1_completed")

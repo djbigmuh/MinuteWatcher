@@ -21,6 +21,11 @@ data class AppSettings(
     val inaccurateCallAttributionsCount: Int = 0,
     val callTrackingEnabled: Boolean = true,
     /**
+     * Whether the persistent silent summary notification for lock screen and Always-on Display is enabled.
+     * Display on Always-on Display depends on device capabilities.
+     */
+    val aodSummaryEnabled: Boolean = false,
+    /**
      * Whether the settings have been successfully loaded from persistent storage.
      * Default state is not loaded.
      */

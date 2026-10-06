@@ -12,6 +12,7 @@ package com.example.minutewatcher.core.model
  * @property backgroundColor Background color.
  * @property notifyLowMinutes Low minutes notification.
  * @property notifyLowTraffic Low traffic notification.
+ * @property aodSummaryEnabled Always-on Display summary notification enabled flag.
  * @property simStates SIM-specific settings (key: slot index).
  * @property widgetLimitExceeded Widget limit exceeded flag.
  * @property settingsLoadFailed General settings load failure flag.
@@ -25,6 +26,7 @@ data class WidgetSettingsState(
     val backgroundColor: Int = Constants.UI.DEFAULT_BG_COLOR,
     val notifyLowMinutes: Boolean = true,
     val notifyLowTraffic: Boolean = true,
+    val aodSummaryEnabled: Boolean = false,
     val simStates: Map<Int, SimSettingsState> = emptyMap(),
     val widgetLimitExceeded: Boolean = false,
     /**

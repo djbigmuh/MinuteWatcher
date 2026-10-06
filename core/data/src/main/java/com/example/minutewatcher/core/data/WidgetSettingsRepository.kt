@@ -86,6 +86,7 @@ class WidgetSettingsRepository
                     backgroundColor = settings.widgetBackgroundColor,
                     notifyLowMinutes = settings.notifyLowMinutes,
                     notifyLowTraffic = settings.notifyLowTraffic,
+                    aodSummaryEnabled = settings.aodSummaryEnabled,
                     simStates = simStates,
                     widgetLimitExceeded = settings.widgetLimitExceeded,
                     settingsLoadFailed = false,
@@ -141,6 +142,7 @@ class WidgetSettingsRepository
                     widgetBackgroundColor = state.backgroundColor,
                     notifyLowMinutes = state.notifyLowMinutes,
                     notifyLowTraffic = state.notifyLowTraffic,
+                    aodSummaryEnabled = state.aodSummaryEnabled,
                 )
             }
         }
@@ -226,6 +228,7 @@ class WidgetSettingsRepository
                 backgroundColor = settings.widgetBackgroundColor,
                 notifyLowMinutes = settings.notifyLowMinutes,
                 notifyLowTraffic = settings.notifyLowTraffic,
+                aodSummaryEnabled = settings.aodSummaryEnabled,
                 simStates = emptyMap(),
                 widgetLimitExceeded = settings.widgetLimitExceeded,
                 settingsLoadFailed = settingsLoadFailed,

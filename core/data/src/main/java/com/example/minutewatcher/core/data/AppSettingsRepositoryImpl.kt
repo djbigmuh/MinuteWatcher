@@ -195,6 +195,7 @@ class AppSettingsRepositoryImpl
         ) {
             prefs[DataStoreKeys.NOTIFY_LOW_MINUTES] = updated.notifyLowMinutes
             prefs[DataStoreKeys.NOTIFY_LOW_TRAFFIC] = updated.notifyLowTraffic
+            prefs[DataStoreKeys.AOD_SUMMARY_ENABLED] = updated.aodSummaryEnabled
             prefs[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
             prefs[DataStoreKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
         }
@@ -241,6 +242,7 @@ class AppSettingsRepositoryImpl
             current.copy(
                 notifyLowMinutes = read(DataStoreKeys.NOTIFY_LOW_MINUTES, current.notifyLowMinutes),
                 notifyLowTraffic = read(DataStoreKeys.NOTIFY_LOW_TRAFFIC, current.notifyLowTraffic),
+                aodSummaryEnabled = read(DataStoreKeys.AOD_SUMMARY_ENABLED, current.aodSummaryEnabled),
                 inaccurateCallAttributionsCount =
                     read(DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT, current.inaccurateCallAttributionsCount),
                 callTrackingEnabled = read(DataStoreKeys.CALL_TRACKING_ENABLED, current.callTrackingEnabled),

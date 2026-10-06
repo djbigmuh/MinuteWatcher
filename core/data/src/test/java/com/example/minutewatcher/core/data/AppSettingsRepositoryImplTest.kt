@@ -50,6 +50,7 @@ class AppSettingsRepositoryImplTest {
             assertEquals(AppTheme.FOLLOW_SYSTEM, settings.theme)
             assertEquals(true, settings.notifyLowMinutes)
             assertEquals(true, settings.notifyLowTraffic)
+            assertEquals(false, settings.aodSummaryEnabled)
             assertEquals(2, settings.widgetLayoutMode)
             assertEquals(50, settings.widgetTransparency)
             assertEquals(false, settings.onboardingCompleted)
@@ -297,5 +298,24 @@ class AppSettingsRepositoryImplTest {
             val settings = repository.getAppSettings().first()
             assertEquals(true, settings.phonePermissionPermanentlyDenied)
             assertEquals(true, settings.notificationPermissionPermanentlyDenied)
+        }
+
+    @Test
+    fun `update app settings roundtrip aod summary enabled`() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+
+            // Default value when key is missing is false
+            val defaultSettings = repository.getAppSettings().first()
+            assertEquals(false, defaultSettings.aodSummaryEnabled)
+
+            repository.updateAppSettings {
+                it.copy(aodSummaryEnabled = true)
+            }
+            advanceUntilIdle()
+
+            val updatedSettings = repository.getAppSettings().first()
+            assertEquals(true, updatedSettings.aodSummaryEnabled)
+            assertEquals(true, dataStore.data.first()[DataStoreKeys.AOD_SUMMARY_ENABLED])
         }
 }
