@@ -96,7 +96,7 @@ class SimLimitsRepositoryImpl
             day: Int,
             enabled: Boolean,
         ) {
-            val safeDay = day.coerceIn(1, 31)
+            val safeDay = day.coerceIn(Constants.AutoReset.MIN_DAY, Constants.AutoReset.MAX_DAY)
             dataStore.edit {
                 it[DataStoreKeys.autoResetDayKey(identity)] = safeDay
                 it[DataStoreKeys.autoResetKey(identity)] = enabled

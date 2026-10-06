@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
 import kotlin.math.abs
 
@@ -40,7 +41,10 @@ fun DayPickerComposeDialog(
     onDismiss: () -> Unit,
     onDaySelected: (Int) -> Unit,
 ) {
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (initialDay - 1).coerceIn(0, MAX_DAYS - 1))
+    val listState =
+        rememberLazyListState(
+            initialFirstVisibleItemIndex = (initialDay - 1).coerceIn(0, Constants.AutoReset.MAX_DAY - 1),
+        )
     val selectedDay by rememberSelectedDay(listState)
 
     AlertDialog(
@@ -50,7 +54,11 @@ fun DayPickerComposeDialog(
             DayPickerContent(listState = listState, selectedDay = selectedDay)
         },
         confirmButton = {
-            DayPickerConfirmButton(onConfirm = { onDaySelected(selectedDay.coerceIn(1, MAX_DAYS)) })
+            DayPickerConfirmButton(
+                onConfirm = {
+                    onDaySelected(selectedDay.coerceIn(Constants.AutoReset.MIN_DAY, Constants.AutoReset.MAX_DAY))
+                },
+            )
         },
         dismissButton = {
             DayPickerCancelButton(onDismiss = onDismiss)
@@ -95,7 +103,7 @@ private fun DayPickerContent(
     listState: LazyListState,
     selectedDay: Int,
 ) {
-    val days = (1..MAX_DAYS).toList()
+    val days = (Constants.AutoReset.MIN_DAY..Constants.AutoReset.MAX_DAY).toList()
     val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -156,5 +164,3 @@ private fun DayItem(
         softWrap = false,
     )
 }
-
-private const val MAX_DAYS = 31

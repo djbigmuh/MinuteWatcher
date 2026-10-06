@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.model.util
 
+import com.example.minutewatcher.core.model.Constants
 import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
@@ -18,7 +19,7 @@ object BillingPeriodCalculator {
         nowMillis: Long = System.currentTimeMillis(),
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): PeriodInfo {
-        val safeDay = resetDay.coerceIn(1, MAX_DAYS_IN_MONTH)
+        val safeDay = resetDay.coerceIn(Constants.AutoReset.MIN_DAY, Constants.AutoReset.MAX_DAY)
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), zoneId)
 
         val currentYearMonth = YearMonth.from(now)
@@ -49,6 +50,4 @@ object BillingPeriodCalculator {
             daysRemaining = maxOf(0, daysRemaining),
         )
     }
-
-    private const val MAX_DAYS_IN_MONTH = 31
 }

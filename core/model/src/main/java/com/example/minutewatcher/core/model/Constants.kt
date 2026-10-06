@@ -172,6 +172,15 @@ object Constants {
     }
 
     /**
+     * Auto-reset day-of-month bounds.
+     * MAX_DAY equals the maximum number of days in a calendar month.
+     */
+    object AutoReset {
+        const val MIN_DAY = 1
+        const val MAX_DAY = 31
+    }
+
+    /**
      * Flow constants.
      *
      * WHILE_SUBSCRIBED_STOP_TIMEOUT_MS — WhileSubscribed stop timeout (ms).
