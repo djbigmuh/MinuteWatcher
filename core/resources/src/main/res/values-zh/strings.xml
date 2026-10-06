@@ -170,4 +170,5 @@
     <string name="menu_language_content_desc">更改语言</string>
     <string name="menu_theme_content_desc">更改主题</string>
     <string name="navigate_up_content_desc">向上导航</string>
+    <string name="banner_dismiss_content_desc">关闭横幅</string>
 </resources>

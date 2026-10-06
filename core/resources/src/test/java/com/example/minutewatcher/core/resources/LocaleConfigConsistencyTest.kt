@@ -70,6 +70,44 @@ class LocaleConfigConsistencyTest {
         assertEquals("vector", docPal.documentElement.tagName)
     }
 
+    @Test
+    fun `banner_dismiss_content_desc string key is present and non empty for all configured locales`() {
+        val resDir = findResDir()
+        val localesConfigFile = File(resDir, "xml/locales_config.xml")
+        val configuredLocales = parseLocalesConfig(localesConfigFile)
+
+        val factory = DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+
+        configuredLocales.forEach { lang ->
+            val dirName = if (lang == "en") "values" else "values-$lang"
+            val stringsFile = File(resDir, "$dirName/strings.xml")
+            assertTrue("strings.xml for locale '$lang' must exist in $dirName", stringsFile.exists())
+
+            val doc = builder.parse(stringsFile)
+            val stringNodes = doc.getElementsByTagName("string")
+            var foundValue: String? = null
+
+            for (i in 0 until stringNodes.length) {
+                val node = stringNodes.item(i)
+                val nameAttr = node.attributes?.getNamedItem("name")?.nodeValue
+                if (nameAttr == "banner_dismiss_content_desc") {
+                    foundValue = node.textContent
+                    break
+                }
+            }
+
+            assertTrue(
+                "Key 'banner_dismiss_content_desc' must exist in $dirName/strings.xml",
+                foundValue != null,
+            )
+            assertTrue(
+                "Key 'banner_dismiss_content_desc' must not be empty in $dirName/strings.xml",
+                !foundValue.isNullOrBlank(),
+            )
+        }
+    }
+
     private fun parseLocalesConfig(file: File): Set<String> {
         val factory = DocumentBuilderFactory.newInstance()
         val builder = factory.newDocumentBuilder()

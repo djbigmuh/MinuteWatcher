@@ -170,4 +170,5 @@
     <string name="menu_language_content_desc">言語を変更</string>
     <string name="menu_theme_content_desc">テーマを変更</string>
     <string name="navigate_up_content_desc">上に移動</string>
+    <string name="banner_dismiss_content_desc">バナーを閉じる</string>
 </resources>

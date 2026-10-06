@@ -154,7 +154,7 @@ internal fun TrackingBanner(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(id = R.string.cancel_button),
+                            contentDescription = stringResource(id = R.string.banner_dismiss_content_desc),
                             modifier = Modifier.padding(4.dp),
                         )
                     }

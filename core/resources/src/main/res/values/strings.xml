@@ -175,4 +175,5 @@
     <string name="menu_language_content_desc">Change language</string>
     <string name="menu_theme_content_desc">Change theme</string>
     <string name="navigate_up_content_desc">Navigate up</string>
+    <string name="banner_dismiss_content_desc">Dismiss banner</string>
 </resources>
