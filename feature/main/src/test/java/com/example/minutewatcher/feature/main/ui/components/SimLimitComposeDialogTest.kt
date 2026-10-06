@@ -52,15 +52,16 @@ class SimLimitComposeDialogTest {
         // Click "Reset limits" button
         composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_button)).performClick()
 
-        // Check if confirmation dialog is displayed
-        composeTestRule.onNodeWithText(context.getString(R.string.reset_confirmation_title)).assertIsDisplayed()
+        // Check if confirmation dialog with new limits reset text is displayed
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_confirmation_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_confirmation_body)).assertIsDisplayed()
         assertFalse("onReset should not be called yet", resetCalled)
 
         // Click "Cancel" in confirmation dialog (the last one added)
         composeTestRule.onAllNodesWithText(context.getString(R.string.cancel_button)).onLast().performClick()
 
         // Confirmation dialog should be gone
-        composeTestRule.onNodeWithText(context.getString(R.string.reset_confirmation_title)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_confirmation_title)).assertDoesNotExist()
         assertFalse("onReset should not be called after Cancel", resetCalled)
 
         // Click "Reset limits" button again
@@ -70,6 +71,21 @@ class SimLimitComposeDialogTest {
         composeTestRule.onNodeWithText(context.getString(R.string.reset_label)).performClick()
 
         assertTrue("onReset should be called after confirmation", resetCalled)
+    }
+
+    @Test
+    fun `ResetConfirmationDialog with default parameters displays counter reset text`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            ResetConfirmationDialog(
+                onDismiss = {},
+                onConfirm = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_confirmation_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_confirmation_body)).assertIsDisplayed()
     }
 
     @Test

@@ -104,6 +104,8 @@
     <string name="reset_counters">إعادة ضبط العدادات</string>
     <string name="reset_confirmation_title">إعادة ضبط العدادات؟</string>
     <string name="reset_confirmation_body">سيؤدي هذا إلى مسح كافة الاستخدامات والتعديلات المتعقبة لبطاقة SIM هذه. لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="reset_limits_confirmation_title">إعادة ضبط الحدود؟</string>
+    <string name="reset_limits_confirmation_body">سيؤدي هذا إلى مسح حدود الدقائق وحركة البيانات وإيقاف تراكم الباقي لبطاقة SIM هذه. لن يتغير الاستخدام المتعقب.</string>
     <string name="choose_reset_day">اختر يوم الشهر لإعادة الضبط التلقائي:</string>
     <string name="choose_reset_day_dialog_title">اختر يوم إعادة الضبط</string>
     <string name="rollover_label">تراكم الباقي</string>

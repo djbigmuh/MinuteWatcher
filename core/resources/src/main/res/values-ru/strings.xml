@@ -100,6 +100,8 @@
     <string name="reset_counters">Сбросить счётчики</string>
     <string name="reset_confirmation_title">Сбросить счётчики?</string>
     <string name="reset_confirmation_body">Это действие обнулит весь накопленный расход и корректировки для этой SIM-карты. Отменить это действие невозможно.</string>
+    <string name="reset_limits_confirmation_title">Сбросить лимиты?</string>
+    <string name="reset_limits_confirmation_body">Это действие очистит лимиты минут и трафика и отключит накопление остатков для этой SIM-карты. Накопленный расход не изменится.</string>
     <string name="choose_reset_day">Выберите число месяца для автоматического сброса:</string>
     <string name="choose_reset_day_dialog_title">Выберите день сброса</string>
     <string name="rollover_label">Накапливать остатки</string>

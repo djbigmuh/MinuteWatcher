@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -14,11 +15,13 @@ import com.example.minutewatcher.core.resources.R
 fun ResetConfirmationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
+    @StringRes titleRes: Int = R.string.reset_confirmation_title,
+    @StringRes textRes: Int = R.string.reset_confirmation_body,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.reset_confirmation_title)) },
-        text = { Text(stringResource(id = R.string.reset_confirmation_body)) },
+        title = { Text(stringResource(id = titleRes)) },
+        text = { Text(stringResource(id = textRes)) },
         confirmButton = {
             Button(onClick = onConfirm) {
                 Text(stringResource(id = R.string.reset_label))

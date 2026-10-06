@@ -100,6 +100,8 @@
     <string name="reset_counters">Reset counters</string>
     <string name="reset_confirmation_title">Reset Counters?</string>
     <string name="reset_confirmation_body">This will clear all tracked usage and adjustments for this SIM card. This action cannot be undone.</string>
+    <string name="reset_limits_confirmation_title">Reset limits?</string>
+    <string name="reset_limits_confirmation_body">This will clear the minutes and traffic limits and disable rollover for this SIM card. Tracked usage will not be changed.</string>
     <string name="choose_reset_day">Choose the day of the month for automatic reset:</string>
     <string name="choose_reset_day_dialog_title">Choose reset day</string>
     <string name="rollover_label">Accumulate remainders</string>

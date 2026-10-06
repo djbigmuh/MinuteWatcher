@@ -100,6 +100,8 @@
     <string name="reset_counters">カウンターをリセット</string>
     <string name="reset_confirmation_title">カウンターをリセットしますか？</string>
     <string name="reset_confirmation_body">これにより、このSIMカードのすべての追跡された使用状況と調整がクリアされます。この操作は取り消すことができません。</string>
+    <string name="reset_limits_confirmation_title">上限をリセットしますか？</string>
+    <string name="reset_limits_confirmation_body">これにより、このSIMカードの通話時間とデータ通信量の上限がクリアされ、残量の繰り越しが無効になります。追跡された使用状況は変更されません。</string>
     <string name="choose_reset_day">自動リセットを行う日を選択してください:</string>
     <string name="choose_reset_day_dialog_title">リセット日を選択</string>
     <string name="rollover_label">残量を繰り越す</string>

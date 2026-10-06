@@ -100,6 +100,8 @@
     <string name="reset_counters">Zähler zurücksetzen</string>
     <string name="reset_confirmation_title">Zähler zurücksetzen?</string>
     <string name="reset_confirmation_body">Dadurch werden alle erfassten Verbrauchsdaten und Anpassungen für diese SIM-Karte gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="reset_limits_confirmation_title">Limits zurücksetzen?</string>
+    <string name="reset_limits_confirmation_body">Dadurch werden die Minuten- und Datenlimits gelöscht und das Anhäufen von Resten für diese SIM-Karte deaktiviert. Der erfasste Verbrauch wird nicht geändert.</string>
     <string name="choose_reset_day">Wählen Sie den Tag des Monats für das automatische Zurücksetzen:</string>
     <string name="choose_reset_day_dialog_title">Reset-Tag wählen</string>
     <string name="rollover_label">Reste anhäufen</string>

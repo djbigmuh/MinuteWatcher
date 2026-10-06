@@ -99,7 +99,9 @@
     <string name="reset_limits_button">सीमाएं रीसेट करें</string>
     <string name="reset_counters">काउंटर रीसेट करें</string>
     <string name="reset_confirmation_title">काउंटर रीसेट करें?</string>
-    <string name="reset_confirmation_body">यह इस सिम कार्ड के लिए सभी ट्रैक किए गए उपयोग और समायोजन को हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा سکتا है।</string>
+    <string name="reset_confirmation_body">यह इस सिम कार्ड के लिए सभी ट्रैक किए गए उपयोग और समायोजन को हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा सकता है。</string>
+    <string name="reset_limits_confirmation_title">सीमाएं रीसेट करें?</string>
+    <string name="reset_limits_confirmation_body">यह मिनट और डेटा सीमाओं को साफ़ कर देगा और इस सिम कार्ड के लिए शेष राशि जमा करना निष्क्रिय कर देगा। ट्रैक किया गया उपयोग नहीं बदला जाएगा।</string>
     <string name="choose_reset_day">स्वचालित रीसेट के लिए महीने का दिन चुनें:</string>
     <string name="choose_reset_day_dialog_title">रीसेट दिन चुनें</string>
     <string name="rollover_label">शेष राशि जमा करें</string>

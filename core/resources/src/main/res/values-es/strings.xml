@@ -100,6 +100,8 @@
     <string name="reset_counters">Reiniciar contadores</string>
     <string name="reset_confirmation_title">¿Reiniciar contadores?</string>
     <string name="reset_confirmation_body">Esto borrará todo el uso rastreado y los ajustes para esta tarjeta SIM. Esta acción no se puede deshacer.</string>
+    <string name="reset_limits_confirmation_title">¿Reiniciar límites?</string>
+    <string name="reset_limits_confirmation_body">Esto borrará los límites de minutos y datos y desactivará acumular restos para esta tarjeta SIM. El uso rastreado no cambiará.</string>
     <string name="choose_reset_day">Elija el día del mes para el reinicio automático:</string>
     <string name="choose_reset_day_dialog_title">Elegir día de reinicio</string>
     <string name="rollover_label">Acumular restos</string>

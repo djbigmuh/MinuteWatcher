@@ -100,6 +100,8 @@
     <string name="reset_counters">Réinitialiser les compteurs</string>
     <string name="reset_confirmation_title">Réinitialiser les compteurs ?</string>
     <string name="reset_confirmation_body">Cela effacera toutes les données d’utilisation suivies et les ajustements pour cette carte SIM. Cette action est irréversible.</string>
+    <string name="reset_limits_confirmation_title">Réinitialiser les limites ?</string>
+    <string name="reset_limits_confirmation_body">Cela effacera les limites de minutes et de données et désactivera l’accumulation des restes pour cette carte SIM. L’utilisation suivie ne sera pas modifiée.</string>
     <string name="choose_reset_day">Choisissez le jour du mois pour la réinitialisation automatique :</string>
     <string name="choose_reset_day_dialog_title">Choisir le jour de réinitialisation</string>
     <string name="rollover_label">Accumuler les restes</string>

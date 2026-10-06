@@ -61,6 +61,8 @@ fun SimLimitComposeDialog(
 
     if (showResetConfirm) {
         ResetConfirmationDialog(
+            titleRes = R.string.reset_limits_confirmation_title,
+            textRes = R.string.reset_limits_confirmation_body,
             onConfirm = {
                 onReset()
                 showResetConfirm = false
