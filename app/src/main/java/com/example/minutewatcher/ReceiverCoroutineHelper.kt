@@ -49,13 +49,9 @@ fun goAsyncWithScope(
                     CommonEntryPoint::class.java,
                 ).ioDispatcher()
         } catch (e: IllegalStateException) {
-            // Fallback when Hilt entry point is not accessible in production or uninitialized contexts
-            AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher fallback", e)
-            IoDispatcherFallback.io
+            handleEntryPointAccessFailure(e)
         } catch (e: IllegalArgumentException) {
-            // Fallback when Hilt entry point is not accessible in production or uninitialized contexts
-            AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher fallback", e)
-            IoDispatcherFallback.io
+            handleEntryPointAccessFailure(e)
         }
 
     val supervisorJob = SupervisorJob()
@@ -83,4 +79,9 @@ fun goAsyncWithScope(
             }
         }
     }
+}
+
+private fun handleEntryPointAccessFailure(e: Exception): CoroutineDispatcher {
+    AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher fallback", e)
+    return IoDispatcherFallback.io
 }
