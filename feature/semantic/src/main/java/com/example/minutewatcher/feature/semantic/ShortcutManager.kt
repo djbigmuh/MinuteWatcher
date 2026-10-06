@@ -114,7 +114,7 @@ class ShortcutManager
                         withContext(ioDispatcher) {
                             updateShortcuts(snapshot)
                         }
-                        transitionStatus(TrackingStatus.Active)
+                        transitionStatus(TrackingStatus.Active, force = true)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -161,7 +161,7 @@ class ShortcutManager
                     val shortcuts = createShortcuts(snapshot)
                     applyShortcuts(shortcuts)
                 }
-                transitionStatus(TrackingStatus.Active)
+                transitionStatus(TrackingStatus.Active, force = true)
                 true
             } catch (e: CancellationException) {
                 throw e

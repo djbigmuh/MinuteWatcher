@@ -349,6 +349,69 @@ class ShortcutManagerTest {
             assertTrue("Shortcuts should be removed", androidShortcutManager.dynamicShortcuts.isEmpty())
         }
 
+    @Test
+    fun `successful shortcut update clears sticky PERMISSION_MISSING error status`() =
+        runTest {
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenThrow(SecurityException("Permission denied"))
+
+            val snapshot = createSnapshot(emptyList())
+            shortcutManager.updateShortcutsSync(snapshot)
+            advanceUntilIdle()
+
+            val errorStatus = shortcutManager.status.value
+            assertTrue(errorStatus is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (errorStatus as TrackingStatus.Error).type)
+
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenAnswer { }
+
+            shortcutManager.updateShortcutsSync(snapshot)
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Active, shortcutManager.status.value)
+        }
+
+    @Test
+    fun `successful shortcut update in flow observation clears sticky PERMISSION_MISSING error status`() =
+        runTest {
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenThrow(SecurityException("Permission denied"))
+
+            val snapshotFlow = MutableStateFlow(createSnapshot(emptyList()))
+            shortcutManager.initialize(snapshotFlow)
+            advanceUntilIdle()
+
+            val errorStatus = shortcutManager.status.value
+            assertTrue(errorStatus is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (errorStatus as TrackingStatus.Error).type)
+
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenAnswer { }
+
+            snapshotFlow.value = createSnapshot(emptyList()).copy(timestamp = 2000L)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Active, shortcutManager.status.value)
+        }
+
     private fun createEntity(
         slot: Int = 0,
         op: String = "MTS",
