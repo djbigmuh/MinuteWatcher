@@ -7,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.clearInvocations
@@ -222,5 +223,80 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
                 updateWidget = eq(value = true),
                 force = eq(value = false),
             )
+        }
+
+    @Test
+    fun `isRefreshing is true during refresh and false after successful refresh`() =
+        testScope.runTest {
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+            whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            val latch = java.util.concurrent.CountDownLatch(1)
+            whenever(usageStateRepository.refresh()).thenAnswer {
+                latch.await()
+                RefreshResult.Success(snapshot)
+            }
+
+            backgroundScope.launch { viewModel.isRefreshing.collect {} }
+
+            assertFalse(viewModel.isRefreshing.value)
+
+            val job =
+                launch(kotlinx.coroutines.Dispatchers.Default) {
+                    viewModel.refreshSimCardsNow()
+                }
+
+            var attempts = 0
+            while (!viewModel.isRefreshing.value && attempts < 50) {
+                Thread.sleep(10)
+                attempts++
+            }
+
+            assertTrue("isRefreshing should be true during refresh", viewModel.isRefreshing.value)
+
+            latch.countDown()
+            job.join()
+
+            assertFalse("isRefreshing should be false after successful refresh", viewModel.isRefreshing.value)
+        }
+
+    @Test
+    fun `isRefreshing returns to false when refresh is SkippedAlreadyInProgress`() =
+        testScope.runTest {
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+            whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            backgroundScope.launch { viewModel.isRefreshing.collect {} }
+
+            launch { viewModel.refreshSimCardsNow() }
+            launch { viewModel.refreshSimCardsNow() } // second call gets SkippedAlreadyInProgress
+
+            testScheduler.advanceUntilIdle()
+
+            assertFalse("isRefreshing should be false after SkippedAlreadyInProgress", viewModel.isRefreshing.value)
+        }
+
+    @Test
+    fun `isRefreshing returns to false when refresh fails with error`() =
+        testScope.runTest {
+            whenever(usageUseCase.refreshOperatorInfo()).thenThrow(RuntimeException("Failure"))
+
+            val viewModel = createViewModel(backgroundScope)
+            testScheduler.advanceUntilIdle()
+
+            backgroundScope.launch { viewModel.isRefreshing.collect {} }
+
+            viewModel.refreshSimCardsNow()
+            testScheduler.advanceUntilIdle()
+
+            assertFalse("isRefreshing should be false after failure", viewModel.isRefreshing.value)
         }
 }

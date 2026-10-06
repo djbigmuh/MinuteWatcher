@@ -14,8 +14,10 @@ import com.example.minutewatcher.feature.main.controller.MainViewModelController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
@@ -62,6 +64,9 @@ class MainViewModel
         val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
         val trackingBannerState: StateFlow<TrackingBannerState> get() = controllers.banner.trackingBannerState
+
+        private val _isRefreshing = MutableStateFlow(false)
+        val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
         /**
          * Observes the UI state of SIM cards, bound to the viewModelScope.
@@ -240,11 +245,15 @@ class MainViewModel
         fun highlightSlot(slot: Int) = controllers.simData.highlightSlot(slot)
 
         fun refreshSimCardsNow(onComplete: () -> Unit = {}) {
+            _isRefreshing.value = true
             controllers.refresh.refreshSimCardsNow(
                 scope = viewModelScope,
                 onNotifyChanged = { controllers.simData.notifyDataChanged(force = it) },
                 onSuccess = { lastRefreshAt = timeProvider.elapsedRealtime() },
-                onComplete = onComplete,
+                onComplete = {
+                    _isRefreshing.value = false
+                    onComplete()
+                },
             )
         }
 

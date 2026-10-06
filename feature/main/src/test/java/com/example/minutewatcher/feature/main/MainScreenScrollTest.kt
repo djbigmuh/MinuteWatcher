@@ -11,11 +11,14 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.resources.R
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -27,6 +30,11 @@ class MainScreenScrollTest {
     val composeTestRule = createComposeRule()
 
     private val mockViewModel: MainViewModel = mock()
+
+    @Before
+    fun setup() {
+        whenever(mockViewModel.isRefreshing).thenReturn(MutableStateFlow(false))
+    }
 
     @Test
     fun `scrolls to highlighted slot once and ignores subsequent updates`() {
