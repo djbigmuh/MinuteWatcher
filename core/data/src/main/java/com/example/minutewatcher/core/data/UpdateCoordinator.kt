@@ -748,26 +748,26 @@ class UpdateCoordinator
             }
         }
 
-    private fun processForcedSuccessResult(
-        result: WidgetUpdateResult.Success,
-        hashBefore: Int,
-        hashAfter: Int,
-    ): ForcedUpdateOutcome {
-        consecutiveUpdateFailures = 0
-        observationRestartCount = 0
-        degradedCycleCount = 0
+        private fun processForcedSuccessResult(
+            result: WidgetUpdateResult.Success,
+            hashBefore: Int,
+            hashAfter: Int,
+        ): ForcedUpdateOutcome {
+            consecutiveUpdateFailures = 0
+            observationRestartCount = 0
+            degradedCycleCount = 0
 
-        return if (result.wasCoalesced) {
-            ForcedUpdateOutcome(
-                success = true,
-                contentChangedDuringUpdate = true,
-            )
-        } else {
-            lastSnapshotHash = hashBefore
-            ForcedUpdateOutcome(
-                success = true,
-                contentChangedDuringUpdate = hashAfter != hashBefore,
-            )
+            return if (result.wasCoalesced) {
+                ForcedUpdateOutcome(
+                    success = true,
+                    contentChangedDuringUpdate = true,
+                )
+            } else {
+                lastSnapshotHash = hashBefore
+                ForcedUpdateOutcome(
+                    success = true,
+                    contentChangedDuringUpdate = hashAfter != hashBefore,
+                )
             }
         }
 
