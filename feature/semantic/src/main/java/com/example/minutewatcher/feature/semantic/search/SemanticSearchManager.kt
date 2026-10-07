@@ -110,6 +110,12 @@ class SemanticSearchManager
 
         override suspend fun recover() {
             initMutex.withLock {
+                val current = statusMachine.current
+                if (current is TrackingStatus.Error && current.type == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                    AppLogger.d("SemanticSearchManager: recover() skipped because status is NOT_SUPPORTED")
+                    return
+                }
+
                 errorHandler.resetFailures()
 
                 val acquired =

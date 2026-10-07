@@ -64,6 +64,8 @@ class AppSearchErrorHandler
 
             val isNotSupported =
                 hasCause(e, DeadObjectException::class.java) ||
+                    hasCause(e, UnsupportedOperationException::class.java) ||
+                    (e is IllegalStateException) ||
                     (e is AppSearchException && (e.resultCode == AppSearchResult.RESULT_INTERNAL_ERROR))
 
             return if (isNotSupported) {

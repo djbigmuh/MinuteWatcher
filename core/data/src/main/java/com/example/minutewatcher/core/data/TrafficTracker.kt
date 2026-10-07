@@ -4,6 +4,7 @@ import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.common.util.firstWithTimeoutOrLog
 import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.SimNotFoundException
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
@@ -19,7 +20,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -452,9 +452,13 @@ class TrafficTracker
         }
 
         private suspend fun fetchActiveSims(): List<ActiveSimInfo>? =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                simIdentityRepository.observeActiveSims().first()
-            } ?: run {
+            simIdentityRepository
+                .observeActiveSims()
+                .firstWithTimeoutOrLog(
+                    timeoutMillis = Constants.Flow.SHORT_TIMEOUT_MS,
+                    tag = "TrafficTracker",
+                    key = "activeSims",
+                ) ?: run {
                 AppLogger.e("TrafficTracker: timeout fetching active sims")
                 null
             }

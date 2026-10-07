@@ -1,20 +1,18 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeoutOrLog
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Handles SIM-change transitions for the data SIM that [TrafficTracker] attributes traffic to.
@@ -41,9 +39,13 @@ class TrafficSimChangeHandler
             if (!lastDataSubIdLoaded.get()) {
                 try {
                     val loaded =
-                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                            callSessionRepository.getLastDataSubId().first()
-                        }
+                        callSessionRepository
+                            .getLastDataSubId()
+                            .firstWithTimeoutOrLog(
+                                timeoutMillis = Constants.Flow.LONG_TIMEOUT_MS,
+                                tag = "TrafficSimChangeHandler",
+                                key = "lastDataSubId",
+                            )
                     if (loaded != null) {
                         inMemoryLastDataSubId.set(loaded)
                         lastDataSubIdLoaded.set(true)

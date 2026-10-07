@@ -5,7 +5,7 @@ import org.junit.Test
 
 class WidgetLayoutModeTest {
     @Test
-    fun `from value`() {
+    fun `fromValue when valid ordinal then returns correct mode`() {
         assertEquals(WidgetLayoutMode.SINGLE_LINE, WidgetLayoutMode.fromValue(0))
         assertEquals(WidgetLayoutMode.TWO_LINES, WidgetLayoutMode.fromValue(1))
         assertEquals(WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.fromValue(2))
@@ -14,7 +14,7 @@ class WidgetLayoutModeTest {
     }
 
     @Test
-    fun `from value default`() {
+    fun `fromValue when invalid ordinal then returns default mode`() {
         assertEquals(WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.fromValue(-1))
         assertEquals(WidgetLayoutMode.THREE_LINES, WidgetLayoutMode.fromValue(100))
     }

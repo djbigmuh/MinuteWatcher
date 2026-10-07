@@ -89,7 +89,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
-    fun `initialization with IllegalStateException sets DATABASE_ERROR status regardless of message text`() =
+    fun `initialization with IllegalStateException sets NOT_SUPPORTED status regardless of message text`() =
         runTest(testDispatcher) {
             val messages = listOf("AppSearch is not supported on this device", "Something went wrong")
             for (msg in messages) {
@@ -103,7 +103,7 @@ class SemanticSearchManagerInitTest : SemanticSearchManagerTestFixtures() {
                 val status = manager.status.value
                 assertTrue("Expected Error status for '$msg', but was $status", status is TrackingStatus.Error)
                 assertEquals(
-                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    TrackingStatus.ErrorType.NOT_SUPPORTED,
                     (status as TrackingStatus.Error).type,
                 )
             }

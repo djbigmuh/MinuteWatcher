@@ -11,12 +11,13 @@ class AppSearchErrorHandlerTest {
     private val errorHandler = AppSearchErrorHandler()
 
     @Test
-    fun `handleInitializationError classifies IllegalStateException as UNKNOWN regardless of message text`() {
+    fun `handleInitializationError classifies IllegalStateException as NOT_SUPPORTED with SERVICE_UNAVAILABLE`() {
         val messages = listOf("AppSearch is not supported", "Random error")
         for (msg in messages) {
             val exception = IllegalStateException(msg)
             val status = errorHandler.handleInitializationError(exception)
-            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+            assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+            assertEquals(TrackingStatus.ErrorCode.SERVICE_UNAVAILABLE, status.code)
         }
     }
 

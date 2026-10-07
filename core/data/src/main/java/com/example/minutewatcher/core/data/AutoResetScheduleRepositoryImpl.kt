@@ -8,8 +8,6 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.model.Constants
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,10 +20,8 @@ class AutoResetScheduleRepositoryImpl
         @AppDataStore dataStore: DataStore<Preferences>,
     ) : BaseDataStoreRepository(dataStore),
         AutoResetScheduleRepository {
-        override suspend fun getLastCheckMillis(): Long? =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                dataStore.data.map { prefs -> prefs[DataStoreKeys.AUTO_RESET_LAST_CHECK_MILLIS] }.first()
-            }
+    override suspend fun getLastCheckMillis(): Long? =
+        getValue(DataStoreKeys.AUTO_RESET_LAST_CHECK_MILLIS, -1L).takeIf { it != -1L }
 
         override suspend fun setLastCheckMillis(valueMillis: Long) {
             val result =
@@ -39,10 +35,7 @@ class AutoResetScheduleRepositoryImpl
             }
         }
 
-        override suspend fun getFailureCount(): Int =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                dataStore.data.map { prefs -> prefs[DataStoreKeys.AUTO_RESET_FAIL_COUNT] ?: 0 }.first()
-            } ?: 0
+    override suspend fun getFailureCount(): Int = getValue(DataStoreKeys.AUTO_RESET_FAIL_COUNT, 0)
 
         override suspend fun setFailureCount(count: Int) {
             val result =

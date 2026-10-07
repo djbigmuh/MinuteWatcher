@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeoutOrLog
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
@@ -15,12 +16,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
@@ -44,8 +43,12 @@ internal class SimIdentitySeedRepositoryImpl
 
         override suspend fun setSeed(seed: String) {
             try {
-                dataStore.edit { preferences ->
-                    preferences[DataStoreKeys.SIM_IDENTITY_SEED] = seed
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    dataStore.edit { preferences ->
+                        preferences[DataStoreKeys.SIM_IDENTITY_SEED] = seed
+                    }
+                } ?: run {
+                    AppLogger.w("SimIdentitySeedRepositoryImpl: setSeed timed out")
                 }
                 clearEphemeralStateOnPersistentRestored()
             } catch (e: CancellationException) {
@@ -67,7 +70,7 @@ internal class SimIdentitySeedRepositoryImpl
             if (result != null) return result
 
             AppLogger.e(
-                "CRITICAL: DataStore unavailable after $MAX_RETRIES retries, using ephemeral seed. " +
+                "CRITICAL: DataStore unavailable after $MAX_RETRIES retries or timeout, using ephemeral seed. " +
                     "All SIM identities will change. Previous statistics will be orphaned.",
             )
             val seed = getOrCreateEphemeralSeed(generator)
@@ -94,8 +97,9 @@ internal class SimIdentitySeedRepositoryImpl
                         }
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (e: IOException) {
+                    } catch (e: Exception) {
                         handlePersistentSeedError(attempt, e)
+                        null
                     }
 
                 if (result is SeedResolutionResult.Persistent) {
@@ -109,10 +113,14 @@ internal class SimIdentitySeedRepositoryImpl
 
         private suspend fun readPersistentSeed(): String? {
             val seed =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    dataStore.data.first()[DataStoreKeys.SIM_IDENTITY_SEED] ?: ""
-                } ?: throw IOException("DataStore read timeout")
-            return seed.ifEmpty { null }
+                dataStore.data
+                    .map { it[DataStoreKeys.SIM_IDENTITY_SEED] ?: "" }
+                    .firstWithTimeoutOrLog(
+                        timeoutMillis = Constants.Flow.SHORT_TIMEOUT_MS,
+                        tag = "SimIdentitySeedRepositoryImpl",
+                        key = DataStoreKeys.SIM_IDENTITY_SEED.name,
+                    )
+            return seed?.ifEmpty { null }
         }
 
         private suspend fun generateAndWritePersistentSeed(generator: () -> String): SeedResolutionResult.Persistent? {
@@ -128,7 +136,12 @@ internal class SimIdentitySeedRepositoryImpl
                     )
                 }
 
-            val updated = (editOutcome ?: throw IOException("DataStore write timeout")).getOrThrow()
+            val updated =
+                (
+                    editOutcome ?: return null.also {
+                        AppLogger.w("SimIdentitySeedRepositoryImpl: DataStore write timeout during seed generation")
+                    }
+                    ).getOrThrow()
             val storedSeed = updated[DataStoreKeys.SIM_IDENTITY_SEED]
             return if (!storedSeed.isNullOrEmpty()) {
                 AppLogger.d("SimIdentitySeedRepositoryImpl: New seed stored.")
@@ -140,13 +153,13 @@ internal class SimIdentitySeedRepositoryImpl
 
         private suspend fun handlePersistentSeedError(
             attempt: Int,
-            e: IOException,
+            e: Exception,
         ) {
             if (attempt == MAX_RETRIES - 1) {
                 AppLogger.e("SimIdentitySeedRepositoryImpl: Persistent seed access failed after retries", e)
             } else {
                 val delayMs = INITIAL_RETRY_DELAY_MS * (1 shl attempt)
-                AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying in ${delayMs}ms...")
+                AppLogger.w("SimIdentitySeedRepositoryImpl: Retrying in ${delayMs}ms due to ${e.message}")
                 delay(delayMs.milliseconds)
             }
         }

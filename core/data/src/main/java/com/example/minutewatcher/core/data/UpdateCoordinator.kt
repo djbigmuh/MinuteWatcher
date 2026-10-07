@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FlowObservationScope
+import com.example.minutewatcher.core.common.util.firstWithTimeoutOrLog
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateCoordinator
@@ -316,9 +317,11 @@ class UpdateCoordinator
                         .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
 
                 firstSnapshot =
-                    withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                        rawFlow.first()
-                    }
+                    rawFlow.firstWithTimeoutOrLog(
+                        timeoutMillis = Constants.Flow.LONG_TIMEOUT_MS,
+                        tag = "UpdateCoordinator",
+                        key = "initialSnapshot",
+                    )
                 if (firstSnapshot == null) {
                     attempt++
                     if (attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) {

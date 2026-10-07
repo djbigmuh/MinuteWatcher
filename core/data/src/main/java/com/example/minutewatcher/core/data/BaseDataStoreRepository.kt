@@ -2,6 +2,8 @@ package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.common.util.firstWithTimeoutOrDefault
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -24,4 +26,20 @@ open class BaseDataStoreRepository(
         key: Preferences.Key<T>,
         defaultValue: T,
     ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
+
+    /**
+     * Standard helper for single reads from DataStore with timeout and default value.
+     */
+    protected suspend fun <T> getValue(
+        key: Preferences.Key<T>,
+        defaultValue: T,
+    ): T =
+        dataStore.data
+            .map { it[key] ?: defaultValue }
+            .firstWithTimeoutOrDefault(
+                timeoutMillis = Constants.Flow.SHORT_TIMEOUT_MS,
+                tag = this::class.java.simpleName,
+                key = key.name,
+                defaultValue = defaultValue,
+            )
 }

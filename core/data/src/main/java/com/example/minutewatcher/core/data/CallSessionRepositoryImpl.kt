@@ -4,15 +4,18 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.AppDataStore
-import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeoutOrLog
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of [CallSessionRepository] using [DataStore].
@@ -48,7 +51,13 @@ class CallSessionRepositoryImpl
          * @throws IOException if DataStore write fails (thrown from dataStore.edit).
          */
         override suspend fun setLastDataSubId(subId: Int) {
-            dataStore.edit { it[DataStoreKeys.LAST_DATA_SUB_ID] = subId }
+            val result =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    dataStore.edit { it[DataStoreKeys.LAST_DATA_SUB_ID] = subId }
+                }
+            if (result == null) {
+                AppLogger.w("CallSessionRepositoryImpl: setLastDataSubId timed out")
+            }
         }
 
         /**
@@ -63,16 +72,22 @@ class CallSessionRepositoryImpl
             uptime: Long,
             identity: String?,
         ) {
-            dataStore.edit { prefs ->
-                prefs[DataStoreKeys.callStartTimeKey(subId)] = startTime
-                prefs[DataStoreKeys.bootTimeKey(subId)] = bootTime
-                prefs[DataStoreKeys.uptimeKey(subId)] = uptime
-                val identityKey = DataStoreKeys.callIdentityKey(subId)
-                if (identity == null) {
-                    prefs.remove(identityKey)
-                } else {
-                    prefs[identityKey] = identity
+            val result =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    dataStore.edit { prefs ->
+                        prefs[DataStoreKeys.callStartTimeKey(subId)] = startTime
+                        prefs[DataStoreKeys.bootTimeKey(subId)] = bootTime
+                        prefs[DataStoreKeys.uptimeKey(subId)] = uptime
+                        val identityKey = DataStoreKeys.callIdentityKey(subId)
+                        if (identity == null) {
+                            prefs.remove(identityKey)
+                        } else {
+                            prefs[identityKey] = identity
+                        }
+                    }
                 }
+            if (result == null) {
+                AppLogger.w("CallSessionRepositoryImpl: saveCallSession timed out for subId $subId")
             }
         }
 
@@ -82,11 +97,17 @@ class CallSessionRepositoryImpl
          * @throws IOException if DataStore write fails.
          */
         override suspend fun clearCallSession(subId: Int) {
-            dataStore.edit { prefs ->
-                prefs.remove(DataStoreKeys.callStartTimeKey(subId))
-                prefs.remove(DataStoreKeys.bootTimeKey(subId))
-                prefs.remove(DataStoreKeys.uptimeKey(subId))
-                prefs.remove(DataStoreKeys.callIdentityKey(subId))
+            val result =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    dataStore.edit { prefs ->
+                        prefs.remove(DataStoreKeys.callStartTimeKey(subId))
+                        prefs.remove(DataStoreKeys.bootTimeKey(subId))
+                        prefs.remove(DataStoreKeys.uptimeKey(subId))
+                        prefs.remove(DataStoreKeys.callIdentityKey(subId))
+                    }
+                }
+            if (result == null) {
+                AppLogger.w("CallSessionRepositoryImpl: clearCallSession timed out for subId $subId")
             }
         }
 
@@ -128,18 +149,24 @@ class CallSessionRepositoryImpl
          * @throws IOException if DataStore write fails (thrown from dataStore.edit).
          */
         override suspend fun clearAllCallSessions() {
-            dataStore.edit { prefs ->
-                prefs
-                    .asMap()
-                    .keys
-                    .filter { key ->
-                        key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX) ||
-                            key.name.startsWith(DataStoreKeys.BOOT_TIME_PREFIX) ||
-                            key.name.startsWith(DataStoreKeys.UPTIME_PREFIX) ||
-                            key.name.startsWith(DataStoreKeys.CALL_IDENTITY_PREFIX)
-                    }.forEach { key ->
-                        prefs.remove(key)
+            val result =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    dataStore.edit { prefs ->
+                        prefs
+                            .asMap()
+                            .keys
+                            .filter { key ->
+                                key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX) ||
+                                    key.name.startsWith(DataStoreKeys.BOOT_TIME_PREFIX) ||
+                                    key.name.startsWith(DataStoreKeys.UPTIME_PREFIX) ||
+                                    key.name.startsWith(DataStoreKeys.CALL_IDENTITY_PREFIX)
+                            }.forEach { key ->
+                                prefs.remove(key)
+                            }
                     }
+                }
+            if (result == null) {
+                AppLogger.w("CallSessionRepositoryImpl: clearAllCallSessions timed out")
             }
         }
 
@@ -150,7 +177,11 @@ class CallSessionRepositoryImpl
          * @return List of active subIds, or null if reading timed out.
          */
         override suspend fun getActiveCallSubIds(): List<Int>? {
-            val prefs = dataStore.data.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: return null
+            val prefs =
+                dataStore.data.firstWithTimeoutOrLog(
+                    timeoutMillis = Constants.Flow.SHORT_TIMEOUT_MS,
+                    tag = "CallSessionRepositoryImpl",
+                ) ?: return null
             return prefs.asMap().entries.mapNotNull { (key, value) ->
                 if ((key.name.startsWith(DataStoreKeys.CALL_START_TIME_PREFIX)) && (((value as? Long) ?: 0L) > 0L)) {
                     key.name.removePrefix(DataStoreKeys.CALL_START_TIME_PREFIX).toIntOrNull()

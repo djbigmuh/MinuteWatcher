@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.common.util.firstWithTimeoutOrLog
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -12,7 +13,6 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -157,9 +157,13 @@ class ResetManager
         ): Boolean {
             val identity = simInfo.identity.stableId
             val usage =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    simUsageRepository.getSimUsage(identity).first()
-                }
+                simUsageRepository
+                    .getSimUsage(identity)
+                    .firstWithTimeoutOrLog(
+                        timeoutMillis = Constants.Flow.SHORT_TIMEOUT_MS,
+                        tag = "ResetManager",
+                        key = "simUsage_$identity",
+                    )
 
             if (usage == null) {
                 AppLogger.w("ResetManager: Timeout reading usage for SIM $identity, skipping reset check.")
