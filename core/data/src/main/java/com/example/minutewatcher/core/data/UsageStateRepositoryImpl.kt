@@ -30,6 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -113,16 +114,16 @@ class UsageStateRepositoryImpl
         }
 
         private val isDataLoadedSet = AtomicBoolean(false)
-    private val isDataLoadedFlow = kotlinx.coroutines.flow.MutableStateFlow(false)
+        private val isDataLoadedFlow = MutableStateFlow(false)
         private val assembler = SnapshotAssembler()
 
         override fun isDataLoaded(): Boolean = isDataLoadedSet.get()
 
-    private fun markDataLoaded() {
-        if (isDataLoadedSet.compareAndSet(false, true)) {
-            isDataLoadedFlow.value = true
+        private fun markDataLoaded() {
+            if (isDataLoadedSet.compareAndSet(false, true)) {
+                isDataLoadedFlow.value = true
+            }
         }
-    }
 
         private val sharedSimUsagesFlow: StateFlow<List<SimUsage>> =
             flow {
