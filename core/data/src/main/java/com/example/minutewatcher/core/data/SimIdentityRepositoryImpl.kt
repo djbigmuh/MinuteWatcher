@@ -49,7 +49,7 @@ class SimIdentityRepositoryImpl
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = observer.activeSimsCache
 
-    override fun observeResolvedActiveSims(): StateFlow<List<ActiveSimInfo>?> = observer.resolvedActiveSimsCache
+        override fun observeResolvedActiveSims(): StateFlow<List<ActiveSimInfo>?> = observer.resolvedActiveSimsCache
 
         override fun getActiveIdentities(): Flow<List<String>> =
             observeActiveSims().map { sims -> sims.map { it.identity.stableId } }.distinctUntilChanged()
