@@ -37,8 +37,6 @@ object AppLocaleContexts {
         configuration.setLayoutDirection(firstLocale)
 
         val localizedContext = context.createConfigurationContext(configuration)
-        @Suppress("DEPRECATION")
-        localizedContext.resources.updateConfiguration(configuration, localizedContext.resources.displayMetrics)
         return localizedContext
     }
 
