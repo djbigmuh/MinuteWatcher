@@ -111,42 +111,42 @@ class SemanticSearchManager
         override suspend fun recover() {
             initMutex.withLock {
                 val current = statusMachine.current
-                if (current is TrackingStatus.Error && current.type == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                val isNotSupported = current is TrackingStatus.Error && current.type == TrackingStatus.ErrorType.NOT_SUPPORTED
+                if (isNotSupported) {
                     AppLogger.d("SemanticSearchManager: recover() skipped because status is NOT_SUPPORTED")
-                    return
-                }
+                } else {
+                    errorHandler.resetFailures()
 
-                errorHandler.resetFailures()
-
-                val acquired =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        indexMutex.withLock {
-                            lastSnapshotHash = null
-                            lastSnapshotVersion = null
-                            consecutiveMutexContention.set(0)
+                    val resetSuccess = resetIndexStateWithTimeout()
+                    if (!resetSuccess) {
+                        AppLogger.e("SemanticSearchManager: recovery blocked by indexing mutex")
+                        transitionStatus(
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                "Recovery blocked: indexing in progress or stuck",
+                            ),
+                        )
+                    } else {
+                        val flow = lastSnapshotFlow
+                        if (flow == null) {
+                            AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
+                        } else {
+                            setupObservation(flow)
                         }
-                        true
-                    } ?: false
-
-                if (!acquired) {
-                    AppLogger.e("SemanticSearchManager: recovery blocked by indexing mutex")
-                    transitionStatus(
-                        TrackingStatus.Error(
-                            TrackingStatus.ErrorType.DATABASE_ERROR,
-                            "Recovery blocked: indexing in progress or stuck",
-                        ),
-                    )
-                    return
-                }
-
-                val flow =
-                    lastSnapshotFlow ?: run {
-                        AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
-                        return
                     }
-                setupObservation(flow)
+                }
             }
         }
+
+        private suspend fun resetIndexStateWithTimeout(): Boolean =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                indexMutex.withLock {
+                    lastSnapshotHash = null
+                    lastSnapshotVersion = null
+                    consecutiveMutexContention.set(0)
+                }
+                true
+            } ?: false
 
         @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
