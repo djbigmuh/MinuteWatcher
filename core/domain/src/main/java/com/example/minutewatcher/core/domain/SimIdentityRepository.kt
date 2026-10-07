@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.domain
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -46,6 +47,14 @@ interface SimIdentityRepository {
      * Observes information about all active SIM cards.
      */
     fun observeActiveSims(): Flow<List<ActiveSimInfo>>
+
+    /**
+     * Observes information about all active SIM cards once discovery has resolved.
+     *
+     * Emits `null` until the first SIM discovery result is available
+     * (success, empty, missing permission, unsupported, or failure).
+     */
+    fun observeResolvedActiveSims(): StateFlow<List<ActiveSimInfo>?>
 
     /**
      * Sets the operator name for the given identity.

@@ -15,7 +15,9 @@ import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -64,6 +66,19 @@ class UsageStateRepositoryResilienceTest {
             )
     }
 
+    private fun mockStateFlowFromFlow(flow: Flow<List<ActiveSimInfo>>): StateFlow<List<ActiveSimInfo>?> =
+        object : StateFlow<List<ActiveSimInfo>?> {
+            override val value: List<ActiveSimInfo>? get() = null
+            override val replayCache: List<List<ActiveSimInfo>?> get() = emptyList()
+
+            override suspend fun collect(
+                collector: kotlinx.coroutines.flow.FlowCollector<List<ActiveSimInfo>?>,
+            ): Nothing {
+                flow.collect { collector.emit(it) }
+                kotlinx.coroutines.awaitCancellation()
+            }
+        }
+
     @Test
     fun `test retry logic after IOException`() =
         runTest(testDispatcher) {
@@ -76,6 +91,7 @@ class UsageStateRepositoryResilienceTest {
                     }
                     emit(listOf(createSimInfo("sim_1")))
                 }
+            whenever(simIdentityRepository.observeResolvedActiveSims()).thenAnswer { mockStateFlowFromFlow(simFlow) }
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(simFlow)
             whenever(simUsageRepository.getSimUsage(any())).thenReturn(flow { emit(createSimUsage("sim_1")) })
 
@@ -93,9 +109,13 @@ class UsageStateRepositoryResilienceTest {
     @Test
     fun `test status goes to DATABASE_ERROR after consecutive failures`() =
         runTest(testDispatcher) {
+            val failingFlow = flow<List<ActiveSimInfo>> { throw IOException("Persistent failure") }
+            whenever(
+                simIdentityRepository.observeResolvedActiveSims(),
+            ).thenAnswer { mockStateFlowFromFlow(failingFlow) }
             whenever(
                 simIdentityRepository.observeActiveSims(),
-            ).thenReturn(flow { throw IOException("Persistent failure") })
+            ).thenReturn(failingFlow)
 
             val repo = UsageStateRepositoryImpl(context, deps, backgroundScope)
 
@@ -108,9 +128,13 @@ class UsageStateRepositoryResilienceTest {
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
 
             // Now recover
+            val activeFlow = flow { emit(listOf(createSimInfo("sim_1"))) }
+            whenever(
+                simIdentityRepository.observeResolvedActiveSims(),
+            ).thenAnswer { mockStateFlowFromFlow(activeFlow) }
             whenever(
                 simIdentityRepository.observeActiveSims(),
-            ).thenReturn(flow { emit(listOf(createSimInfo("sim_1"))) })
+            ).thenReturn(activeFlow)
             whenever(simUsageRepository.getSimUsage(any())).thenReturn(flow { emit(createSimUsage("sim_1")) })
 
             advanceTimeBy(40000.milliseconds)
@@ -128,6 +152,9 @@ class UsageStateRepositoryResilienceTest {
                     attemptCount++
                     throw IOException("Simulated persistent failure")
                 }
+            whenever(
+                simIdentityRepository.observeResolvedActiveSims(),
+            ).thenAnswer { mockStateFlowFromFlow(failingFlow) }
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(failingFlow)
 
             val repo = UsageStateRepositoryImpl(context, deps, backgroundScope)

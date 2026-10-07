@@ -217,19 +217,22 @@ class ShortcutManager
             val entity = sim.entities[PackageType.MINUTES]
             if ((entity == null) || (entity.limit <= 0)) return null
 
+            val appLocaleContext =
+                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                    .forAppLocale(context)
             val slot = sim.slot
-            val operator = SimUtils.getShortOperatorName(context, sim.operatorName, slot)
+            val operator = SimUtils.getShortOperatorName(appLocaleContext, sim.operatorName, slot)
             val shortLabel =
-                context.getString(
+                appLocaleContext.getString(
                     R.string.shortcut_minutes_short,
                     entity.remaining,
-                    context.getString(R.string.minutes_abbr).trim(),
+                    appLocaleContext.getString(R.string.minutes_abbr).trim(),
                 )
             val longLabel =
-                context.getString(
+                appLocaleContext.getString(
                     R.string.shortcut_long_format,
                     operator,
-                    context.getString(R.string.remaining_text).trim(),
+                    appLocaleContext.getString(R.string.remaining_text).trim(),
                     shortLabel,
                 )
 
@@ -246,20 +249,23 @@ class ShortcutManager
             val entity = sim.entities[PackageType.DATA]
             if (entity == null || (entity.limit <= 0)) return null
 
+            val appLocaleContext =
+                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                    .forAppLocale(context)
             val slot = sim.slot
-            val operator = SimUtils.getShortOperatorName(context, sim.operatorName, slot)
+            val operator = SimUtils.getShortOperatorName(appLocaleContext, sim.operatorName, slot)
             val trafficGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
             val shortLabel =
-                context.getString(
+                appLocaleContext.getString(
                     R.string.shortcut_traffic_short,
                     trafficGb,
-                    context.getString(R.string.gb_abbr).trim(),
+                    appLocaleContext.getString(R.string.gb_abbr).trim(),
                 )
             val longLabel =
-                context.getString(
+                appLocaleContext.getString(
                     R.string.shortcut_long_format,
                     operator,
-                    context.getString(R.string.remaining_text).trim(),
+                    appLocaleContext.getString(R.string.remaining_text).trim(),
                     shortLabel,
                 )
 

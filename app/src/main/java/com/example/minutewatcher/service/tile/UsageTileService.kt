@@ -110,14 +110,17 @@ class UsageTileService : TileService() {
     private fun updateTile() {
         val tile = qsTile ?: return
         val snapshot = semanticRepository.snapshot.value
+        val appLocaleContext =
+            com.example.minutewatcher.core.android.util.AppLocaleContexts
+                .forAppLocale(this)
 
         // Use all SIMs from snapshot (already filtered by active physical SIMs in repository)
         val activeSims = snapshot.simSnapshots
         if (activeSims.isEmpty()) {
             tile.applyState(TileState.UNAVAILABLE)
-            tile.label = getString(R.string.no_sim_found)
+            tile.label = appLocaleContext.getString(R.string.no_sim_found)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = getString(R.string.no_sim_found)
+                tile.subtitle = appLocaleContext.getString(R.string.no_sim_found)
             }
             tile.updateTile()
             return
@@ -126,13 +129,16 @@ class UsageTileService : TileService() {
         // Select SIM with limit and lowest minutes, or null if no SIM has limit
         val activeSim = TileSimSelector.select(activeSims) ?: activeSims[0]
 
-        val operatorName = SimUtils.getShortOperatorName(this, activeSim.operatorName, activeSim.slot)
+        val operatorName = SimUtils.getShortOperatorName(appLocaleContext, activeSim.operatorName, activeSim.slot)
         val minutes = activeSim.entities[PackageType.MINUTES]
 
         // Note: remaining == 0 when limit == 0 means "no limit set", not "exhausted".
         if (minutes != null && minutes.limit > 0) {
             val remaining = minutes.remaining.toInt()
-            val remainingText = resources.getQuantityString(R.plurals.minutes_plurals, remaining, remaining)
+            val remainingText =
+                appLocaleContext
+                    .resources
+                    .getQuantityString(R.plurals.minutes_plurals, remaining, remaining)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.label = operatorName
@@ -152,9 +158,9 @@ class UsageTileService : TileService() {
             tile.label = operatorName
             tile.applyState(TileState.UNAVAILABLE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = getString(R.string.no_data)
+                tile.subtitle = appLocaleContext.getString(R.string.no_data)
             }
-            tile.contentDescription = "$operatorName: ${getString(R.string.no_data)}"
+            tile.contentDescription = "$operatorName: ${appLocaleContext.getString(R.string.no_data)}"
         }
 
         tile.updateTile()

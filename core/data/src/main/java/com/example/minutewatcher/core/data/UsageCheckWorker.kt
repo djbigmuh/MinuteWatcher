@@ -269,18 +269,21 @@ class UsageCheckWorker
                 }
 
             if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
+                val appLocaleContext =
+                    com.example.minutewatcher.core.android.util.AppLocaleContexts
+                        .forAppLocale(applicationContext)
                 val levelRes =
                     if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
                         R.string.usage_level_critical
                     } else {
                         R.string.usage_level_low
                     }
-                val level = applicationContext.getString(levelRes)
-                val remText = FormatUtils.formatMinutesPlural(applicationContext, entity.remaining.toInt())
-                val daysText = FormatUtils.formatDaysPlural(applicationContext, daysRem)
+                val level = appLocaleContext.getString(levelRes)
+                val remText = FormatUtils.formatMinutesPlural(appLocaleContext, entity.remaining.toInt())
+                val daysText = FormatUtils.formatDaysPlural(appLocaleContext, daysRem)
 
                 val body =
-                    applicationContext.getString(
+                    appLocaleContext.getString(
                         R.string.notification_minutes_body,
                         level,
                         remText,
@@ -300,7 +303,10 @@ class UsageCheckWorker
             slot: Int,
             type: Int,
         ) {
-            val body = applicationContext.getString(bodyResId)
+            val appLocaleContext =
+                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                    .forAppLocale(applicationContext)
+            val body = appLocaleContext.getString(bodyResId)
             sendNotificationWithBody(operator, body, slot, type)
         }
 
@@ -310,13 +316,16 @@ class UsageCheckWorker
             slot: Int,
             type: Int,
         ) {
+            val appLocaleContext =
+                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                    .forAppLocale(applicationContext)
             val titleRes =
                 if (type == NOTIFICATION_TYPE_MINUTES) {
                     R.string.notification_minutes_title
                 } else {
                     R.string.notification_traffic_title
                 }
-            val title = applicationContext.getString(titleRes, operator)
+            val title = appLocaleContext.getString(titleRes, operator)
             deps.notificationHelper.sendUsageNotification(title, body, slot, type)
         }
 
@@ -386,16 +395,19 @@ class UsageCheckWorker
                 }
 
             if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
+                val appLocaleContext =
+                    com.example.minutewatcher.core.android.util.AppLocaleContexts
+                        .forAppLocale(applicationContext)
                 val levelRes =
                     if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
                         R.string.usage_level_critical
                     } else {
                         R.string.usage_level_low
                     }
-                val level = applicationContext.getString(levelRes)
-                val daysText = FormatUtils.formatDaysPlural(applicationContext, daysRem)
+                val level = appLocaleContext.getString(levelRes)
+                val daysText = FormatUtils.formatDaysPlural(appLocaleContext, daysRem)
                 val body =
-                    applicationContext.getString(
+                    appLocaleContext.getString(
                         R.string.notification_traffic_body,
                         level,
                         remGb,

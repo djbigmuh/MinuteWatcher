@@ -35,12 +35,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
@@ -113,33 +113,45 @@ class UsageStateRepositoryImpl
         }
 
         private val isDataLoadedSet = AtomicBoolean(false)
+    private val isDataLoadedFlow = kotlinx.coroutines.flow.MutableStateFlow(false)
         private val assembler = SnapshotAssembler()
 
         override fun isDataLoaded(): Boolean = isDataLoadedSet.get()
 
+    private fun markDataLoaded() {
+        if (isDataLoadedSet.compareAndSet(false, true)) {
+            isDataLoadedFlow.value = true
+        }
+    }
+
         private val sharedSimUsagesFlow: StateFlow<List<SimUsage>> =
             flow {
                 deps.simIdentityRepository
-                    .observeActiveSims()
+                    .observeResolvedActiveSims()
                     .debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                     .distinctUntilChanged()
-                    .flatMapLatest { sims ->
-                        if (sims.isEmpty()) {
-                            flowOf(emptyList())
-                        } else {
-                            combine(
-                                sims.map { sim ->
-                                    deps.simUsageRepository.getSimUsage(sim.identity.stableId).map { usage ->
-                                        usage.copy(slotIndex = sim.slotIndex)
-                                    }
-                                },
-                            ) { it.toList() }
+                    .flatMapLatest { resolvedSims ->
+                        when {
+                            resolvedSims == null -> emptyFlow()
+                            resolvedSims.isEmpty() -> {
+                                markDataLoaded()
+                                flowOf(emptyList())
+                            }
+
+                            else -> {
+                                combine(
+                                    resolvedSims.map { sim ->
+                                        deps.simUsageRepository.getSimUsage(sim.identity.stableId).map { usage ->
+                                            usage.copy(slotIndex = sim.slotIndex)
+                                        }
+                                    },
+                                ) { usagesList ->
+                                    markDataLoaded()
+                                    usagesList.toList()
+                                }
+                            }
                         }
                     }.collect { emit(it) }
-            }.onEach { usages ->
-                if (usages.isNotEmpty()) {
-                    isDataLoadedSet.set(true)
-                }
             }.observeWithRetry(
                 label = "UsageStateRepository: simUsagesFlow",
                 logThreshold = LOG_THRESHOLD,
@@ -171,22 +183,26 @@ class UsageStateRepositoryImpl
          * **Thread Safety:** Safe to call from any coroutine context.
          */
         override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> =
-            sharedSimUsagesFlow
-                .map { usages ->
-                    usages
-                        .asSequence()
-                        .filter { it.slotIndex in Constants.SimConstants.SUPPORTED_SLOT_INDICES }
-                        .map { usage ->
-                            SimCardMapper.map(context, usage.slotIndex, usage)
-                        }.toList()
-                }
+            combine(sharedSimUsagesFlow, isDataLoadedFlow) { usages, _ ->
+                usages
+                    .asSequence()
+                    .filter { it.slotIndex in Constants.SimConstants.SUPPORTED_SLOT_INDICES }
+                    .map { usage ->
+                        SimCardMapper.map(context, usage.slotIndex, usage)
+                    }.toList()
+            }
 
         private val snapshotFlow: StateFlow<GlobalSnapshot> =
-            combine(sharedSimUsagesFlow, deps.dataRefreshNotifier.refreshFlow) { usages, event ->
+            combine(
+                sharedSimUsagesFlow,
+                deps.dataRefreshNotifier.refreshFlow,
+                isDataLoadedFlow,
+            ) { usages, event, isLoaded ->
+                val timestamp = if (isLoaded) deps.timeProvider.now() else Constants.Data.EMPTY_TIMESTAMP
                 assembler.assemble(
                     usages = usages,
                     event = event,
-                    timestamp = deps.timeProvider.now(),
+                    timestamp = timestamp,
                     semanticVersion = deps.semanticVersion,
                     semanticCapabilities = deps.semanticCapabilities,
                     mapSimSnapshot = { usage, ts -> mapSimSnapshot(usage, ts) },
@@ -246,7 +262,7 @@ class UsageStateRepositoryImpl
         private fun createEmptySnapshot() =
             GlobalSnapshot(
                 version = deps.semanticVersion.getVersion(),
-                timestamp = 0L,
+                timestamp = Constants.Data.EMPTY_TIMESTAMP,
                 simSnapshots = emptyList(),
                 capabilities = deps.semanticCapabilities.getCapabilities(),
                 isManualUpdate = false,

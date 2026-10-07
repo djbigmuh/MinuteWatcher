@@ -31,7 +31,6 @@ import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
-import com.example.minutewatcher.core.resources.R
 import android.graphics.Color as AndroidColor
 import androidx.glance.unit.ColorProvider as IColorProvider
 
@@ -74,16 +73,19 @@ internal fun WidgetMainContent(
     uiState: WidgetUiState,
     noDataColor: IColorProvider,
 ) {
-    val context = LocalContext.current
     val simUiStates = uiState.simUiStates.filter { it.showSim }
 
     when {
         uiState.refreshFailed && uiState.isSnapshotEmpty -> {
-            WidgetMessage(context.getString(R.string.refresh_error), noDataColor)
+            WidgetMessage(uiState.strings.refreshErrorText, noDataColor)
         }
 
         uiState.settingsLoadFailed || uiState.simListLoadFailed -> {
-            WidgetMessage(context.getString(R.string.settings_load_error), noDataColor)
+            WidgetMessage(uiState.strings.settingsLoadErrorText, noDataColor)
+        }
+
+        uiState.isSnapshotEmpty -> {
+            WidgetMessage(uiState.strings.noDataText, noDataColor)
         }
 
         simUiStates.isNotEmpty() -> {
@@ -91,7 +93,7 @@ internal fun WidgetMainContent(
         }
 
         else -> {
-            WidgetMessage(context.getString(R.string.no_sim_found), noDataColor)
+            WidgetMessage(uiState.strings.noSimFoundText, noDataColor)
         }
     }
 }
@@ -117,7 +119,7 @@ internal fun SimCardsLayout(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (uiState.refreshFailed) {
-            StaleDataIndicator(noDataColor)
+            StaleDataIndicator(noDataColor, uiState.strings.staleDataWarningText)
         }
         Box(
             modifier = GlanceModifier.wrapContentSize(),

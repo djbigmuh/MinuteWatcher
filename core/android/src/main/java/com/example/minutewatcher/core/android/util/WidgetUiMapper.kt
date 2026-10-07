@@ -82,6 +82,7 @@ object WidgetUiMapper {
             simListLoadFailed = state.simListLoadFailed,
             refreshFailed = refreshFailed,
             isSnapshotEmpty = snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP,
+            strings = strings,
         )
     }
 }

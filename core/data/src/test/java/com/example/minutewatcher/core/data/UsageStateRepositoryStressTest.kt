@@ -53,6 +53,7 @@ class UsageStateRepositoryStressTest {
 
     @Before
     fun setup() {
+        whenever(simIdentityRepository.observeResolvedActiveSims()).thenReturn(MutableStateFlow(emptyList()))
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
         whenever(semanticVersion.getVersion()).thenReturn(SchemaVersion(1, 0, 0))
         whenever(semanticCapabilities.getCapabilities()).thenReturn(emptyList())

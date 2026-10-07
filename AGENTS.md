@@ -21,7 +21,9 @@ The project follows a comprehensive testing strategy documented in [docs/testing
 ## App Icon Note
 
 Canonical launcher icon layout must be maintained:
-- Adaptive icon XML: `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+
+- Adaptive icon XML: `app/src/main/res/mipmap/ic_launcher.xml`
+- Required adaptive icon elements: `<background>`, `<foreground>`, `<monochrome>`
 - Vector parts: `app/src/main/res/drawable/ic_launcher_background.xml`, `ic_launcher_foreground.xml`
 - Namespace MUST be `http://schemas.android.com/apk/res/android`
 - Do not move, duplicate, or rasterize launcher icon files.

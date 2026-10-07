@@ -7,7 +7,6 @@ import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.LocalContext
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
@@ -26,10 +25,13 @@ import com.example.minutewatcher.core.resources.R
  * Contains warning icon and text "Data may be stale".
  *
  * @param color Indicator color.
+ * @param text Localized warning text.
  */
 @Composable
-internal fun StaleDataIndicator(color: ColorProvider) {
-    val context = LocalContext.current
+internal fun StaleDataIndicator(
+    color: ColorProvider,
+    text: String,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = GlanceModifier.padding(top = 4.dp),
@@ -42,7 +44,7 @@ internal fun StaleDataIndicator(color: ColorProvider) {
         )
         Spacer(modifier = GlanceModifier.width(4.dp))
         Text(
-            text = context.getString(R.string.stale_data_warning),
+            text = text,
             style =
                 TextStyle(
                     fontSize = 10.sp,

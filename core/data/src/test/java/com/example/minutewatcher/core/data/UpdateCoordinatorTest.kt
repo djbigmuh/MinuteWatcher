@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -528,5 +529,101 @@ class UpdateCoordinatorTest {
             testScheduler.runCurrent()
 
             assertEquals(TrackingStatus.Active, coordinator.status.value)
+        }
+
+    @Test
+    fun `forced update with LIMIT_EXCEEDED failure sets NOT_SUPPORTED status and resets hash`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(
+                WidgetUpdateResult.Failure(reason = WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED),
+            )
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            testScheduler.runCurrent()
+
+            val success = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertFalse("Forced update should return false on failure", success)
+
+            val status = coordinator.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+            assertEquals(TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT, status.code)
+
+            // Emit identical snapshot reactively — should attempt update because hash was reset to null
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+            val nextSnapshot = createSnapshot(timestamp = 2000L, content = "SameContent")
+            snapshotFlow.emit(nextSnapshot)
+            testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            verify(widgetUpdater, atLeastOnce()).updateAll()
+        }
+
+    @Test
+    fun `forced update with TERMINAL failure sets UNKNOWN status and resets hash`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(
+                WidgetUpdateResult.Failure(reason = WidgetUpdateResult.FailureReason.TERMINAL),
+            )
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            testScheduler.runCurrent()
+
+            val success = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertFalse("Forced update should return false on failure", success)
+
+            val status = coordinator.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
+    fun `forced update with TRANSIENT failure increments consecutive failures and suppresses updates`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenReturn(
+                WidgetUpdateResult.Failure(reason = WidgetUpdateResult.FailureReason.TRANSIENT),
+            )
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            testScheduler.runCurrent()
+
+            repeat(Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES) {
+                coordinator.notifyDataChanged(updateWidget = true, force = true)
+            }
+
+            val status = coordinator.status.value
+            assertTrue("Status should be Error", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+
+            val suppressedCallSuccess = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertFalse("Subsequent forced update should be suppressed", suppressedCallSuccess)
+        }
+
+    @Test
+    fun `forced update throwing unexpected exception is classified as TERMINAL and returns false`() =
+        runTest {
+            val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+            whenever(widgetUpdater.updateAll()).thenThrow(RuntimeException("Unexpected error"))
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            testScheduler.runCurrent()
+
+            val success = coordinator.notifyDataChanged(updateWidget = true, force = true)
+            assertFalse("Forced update with exception should return false", success)
+
+            val status = coordinator.status.value
+            assertTrue("Status should be Error(UNKNOWN)", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
         }
 }

@@ -110,6 +110,9 @@ class MinutesGlanceWidget(
      */
     @Composable
     private fun FallbackContent(context: Context) {
+        val appLocaleContext =
+            com.example.minutewatcher.core.android.util.AppLocaleContexts
+                .forAppLocale(context)
         Box(
             modifier =
                 GlanceModifier
@@ -120,7 +123,7 @@ class MinutesGlanceWidget(
             // Using refresh_error as a general fallback message.
             // This is intentional as most provideGlance failures are related to data access.
             Text(
-                text = context.getString(R.string.refresh_error),
+                text = appLocaleContext.getString(R.string.refresh_error),
                 style =
                     TextStyle(
                         fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,

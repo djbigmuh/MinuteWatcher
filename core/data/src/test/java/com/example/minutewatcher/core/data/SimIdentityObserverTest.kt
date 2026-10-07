@@ -18,7 +18,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
@@ -132,6 +131,49 @@ class SimIdentityObserverTest {
 
             verify(fetcher, times(7)).fetchActiveSimsWithRetry(any())
             assertEquals(TrackingStatus.Active, observer.status.value)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `resolvedActiveSimsCache is initially null and transitions to non-null on discovery result`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val observer = createObserver(backgroundScope)
+            assertEquals("Initial placeholder value must be null", null, observer.resolvedActiveSimsCache.value)
+            assertEquals(
+                "activeSimsCache must initially be empty list",
+                emptyList<ActiveSimInfo>(),
+                observer.activeSimsCache.value,
+            )
+
+            val resolvedEmissions = mutableListOf<List<ActiveSimInfo>?>()
+            val job = launch { observer.resolvedActiveSimsCache.collect { resolvedEmissions.add(it) } }
+
+            testScheduler.advanceTimeBy(1.seconds)
+            testScheduler.runCurrent()
+
+            assertTrue("Should emit resolved SIMs list", resolvedEmissions.last() != null)
+            assertEquals(emptyList<ActiveSimInfo>(), resolvedEmissions.last())
+            assertEquals(emptyList<ActiveSimInfo>(), observer.activeSimsCache.value)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `resolvedActiveSimsCache transitions to list even on permission missing`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val observer = createObserver(backgroundScope)
+            fetcher.stub {
+                on { fetchActiveSimsWithRetry(any()) } doReturn SimDiscoveryResult.PermissionMissing
+            }
+
+            val job = launch { observer.resolvedActiveSimsCache.collect {} }
+
+            testScheduler.advanceTimeBy(1.seconds)
+            testScheduler.runCurrent()
+
+            assertEquals(emptyList<ActiveSimInfo>(), observer.resolvedActiveSimsCache.value)
+            assertEquals(emptyList<ActiveSimInfo>(), observer.activeSimsCache.value)
 
             job.cancel()
         }

@@ -8,7 +8,6 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.LocalContext
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -30,7 +29,6 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
-import com.example.minutewatcher.core.resources.R
 import androidx.glance.unit.ColorProvider as IColorProvider
 
 /**
@@ -46,14 +44,18 @@ internal fun SimItem(
     sim: SimUiState,
     uiState: WidgetUiState,
 ) {
-    val context = LocalContext.current
     val summary =
-        context.getString(
-            R.string.sim_status_summary,
-            sim.operatorName,
-            sim.minutesText,
-            sim.trafficText,
-        )
+        if (uiState.strings.simStatusSummaryFormat.isNotEmpty()) {
+            String.format(
+                uiState.strings.locale,
+                uiState.strings.simStatusSummaryFormat,
+                sim.operatorName,
+                sim.minutesText,
+                sim.trafficText,
+            )
+        } else {
+            "${sim.operatorName}: ${sim.minutesText}, ${sim.trafficText}"
+        }
 
     Column(
         modifier =

@@ -34,6 +34,13 @@ data class WidgetUiState(
     val simListLoadFailed: Boolean = false,
     val refreshFailed: Boolean = false,
     val isSnapshotEmpty: Boolean = false,
+    val strings: WidgetStrings =
+        WidgetStrings(
+            usedText = "",
+            minutesAbbr = "",
+            limitText = "",
+            gbAbbr = "",
+        ),
 )
 
 /**
@@ -45,6 +52,12 @@ data class WidgetUiState(
  * @property minutesAbbr Minutes abbreviation (e.g., "min.").
  * @property limitText "Limit" text.
  * @property gbAbbr Gigabytes abbreviation ("GB").
+ * @property refreshErrorText "Refresh error" text.
+ * @property settingsLoadErrorText "Settings load error" text.
+ * @property noDataText "No data" text.
+ * @property noSimFoundText "No SIM found" text.
+ * @property staleDataWarningText "Stale data warning" text.
+ * @property simStatusSummaryFormat Format string for SIM status accessibility summary.
  * @property locale Effective locale for formatting.
  */
 @Immutable
@@ -53,6 +66,12 @@ data class WidgetStrings(
     val minutesAbbr: String,
     val limitText: String,
     val gbAbbr: String,
+    val refreshErrorText: String = "",
+    val settingsLoadErrorText: String = "",
+    val noDataText: String = "",
+    val noSimFoundText: String = "",
+    val staleDataWarningText: String = "",
+    val simStatusSummaryFormat: String = "",
     val locale: Locale = Locale.US,
 )
 

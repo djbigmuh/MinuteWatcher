@@ -118,8 +118,11 @@ class AodSummaryController
             } else {
                 val expandedText = simLines.joinToString("\n")
                 if (!isPosted || expandedText != lastPublishedText) {
+                    val appLocaleContext =
+                        com.example.minutewatcher.core.android.util.AppLocaleContexts
+                            .forAppLocale(context)
                     val contentLine = simLines.first()
-                    val title = context.getString(R.string.app_name)
+                    val title = appLocaleContext.getString(R.string.app_name)
 
                     val posted = notificationHelper.sendAodSummaryNotification(title, contentLine, expandedText)
                     if (posted) {
@@ -134,8 +137,11 @@ class AodSummaryController
         }
 
         private fun buildSimLines(snapshot: GlobalSnapshot): List<String> {
-            val locale = FormatUtils.getLocale(context)
-            val gbAbbr = context.getString(R.string.gb_abbr)
+            val appLocaleContext =
+                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                    .forAppLocale(context)
+            val locale = FormatUtils.getLocale(appLocaleContext)
+            val gbAbbr = appLocaleContext.getString(R.string.gb_abbr)
 
             return snapshot.simSnapshots
                 .sortedBy { it.slot }
@@ -144,7 +150,7 @@ class AodSummaryController
 
                     val minutesEntity = sim.entities[PackageType.MINUTES]
                     if (minutesEntity != null && minutesEntity.limit > 0) {
-                        parts.add(FormatUtils.formatMinutesPlural(context, minutesEntity.remaining.toInt()))
+                        parts.add(FormatUtils.formatMinutesPlural(appLocaleContext, minutesEntity.remaining.toInt()))
                     }
 
                     val dataEntity = sim.entities[PackageType.DATA]
@@ -156,7 +162,7 @@ class AodSummaryController
                     if (parts.isEmpty()) {
                         null
                     } else {
-                        val operatorName = SimUtils.getShortOperatorName(context, sim.operatorName, sim.slot)
+                        val operatorName = SimUtils.getShortOperatorName(appLocaleContext, sim.operatorName, sim.slot)
                         "$operatorName$SIM_PARTS_SEPARATOR${parts.joinToString(SIM_PARTS_SEPARATOR)}"
                     }
                 }

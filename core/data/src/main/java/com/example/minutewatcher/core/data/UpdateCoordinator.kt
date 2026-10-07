@@ -718,39 +718,53 @@ class UpdateCoordinator
                 val hashAfter = SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
 
                 stateMutex.withLock {
-                    if (result is WidgetUpdateResult.Success) {
-                        consecutiveUpdateFailures = 0
-                        observationRestartCount = 0
-                        degradedCycleCount = 0
-
-                        if (result.wasCoalesced) {
-                            ForcedUpdateOutcome(
-                                success = true,
-                                contentChangedDuringUpdate = true,
-                            )
-                        } else {
-                            // Invariant: hash <= rendered state.
-                            // Discrepancy is compensated by reactive cycle, and if data changed
-                            // during forced render, suppression of the next reactive update is disabled.
-                            lastSnapshotHash = hashBefore
-                            ForcedUpdateOutcome(
-                                success = true,
-                                contentChangedDuringUpdate = hashAfter != hashBefore,
-                            )
+                    when (result) {
+                        is WidgetUpdateResult.Success -> processForcedSuccessResult(result, hashBefore, hashAfter)
+                        is WidgetUpdateResult.Failure -> {
+                            processFailureResult(result)
+                            ForcedUpdateOutcome(success = false, contentChangedDuringUpdate = false)
                         }
-                    } else {
-                        handleUpdateFailure()
-                        ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
                     }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.w("Force widget update failed, hash not updated", e)
+                AppLogger.w(
+                    "UpdateCoordinator: forced widget update failed with unexpected exception, " +
+                        "treating as terminal failure",
+                    e,
+                )
                 stateMutex.withLock {
-                    handleUpdateFailure()
+                    processFailureResult(
+                        WidgetUpdateResult.Failure(
+                            reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                        ),
+                    )
                 }
                 ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
+            }
+        }
+
+    private fun processForcedSuccessResult(
+        result: WidgetUpdateResult.Success,
+        hashBefore: Int,
+        hashAfter: Int,
+    ): ForcedUpdateOutcome {
+        consecutiveUpdateFailures = 0
+        observationRestartCount = 0
+        degradedCycleCount = 0
+
+        return if (result.wasCoalesced) {
+            ForcedUpdateOutcome(
+                success = true,
+                contentChangedDuringUpdate = true,
+            )
+        } else {
+            lastSnapshotHash = hashBefore
+            ForcedUpdateOutcome(
+                success = true,
+                contentChangedDuringUpdate = hashAfter != hashBefore,
+            )
             }
         }
 

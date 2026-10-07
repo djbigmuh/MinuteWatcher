@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -47,6 +48,8 @@ class SimIdentityRepositoryImpl
             )
 
         override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = observer.activeSimsCache
+
+    override fun observeResolvedActiveSims(): StateFlow<List<ActiveSimInfo>?> = observer.resolvedActiveSimsCache
 
         override fun getActiveIdentities(): Flow<List<String>> =
             observeActiveSims().map { sims -> sims.map { it.identity.stableId } }.distinctUntilChanged()

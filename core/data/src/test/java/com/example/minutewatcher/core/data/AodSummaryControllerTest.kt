@@ -1,6 +1,11 @@
 package com.example.minutewatcher.core.data
 
+import android.app.LocaleManager
 import android.content.Context
+import android.os.Build
+import android.os.LocaleList
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -22,6 +27,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -34,6 +40,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -362,4 +369,48 @@ class AodSummaryControllerTest {
             autoResetDay = 1,
         )
     }
+
+    @Test
+    fun `summary lines format strings according to app locale`() =
+        runTest {
+            val russianLocale = Locale.forLanguageTag("ru")
+            val localeList = LocaleListCompat.create(russianLocale)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val localeManager = context.getSystemService(LocaleManager::class.java)
+                if (localeManager != null) {
+                    localeManager.applicationLocales = LocaleList(russianLocale)
+                }
+            }
+            AppCompatDelegate.setApplicationLocales(localeList)
+
+            try {
+                appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
+
+                val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 5)
+                snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
+
+                controller.start()
+                testScope.advanceUntilIdle()
+
+                val lineCaptor = argumentCaptor<String>()
+                verify(notificationHelper).sendAodSummaryNotification(
+                    any(),
+                    lineCaptor.capture(),
+                    any(),
+                )
+
+                assertTrue(
+                    "Summary line should contain Russian plural 'минут'",
+                    lineCaptor.firstValue.contains("минут"),
+                )
+            } finally {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val localeManager = context.getSystemService(LocaleManager::class.java)
+                    if (localeManager != null) {
+                        localeManager.applicationLocales = LocaleList.getEmptyLocaleList()
+                    }
+                }
+                AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+            }
+        }
 }

@@ -49,7 +49,9 @@ interface UsageStateRepository {
     fun observeSnapshot(): StateFlow<GlobalSnapshot>
 
     /**
-     * Returns true if the usage data has been loaded at least once.
+     * Returns true after the first real SIM discovery resolution has been processed:
+     * - Immediately if discovery completes with an empty SIM list (e.g. no SIMs or permission denied).
+     * - After the first usage data emission if discovery completes with active SIMs.
      */
     fun isDataLoaded(): Boolean
 

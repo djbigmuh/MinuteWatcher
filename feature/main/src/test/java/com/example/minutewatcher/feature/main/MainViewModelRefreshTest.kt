@@ -3,19 +3,23 @@ package com.example.minutewatcher.feature.main
 import com.example.minutewatcher.core.domain.RefreshResult
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.clearInvocations
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelRefreshTest : MainViewModelTestFixtures() {
@@ -235,31 +239,34 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
             val viewModel = createViewModel(backgroundScope)
             testScheduler.advanceUntilIdle()
 
-            val latch = java.util.concurrent.CountDownLatch(1)
-            whenever(usageStateRepository.refresh()).thenAnswer {
-                latch.await()
+            val refreshStarted = CompletableDeferred<Unit>()
+            val canCompleteRefresh = CompletableDeferred<Unit>()
+
+            whenever(usageStateRepository.refresh()).doSuspendableAnswer {
+                refreshStarted.complete(Unit)
+                canCompleteRefresh.await()
                 RefreshResult.Success(snapshot)
             }
 
             backgroundScope.launch { viewModel.isRefreshing.collect {} }
 
-            assertFalse(viewModel.isRefreshing.value)
+            assertFalse("isRefreshing should initially be false", viewModel.isRefreshing.value)
 
-            val job =
-                launch(kotlinx.coroutines.Dispatchers.Default) {
-                    viewModel.refreshSimCardsNow()
-                }
+            val refreshJob = launch { viewModel.refreshSimCardsNow() }
 
-            var attempts = 0
-            while (!viewModel.isRefreshing.value && attempts < 50) {
-                Thread.sleep(10)
-                attempts++
+            testScheduler.runCurrent()
+            withTimeout(5.seconds) {
+                refreshStarted.await()
             }
 
             assertTrue("isRefreshing should be true during refresh", viewModel.isRefreshing.value)
 
-            latch.countDown()
-            job.join()
+            canCompleteRefresh.complete(Unit)
+            testScheduler.advanceUntilIdle()
+
+            withTimeout(5.seconds) {
+                refreshJob.join()
+            }
 
             assertFalse("isRefreshing should be false after successful refresh", viewModel.isRefreshing.value)
         }

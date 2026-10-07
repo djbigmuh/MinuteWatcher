@@ -396,13 +396,11 @@ internal class SimIdentityObserver
         }
 
         /**
-         * StateFlow of active SIMs, prioritizing mock SIMs in benchmark builds.
-         * In benchmark builds, if [MockSimProvider.getMockSims] returns non-null,
-         * it takes priority over physical SIMs. In debug/release builds, [NoOpMockSimProvider]
-         * returns null and physical SIMs are used.
+         * StateFlow of resolved active SIMs (null until the first discovery completes),
+         * prioritizing mock SIMs in benchmark builds.
          */
         @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-        val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+        val resolvedActiveSimsCache: StateFlow<List<ActiveSimInfo>?> =
             combine(
                 physicalActiveSims,
                 observeBenchmarkSimCount(),
@@ -427,6 +425,18 @@ internal class SimIdentityObserver
                     onSourceCompleted = {},
                 ).onEach { cleanupCache(it) }
                 .onStart { isObservationInitialized.set(true) }
+                .stateIn(
+                    scope,
+                    SharingStarted.Eagerly,
+                    null,
+                )
+
+    /**
+     * StateFlow of active SIMs for consumers expecting a non-null list (defaults to emptyList()).
+     */
+    val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+        resolvedActiveSimsCache
+            .map { it ?: emptyList() }
                 .stateIn(
                     scope,
                     SharingStarted.Eagerly,

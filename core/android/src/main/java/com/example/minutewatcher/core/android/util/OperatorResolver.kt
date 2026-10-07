@@ -222,18 +222,19 @@ object OperatorResolver {
     ): String {
         if (isValidSpecificName(operatorName)) return operatorName
 
-        val database = loadDb(context)
+        val localizedContext = AppLocaleContexts.forAppLocale(context)
+        val database = loadDb(localizedContext)
         val resKey = findInDatabase(database, candidates)
 
         val resolved =
             if (resKey != null) {
-                resolveFromDbKey(context, resKey)
+                resolveFromDbKey(localizedContext, resKey)
             } else {
                 logUnknownCandidates(candidates)
                 null
             }
 
-        return resolved ?: fallbackResolution(context, candidates.firstOrNull().orEmpty(), simSlot)
+        return resolved ?: fallbackResolution(localizedContext, candidates.firstOrNull().orEmpty(), simSlot)
     }
 
     private fun findInDatabase(

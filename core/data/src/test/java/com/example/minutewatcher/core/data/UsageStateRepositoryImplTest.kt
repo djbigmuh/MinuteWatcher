@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,6 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -47,10 +49,14 @@ class UsageStateRepositoryImplTest {
     private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val timeProvider = FixedTimeProvider(currentTime = 1000L)
 
+    private val resolvedSimsFlow = MutableStateFlow<List<ActiveSimInfo>?>(emptyList())
+
     @Before
     fun setup() {
         initTestLogger()
         context = ApplicationProvider.getApplicationContext()
+        resolvedSimsFlow.value = emptyList()
+        whenever(simIdentityRepository.observeResolvedActiveSims()).thenReturn(resolvedSimsFlow)
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
         whenever(dataRefreshNotifier.refreshFlow).thenReturn(
             MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(replay = 1).apply {
@@ -69,7 +75,7 @@ class UsageStateRepositoryImplTest {
                     createActiveSimInfo("id_0", subId = 1, slot = 0), // Valid
                     createActiveSimInfo("id_99", subId = 2, slot = 99), // Invalid
                 )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            resolvedSimsFlow.value = activeSims
 
             val usage0 = createSimUsage("id_0", slot = 0, subId = 1)
             val usage99 = createSimUsage("id_99", slot = 99, subId = 2)
@@ -100,48 +106,10 @@ class UsageStateRepositoryImplTest {
             assertEquals(0, uiModels[0].slot)
         }
 
-    private fun createActiveSimInfo(
-        id: String,
-        subId: Int,
-        slot: Int,
-    ) = ActiveSimInfo(
-        identity = SimIdentity(id, subId, slot, IdentitySource.ICCID, isStable = true),
-        slotIndex = slot,
-        subscriptionId = subId,
-        iccId = id,
-        displayName = "SIM $slot",
-        carrierName = "Carrier",
-        mccMnc = "12345",
-        isDefaultData = (slot == 0),
-        isDefaultVoice = (slot == 0),
-    )
-
-    private fun createSimUsage(
-        id: String,
-        slot: Int,
-        subId: Int,
-    ) = SimUsage(
-        identity = id,
-        slotIndex = slot,
-        subscriptionId = subId,
-        operator = "Op",
-        minutesUsed = 0,
-        minutesLimit = 0,
-        trafficUsedMb = 0f,
-        trafficLimitMb = 0,
-        manualAdjustment = 0,
-        trafficAdjustmentGb = 0f,
-        autoReset = false,
-        autoResetDay = 1,
-        lastResetDate = 0L,
-        rolloverEnabled = false,
-    )
-
     @Test
-    fun `isDataLoaded becomes true after first non-empty data emission`() =
+    fun `discovery completed with empty list sets isDataLoaded to true and snapshot timestamp to valid`() =
         runTest {
-            val simsFlow = MutableStateFlow(emptyList<ActiveSimInfo>())
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(simsFlow)
+            resolvedSimsFlow.value = emptyList()
 
             val repository =
                 UsageStateRepositoryImpl(
@@ -158,21 +126,121 @@ class UsageStateRepositoryImplTest {
                     scope = backgroundScope,
                 )
 
-            assertFalse("Initially should be false", repository.isDataLoaded())
-
-            // Emit some data
-            val id = "id_0"
-            val sims = listOf(createActiveSimInfo(id, subId = 1, slot = 0))
-            val usage = createSimUsage(id, slot = 0, subId = 1)
-            whenever(simUsageRepository.getSimUsage(id)).thenReturn(flowOf(usage))
-
-            simsFlow.value = sims
-
-            // Wait for debounce and internal flow processing
             testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
             testScheduler.runCurrent()
 
-            assertTrue("Should be true after data emission", repository.isDataLoaded())
+            assertTrue("isDataLoaded should be true after empty discovery result", repository.isDataLoaded())
+            val snapshot = repository.observeSnapshot().value
+            assertNotEquals(
+                "Snapshot timestamp should not be EMPTY_TIMESTAMP after load",
+                Constants.Data.EMPTY_TIMESTAMP,
+                snapshot.timestamp,
+            )
+            assertEquals(1000L, snapshot.timestamp)
+        }
+
+    @Test
+    fun `before discovery completes isDataLoaded is false and snapshot has EMPTY_TIMESTAMP`() =
+        runTest {
+            resolvedSimsFlow.value = null
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps =
+                        UsageRepositoryDependencies(
+                            simIdentityRepository = simIdentityRepository,
+                            simUsageRepository = simUsageRepository,
+                            semanticCapabilities = semanticCapabilities,
+                            semanticVersion = semanticVersion,
+                            dataRefreshNotifier = dataRefreshNotifier,
+                            timeProvider = timeProvider,
+                        ),
+                    scope = backgroundScope,
+                )
+
+            testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            assertFalse("isDataLoaded should be false before discovery resolves", repository.isDataLoaded())
+            val snapshot = repository.observeSnapshot().value
+            assertEquals(
+                "Snapshot timestamp should be EMPTY_TIMESTAMP before load",
+                Constants.Data.EMPTY_TIMESTAMP,
+                snapshot.timestamp,
+            )
+        }
+
+    @Test
+    fun `discovery returned SIMs but usages not yet emitted keeps isDataLoaded false`() =
+        runTest {
+            val usageFlow = MutableSharedFlow<SimUsage>()
+            val id = "id_0"
+            val sims = listOf(createActiveSimInfo(id, subId = 1, slot = 0))
+            whenever(simUsageRepository.getSimUsage(id)).thenReturn(usageFlow)
+
+            resolvedSimsFlow.value = sims
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps =
+                        UsageRepositoryDependencies(
+                            simIdentityRepository = simIdentityRepository,
+                            simUsageRepository = simUsageRepository,
+                            semanticCapabilities = semanticCapabilities,
+                            semanticVersion = semanticVersion,
+                            dataRefreshNotifier = dataRefreshNotifier,
+                            timeProvider = timeProvider,
+                        ),
+                    scope = backgroundScope,
+                )
+
+            testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            assertFalse("isDataLoaded should be false until first usage emission", repository.isDataLoaded())
+
+            usageFlow.emit(createSimUsage(id, slot = 0, subId = 1))
+            testScheduler.runCurrent()
+
+            assertTrue("isDataLoaded should be true after usage emission", repository.isDataLoaded())
+        }
+
+    @Test
+    fun `flag transition to true with empty list triggers new emissions`() =
+        runTest {
+            resolvedSimsFlow.value = null
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps =
+                        UsageRepositoryDependencies(
+                            simIdentityRepository = simIdentityRepository,
+                            simUsageRepository = simUsageRepository,
+                            semanticCapabilities = semanticCapabilities,
+                            semanticVersion = semanticVersion,
+                            dataRefreshNotifier = dataRefreshNotifier,
+                            timeProvider = timeProvider,
+                        ),
+                    scope = backgroundScope,
+                )
+
+            val uiModelsEmissions = mutableListOf<List<SimCardUiModel>>()
+            val uiJob = launch { repository.observeSimCardUiModels().collect { uiModelsEmissions.add(it) } }
+
+            testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            resolvedSimsFlow.value = emptyList()
+            testScheduler.advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds + 100.milliseconds)
+            testScheduler.runCurrent()
+
+            assertTrue("Should have emitted uiModels after resolution", uiModelsEmissions.isNotEmpty())
+            assertTrue("isDataLoaded should be true", repository.isDataLoaded())
+
+            uiJob.cancel()
         }
 
     @Test
@@ -221,7 +289,7 @@ class UsageStateRepositoryImplTest {
         runTest {
             val id = "id_0"
             val sims = listOf(createActiveSimInfo(id, subId = 1, slot = 0))
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(sims))
+            resolvedSimsFlow.value = sims
 
             var collectionCount = 0
             val usageFlow =
@@ -306,6 +374,43 @@ class UsageStateRepositoryImplTest {
             assertEquals(1000L, newSnapshot.timestamp)
             assertTrue("Revision must have advanced", newSnapshot.revision > firstSnapshot.revision)
         }
+
+    private fun createActiveSimInfo(
+        id: String,
+        subId: Int,
+        slot: Int,
+    ) = ActiveSimInfo(
+        identity = SimIdentity(id, subId, slot, IdentitySource.ICCID, isStable = true),
+        slotIndex = slot,
+        subscriptionId = subId,
+        iccId = id,
+        displayName = "SIM $slot",
+        carrierName = "Carrier",
+        mccMnc = "12345",
+        isDefaultData = (slot == 0),
+        isDefaultVoice = (slot == 0),
+    )
+
+    private fun createSimUsage(
+        id: String,
+        slot: Int,
+        subId: Int,
+    ) = SimUsage(
+        identity = id,
+        slotIndex = slot,
+        subscriptionId = subId,
+        operator = "Op",
+        minutesUsed = 0,
+        minutesLimit = 0,
+        trafficUsedMb = 0f,
+        trafficLimitMb = 0,
+        manualAdjustment = 0,
+        trafficAdjustmentGb = 0f,
+        autoReset = false,
+        autoResetDay = 1,
+        lastResetDate = 0L,
+        rolloverEnabled = false,
+    )
 
     companion object {
         private const val TIMEOUT_TOLERANCE_MS = 500L
