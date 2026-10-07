@@ -37,14 +37,13 @@ suspend fun <T> Flow<T>.firstWithTimeoutOrDefault(
     tag: String,
     defaultValue: T,
     key: String? = null,
-): T {
-    return withTimeoutOrNull(timeoutMillis.milliseconds) {
+): T =
+    withTimeoutOrNull(timeoutMillis.milliseconds) {
         this@firstWithTimeoutOrDefault.firstOrNull()
     } ?: defaultValue.also {
         val keyInfo = if (key != null) " for key: $key" else ""
         AppLogger.w("Timeout reading from Flow in $tag after ${timeoutMillis}ms$keyInfo. Returning default.")
     }
-}
 
 /**
  * Fetches the first value from a Flow with a timeout or returns null if it times out.
@@ -54,11 +53,10 @@ suspend fun <T> Flow<T>.firstWithTimeoutOrLog(
     timeoutMillis: Long,
     tag: String,
     key: String? = null,
-): T? {
-    return withTimeoutOrNull(timeoutMillis.milliseconds) {
+): T? =
+    withTimeoutOrNull(timeoutMillis.milliseconds) {
         this@firstWithTimeoutOrLog.firstOrNull()
     } ?: null.also {
         val keyInfo = if (key != null) " for key: $key" else ""
         AppLogger.w("Timeout reading from Flow in $tag after ${timeoutMillis}ms$keyInfo. Returning null.")
     }
-}
