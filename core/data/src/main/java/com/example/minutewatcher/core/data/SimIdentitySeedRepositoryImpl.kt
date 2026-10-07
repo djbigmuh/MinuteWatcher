@@ -116,7 +116,7 @@ internal class SimIdentitySeedRepositoryImpl
                 dataStore.data
                     .map { it[DataStoreKeys.SIM_IDENTITY_SEED] ?: "" }
                     .firstWithTimeoutOrLog(
-                        timeoutMillis = Constants.Flow.SHORT_TIMEOUT_MS,
+                        timeoutMillis = Constants.Flow.RETRY_READ_ATTEMPT_TIMEOUT_MS,
                         tag = "SimIdentitySeedRepositoryImpl",
                         key = DataStoreKeys.SIM_IDENTITY_SEED.name,
                     )
@@ -125,8 +125,8 @@ internal class SimIdentitySeedRepositoryImpl
 
         private suspend fun generateAndWritePersistentSeed(generator: () -> String): SeedResolutionResult.Persistent? {
             val newSeed = generator()
-            val editOutcome: Result<Preferences>? =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+            val editOutcome =
+                withTimeoutOrNull(Constants.Flow.RETRY_READ_ATTEMPT_TIMEOUT_MS.milliseconds) {
                     Result.success(
                         dataStore.edit { preferences ->
                             if (preferences[DataStoreKeys.SIM_IDENTITY_SEED].isNullOrEmpty()) {
@@ -134,14 +134,11 @@ internal class SimIdentitySeedRepositoryImpl
                             }
                         },
                     )
+                } ?: run {
+                    AppLogger.w("SimIdentitySeedRepositoryImpl: DataStore write timeout during seed generation")
+                    return null
                 }
-
-            val updated =
-                (
-                    editOutcome ?: return null.also {
-                        AppLogger.w("SimIdentitySeedRepositoryImpl: DataStore write timeout during seed generation")
-                    }
-                    ).getOrThrow()
+            val updated = editOutcome.getOrThrow()
             val storedSeed = updated[DataStoreKeys.SIM_IDENTITY_SEED]
             return if (!storedSeed.isNullOrEmpty()) {
                 AppLogger.d("SimIdentitySeedRepositoryImpl: New seed stored.")

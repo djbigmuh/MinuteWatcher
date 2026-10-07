@@ -196,8 +196,8 @@ object Constants {
      * DEBOUNCE_MS — general debounce for UI flows (ms).
      * SHORT_TIMEOUT_MS — timeout for "fast" operations (ms).
      * LONG_TIMEOUT_MS — timeout for "heavy" operations (ms).
-     * RETRY_READ_ATTEMPT_TIMEOUT_MS — timeout for a single DataStore retry read attempt (ms).
-     *   On AOSP DataStore reads take < 100 ms; timeout triggers only on storage degradation.
+     * RETRY_READ_ATTEMPT_TIMEOUT_MS — timeout for a single DataStore retry read or write attempt (ms).
+     *   On AOSP DataStore operations take < 100 ms; timeout triggers only on storage degradation.
      * RETRY_DELAY_MS — retry delay on network/disk failures (ms).
      * SEED_GENERATION_TIMEOUT_MS — primary seed identity generation timeout (ms).
      * SEED_TOTAL_TIMEOUT_EXTRA_MS — additional wait time for completing
