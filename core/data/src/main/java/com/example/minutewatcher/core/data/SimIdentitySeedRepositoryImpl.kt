@@ -43,12 +43,15 @@ internal class SimIdentitySeedRepositoryImpl
 
         override suspend fun setSeed(seed: String) {
             try {
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    dataStore.edit { preferences ->
-                        preferences[DataStoreKeys.SIM_IDENTITY_SEED] = seed
+                val writeResult =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        dataStore.edit { preferences ->
+                            preferences[DataStoreKeys.SIM_IDENTITY_SEED] = seed
+                        }
                     }
-                } ?: run {
+                if (writeResult == null) {
                     AppLogger.w("SimIdentitySeedRepositoryImpl: setSeed timed out")
+                    return
                 }
                 clearEphemeralStateOnPersistentRestored()
             } catch (e: CancellationException) {

@@ -314,4 +314,39 @@ class SimIdentitySeedRepositoryImplTest {
             val s2 = repo.getOrCreateEphemeralSeed { "eph-b" }
             assertEquals("eph-b", s2)
         }
+
+    @Test
+    fun `setSeed keeps ephemeral state active when persistent write times out`() =
+        runTest {
+            val hangingDataStore =
+                object : DataStore<Preferences> {
+                    override val data: Flow<Preferences> = MutableSharedFlow()
+
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        val deferred = CompletableDeferred<Preferences>()
+                        return withTimeoutOrNull(30.seconds) { deferred.await() }
+                            ?: throw AssertionError("Timed out waiting for hangingDataStore updateData")
+                    }
+                }
+
+            val repo = SimIdentitySeedRepositoryImpl(hangingDataStore)
+
+            val ephSeed = repo.getOrCreateEphemeralSeed { "ephemeral-seed-test" }
+            assertEquals("ephemeral-seed-test", ephSeed)
+            assertTrue(repo.isEphemeralSeedActive.value)
+
+            val setSeedJob =
+                launch {
+                    repo.setSeed("timed-out-seed")
+                }
+
+            advanceTimeBy(5100.milliseconds)
+            runCurrent()
+
+            assertTrue("setSeed should have completed after timeout", setSeedJob.isCompleted)
+            assertTrue("isEphemeralSeedActive should remain true on write timeout", repo.isEphemeralSeedActive.value)
+
+            val cachedEphSeed = repo.getOrCreateEphemeralSeed { "different-seed" }
+            assertEquals("ephemeral-seed-test", cachedEphSeed)
+        }
 }
