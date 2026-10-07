@@ -96,6 +96,7 @@ class TrafficTracker
         private val updateMutex = Mutex()
         private val initializationFailed = AtomicBoolean(false)
         private val isInitializing = AtomicBoolean(false)
+        private val isInitStarted = AtomicBoolean(false)
         private val isObserversStarted = AtomicBoolean(false)
         private val bothPermissionsGranted = AtomicBoolean(false)
 
@@ -119,7 +120,7 @@ class TrafficTracker
          * Should be called from Application.onCreate after dependencies are ready.
          */
         fun ensureStarted() {
-            if (tryClaimInitialization()) {
+            if (isInitStarted.compareAndSet(false, true) && tryClaimInitialization()) {
                 scope.launch {
                     try {
                         startInitialization()
