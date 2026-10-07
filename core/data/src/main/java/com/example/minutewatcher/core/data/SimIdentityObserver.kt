@@ -437,11 +437,11 @@ internal class SimIdentityObserver
     val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
         resolvedActiveSimsCache
             .map { it ?: emptyList() }
-                .stateIn(
-                    scope,
-                    SharingStarted.Eagerly,
-                    emptyList(),
-                )
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptyList(),
+            )
 
         private fun cleanupCache(sims: List<ActiveSimInfo>) {
             val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()
