@@ -10,9 +10,10 @@ import javax.inject.Singleton
 /**
  * Provides capabilities supported by the app.
  *
- * AppSearch indexing uses the bundled LocalStorage backend which is available
- * across all supported API levels. Actual runtime availability is handled at runtime;
- * if indexing fails, the device is assigned NOT_SUPPORTED error status.
+ * AppSearch indexing uses PlatformStorage on Android 12+ (API 31+) for system search integration,
+ * and bundled LocalStorage on Android 8.0–11 (API 26–30) as a private app index.
+ * Actual runtime availability is determined at runtime; if indexing fails on device,
+ * the status is set to NOT_SUPPORTED, and an error banner is not displayed for this type.
  */
 @Singleton
 class SemanticCapabilities

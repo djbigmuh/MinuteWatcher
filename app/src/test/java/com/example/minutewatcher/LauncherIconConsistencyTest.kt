@@ -16,7 +16,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = MinuteWatcherTestApp::class)
 class LauncherIconConsistencyTest {
-
     @Test
     fun `application icon and round icon point to valid ic_launcher mipmap resource`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -25,12 +24,13 @@ class LauncherIconConsistencyTest {
         assertNotNull(appInfo)
         assertTrue("Application icon must be non-zero", appInfo.icon != 0)
 
-        val roundIconVal = try {
-            val field = appInfo.javaClass.getField("roundIcon")
-            field.getInt(appInfo)
-        } catch (_: Exception) {
-            context.resources.getIdentifier("ic_launcher", "mipmap", context.packageName)
-        }
+        val roundIconVal =
+            try {
+                val field = appInfo.javaClass.getField("roundIcon")
+                field.getInt(appInfo)
+            } catch (_: Exception) {
+                context.resources.getIdentifier("ic_launcher", "mipmap", context.packageName)
+            }
         assertTrue("Application round icon must be non-zero", roundIconVal != 0)
 
         val iconResName = context.resources.getResourceEntryName(appInfo.icon)

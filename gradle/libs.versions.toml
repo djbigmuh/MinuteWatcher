@@ -32,6 +32,8 @@ mockito = "5.23.0"
 mockitoKotlin = "6.3.0"
 colorpickerview = "2.4.0"
 appsearch = "1.1.0"
+# AppFunctions (alpha): required for the AppFunctionServiceEntryPoint architecture used by
+# on-device assistant integration. Update to stable when available.
 appfunctions = "1.0.0-alpha10"
 kotlinxCoroutines = "1.11.0"
 kotlinxCoroutinesTest = "1.11.0"

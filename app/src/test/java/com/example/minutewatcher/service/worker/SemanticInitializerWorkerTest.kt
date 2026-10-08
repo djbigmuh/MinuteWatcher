@@ -47,7 +47,14 @@ class SemanticInitializerWorkerTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(kotlinx.coroutines.flow.flowOf(com.example.minutewatcher.core.model.AppSettings()))
+        whenever(
+            appSettingsRepository.getAppSettings(),
+        ).thenReturn(
+            kotlinx.coroutines.flow.flowOf(
+                com.example.minutewatcher.core.model
+                    .AppSettings(),
+            ),
+        )
         runBlocking {
             whenever(searchManager.indexInitialSnapshot(any())).thenReturn(SemanticSearchManager.IndexResult.Success)
             whenever(shortcutManager.updateShortcutsSync(any())).thenReturn(true)

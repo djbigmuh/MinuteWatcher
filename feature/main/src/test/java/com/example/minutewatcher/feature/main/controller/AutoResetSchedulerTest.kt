@@ -196,7 +196,10 @@ class AutoResetSchedulerTest {
             schedulerWithMockRepo.checkOnStart()
 
             // Second call should be able to run because isCheckStarted flag was reset to false in finally
-            org.mockito.kotlin.doReturn(true).whenever(autoResetUseCase).performAutoReset(any())
+            org.mockito.kotlin
+                .doReturn(true)
+                .whenever(autoResetUseCase)
+                .performAutoReset(any())
 
             schedulerWithMockRepo.checkOnStart()
 

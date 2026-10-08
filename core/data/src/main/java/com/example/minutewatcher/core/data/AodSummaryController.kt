@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import com.example.minutewatcher.core.android.util.AppLocaleContexts
 import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
@@ -120,7 +121,7 @@ class AodSummaryController
                 val active = notificationHelper.isAodSummaryNotificationActive()
                 if (!isPosted || !active || expandedText != lastPublishedText) {
                     val appLocaleContext =
-                        com.example.minutewatcher.core.android.util.AppLocaleContexts
+                        AppLocaleContexts
                             .forAppLocale(context)
                     val contentLine = simLines.first()
                     val title = appLocaleContext.getString(R.string.app_name)
@@ -139,7 +140,7 @@ class AodSummaryController
 
         private fun buildSimLines(snapshot: GlobalSnapshot): List<String> {
             val appLocaleContext =
-                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                AppLocaleContexts
                     .forAppLocale(context)
             val locale = FormatUtils.getLocale(appLocaleContext)
             val gbAbbr = appLocaleContext.getString(R.string.gb_abbr)

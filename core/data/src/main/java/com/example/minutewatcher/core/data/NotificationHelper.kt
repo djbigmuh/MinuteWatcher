@@ -247,7 +247,8 @@ class NotificationHelper
                 false
             }
         }
-        @Suppress("TooGenericExceptionCaught")
+
+    @Suppress("TooGenericExceptionCaught")
         fun cancelAodSummaryNotification() {
             val manager = notificationManager ?: return
             try {

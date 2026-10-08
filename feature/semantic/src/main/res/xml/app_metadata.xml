@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppFunctionAppMetadata xmlns:appfn="http://schemas.android.com/apk/androidx.appfunctions"
+    appfn:description="MinuteWatcher tracks mobile plan usage per SIM card: remaining voice minutes and remaining mobile data against user-configured monthly limits, with the billing period end date. Use getUsageSummary to answer questions such as 'How many minutes do I have left?' or 'How much mobile data is remaining?'. All data is stored locally on the device."
+    appfn:displayDescription="@string/app_functions_display_description" />

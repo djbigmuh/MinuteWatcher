@@ -59,7 +59,7 @@ class CallSessionRepositoryTimeoutTest {
             val exception = result.exceptionOrNull()
             assertTrue(
                 "Expected DataStoreWriteTimeoutException, but was $exception",
-                exception is DataStoreWriteTimeoutException
+                exception is DataStoreWriteTimeoutException,
             )
             assertEquals("DataStore write timeout (saveCallSession)", exception?.message)
         }
@@ -79,7 +79,7 @@ class CallSessionRepositoryTimeoutTest {
             val exception = result.exceptionOrNull()
             assertTrue(
                 "Expected DataStoreWriteTimeoutException, but was $exception",
-                exception is DataStoreWriteTimeoutException
+                exception is DataStoreWriteTimeoutException,
             )
             assertEquals("DataStore write timeout (clearCallSession)", exception?.message)
         }
@@ -99,7 +99,7 @@ class CallSessionRepositoryTimeoutTest {
             val exception = result.exceptionOrNull()
             assertTrue(
                 "Expected DataStoreWriteTimeoutException, but was $exception",
-                exception is DataStoreWriteTimeoutException
+                exception is DataStoreWriteTimeoutException,
             )
             assertEquals("DataStore write timeout (clearAllCallSessions)", exception?.message)
         }
@@ -119,7 +119,7 @@ class CallSessionRepositoryTimeoutTest {
             val exception = result.exceptionOrNull()
             assertTrue(
                 "Expected DataStoreWriteTimeoutException, but was $exception",
-                exception is DataStoreWriteTimeoutException
+                exception is DataStoreWriteTimeoutException,
             )
             assertEquals("DataStore write timeout (setLastDataSubId)", exception?.message)
         }

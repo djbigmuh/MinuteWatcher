@@ -6,6 +6,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import com.example.minutewatcher.core.android.util.AppLocaleContexts
 import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
@@ -218,7 +219,7 @@ class ShortcutManager
             if ((entity == null) || (entity.limit <= 0)) return null
 
             val appLocaleContext =
-                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                AppLocaleContexts
                     .forAppLocale(context)
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(appLocaleContext, sim.operatorName, slot)
@@ -250,7 +251,7 @@ class ShortcutManager
             if (entity == null || (entity.limit <= 0)) return null
 
             val appLocaleContext =
-                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                AppLocaleContexts
                     .forAppLocale(context)
             val slot = sim.slot
             val operator = SimUtils.getShortOperatorName(appLocaleContext, sim.operatorName, slot)

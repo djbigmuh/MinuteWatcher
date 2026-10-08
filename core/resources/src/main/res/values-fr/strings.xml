@@ -189,4 +189,5 @@
     <string name="call_tracking_description">Compter les minutes d’appel pour chaque carte SIM. Désactiver pour suivre uniquement les données mobiles.</string>
     <string name="assistant_access_title">Accès assistant</string>
     <string name="assistant_access_description">Permettre à l’assistant de l’appareil de demander vos minutes et données restantes (Android 16+). Désactivé par défaut. L’assistant peut traiter les réponses reçues.</string>
+    <string name="app_functions_display_description">Partage les minutes et les données mobiles restantes avec l\'assistant sur l\'appareil</string>
 </resources>

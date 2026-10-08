@@ -345,8 +345,8 @@ class CallEventWorkerTest {
             whenever(
                 callTracker.onCallStarted(
                     any(),
-                    any()
-                )
+                    any(),
+                ),
             ).thenAnswer { throw DataStoreWriteTimeoutException("saveCallSession") }
             val inputData =
                 Data
@@ -381,8 +381,8 @@ class CallEventWorkerTest {
             whenever(
                 callTracker.onCallEnded(
                     any(),
-                    any()
-                )
+                    any(),
+                ),
             ).thenAnswer { throw DataStoreWriteTimeoutException("clearCallSession") }
             val inputData =
                 Data

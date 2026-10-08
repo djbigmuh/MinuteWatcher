@@ -22,10 +22,12 @@ import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.DateUtils
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -77,6 +79,7 @@ class UsageCheckWorkerTest {
                 timeProvider = timeProvider,
             )
         worker = UsageCheckWorker(context, workerParams, deps, testDispatcher)
+        whenever(trafficTracker.status).thenReturn(MutableStateFlow(TrackingStatus.Active))
     }
 
     private suspend fun setupDefaultMocks() {
@@ -270,16 +273,44 @@ class UsageCheckWorkerTest {
         }
 
     @Test
-    fun `doWork returns retry when TrafficUpdateTimeoutException is thrown`() =
+    fun `doWork returns retry when traffic update status is timeout`() =
         runTest(testDispatcher) {
             setupDefaultMocks()
-            whenever(trafficTracker.updateTrafficUsage()).thenAnswer {
-                throw TrafficUpdateTimeoutException(startElapsed = 1000L)
-            }
+            whenever(trafficTracker.status).thenReturn(
+                MutableStateFlow(
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    ),
+                ),
+            )
 
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.retry(), result)
+            verify(usageStateRepository, never()).refresh()
+        }
+
+    @Test
+    fun `doWork continues when traffic update status is active`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            whenever(trafficTracker.status).thenReturn(
+                MutableStateFlow(TrackingStatus.Active),
+            )
+            val emptySnapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Timeout(emptySnapshot))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(trafficTracker).updateTrafficUsage()
         }
 
     private companion object {

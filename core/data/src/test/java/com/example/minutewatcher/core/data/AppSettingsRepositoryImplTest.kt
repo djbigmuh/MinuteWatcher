@@ -51,6 +51,7 @@ class AppSettingsRepositoryImplTest {
             assertEquals(true, settings.notifyLowMinutes)
             assertEquals(true, settings.notifyLowTraffic)
             assertEquals(false, settings.aodSummaryEnabled)
+            assertEquals(false, settings.assistantAccessEnabled)
             assertEquals(2, settings.widgetLayoutMode)
             assertEquals(50, settings.widgetTransparency)
             assertEquals(false, settings.onboardingCompleted)
@@ -317,5 +318,32 @@ class AppSettingsRepositoryImplTest {
             val updatedSettings = repository.getAppSettings().first()
             assertEquals(true, updatedSettings.aodSummaryEnabled)
             assertEquals(true, dataStore.data.first()[DataStoreKeys.AOD_SUMMARY_ENABLED])
+        }
+
+    @Test
+    fun `update app settings roundtrip assistant access enabled`() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+
+            val defaultSettings = repository.getAppSettings().first()
+            assertEquals(false, defaultSettings.assistantAccessEnabled)
+
+            repository.updateAppSettings {
+                it.copy(assistantAccessEnabled = true)
+            }
+            advanceUntilIdle()
+
+            val updatedSettings = repository.getAppSettings().first()
+            assertEquals(true, updatedSettings.assistantAccessEnabled)
+            assertEquals(true, dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED])
+
+            repository.updateAppSettings {
+                it.copy(assistantAccessEnabled = false)
+            }
+            advanceUntilIdle()
+
+            val finalSettings = repository.getAppSettings().first()
+            assertEquals(false, finalSettings.assistantAccessEnabled)
+            assertEquals(false, dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED])
         }
 }

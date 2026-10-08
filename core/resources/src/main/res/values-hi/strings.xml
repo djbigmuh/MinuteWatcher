@@ -187,4 +187,5 @@
     <string name="call_tracking_description">प्रत्येक सिम कार्ड के लिए कॉल मिनट गिनें। केवल मोबाइल डेटा उपयोग ट्रैक करने के लिए बंद करें।</string>
     <string name="assistant_access_title">सहायक पहुँच</string>
     <string name="assistant_access_description">ऑन-डिवाइस सहायक को आपके शेष मिनटों और डेटा का अनुरोध करने की अनुमति दें (Android 16+)। डिफ़ॉल्ट रूप से अक्षम। सहायक प्राप्त उत्तरों को संसाधित कर सकता है।</string>
+    <string name="app_functions_display_description">डिवाइस पर मौजूद सहायक के साथ शेष मिनट और मोबाइल डेटा साझा करता है</string>
 </resources>

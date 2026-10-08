@@ -2,6 +2,7 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.domain.AppFunctionAvailability
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.InvalidSlotException
 import com.example.minutewatcher.core.domain.SeedUnavailableException
@@ -31,6 +32,7 @@ class WidgetSettingsRepository
         private val appSettingsRepository: AppSettingsRepository,
         private val simIdentityRepository: SimIdentityRepository,
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
+        private val appFunctionAvailability: AppFunctionAvailability,
     ) : WidgetSettingsLoader {
         /**
          * Loads the current unified widget settings state.
@@ -126,6 +128,7 @@ class WidgetSettingsRepository
 
         /**
          * Saves general widget settings (layout, transparency, etc.) to DataStore.
+         * Additionally applies assistant access state to system AppFunctions.
          *
          * @param state The state containing general widget settings to save.
          *
@@ -148,6 +151,7 @@ class WidgetSettingsRepository
                     assistantAccessEnabled = state.assistantAccessEnabled,
                 )
             }
+            appFunctionAvailability.setAssistantAccessEnabled(state.assistantAccessEnabled)
         }
 
         /**

@@ -7,6 +7,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.core.service.quicksettings.PendingIntentActivityWrapper
 import androidx.core.service.quicksettings.TileServiceCompat
+import com.example.minutewatcher.core.android.util.AppLocaleContexts
 import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.MainImmediateDispatcher
@@ -111,7 +112,7 @@ class UsageTileService : TileService() {
         val tile = qsTile ?: return
         val snapshot = semanticRepository.snapshot.value
         val appLocaleContext =
-            com.example.minutewatcher.core.android.util.AppLocaleContexts
+            AppLocaleContexts
                 .forAppLocale(this)
 
         // Use all SIMs from snapshot (already filtered by active physical SIMs in repository)

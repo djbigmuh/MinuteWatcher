@@ -9,7 +9,6 @@ import org.junit.Test
 import java.util.Locale
 
 class WidgetContentResolverTest {
-
     @Test
     fun `priority 1 - refreshFailed and isSnapshotEmpty returns RefreshError`() {
         val uiState =
@@ -58,18 +57,20 @@ class WidgetContentResolverTest {
 
     @Test
     fun `buildSimSummary formats correctly when format is present`() {
-        val strings = WidgetStrings(
-            usedText = "Used",
-            minutesAbbr = "min",
-            limitText = "Limit",
-            gbAbbr = "GB",
-            simStatusSummaryFormat = "%s | %s | %s",
-            locale = Locale.US,
-        )
-        val sim = createSimUiState(showSim = true, operatorName = "MTS").copy(
-            minutesText = "100 min",
-            trafficText = "5 GB",
-        )
+        val strings =
+            WidgetStrings(
+                usedText = "Used",
+                minutesAbbr = "min",
+                limitText = "Limit",
+                gbAbbr = "GB",
+                simStatusSummaryFormat = "%s | %s | %s",
+                locale = Locale.US,
+            )
+        val sim =
+            createSimUiState(showSim = true, operatorName = "MTS").copy(
+                minutesText = "100 min",
+                trafficText = "5 GB",
+            )
 
         val summary = buildSimSummary(strings, sim)
         assertEquals("MTS | 100 min | 5 GB", summary)
@@ -77,17 +78,19 @@ class WidgetContentResolverTest {
 
     @Test
     fun `buildSimSummary falls back when format is empty`() {
-        val strings = WidgetStrings(
-            usedText = "Used",
-            minutesAbbr = "min",
-            limitText = "Limit",
-            gbAbbr = "GB",
-            simStatusSummaryFormat = "",
-        )
-        val sim = createSimUiState(showSim = true, operatorName = "MTS").copy(
-            minutesText = "100 min",
-            trafficText = "5 GB",
-        )
+        val strings =
+            WidgetStrings(
+                usedText = "Used",
+                minutesAbbr = "min",
+                limitText = "Limit",
+                gbAbbr = "GB",
+                simStatusSummaryFormat = "",
+            )
+        val sim =
+            createSimUiState(showSim = true, operatorName = "MTS").copy(
+                minutesText = "100 min",
+                trafficText = "5 GB",
+            )
 
         val summary = buildSimSummary(strings, sim)
         assertEquals("MTS: 100 min, 5 GB", summary)

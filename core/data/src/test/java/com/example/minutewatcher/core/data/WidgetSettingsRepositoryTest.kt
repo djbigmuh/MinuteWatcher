@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.domain.AppFunctionAvailability
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -19,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -32,6 +34,7 @@ class WidgetSettingsRepositoryTest {
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
+    private val appFunctionAvailability: AppFunctionAvailability = mock()
 
     private lateinit var repository: WidgetSettingsRepository
 
@@ -43,6 +46,7 @@ class WidgetSettingsRepositoryTest {
                 appSettingsRepository = appSettingsRepository,
                 simIdentityRepository = simIdentityRepository,
                 simWidgetVisibilityRepository = simWidgetVisibilityRepository,
+                appFunctionAvailability = appFunctionAvailability,
             )
     }
 
@@ -84,7 +88,6 @@ class WidgetSettingsRepositoryTest {
     @Test
     fun `load sets simListLoadFailed when active sims flow is empty`() =
         runTest {
-            // firstWithTimeout on flowOf(emptyList()) returns emptyList, not null.
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 
             val appSettings = AppSettings(isLoaded = true)
@@ -93,7 +96,7 @@ class WidgetSettingsRepositoryTest {
             val result = repository.load()
 
             assertNotNull(result)
-            assertFalse(result.simListLoadFailed) // Empty list is a valid result (0 SIMs)
+            assertFalse(result.simListLoadFailed)
             assertEquals(0, result.simStates.size)
         }
 
@@ -136,6 +139,7 @@ class WidgetSettingsRepositoryTest {
 
             val captor = org.mockito.kotlin.argumentCaptor<(AppSettings) -> AppSettings>()
             verify(appSettingsRepository).updateAppSettings(captor.capture())
+            verify(appFunctionAvailability).setAssistantAccessEnabled(true)
 
             val initial =
                 AppSettings(aodSummaryEnabled = false, callTrackingEnabled = true, assistantAccessEnabled = false)
@@ -143,6 +147,33 @@ class WidgetSettingsRepositoryTest {
             assertEquals(true, updated.aodSummaryEnabled)
             assertEquals(false, updated.callTrackingEnabled)
             assertEquals(true, updated.assistantAccessEnabled)
+        }
+
+    @Test
+    fun `saveGeneralSettings syncs assistant access enabled false`() =
+        runTest {
+            val state = WidgetSettingsState(assistantAccessEnabled = false)
+
+            repository.saveGeneralSettings(state)
+
+            verify(appFunctionAvailability).setAssistantAccessEnabled(false)
+        }
+
+    @Test
+    fun `saveGeneralSettings throws exception does not sync assistant access`() =
+        runTest {
+            val state = WidgetSettingsState(assistantAccessEnabled = true)
+            whenever(
+                appSettingsRepository.updateAppSettings(any()),
+            ).thenThrow(IllegalStateException("Simulated failure"))
+
+            assertThrows(IllegalStateException::class.java) {
+                runTest {
+                    repository.saveGeneralSettings(state)
+                }
+            }
+
+            verify(appFunctionAvailability, never()).setAssistantAccessEnabled(any())
         }
 
     @Test
@@ -189,7 +220,6 @@ class WidgetSettingsRepositoryTest {
     @Test
     fun `load returns fallback with settingsLoadFailed when app settings timeout`() =
         runTest {
-            // Mock timeout: a flow that never emits
             whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableSharedFlow())
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
 

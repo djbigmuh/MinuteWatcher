@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.semantic.appfunctions
 
+import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.appfunctions.AppFunction
 import androidx.appfunctions.AppFunctionService
@@ -7,7 +8,7 @@ import androidx.appfunctions.AppFunctionServiceEntryPoint
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
-@RequiresApi(36)
+@RequiresApi(Build.VERSION_CODES.BAKLAVA)
 @AndroidEntryPoint
 @AppFunctionServiceEntryPoint(
     serviceName = "MinuteWatcherAppFunctionService",

@@ -84,7 +84,7 @@ class AutoResetScheduleRepositoryImplTest {
             val exception = result.exceptionOrNull()
             assertTrue(
                 "Expected DataStoreWriteTimeoutException, but was $exception",
-                exception is DataStoreWriteTimeoutException
+                exception is DataStoreWriteTimeoutException,
             )
             assertEquals("DataStore write timeout (setLastCheckMillis)", exception?.message)
         }
@@ -104,7 +104,7 @@ class AutoResetScheduleRepositoryImplTest {
             val exception = result.exceptionOrNull()
             assertTrue(
                 "Expected DataStoreWriteTimeoutException, but was $exception",
-                exception is DataStoreWriteTimeoutException
+                exception is DataStoreWriteTimeoutException,
             )
             assertEquals("DataStore write timeout (setFailureCount)", exception?.message)
         }

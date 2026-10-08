@@ -126,7 +126,9 @@ private fun SimPreviewCardsLayout(
                     painter = painterResource(id = R.drawable.ic_warning_amber),
                     contentDescription = null,
                     modifier = Modifier.size(12.dp),
-                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(noDataColor),
+                    colorFilter =
+                        androidx.compose.ui.graphics.ColorFilter
+                            .tint(noDataColor),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(

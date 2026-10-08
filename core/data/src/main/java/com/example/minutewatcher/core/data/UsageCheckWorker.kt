@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.minutewatcher.core.android.util.AppLocaleContexts
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FormatUtils
@@ -15,6 +16,7 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.util.DateUtils
 import com.example.minutewatcher.core.resources.R
 import dagger.assisted.Assisted
@@ -75,9 +77,6 @@ class UsageCheckWorker
                 checkUsageAndNotify()
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: TrafficUpdateTimeoutException) {
-                AppLogger.w("UsageCheckWorker: Traffic update timed out, retrying. ${e.message}")
-                Result.retry()
             } catch (e: IOException) {
                 AppLogger.w("UsageCheckWorker: Network or storage error, retrying. ${e.message}")
                 Result.retry()
@@ -91,16 +90,30 @@ class UsageCheckWorker
 
         private suspend fun checkUsageAndNotify(): Result {
             deps.trafficTracker.updateTrafficUsage()
+            val trafficStatus = runCatching { deps.trafficTracker.status.value }.getOrNull()
+            val isTimeout =
+                trafficStatus is TrackingStatus.Error &&
+                    trafficStatus.code == TrackingStatus.ErrorCode.TIMEOUT
 
-            tryPerformAutoReset()
+            return if (isTimeout) {
+                AppLogger.w("UsageCheckWorker: Traffic update timed out, retrying.")
+                Result.retry()
+            } else {
+                tryPerformAutoReset()
+                executeRefreshAndProcess()
+            }
+        }
 
+    private suspend fun executeRefreshAndProcess(): Result {
             val refreshResult =
                 withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
                     deps.usageStateRepository.refresh()
+                } ?: run {
+                    AppLogger.e("UsageCheckWorker: refresh timed out after ${WORKER_REFRESH_TIMEOUT_MS}ms")
+                    null
                 }
 
             if (refreshResult == null) {
-                AppLogger.e("UsageCheckWorker: refresh timed out after ${WORKER_REFRESH_TIMEOUT_MS}ms")
                 return Result.retry()
             }
 
@@ -270,7 +283,7 @@ class UsageCheckWorker
 
             if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
                 val appLocaleContext =
-                    com.example.minutewatcher.core.android.util.AppLocaleContexts
+                    AppLocaleContexts
                         .forAppLocale(applicationContext)
                 val levelRes =
                     if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
@@ -304,7 +317,7 @@ class UsageCheckWorker
             type: Int,
         ) {
             val appLocaleContext =
-                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                AppLocaleContexts
                     .forAppLocale(applicationContext)
             val body = appLocaleContext.getString(bodyResId)
             sendNotificationWithBody(operator, body, slot, type)
@@ -317,7 +330,7 @@ class UsageCheckWorker
             type: Int,
         ) {
             val appLocaleContext =
-                com.example.minutewatcher.core.android.util.AppLocaleContexts
+                AppLocaleContexts
                     .forAppLocale(applicationContext)
             val titleRes =
                 if (type == NOTIFICATION_TYPE_MINUTES) {
@@ -396,7 +409,7 @@ class UsageCheckWorker
 
             if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
                 val appLocaleContext =
-                    com.example.minutewatcher.core.android.util.AppLocaleContexts
+                    AppLocaleContexts
                         .forAppLocale(applicationContext)
                 val levelRes =
                     if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {

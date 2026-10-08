@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.common.testing.InMemoryPreferencesDataStor
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
+import com.example.minutewatcher.core.domain.AppFunctionAvailability
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.model.IdentitySource
@@ -40,6 +41,7 @@ class WidgetSettingsAttributionTest {
     private lateinit var simWidgetVisibilityRepository: SimWidgetVisibilityRepositoryImpl
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var simIdentityRepository: SimIdentityRepository
+    private lateinit var appFunctionAvailability: AppFunctionAvailability
     private lateinit var migrationService: IdentityMigrationService
     private lateinit var repository: WidgetSettingsRepository
 
@@ -53,12 +55,14 @@ class WidgetSettingsAttributionTest {
         simWidgetVisibilityRepository = SimWidgetVisibilityRepositoryImpl(simDataStore)
         appSettingsRepository = mock()
         simIdentityRepository = mock()
+        appFunctionAvailability = mock()
         migrationService = IdentityMigrationService(appDataStore, simDataStore)
         repository =
             WidgetSettingsRepository(
                 appSettingsRepository = appSettingsRepository,
                 simIdentityRepository = simIdentityRepository,
                 simWidgetVisibilityRepository = simWidgetVisibilityRepository,
+                appFunctionAvailability = appFunctionAvailability,
             )
     }
 

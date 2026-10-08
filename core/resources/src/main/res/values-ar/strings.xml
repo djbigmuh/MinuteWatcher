@@ -199,4 +199,5 @@
     <string name="call_tracking_description">حساب دقائق المكالمات لكل شريحة SIM. قم بوقف التفعيل لتتبع بيانات الهاتف المحمول فقط.</string>
     <string name="assistant_access_title">وصول المساعد</string>
     <string name="assistant_access_description">السماح للمساعد في الجهاز بطلب الدقائق والبيانات المتبقية (Android 16+). معطل افتراضياً. قد يقوم المساعد معالجة الإجابات التي يتلقاها.</string>
+    <string name="app_functions_display_description">يشارك الدقائق المتبقية وبيانات الجوال مع المساعد الموجود على الجهاز</string>
 </resources>

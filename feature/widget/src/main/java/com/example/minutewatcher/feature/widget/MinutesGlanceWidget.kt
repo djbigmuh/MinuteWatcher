@@ -14,6 +14,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.example.minutewatcher.core.android.util.AppLocaleContexts
 import com.example.minutewatcher.core.android.util.WidgetStringsFactory
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -111,7 +112,7 @@ class MinutesGlanceWidget(
     @Composable
     private fun FallbackContent(context: Context) {
         val appLocaleContext =
-            com.example.minutewatcher.core.android.util.AppLocaleContexts
+            AppLocaleContexts
                 .forAppLocale(context)
         Box(
             modifier =

@@ -185,4 +185,5 @@
     <string name="call_tracking_description">计算每张 SIM 卡的通话时长。关闭后将仅统计流量使用情况。</string>
     <string name="assistant_access_title">助手访问</string>
     <string name="assistant_access_description">允许设备上的助手查询剩余通话时长和流量（Android 16+）。默认关闭。助手可能会处理其接收到的回答。</string>
+    <string name="app_functions_display_description">与设备上的助手共享剩余通话分钟数和移动数据流量</string>
 </resources>

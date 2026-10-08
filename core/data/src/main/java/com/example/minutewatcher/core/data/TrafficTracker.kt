@@ -357,7 +357,9 @@ class TrafficTracker
         /**
          * Updates mobile traffic usage for the current default data SIM.
          *
-         * @throws TrafficUpdateTimeoutException if the operation times out.
+         * Errors, including timeout, are not thrown, but reported in [status] as [TrackingStatus.Error]
+         * with machine-readable `type` and `code`. The calling side that needs to react to a timeout
+         * checks [status] for [TrackingStatus.ErrorCode.TIMEOUT] after returning from the method.
          *
          * **Thread Safety:** Safe to call from any coroutine context. Holds internal mutex
          * during the entire update process to ensure data consistency.

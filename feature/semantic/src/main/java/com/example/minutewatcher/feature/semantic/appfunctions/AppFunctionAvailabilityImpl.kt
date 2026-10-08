@@ -17,8 +17,14 @@ internal class AppFunctionAvailabilityImpl
 constructor(
     @ApplicationContext private val context: Context,
 ) : AppFunctionAvailability {
+    /**
+     * Sets assistant access enabled status.
+     * Below the supported API level, the call is a no-op.
+     * Platform errors are logged and not thrown.
+     * [CancellationException] is always propagated.
+     */
     override suspend fun setAssistantAccessEnabled(enabled: Boolean) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (!isAppFunctionApiAvailable()) {
             return
         }
         try {
@@ -26,11 +32,16 @@ constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            AppLogger.w("AppFunctionAvailabilityImpl: Failed to set assistant access enabled = $enabled", e)
+            AppLogger.w(
+                "AppFunctionAvailabilityImpl: Failed to set assistant access enabled = $enabled",
+                e,
+            )
         }
     }
 
-    @RequiresApi(36)
+    private fun isAppFunctionApiAvailable(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA
+
+    @RequiresApi(Build.VERSION_CODES.BAKLAVA)
     private suspend fun setAssistantAccessEnabledInternal(enabled: Boolean) {
         val manager = AppFunctionManager.getInstance(context)
         if (manager == null) {
@@ -44,7 +55,7 @@ constructor(
                 AppFunctionManager.APP_FUNCTION_STATE_DISABLED
             }
         manager.setAppFunctionEnabled(
-            "com.example.minutewatcher.feature.semantic.appfunctions.MinuteWatcherAppFunctionService#getUsageSummary",
+            MinuteWatcherAppFunctionService.FUNCTION_ID_GET_USAGE_SUMMARY,
             state,
         )
     }

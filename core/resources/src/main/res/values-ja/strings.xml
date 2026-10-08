@@ -185,4 +185,5 @@
     <string name="call_tracking_description">各SIMカードの通話時間をカウントします。モバイルデータのみを記録する場合はオフにします。</string>
     <string name="assistant_access_title">アシスタントアクセス</string>
     <string name="assistant_access_description">デバイス上のアシスタントに残りの通話時間とデータ通信量の確認を許可します (Android 16+)。デフォルトでは無効です。アシスタントは受信した回答を処理する場合があります。</string>
+    <string name="app_functions_display_description">残りの通話時間とモバイルデータ通信量を端末上のアシスタントに提供します</string>
 </resources>

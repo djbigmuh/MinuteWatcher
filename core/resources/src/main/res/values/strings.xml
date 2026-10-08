@@ -190,4 +190,5 @@
     <string name="call_tracking_description">Count call minutes for each SIM card. Turn off to track mobile data usage only.</string>
     <string name="assistant_access_title">Assistant access</string>
     <string name="assistant_access_description">Allow the on-device assistant to request your remaining minutes and mobile data (Android 16+). Disabled by default. The assistant may process the answers it receives.</string>
+    <string name="app_functions_display_description">Shares remaining minutes and mobile data with the on-device assistant</string>
 </resources>

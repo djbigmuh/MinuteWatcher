@@ -21,6 +21,13 @@ constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     suspend fun getUsageSummary(): UsageSummary {
+        val snapshot = fetchAndValidateSnapshot()
+        return withContext(ioDispatcher) {
+            mapSnapshot(snapshot)
+        }
+    }
+
+    private suspend fun fetchAndValidateSnapshot(): GlobalSnapshot {
         var snapshot = usageStateRepository.observeSnapshot().value
         if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
             try {
@@ -33,15 +40,23 @@ constructor(
             }
         }
 
-        if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
-            throw AppFunctionElementNotFoundException("Usage data is not available yet")
-        }
-        if (snapshot.simSnapshots.isEmpty()) {
-            throw AppFunctionElementNotFoundException("No active SIM cards")
+        validateSnapshot(snapshot)
+        return snapshot
         }
 
-        return withContext(ioDispatcher) {
-            mapSnapshot(snapshot)
+    private fun validateSnapshot(snapshot: GlobalSnapshot) {
+        val exception =
+            when {
+                snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP ->
+                    AppFunctionElementNotFoundException("Usage data is not available yet")
+
+                snapshot.simSnapshots.isEmpty() ->
+                    AppFunctionElementNotFoundException("No active SIM cards")
+
+                else -> null
+            }
+        if (exception != null) {
+            throw exception
         }
     }
 

@@ -9,10 +9,16 @@ import com.example.minutewatcher.core.model.WidgetUiState
  */
 sealed interface WidgetContent {
     data object RefreshError : WidgetContent
+
     data object SettingsLoadError : WidgetContent
+
     data object NoData : WidgetContent
+
     data object NoSimFound : WidgetContent
-    data class Sims(val visible: List<SimUiState>) : WidgetContent
+
+    data class Sims(
+        val visible: List<SimUiState>,
+    ) : WidgetContent
 }
 
 /**

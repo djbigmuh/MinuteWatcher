@@ -198,6 +198,7 @@ class AppSettingsRepositoryImpl
             prefs[DataStoreKeys.AOD_SUMMARY_ENABLED] = updated.aodSummaryEnabled
             prefs[DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT] = updated.inaccurateCallAttributionsCount
             prefs[DataStoreKeys.CALL_TRACKING_ENABLED] = updated.callTrackingEnabled
+            prefs[DataStoreKeys.ASSISTANT_ACCESS_ENABLED] = updated.assistantAccessEnabled
         }
 
         private fun Preferences.toAppSettings(): AppSettings =

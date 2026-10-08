@@ -191,4 +191,5 @@
     <string name="call_tracking_description">Подсчитывать минуты звонков для каждой SIM-карты. Отключите, если нужен только учёт мобильного трафика.</string>
     <string name="assistant_access_title">Доступ ассистента</string>
     <string name="assistant_access_description">Разрешить ассистенту на устройстве запрашивать оставшиеся минуты и трафик (Android 16+). По умолчанию выключено. Ассистент может обрабатывать полученные ответы.</string>
+    <string name="app_functions_display_description">Передаёт ассистенту на устройстве оставшиеся минуты и мобильный трафик</string>
 </resources>
