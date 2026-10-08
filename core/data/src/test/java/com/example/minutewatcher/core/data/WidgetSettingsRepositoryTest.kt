@@ -64,6 +64,7 @@ class WidgetSettingsRepositoryTest {
                     widgetBackgroundColor = 0xFF000000.toInt(),
                     widgetTransparency = 0,
                     aodSummaryEnabled = true,
+                    callTrackingEnabled = false,
                     widgetLimitExceeded = false,
                     isLoaded = true,
                 )
@@ -76,6 +77,7 @@ class WidgetSettingsRepositoryTest {
             assertFalse(result.simListLoadFailed)
             assertEquals(1, result.layoutMode)
             assertEquals(true, result.aodSummaryEnabled)
+            assertEquals(false, result.callTrackingEnabled)
             assertEquals(3, result.simStates.size)
         }
 
@@ -126,6 +128,8 @@ class WidgetSettingsRepositoryTest {
                     backgroundColor = 0xFF111111.toInt(),
                     transparency = 50,
                     aodSummaryEnabled = true,
+                    callTrackingEnabled = false,
+                    assistantAccessEnabled = true,
                 )
 
             repository.saveGeneralSettings(state)
@@ -133,9 +137,12 @@ class WidgetSettingsRepositoryTest {
             val captor = org.mockito.kotlin.argumentCaptor<(AppSettings) -> AppSettings>()
             verify(appSettingsRepository).updateAppSettings(captor.capture())
 
-            val initial = AppSettings(aodSummaryEnabled = false)
+            val initial =
+                AppSettings(aodSummaryEnabled = false, callTrackingEnabled = true, assistantAccessEnabled = false)
             val updated = captor.firstValue(initial)
             assertEquals(true, updated.aodSummaryEnabled)
+            assertEquals(false, updated.callTrackingEnabled)
+            assertEquals(true, updated.assistantAccessEnabled)
         }
 
     @Test

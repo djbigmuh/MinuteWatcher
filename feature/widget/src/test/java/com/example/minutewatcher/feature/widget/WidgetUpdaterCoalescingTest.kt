@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -223,6 +224,6 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
 
             val joinedUpdateJob = async { updater.updateAll() }
             joinedUpdateJob.cancel()
-            joinedUpdateJob.await()
+            withTimeout(30.seconds) { joinedUpdateJob.await() }
         }
 }

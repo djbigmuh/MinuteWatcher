@@ -166,6 +166,8 @@ class NotificationHelper
 
         /**
          * Sends or updates the persistent silent Always-on Display summary notification.
+         * Content is visible on locked secure screens (`VISIBILITY_PUBLIC`).
+         * Function is opt-in (disabled by default).
          *
          * @return true if notification was posted successfully, false otherwise.
          */
@@ -211,6 +213,7 @@ class NotificationHelper
                             .setOnlyAlertOnce(true)
                             .setShowWhen(false)
                             .setCategory(NotificationCompat.CATEGORY_STATUS)
+                            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                             .setContentIntent(pendingIntent)
                             .build()
 
@@ -229,8 +232,21 @@ class NotificationHelper
         }
 
         /**
-         * Cancels the Always-on Display summary notification.
+         * Checks whether the AOD summary notification is currently active in the notification manager.
          */
+        @Suppress("TooGenericExceptionCaught")
+        fun isAodSummaryNotificationActive(): Boolean {
+            val manager = notificationManager ?: return false
+            return try {
+                manager.activeNotifications.any { it.id == AOD_SUMMARY_NOTIFICATION_ID }
+            } catch (e: SecurityException) {
+                AppLogger.w("Error checking active AOD notifications: SecurityException: ${e.message}")
+                false
+            } catch (e: RuntimeException) {
+                AppLogger.w("Error checking active AOD notifications: RuntimeException: ${e.message}")
+                false
+            }
+        }
         @Suppress("TooGenericExceptionCaught")
         fun cancelAodSummaryNotification() {
             val manager = notificationManager ?: return

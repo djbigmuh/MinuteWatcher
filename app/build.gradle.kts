@@ -20,8 +20,8 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "com.example.minutewatcher"
-        versionCode = 320
-        versionName = "3.2.0"
+        versionCode = 330
+        versionName = "3.3.0"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -66,7 +66,7 @@ configure<ApplicationExtension> {
     }
 
     lint {
-        disable += "AndroidGradlePluginVersion"
+        disable += listOf("AndroidGradlePluginVersion", "ObsoleteSdkInt")
     }
 
     packaging {

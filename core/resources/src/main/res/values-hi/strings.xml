@@ -180,4 +180,11 @@
     <string name="menu_theme_content_desc">थीम बदलें</string>
     <string name="navigate_up_content_desc">ऊपर नेविगेट करें</string>
     <string name="banner_dismiss_content_desc">बैनर बंद करें</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">ट्रैकिंग</string>
+    <string name="call_tracking_title">कॉल मिनट ट्रैक करें</string>
+    <string name="call_tracking_description">प्रत्येक सिम कार्ड के लिए कॉल मिनट गिनें। केवल मोबाइल डेटा उपयोग ट्रैक करने के लिए बंद करें।</string>
+    <string name="assistant_access_title">सहायक पहुँच</string>
+    <string name="assistant_access_description">ऑन-डिवाइस सहायक को आपके शेष मिनटों और डेटा का अनुरोध करने की अनुमति दें (Android 16+)। डिफ़ॉल्ट रूप से अक्षम। सहायक प्राप्त उत्तरों को संसाधित कर सकता है।</string>
 </resources>

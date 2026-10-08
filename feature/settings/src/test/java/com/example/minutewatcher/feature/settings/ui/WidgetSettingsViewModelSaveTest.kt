@@ -124,6 +124,30 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
         }
 
     @Test
+    fun `updateSettings updates callTrackingEnabled`() =
+        runTest {
+            initViewModel()
+            viewModel.updateSettings { it.copy(callTrackingEnabled = false) }
+            assertEquals(
+                false,
+                viewModel.state.value.settings
+                    ?.callTrackingEnabled,
+            )
+        }
+
+    @Test
+    fun `updateSettings updates assistantAccessEnabled`() =
+        runTest {
+            initViewModel()
+            viewModel.updateSettings { it.copy(assistantAccessEnabled = true) }
+            assertEquals(
+                true,
+                viewModel.state.value.settings
+                    ?.assistantAccessEnabled,
+            )
+        }
+
+    @Test
     fun `updateSimSettings updates visibility`() =
         runTest {
             initViewModel()

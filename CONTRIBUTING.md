@@ -76,7 +76,9 @@ For AI-assisted development and auditing, we use `.\MAKE_AUDIT_DUMP.bat`.
 
 ### AppSearch Note
 
-Semantic search indexing uses bundled LocalStorage. In case of runtime indexing failures on a device, the status is set
+Semantic search indexing uses PlatformStorage on Android 12+ (API 31+) for system search integration, and bundled
+LocalStorage on Android 8.0-11 (API 26-30) as a private app index. In case of runtime indexing failures on a device, the
+status is set
 to `NOT_SUPPORTED`. An error banner is not displayed for errors of type `NOT_SUPPORTED`.
 
 ## Non-Stable Dependencies

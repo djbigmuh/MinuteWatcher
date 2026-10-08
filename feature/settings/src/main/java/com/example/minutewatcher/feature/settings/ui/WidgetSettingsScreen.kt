@@ -295,6 +295,15 @@ private fun WidgetSettingsList(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        TrackingSettingsSection(
+            state = state,
+            enabled = true,
+            onUpdateCallTracking = { en -> viewModel.updateSettings { it.copy(callTrackingEnabled = en) } },
+            onUpdateAssistantAccess = { en -> viewModel.updateSettings { it.copy(assistantAccessEnabled = en) } },
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         NotificationSettingsSection(
             state = state,
             enabled = true,

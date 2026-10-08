@@ -31,8 +31,10 @@ Call duration is tracked using real-time system state changes.
 
 ### AppSearch Integration
 
-Semantic indexing of usage data via AppSearch is automatically disabled on devices without the AppSearch system
-service (e.g., LineageOS or CalyxOS without Google Services).
+Semantic indexing of usage data uses `PlatformStorage` on Android 12+ (API 31+) to participate in system search, and
+bundled `LocalStorage` on Android 8.0–11 (API 26–30) as a private app index. Indexing is automatically disabled on
+devices without the AppSearch system service or where AppSearch is unsupported (e.g., custom ROMs without AppSearch
+service).
 - An error banner is **not** displayed for `NOT_SUPPORTED` errors to ensure a clean UX on these devices.
 - For other recoverable issues (like database schema drift), the app attempts automatic recovery with limited retry attempts.
 

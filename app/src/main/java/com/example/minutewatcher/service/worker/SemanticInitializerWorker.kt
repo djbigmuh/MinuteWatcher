@@ -5,12 +5,16 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.domain.AppFunctionAvailability
+import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
@@ -29,9 +33,26 @@ class SemanticInitializerWorker
         private val searchManager: SemanticSearchManager,
         private val shortcutManager: ShortcutManager,
         private val usageStateRepository: UsageStateRepository,
+        private val appSettingsRepository: AppSettingsRepository,
+        private val appFunctionAvailability: AppFunctionAvailability,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             AppLogger.d("SemanticInitializerWorker: Starting initialization")
+
+            try {
+                val settings =
+                    appSettingsRepository
+                        .getAppSettings()
+                        .firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
+                if (settings != null) {
+                    appFunctionAvailability.setAssistantAccessEnabled(settings.assistantAccessEnabled)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("SemanticInitializerWorker: Failed to synchronize AppFunction availability", e)
+            }
+
             val snapshotFlow = usageStateRepository.observeSnapshot()
 
             // Start background observers for continuous updates.

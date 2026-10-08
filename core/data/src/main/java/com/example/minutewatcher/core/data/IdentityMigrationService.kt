@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
@@ -518,6 +519,17 @@ class IdentityMigrationService
                         value,
                         storeName,
                     )
+
+                is Set<*> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val stringSet = value as Set<String>
+                    migrateOrBackup(
+                        stringSetPreferencesKey(newKeyName),
+                        stringSetPreferencesKey(conflictKeyName),
+                        stringSet,
+                        storeName,
+                    )
+                }
 
                 else -> {
                     AppLogger.e("Unknown type for key ${oldKey.name}: ${value::class.simpleName}, skipping migration")

@@ -87,6 +87,7 @@ class WidgetSettingsRepository
                     notifyLowMinutes = settings.notifyLowMinutes,
                     notifyLowTraffic = settings.notifyLowTraffic,
                     aodSummaryEnabled = settings.aodSummaryEnabled,
+                    callTrackingEnabled = settings.callTrackingEnabled,
                     simStates = simStates,
                     widgetLimitExceeded = settings.widgetLimitExceeded,
                     settingsLoadFailed = false,
@@ -143,6 +144,8 @@ class WidgetSettingsRepository
                     notifyLowMinutes = state.notifyLowMinutes,
                     notifyLowTraffic = state.notifyLowTraffic,
                     aodSummaryEnabled = state.aodSummaryEnabled,
+                    callTrackingEnabled = state.callTrackingEnabled,
+                    assistantAccessEnabled = state.assistantAccessEnabled,
                 )
             }
         }
@@ -229,6 +232,8 @@ class WidgetSettingsRepository
                 notifyLowMinutes = settings.notifyLowMinutes,
                 notifyLowTraffic = settings.notifyLowTraffic,
                 aodSummaryEnabled = settings.aodSummaryEnabled,
+                callTrackingEnabled = settings.callTrackingEnabled,
+                assistantAccessEnabled = settings.assistantAccessEnabled,
                 simStates = emptyMap(),
                 widgetLimitExceeded = settings.widgetLimitExceeded,
                 settingsLoadFailed = settingsLoadFailed,

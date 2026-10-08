@@ -70,6 +70,7 @@ class AodSummaryControllerTest {
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(appSettingsFlow)
         whenever(permissionRepository.notificationPermissionGranted).thenReturn(permissionFlow)
         whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(true)
+        whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(true)
         whenever(notificationHelper.sendAodSummaryNotification(any(), any(), any())).thenReturn(true)
 
         controller =
@@ -412,5 +413,38 @@ class AodSummaryControllerTest {
                 }
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
             }
+        }
+
+    @Test
+    fun `reposts summary when notification was externally removed even if content is unchanged`() =
+        runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
+            val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
+
+            controller.start()
+            testScope.advanceUntilIdle()
+
+            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+
+            whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(false)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0)).copy(revision = 1L)
+            testScope.advanceUntilIdle()
+
+            verify(notificationHelper, times(2)).sendAodSummaryNotification(any(), any(), any())
+            controller.observationJob?.cancel()
+        }
+
+    @Test
+    fun `cancels summary on start if notification is active but settings or permission became unavailable`() =
+        runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = false)
+            whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(true)
+
+            controller.start()
+            testScope.advanceUntilIdle()
+
+            verify(notificationHelper).cancelAodSummaryNotification()
+            controller.observationJob?.cancel()
         }
 }

@@ -41,6 +41,17 @@ internal class SimIdentitySeedRepositoryImpl
                 preferences[DataStoreKeys.SIM_IDENTITY_SEED] ?: ""
             }
 
+    /**
+     * Sets the seed string.
+     *
+     * Operation write is bounded by [Constants.Flow.SHORT_TIMEOUT_MS].
+     * On write timeout, logs a warning and completes silently without throwing an exception,
+     * preserving any active ephemeral seed state.
+     * On non-timeout storage errors, rethrows the exception to the caller.
+     *
+     * @throws Exception if non-timeout storage operation fails.
+     * @throws CancellationException if the coroutine is cancelled.
+     */
         override suspend fun setSeed(seed: String) {
             try {
                 val writeResult =

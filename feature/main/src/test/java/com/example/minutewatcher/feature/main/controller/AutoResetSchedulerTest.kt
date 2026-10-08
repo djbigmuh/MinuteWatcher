@@ -180,6 +180,29 @@ class AutoResetSchedulerTest {
             }
         }
 
+    @Test
+    fun `checkOnStart resets single flight flag when setFailureCount in error handler throws exception`() =
+        runTest {
+            val mockRepository: AutoResetScheduleRepository = mock()
+            whenever(mockRepository.getLastCheckMillis()).thenReturn(null)
+            whenever(mockRepository.getFailureCount()).thenReturn(0)
+            whenever(mockRepository.setFailureCount(any())).thenThrow(RuntimeException("Persistence error"))
+
+            whenever(autoResetUseCase.performAutoReset(any())).thenThrow(RuntimeException("UseCase error"))
+
+            val schedulerWithMockRepo = AutoResetScheduler(mockRepository, autoResetUseCase, timeProvider)
+
+            // First call fails in UseCase AND in setFailureCount
+            schedulerWithMockRepo.checkOnStart()
+
+            // Second call should be able to run because isCheckStarted flag was reset to false in finally
+            org.mockito.kotlin.doReturn(true).whenever(autoResetUseCase).performAutoReset(any())
+
+            schedulerWithMockRepo.checkOnStart()
+
+            verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(false))
+        }
+
     private class FakeAutoResetScheduleRepository : AutoResetScheduleRepository {
         var lastCheckMillis: Long? = null
         var failCount: Int = 0

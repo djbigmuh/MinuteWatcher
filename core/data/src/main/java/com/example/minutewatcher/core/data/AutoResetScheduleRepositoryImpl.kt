@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
+import com.example.minutewatcher.core.data.util.DataStoreWriteTimeoutException
 import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.withTimeoutOrNull
@@ -32,6 +33,7 @@ class AutoResetScheduleRepositoryImpl
                 }
             if (result == null) {
                 AppLogger.w("AutoResetScheduleRepositoryImpl: setLastCheckMillis timed out")
+                throw DataStoreWriteTimeoutException("setLastCheckMillis")
             }
         }
 
@@ -46,6 +48,7 @@ class AutoResetScheduleRepositoryImpl
                 }
             if (result == null) {
                 AppLogger.w("AutoResetScheduleRepositoryImpl: setFailureCount timed out")
+                throw DataStoreWriteTimeoutException("setFailureCount")
             }
         }
     }

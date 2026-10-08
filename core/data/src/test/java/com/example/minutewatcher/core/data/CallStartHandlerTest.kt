@@ -4,6 +4,7 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.util.DataStoreReadTimeoutException
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
+import com.example.minutewatcher.core.data.util.DataStoreWriteTimeoutException
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -137,5 +138,46 @@ class CallStartHandlerTest {
                 eq(false),
             )
             verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
+        }
+
+    @Test
+    fun `executeCallStart handles write timeout failure setting TIMEOUT error code`() =
+        runTest {
+            whenever(context.checkPermissions()).thenReturn(true)
+            whenever(attributionResolver.resolveTargetSubId(1)).thenReturn(1)
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+            whenever(attributionResolver.resolveIdentity(1)).thenReturn("id_1")
+            whenever(timeProvider.now()).thenReturn(1000L)
+            whenever(timeProvider.elapsedRealtime()).thenReturn(5000L)
+            whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
+
+            val timeoutException = DataStoreWriteTimeoutException("saveCallSession")
+            whenever(
+                callSessionRepository.saveCallSession(
+                    subId = eq(1),
+                    startTime = eq(1000L),
+                    bootTime = eq(5000L),
+                    uptime = eq(3000L),
+                    identity = eq("id_1"),
+                ),
+            ).thenAnswer { throw timeoutException }
+
+            runCatching {
+                handler.executeCallStart(1, -1L, context)
+            }
+
+            verify(context).updateStatus(
+                eq(
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        timeoutException.message,
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    ),
+                ),
+                eq(false),
+            )
         }
 }

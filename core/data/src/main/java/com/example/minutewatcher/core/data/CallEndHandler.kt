@@ -3,8 +3,8 @@ package com.example.minutewatcher.core.data
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.data.util.DataStoreReadTimeoutException
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
+import com.example.minutewatcher.core.data.util.DataStoreTimeoutException
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.model.Constants
@@ -90,7 +90,7 @@ internal class CallEndHandler
             } catch (e2: Exception) {
                 AppLogger.w("CallEndHandler: refreshStatus failed after fatal error", e2)
             }
-            val code = if (e is DataStoreReadTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
+            val code = if (e is DataStoreTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
             context.updateStatus(TrackingStatus.Error(errorType, e.message, code = code))
             throw e
         }

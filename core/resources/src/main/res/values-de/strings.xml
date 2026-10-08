@@ -180,4 +180,11 @@
     <string name="menu_theme_content_desc">Design ändern</string>
     <string name="navigate_up_content_desc">Nach oben</string>
     <string name="banner_dismiss_content_desc">Banner schließen</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Erfassung</string>
+    <string name="call_tracking_title">Anrufminuten erfassen</string>
+    <string name="call_tracking_description">Anrufminuten für jede SIM-Karte zählen. Deaktivieren, um nur die Datennutzung zu erfassen.</string>
+    <string name="assistant_access_title">Assistentenzugriff</string>
+    <string name="assistant_access_description">Dem Assistenten auf dem Gerät erlauben, verbleibende Minuten und Daten abzufragen (Android 16+). Standardmäßig deaktiviert. Der Assistent kann erhaltene Antworten verarbeiten.</string>
 </resources>

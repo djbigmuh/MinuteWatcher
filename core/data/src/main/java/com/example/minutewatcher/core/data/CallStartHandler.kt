@@ -2,8 +2,8 @@ package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
-import com.example.minutewatcher.core.data.util.DataStoreReadTimeoutException
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
+import com.example.minutewatcher.core.data.util.DataStoreTimeoutException
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -76,7 +76,7 @@ internal class CallStartHandler
                 shouldRefreshStatus = false
                 when (e) {
                     is IOException -> {
-                        val code = if (e is DataStoreReadTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
+                        val code = if (e is DataStoreTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
                         context.updateStatus(
                             TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR, e.message, code = code),
                         )

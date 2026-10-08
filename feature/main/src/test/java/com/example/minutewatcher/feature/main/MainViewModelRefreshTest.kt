@@ -8,6 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -244,7 +245,8 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
 
             whenever(usageStateRepository.refresh()).doSuspendableAnswer {
                 refreshStarted.complete(Unit)
-                canCompleteRefresh.await()
+                withTimeoutOrNull(30.seconds) { canCompleteRefresh.await() }
+                    ?: throw AssertionError("Timed out waiting for canCompleteRefresh")
                 RefreshResult.Success(snapshot)
             }
 

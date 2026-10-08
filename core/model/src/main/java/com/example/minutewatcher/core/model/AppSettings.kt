@@ -21,6 +21,11 @@ data class AppSettings(
     val inaccurateCallAttributionsCount: Int = 0,
     val callTrackingEnabled: Boolean = true,
     /**
+     * User consent for on-device assistant to request remaining minutes and data via AppFunctions (Android 16+).
+     * Disabled by default.
+     */
+    val assistantAccessEnabled: Boolean = false,
+    /**
      * Whether the persistent silent summary notification for lock screen and Always-on Display is enabled.
      * Display on Always-on Display depends on device capabilities.
      */

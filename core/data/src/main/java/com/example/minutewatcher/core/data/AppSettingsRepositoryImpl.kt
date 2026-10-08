@@ -246,6 +246,7 @@ class AppSettingsRepositoryImpl
                 inaccurateCallAttributionsCount =
                     read(DataStoreKeys.INACCURATE_CALL_ATTRIBUTIONS_COUNT, current.inaccurateCallAttributionsCount),
                 callTrackingEnabled = read(DataStoreKeys.CALL_TRACKING_ENABLED, current.callTrackingEnabled),
+                assistantAccessEnabled = read(DataStoreKeys.ASSISTANT_ACCESS_ENABLED, current.assistantAccessEnabled),
             )
 
         private fun Preferences.mapWidgetSettings(current: AppSettings): AppSettings =

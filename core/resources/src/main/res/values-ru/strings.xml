@@ -184,4 +184,11 @@
     <string name="menu_theme_content_desc">Смена темы</string>
     <string name="navigate_up_content_desc">Перейти вверх</string>
     <string name="banner_dismiss_content_desc">Закрыть баннер</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Учёт</string>
+    <string name="call_tracking_title">Учитывать минуты звонков</string>
+    <string name="call_tracking_description">Подсчитывать минуты звонков для каждой SIM-карты. Отключите, если нужен только учёт мобильного трафика.</string>
+    <string name="assistant_access_title">Доступ ассистента</string>
+    <string name="assistant_access_description">Разрешить ассистенту на устройстве запрашивать оставшиеся минуты и трафик (Android 16+). По умолчанию выключено. Ассистент может обрабатывать полученные ответы.</string>
 </resources>

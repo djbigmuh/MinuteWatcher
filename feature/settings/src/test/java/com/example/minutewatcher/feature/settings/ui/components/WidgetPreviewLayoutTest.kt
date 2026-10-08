@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimLayoutRow
 import com.example.minutewatcher.core.model.SimLayoutSpec
@@ -136,5 +137,72 @@ class WidgetPreviewLayoutTest {
 
         val desc0 = "MegaFon: 100, 5.0 GB"
         composeTestRule.onNodeWithContentDescription(desc0).assertIsDisplayed()
+    }
+
+    @Test
+    fun `preview shows noSimFoundText when snapshot is non-empty but all sims hidden`() {
+        val sim0 = createSimUiState(0, "MTS").copy(showSim = false)
+        val uiState =
+            createWidgetUiState(listOf(sim0), isHorizontal = true).copy(
+                strings =
+                    com.example.minutewatcher.core.model.WidgetStrings(
+                        usedText = "",
+                        minutesAbbr = "",
+                        limitText = "",
+                        gbAbbr = "",
+                        noSimFoundText = "Custom SIM not found",
+                    ),
+                isSnapshotEmpty = false,
+            )
+
+        composeTestRule.setContent {
+            WidgetPreview(uiState = uiState)
+        }
+
+        composeTestRule.onNodeWithText("Custom SIM not found").assertIsDisplayed()
+    }
+
+    @Test
+    fun `preview shows settingsLoadErrorText when simListLoadFailed`() {
+        val uiState =
+            createWidgetUiState(emptyList(), isHorizontal = true).copy(
+                strings =
+                    com.example.minutewatcher.core.model.WidgetStrings(
+                        usedText = "",
+                        minutesAbbr = "",
+                        limitText = "",
+                        gbAbbr = "",
+                        settingsLoadErrorText = "Custom Settings Error",
+                    ),
+                simListLoadFailed = true,
+            )
+
+        composeTestRule.setContent {
+            WidgetPreview(uiState = uiState)
+        }
+
+        composeTestRule.onNodeWithText("Custom Settings Error").assertIsDisplayed()
+    }
+
+    @Test
+    fun `preview shows noDataText when snapshot is empty`() {
+        val uiState =
+            createWidgetUiState(emptyList(), isHorizontal = true).copy(
+                strings =
+                    com.example.minutewatcher.core.model.WidgetStrings(
+                        usedText = "",
+                        minutesAbbr = "",
+                        limitText = "",
+                        gbAbbr = "",
+                        noDataText = "Custom No Data",
+                    ),
+                isSnapshotEmpty = true,
+            )
+
+        composeTestRule.setContent {
+            WidgetPreview(uiState = uiState)
+        }
+
+        composeTestRule.onNodeWithText("Custom No Data").assertIsDisplayed()
     }
 }

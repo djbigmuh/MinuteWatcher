@@ -32,6 +32,7 @@ mockito = "5.23.0"
 mockitoKotlin = "6.3.0"
 colorpickerview = "2.4.0"
 appsearch = "1.1.0"
+appfunctions = "1.0.0-alpha10"
 kotlinxCoroutines = "1.11.0"
 kotlinxCoroutinesTest = "1.11.0"
 detekt = "2.0.0-alpha.6"
@@ -96,6 +97,9 @@ skydovesColorpickerview = { group = "com.github.skydoves", name = "colorpickervi
 androidxAppsearch = { group = "androidx.appsearch", name = "appsearch", version.ref = "appsearch" }
 androidxAppsearchCompiler = { group = "androidx.appsearch", name = "appsearch-compiler", version.ref = "appsearch" }
 androidxAppsearchLocalStorage = { group = "androidx.appsearch", name = "appsearch-local-storage", version.ref = "appsearch" }
+androidxAppsearchPlatformStorage = { group = "androidx.appsearch", name = "appsearch-platform-storage", version.ref = "appsearch" }
+androidxAppfunctions = { group = "androidx.appfunctions", name = "appfunctions", version.ref = "appfunctions" }
+androidxAppfunctionsCompiler = { group = "androidx.appfunctions", name = "appfunctions-compiler", version.ref = "appfunctions" }
 javaxInject = { group = "javax.inject", name = "javax.inject", version = "1" }
 json = { group = "org.json", name = "json", version = "20240303" }
 kotlinxCoroutinesCore = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }

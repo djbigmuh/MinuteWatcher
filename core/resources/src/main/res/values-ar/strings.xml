@@ -192,4 +192,11 @@
     <string name="menu_theme_content_desc">تغيير السمة</string>
     <string name="navigate_up_content_desc">التنقل إلى الأعلى</string>
     <string name="banner_dismiss_content_desc">إغلاق الإشعار</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">التتبع</string>
+    <string name="call_tracking_title">تتبع دقائق المكالمات</string>
+    <string name="call_tracking_description">حساب دقائق المكالمات لكل شريحة SIM. قم بوقف التفعيل لتتبع بيانات الهاتف المحمول فقط.</string>
+    <string name="assistant_access_title">وصول المساعد</string>
+    <string name="assistant_access_description">السماح للمساعد في الجهاز بطلب الدقائق والبيانات المتبقية (Android 16+). معطل افتراضياً. قد يقوم المساعد معالجة الإجابات التي يتلقاها.</string>
 </resources>

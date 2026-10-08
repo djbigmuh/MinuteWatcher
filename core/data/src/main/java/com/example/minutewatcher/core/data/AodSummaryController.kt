@@ -117,7 +117,8 @@ class AodSummaryController
                 cancelSummaryIfPosted(reason)
             } else {
                 val expandedText = simLines.joinToString("\n")
-                if (!isPosted || expandedText != lastPublishedText) {
+                val active = notificationHelper.isAodSummaryNotificationActive()
+                if (!isPosted || !active || expandedText != lastPublishedText) {
                     val appLocaleContext =
                         com.example.minutewatcher.core.android.util.AppLocaleContexts
                             .forAppLocale(context)
@@ -169,7 +170,7 @@ class AodSummaryController
         }
 
         private fun cancelSummaryIfPosted(reason: String) {
-            if (isPosted) {
+            if (isPosted || notificationHelper.isAodSummaryNotificationActive()) {
                 notificationHelper.cancelAodSummaryNotification()
                 isPosted = false
                 lastPublishedText = null

@@ -14,11 +14,25 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
+ * Abstract base class for DataStore timeout exceptions.
+ */
+internal abstract class DataStoreTimeoutException(
+    message: String,
+) : IOException(message)
+
+/**
  * Exception thrown when a DataStore read operation times out.
  */
 internal class DataStoreReadTimeoutException(
     label: String,
-) : IOException("DataStore read timeout ($label)")
+) : DataStoreTimeoutException("DataStore read timeout ($label)")
+
+/**
+ * Exception thrown when a DataStore write operation times out.
+ */
+internal class DataStoreWriteTimeoutException(
+    label: String,
+) : DataStoreTimeoutException("DataStore write timeout ($label)")
 
 /**
  * Helper class for retrying DataStore read operations with exponential backoff.

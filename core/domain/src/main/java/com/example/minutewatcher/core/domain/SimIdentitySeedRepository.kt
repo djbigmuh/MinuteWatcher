@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.domain
 
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.IOException
@@ -27,7 +28,13 @@ interface SimIdentitySeedRepository {
     /**
      * Sets the seed string.
      *
-     * @throws IOException if storage access fails.
+     * Operation write is bounded by [Constants.Flow.SHORT_TIMEOUT_MS].
+     * On write timeout, logs a warning and completes silently without throwing an exception,
+     * leaving any active ephemeral seed state unchanged.
+     * On non-timeout storage errors (exceptions thrown by DataStore edit), rethrows the exception.
+     *
+     * @param seed Seed string to persist.
+     * @throws Exception if non-timeout storage operation fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun setSeed(seed: String)

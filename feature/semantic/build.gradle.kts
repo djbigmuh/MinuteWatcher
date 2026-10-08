@@ -40,6 +40,9 @@ dependencies {
     implementation(libs.androidxAppsearch)
     ksp(libs.androidxAppsearchCompiler)
     implementation(libs.androidxAppsearchLocalStorage)
+    implementation(libs.androidxAppsearchPlatformStorage)
+    implementation(libs.androidxAppfunctions)
+    ksp(libs.androidxAppfunctionsCompiler)
     implementation(libs.kotlinxCoroutinesGuava)
 
     testImplementation(testFixtures(project(":core:android")))

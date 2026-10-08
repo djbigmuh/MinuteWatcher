@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.feature.main.controller.AutoResetScheduler.Companion.MAX_AUTO_RESET_RETRIES
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
@@ -22,6 +23,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * - The failure count reset window (`FAIL_COUNT_RESET_INTERVAL_MS`) is measured from the last actual attempt.
  *   While the failure count exceeds the threshold, retry checks do not update the attempt timestamp,
  *   allowing retries to resume once the failure window expires.
+ * - Persistence errors when updating the failure count do not block subsequent auto-reset checks.
  * - Repeat auto-reset check is safe because [AutoResetUseCase] is idempotent regarding reset dates.
  */
 class AutoResetScheduler
@@ -52,11 +54,19 @@ class AutoResetScheduler
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Auto-reset failed during initialization", e)
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    val currentFailCount = scheduleRepository.getFailureCount()
-                    scheduleRepository.setFailureCount(currentFailCount + 1)
+                try {
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        val currentFailCount = scheduleRepository.getFailureCount()
+                        scheduleRepository.setFailureCount(currentFailCount + 1)
+                    }
+                } catch (e2: CancellationException) {
+                    isCheckStarted.set(false)
+                    throw e2
+                } catch (e2: Exception) {
+                    AppLogger.w("Failed to update failure count during auto-reset error handling", e2)
+                } finally {
+                    isCheckStarted.set(false)
                 }
-                isCheckStarted.set(false)
             }
         }
 

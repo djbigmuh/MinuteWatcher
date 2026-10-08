@@ -302,6 +302,103 @@ class WidgetSettingsScreenTest {
     }
 
     @Test
+    fun trackingTitleAndDescriptionDisplayed() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.tracking_title))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.call_tracking_title))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.call_tracking_description))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.assistant_access_title))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.assistant_access_description))
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun togglingCallTrackingCheckboxCallsUpdateSettings() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.call_tracking_title))
+            .performScrollTo()
+            .performClick()
+
+        verify(viewModel).updateSettings(any())
+    }
+
+    @Test
+    fun togglingAssistantAccessCheckboxCallsUpdateSettings() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.assistant_access_title))
+            .performScrollTo()
+            .performClick()
+
+        verify(viewModel).updateSettings(any())
+    }
+
+    @Test
+    fun trackingStringsAreNonEmptyInAllConfiguredLocales() {
+        val supportedLocales = listOf("en", "ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
+        val stringResIds =
+            listOf(
+                R.string.tracking_title,
+                R.string.call_tracking_title,
+                R.string.call_tracking_description,
+                R.string.assistant_access_title,
+                R.string.assistant_access_description,
+            )
+
+        supportedLocales.forEach { lang ->
+            val locale = Locale.forLanguageTag(lang)
+            val config = Configuration(context.resources.configuration)
+            config.setLocale(locale)
+            val localizedContext = context.createConfigurationContext(config)
+
+            stringResIds.forEach { resId ->
+                val strName = context.resources.getResourceEntryName(resId)
+                val valStr = localizedContext.getString(resId)
+                assertTrue("String $strName for locale $lang must not be empty", valStr.isNotEmpty())
+            }
+        }
+    }
+
+    @Test
     fun clickingBackgroundColorRowShowsColorPickerDialog() {
         whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
 

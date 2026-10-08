@@ -178,4 +178,11 @@
     <string name="menu_theme_content_desc">更改主题</string>
     <string name="navigate_up_content_desc">向上导航</string>
     <string name="banner_dismiss_content_desc">关闭横幅</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">追踪</string>
+    <string name="call_tracking_title">统计通话时长</string>
+    <string name="call_tracking_description">计算每张 SIM 卡的通话时长。关闭后将仅统计流量使用情况。</string>
+    <string name="assistant_access_title">助手访问</string>
+    <string name="assistant_access_description">允许设备上的助手查询剩余通话时长和流量（Android 16+）。默认关闭。助手可能会处理其接收到的回答。</string>
 </resources>

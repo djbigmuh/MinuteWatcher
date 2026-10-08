@@ -183,4 +183,11 @@
     <string name="menu_theme_content_desc">Change theme</string>
     <string name="navigate_up_content_desc">Navigate up</string>
     <string name="banner_dismiss_content_desc">Dismiss banner</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Tracking</string>
+    <string name="call_tracking_title">Track call minutes</string>
+    <string name="call_tracking_description">Count call minutes for each SIM card. Turn off to track mobile data usage only.</string>
+    <string name="assistant_access_title">Assistant access</string>
+    <string name="assistant_access_description">Allow the on-device assistant to request your remaining minutes and mobile data (Android 16+). Disabled by default. The assistant may process the answers it receives.</string>
 </resources>

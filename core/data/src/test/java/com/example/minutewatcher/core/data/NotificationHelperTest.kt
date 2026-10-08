@@ -90,6 +90,7 @@ class NotificationHelperTest {
         assertEquals("AOD Line", text)
         assertEquals("Expanded text", bigText)
         assertTrue((notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0)
+        assertEquals(android.app.Notification.VISIBILITY_PUBLIC, notification.visibility)
     }
 
     @Test
@@ -201,5 +202,31 @@ class NotificationHelperTest {
         assertFalse(nullServiceHelper.sendAodSummaryNotification("Title", "Line", "Text"))
         nullServiceHelper.cancelAodSummaryNotification()
         assertFalse(nullServiceHelper.isAodSummaryAvailable())
+        assertFalse(nullServiceHelper.isAodSummaryNotificationActive())
+    }
+
+    @Test
+    fun `isAodSummaryNotificationActive returns true when notification is posted`() {
+        whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+        helper.sendAodSummaryNotification("Title", "Line", "Expanded")
+
+        assertTrue(helper.isAodSummaryNotificationActive())
+    }
+
+    @Test
+    fun `isAodSummaryNotificationActive returns false when no notification posted`() {
+        assertFalse(helper.isAodSummaryNotificationActive())
+    }
+
+    @Test
+    fun `isAodSummaryNotificationActive returns false when NotificationManager is null`() {
+        val nullServiceContext =
+            object : android.content.ContextWrapper(context) {
+                override fun getSystemService(name: String): Any? = null
+
+                override fun getSystemServiceName(serviceClass: Class<*>): String? = null
+            }
+        val nullServiceHelper = NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
+        assertFalse(nullServiceHelper.isAodSummaryNotificationActive())
     }
 }

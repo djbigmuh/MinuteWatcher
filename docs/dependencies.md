@@ -30,6 +30,11 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 - **Plan**: Upgrade to the stable 2.x release once available; revise `config/detekt/detekt.yml` for new and deprecated
   rules; verify `buildUponDefaultConfig` behavior.
 
+### 6. AndroidX AppSearch Platform Storage
+
+- **Artifact**: `androidx.appsearch:appsearch-platform-storage` (1.1.0)
+- **Purpose**: Enables system search integration on Android 12+ (API 31+) via `PlatformStorage`.
+
 ---
 
 > [!NOTE]

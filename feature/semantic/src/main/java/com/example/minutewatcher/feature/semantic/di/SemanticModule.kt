@@ -34,4 +34,8 @@ internal interface SemanticModule {
     @Binds
     @Singleton
     fun bindAppSearchWrapper(impl: AppSearchWrapperImpl): AppSearchWrapper
+
+    @Binds
+    @Singleton
+    fun bindAppFunctionAvailability(impl: com.example.minutewatcher.feature.semantic.appfunctions.AppFunctionAvailabilityImpl): com.example.minutewatcher.core.domain.AppFunctionAvailability
 }

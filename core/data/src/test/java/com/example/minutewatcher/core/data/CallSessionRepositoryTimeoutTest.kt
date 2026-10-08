@@ -2,31 +2,125 @@ package com.example.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.data.util.DataStoreWriteTimeoutException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert
+import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallSessionRepositoryTimeoutTest {
+    private class HangingDataStore : DataStore<Preferences> {
+        override val data: Flow<Preferences> = MutableSharedFlow()
+
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
+            awaitCancellation()
+        }
+    }
+
     @Test
     fun `getActiveCallSubIds returns null on DataStore timeout`() =
         runTest {
-            // 1. Setup a DataStore that hangs (Flow that never emits)
-            val hangingFlow = MutableSharedFlow<Preferences>()
-            val dataStore = mock<DataStore<Preferences>>()
-            whenever(dataStore.data).thenReturn(hangingFlow)
+            val repository = CallSessionRepositoryImpl(HangingDataStore())
 
-            val repository = CallSessionRepositoryImpl(dataStore)
+            val result =
+                withTimeout(10.seconds) {
+                    repository.getActiveCallSubIds()
+                }
 
-            // 2. Call the method. It should timeout after Constants.Flow.SHORT_TIMEOUT_MS
-            // In runTest, time is virtual, so it will trigger the timeout quickly.
-            val result = repository.getActiveCallSubIds()
+            assertNull("Should return null on timeout", result)
+        }
 
-            // 3. Verify it returns null
-            Assert.assertNull("Should return null on timeout", result)
+    @Test
+    fun `saveCallSession throws DataStoreWriteTimeoutException on write timeout`() =
+        runTest {
+            val repository = CallSessionRepositoryImpl(HangingDataStore())
+
+            val result =
+                runCatching {
+                    withTimeout(10.seconds) {
+                        repository.saveCallSession(
+                            subId = 1,
+                            startTime = 1000L,
+                            bootTime = 2000L,
+                            uptime = 3000L,
+                            identity = "sub1",
+                        )
+                    }
+                }
+
+            val exception = result.exceptionOrNull()
+            assertTrue(
+                "Expected DataStoreWriteTimeoutException, but was $exception",
+                exception is DataStoreWriteTimeoutException
+            )
+            assertEquals("DataStore write timeout (saveCallSession)", exception?.message)
+        }
+
+    @Test
+    fun `clearCallSession throws DataStoreWriteTimeoutException on write timeout`() =
+        runTest {
+            val repository = CallSessionRepositoryImpl(HangingDataStore())
+
+            val result =
+                runCatching {
+                    withTimeout(10.seconds) {
+                        repository.clearCallSession(subId = 1)
+                    }
+                }
+
+            val exception = result.exceptionOrNull()
+            assertTrue(
+                "Expected DataStoreWriteTimeoutException, but was $exception",
+                exception is DataStoreWriteTimeoutException
+            )
+            assertEquals("DataStore write timeout (clearCallSession)", exception?.message)
+        }
+
+    @Test
+    fun `clearAllCallSessions throws DataStoreWriteTimeoutException on write timeout`() =
+        runTest {
+            val repository = CallSessionRepositoryImpl(HangingDataStore())
+
+            val result =
+                runCatching {
+                    withTimeout(10.seconds) {
+                        repository.clearAllCallSessions()
+                    }
+                }
+
+            val exception = result.exceptionOrNull()
+            assertTrue(
+                "Expected DataStoreWriteTimeoutException, but was $exception",
+                exception is DataStoreWriteTimeoutException
+            )
+            assertEquals("DataStore write timeout (clearAllCallSessions)", exception?.message)
+        }
+
+    @Test
+    fun `setLastDataSubId throws DataStoreWriteTimeoutException on write timeout`() =
+        runTest {
+            val repository = CallSessionRepositoryImpl(HangingDataStore())
+
+            val result =
+                runCatching {
+                    withTimeout(10.seconds) {
+                        repository.setLastDataSubId(subId = 1)
+                    }
+                }
+
+            val exception = result.exceptionOrNull()
+            assertTrue(
+                "Expected DataStoreWriteTimeoutException, but was $exception",
+                exception is DataStoreWriteTimeoutException
+            )
+            assertEquals("DataStore write timeout (setLastDataSubId)", exception?.message)
         }
 }

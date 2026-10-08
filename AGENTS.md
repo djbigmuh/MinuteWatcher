@@ -4,7 +4,9 @@ This project is assisted by AI Agents.
 
 ## AppSearch Note
 
-Semantic search indexing uses bundled LocalStorage. In case of runtime indexing failures on a device, the status is set
+Semantic search indexing uses PlatformStorage on Android 12+ (API 31+) for system search integration, and bundled
+LocalStorage on Android 8.0-11 (API 26-30) as a private app index. In case of runtime indexing failures on a device, the
+status is set
 to `NOT_SUPPORTED`. An error banner is not displayed for errors of type `NOT_SUPPORTED`.
 
 ## Always-on Display Note
@@ -22,7 +24,10 @@ The project follows a comprehensive testing strategy documented in [docs/testing
 
 Canonical launcher icon layout must be maintained:
 
-- Adaptive icon XML: `app/src/main/res/mipmap/ic_launcher.xml`
+- Adaptive icon XML: `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+- Launcher icon files are placed only in `res/mipmap-anydpi-v26/` (adaptive icon) and `res/drawable/` (vector parts);
+  placing the adaptive icon in unqualified `res/mipmap/` is prohibited — explicit qualifier `anydpi-v26` guarantees
+  priority when resolving resources on device.
 - Required adaptive icon elements: `<background>`, `<foreground>`, `<monochrome>`
 - Vector parts: `app/src/main/res/drawable/ic_launcher_background.xml`, `ic_launcher_foreground.xml`
 - Namespace MUST be `http://schemas.android.com/apk/res/android`

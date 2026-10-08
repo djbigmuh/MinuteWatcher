@@ -75,4 +75,38 @@ class WidgetSettingsStateTest {
         val validatedDisabled = WidgetSettingsState.validate(initialDisabled)
         assertFalse(validatedDisabled.aodSummaryEnabled)
     }
+
+    @Test
+    fun `default callTrackingEnabled is true`() {
+        val state = WidgetSettingsState()
+        assertTrue(state.callTrackingEnabled)
+    }
+
+    @Test
+    fun `default assistantAccessEnabled is false`() {
+        val state = WidgetSettingsState()
+        assertFalse(state.assistantAccessEnabled)
+    }
+
+    @Test
+    fun `validate should preserve callTrackingEnabled`() {
+        val initialEnabled = WidgetSettingsState(callTrackingEnabled = true)
+        val validatedEnabled = WidgetSettingsState.validate(initialEnabled)
+        assertTrue(validatedEnabled.callTrackingEnabled)
+
+        val initialDisabled = WidgetSettingsState(callTrackingEnabled = false)
+        val validatedDisabled = WidgetSettingsState.validate(initialDisabled)
+        assertFalse(validatedDisabled.callTrackingEnabled)
+    }
+
+    @Test
+    fun `validate should preserve assistantAccessEnabled`() {
+        val initialEnabled = WidgetSettingsState(assistantAccessEnabled = true)
+        val validatedEnabled = WidgetSettingsState.validate(initialEnabled)
+        assertTrue(validatedEnabled.assistantAccessEnabled)
+
+        val initialDisabled = WidgetSettingsState(assistantAccessEnabled = false)
+        val validatedDisabled = WidgetSettingsState.validate(initialDisabled)
+        assertFalse(validatedDisabled.assistantAccessEnabled)
+    }
 }

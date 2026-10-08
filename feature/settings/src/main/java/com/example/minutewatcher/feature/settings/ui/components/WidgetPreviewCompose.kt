@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +36,9 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
+import com.example.minutewatcher.core.model.util.WidgetContent
+import com.example.minutewatcher.core.model.util.buildSimSummary
+import com.example.minutewatcher.core.model.util.resolveWidgetContent
 import com.example.minutewatcher.core.resources.R
 
 @Composable
@@ -66,16 +68,80 @@ private fun WidgetPreviewContent(
     uiState: WidgetUiState,
     noDataColor: Color,
 ) {
-    val simUiStates = uiState.simUiStates.filter { it.showSim }
+    when (val content = resolveWidgetContent(uiState)) {
+        is WidgetContent.RefreshError -> {
+            Text(
+                text = uiState.strings.refreshErrorText,
+                color = noDataColor,
+                fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+            )
+        }
 
-    if (simUiStates.isEmpty()) {
-        Text(
-            text = stringResource(id = R.string.no_data),
-            color = noDataColor,
-            fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
-        )
-    } else {
-        MultiSimPreviewLayout(simUiStates, uiState)
+        is WidgetContent.SettingsLoadError -> {
+            Text(
+                text = uiState.strings.settingsLoadErrorText,
+                color = noDataColor,
+                fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+            )
+        }
+
+        is WidgetContent.NoData -> {
+            Text(
+                text = uiState.strings.noDataText,
+                color = noDataColor,
+                fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+            )
+        }
+
+        is WidgetContent.NoSimFound -> {
+            Text(
+                text = uiState.strings.noSimFoundText,
+                color = noDataColor,
+                fontSize = Constants.Widget.FONT_SIZE_MEDIUM.sp,
+            )
+        }
+
+        is WidgetContent.Sims -> {
+            SimPreviewCardsLayout(content.visible, uiState, noDataColor)
+        }
+    }
+}
+
+@Composable
+private fun SimPreviewCardsLayout(
+    sims: List<SimUiState>,
+    uiState: WidgetUiState,
+    noDataColor: Color,
+) {
+    Column(
+        modifier = Modifier.wrapContentSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (uiState.refreshFailed) {
+            Row(
+                modifier = Modifier.padding(bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_warning_amber),
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(noDataColor),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = uiState.strings.staleDataWarningText,
+                    fontSize = 10.sp,
+                    color = noDataColor,
+                )
+            }
+        }
+        Box(
+            modifier = Modifier.wrapContentSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            MultiSimPreviewLayout(sims, uiState)
+        }
     }
 }
 
@@ -190,7 +256,7 @@ private fun SimItemPreview(
     sim: SimUiState,
     uiState: WidgetUiState,
 ) {
-    val summary = stringResource(id = R.string.sim_status_summary, sim.operatorName, sim.minutesText, sim.trafficText)
+    val summary = buildSimSummary(uiState.strings, sim)
 
     Column(
         modifier =

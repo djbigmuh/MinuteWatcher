@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.common.di.AppDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeoutOrLog
 import com.example.minutewatcher.core.data.di.DataStoreKeys
+import com.example.minutewatcher.core.data.util.DataStoreWriteTimeoutException
 import com.example.minutewatcher.core.domain.CallSessionRepository
 import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
@@ -57,6 +58,7 @@ class CallSessionRepositoryImpl
                 }
             if (result == null) {
                 AppLogger.w("CallSessionRepositoryImpl: setLastDataSubId timed out")
+                throw DataStoreWriteTimeoutException("setLastDataSubId")
             }
         }
 
@@ -88,6 +90,7 @@ class CallSessionRepositoryImpl
                 }
             if (result == null) {
                 AppLogger.w("CallSessionRepositoryImpl: saveCallSession timed out for subId $subId")
+                throw DataStoreWriteTimeoutException("saveCallSession")
             }
         }
 
@@ -108,6 +111,7 @@ class CallSessionRepositoryImpl
                 }
             if (result == null) {
                 AppLogger.w("CallSessionRepositoryImpl: clearCallSession timed out for subId $subId")
+                throw DataStoreWriteTimeoutException("clearCallSession")
             }
         }
 
@@ -167,6 +171,7 @@ class CallSessionRepositoryImpl
                 }
             if (result == null) {
                 AppLogger.w("CallSessionRepositoryImpl: clearAllCallSessions timed out")
+                throw DataStoreWriteTimeoutException("clearAllCallSessions")
             }
         }
 

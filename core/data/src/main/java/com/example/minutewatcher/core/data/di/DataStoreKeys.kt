@@ -74,6 +74,8 @@ internal object DataStoreKeys {
 
     val CALL_TRACKING_ENABLED = booleanPreferencesKey("call_tracking_enabled")
 
+    val ASSISTANT_ACCESS_ENABLED = booleanPreferencesKey("assistant_access_enabled")
+
     const val CURRENT_DATA_SCHEMA_VERSION = 2
 
     const val CALL_START_TIME_PREFIX = "call_start_time_"

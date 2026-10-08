@@ -178,4 +178,11 @@
     <string name="menu_theme_content_desc">テーマを変更</string>
     <string name="navigate_up_content_desc">上に移動</string>
     <string name="banner_dismiss_content_desc">バナーを閉じる</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">トラッキング</string>
+    <string name="call_tracking_title">通話時間を記録</string>
+    <string name="call_tracking_description">各SIMカードの通話時間をカウントします。モバイルデータのみを記録する場合はオフにします。</string>
+    <string name="assistant_access_title">アシスタントアクセス</string>
+    <string name="assistant_access_description">デバイス上のアシスタントに残りの通話時間とデータ通信量の確認を許可します (Android 16+)。デフォルトでは無効です。アシスタントは受信した回答を処理する場合があります。</string>
 </resources>

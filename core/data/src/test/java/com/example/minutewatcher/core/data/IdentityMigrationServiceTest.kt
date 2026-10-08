@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.IdentitySource
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -505,5 +507,126 @@ class IdentityMigrationServiceTest {
 
             assertEquals(0, outcome.migrated)
             assertEquals(0, outcome.failures)
+        }
+
+    @Test
+    fun `migrates string set legacy preferences to modern format`() =
+        runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val legacyKey = stringSetPreferencesKey("blocked_numbers_sim_0")
+            val identityId = "new_identity"
+            val newKey = stringSetPreferencesKey("blocked_numbers_$identityId")
+            val stringSet = setOf("123", "456")
+
+            appDataStore.edit { it[legacyKey] = stringSet }
+            advanceUntilIdle()
+
+            val outcome =
+                withTimeout(10.seconds) {
+                    service.migrateLegacyData(
+                        SimIdentity(
+                            stableId = identityId,
+                            subscriptionId = 1,
+                            slotIndex = 0,
+                            source = IdentitySource.SUBSCRIPTION_ID,
+                            isStable = false,
+                        ),
+                    )
+                }
+            advanceUntilIdle()
+
+            assertEquals(1, outcome.migrated)
+            assertEquals(0, outcome.conflicts)
+            assertEquals(0, outcome.failures)
+            assertFalse(outcome.partialFailure)
+
+            val prefs = appDataStore.data.first()
+            assertEquals(stringSet, prefs[newKey])
+            assertNull(prefs[legacyKey])
+        }
+
+    @Test
+    fun `migration conflict with string set preserves modern value and backs up legacy`() =
+        runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val legacyKey = stringSetPreferencesKey("blocked_numbers_sim_0")
+            val identityId = "new_identity"
+            val newKey = stringSetPreferencesKey("blocked_numbers_$identityId")
+            val conflictKey = stringSetPreferencesKey("conflict_blocked_numbers_sim_0")
+
+            val oldSet = setOf("123", "456")
+            val newSet = setOf("789")
+
+            appDataStore.edit {
+                it[legacyKey] = oldSet
+                it[newKey] = newSet
+            }
+            advanceUntilIdle()
+
+            val outcome =
+                withTimeout(10.seconds) {
+                    service.migrateLegacyData(
+                        SimIdentity(
+                            stableId = identityId,
+                            subscriptionId = 1,
+                            slotIndex = 0,
+                            source = IdentitySource.SUBSCRIPTION_ID,
+                            isStable = false,
+                        ),
+                    )
+                }
+            advanceUntilIdle()
+
+            assertEquals(0, outcome.migrated)
+            assertEquals(1, outcome.conflicts)
+            assertEquals(0, outcome.failures)
+            assertFalse(outcome.partialFailure)
+
+            val prefs = appDataStore.data.first()
+            assertEquals(newSet, prefs[newKey])
+            assertEquals(oldSet, prefs[conflictKey])
+            assertNull(prefs[legacyKey])
+        }
+
+    @Test
+    fun `migration with identical string set value succeeds without creating conflict`() =
+        runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val legacyKey = stringSetPreferencesKey("blocked_numbers_sim_0")
+            val identityId = "new_identity"
+            val newKey = stringSetPreferencesKey("blocked_numbers_$identityId")
+            val conflictKey = stringSetPreferencesKey("conflict_blocked_numbers_sim_0")
+
+            val set = setOf("123", "456")
+
+            appDataStore.edit {
+                it[legacyKey] = set
+                it[newKey] = set
+            }
+            advanceUntilIdle()
+
+            val outcome =
+                withTimeout(10.seconds) {
+                    service.migrateLegacyData(
+                        SimIdentity(
+                            stableId = identityId,
+                            subscriptionId = 1,
+                            slotIndex = 0,
+                            source = IdentitySource.SUBSCRIPTION_ID,
+                            isStable = false,
+                        ),
+                    )
+                }
+            advanceUntilIdle()
+
+            assertEquals(1, outcome.migrated)
+            assertEquals(0, outcome.conflicts)
+            assertEquals(0, outcome.failures)
+            assertFalse(outcome.partialFailure)
+
+            val prefs = appDataStore.data.first()
+            assertEquals(set, prefs[newKey])
+            assertNull(prefs[conflictKey])
+            assertNull(prefs[legacyKey])
         }
 }

@@ -1,6 +1,9 @@
 package com.example.minutewatcher.feature.semantic.search
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.annotation.VisibleForTesting
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.app.AppSearchSession
 import androidx.appsearch.app.PutDocumentsRequest
@@ -10,6 +13,7 @@ import androidx.appsearch.app.SearchSpec
 import androidx.appsearch.app.SetSchemaRequest
 import androidx.appsearch.exceptions.AppSearchException
 import androidx.appsearch.localstorage.LocalStorage
+import androidx.appsearch.platformstorage.PlatformStorage
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.semantic.search.AppSearchConstants.NAMESPACE
 import kotlinx.coroutines.guava.await
@@ -55,7 +59,32 @@ interface AppSearchSessionWrapper : AutoCloseable {
 internal class AppSearchWrapperImpl
     @Inject
     constructor() : AppSearchWrapper {
+    @VisibleForTesting
+    internal fun isPlatformBackend(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
         override suspend fun createSearchSession(
+            context: Context,
+            databaseName: String,
+        ): AppSearchSessionWrapper =
+            if (isPlatformBackend()) {
+                createPlatformSearchSession(context, databaseName)
+            } else {
+                createLocalSearchSession(context, databaseName)
+            }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private suspend fun createPlatformSearchSession(
+        context: Context,
+        databaseName: String,
+    ): AppSearchSessionWrapper {
+        val future =
+            PlatformStorage.createSearchSessionAsync(
+                PlatformStorage.SearchContext.Builder(context, databaseName).build(),
+            )
+        return AppSearchSessionWrapperImpl(future.await())
+    }
+
+    private suspend fun createLocalSearchSession(
             context: Context,
             databaseName: String,
         ): AppSearchSessionWrapper {
@@ -71,6 +100,7 @@ internal class AppSearchWrapperImpl
                 .Builder()
                 .setForceOverride(forceOverride)
                 .addDocumentClasses(UsageDocument::class.java)
+                .setDocumentClassDisplayedBySystem(UsageDocument::class.java, true)
                 .build()
 
         override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =

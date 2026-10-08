@@ -68,7 +68,8 @@ class WidgetUpdaterErrorTest {
                         forceFull: Boolean,
                     ) {
                         updateStartedSignal.complete(Unit)
-                        finishSignal.await()
+                        withTimeoutOrNull(30.seconds) { finishSignal.await() }
+                            ?: throw AssertionError("Timed out waiting for finishSignal")
                         throw OutOfMemoryError("Simulated OOM")
                     }
                 }

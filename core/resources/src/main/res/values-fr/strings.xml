@@ -182,4 +182,11 @@
     <string name="menu_theme_content_desc">Changer de thème</string>
     <string name="navigate_up_content_desc">Revenir en haut</string>
     <string name="banner_dismiss_content_desc">Fermer la bannière</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Suivi</string>
+    <string name="call_tracking_title">Suivre les minutes d’appel</string>
+    <string name="call_tracking_description">Compter les minutes d’appel pour chaque carte SIM. Désactiver pour suivre uniquement les données mobiles.</string>
+    <string name="assistant_access_title">Accès assistant</string>
+    <string name="assistant_access_description">Permettre à l’assistant de l’appareil de demander vos minutes et données restantes (Android 16+). Désactivé par défaut. L’assistant peut traiter les réponses reçues.</string>
 </resources>

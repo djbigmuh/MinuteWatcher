@@ -39,12 +39,15 @@ class SemanticInitializerWorkerTest {
     private val searchManager: SemanticSearchManager = mock()
     private val shortcutManager: ShortcutManager = mock()
     private val usageStateRepository: UsageStateRepository = mock()
+    private val appSettingsRepository: com.example.minutewatcher.core.domain.AppSettingsRepository = mock()
+    private val appFunctionAvailability: com.example.minutewatcher.core.domain.AppFunctionAvailability = mock()
     private val snapshotFlow = MutableStateFlow(createEmptySnapshot())
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(kotlinx.coroutines.flow.flowOf(com.example.minutewatcher.core.model.AppSettings()))
         runBlocking {
             whenever(searchManager.indexInitialSnapshot(any())).thenReturn(SemanticSearchManager.IndexResult.Success)
             whenever(shortcutManager.updateShortcutsSync(any())).thenReturn(true)
@@ -69,6 +72,8 @@ class SemanticInitializerWorkerTest {
                                     searchManager,
                                     shortcutManager,
                                     usageStateRepository,
+                                    appSettingsRepository,
+                                    appFunctionAvailability,
                                 )
                         },
                     ).build()

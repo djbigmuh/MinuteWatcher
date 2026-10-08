@@ -7,6 +7,7 @@ import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.data.util.DataStoreWriteTimeoutException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -336,5 +337,77 @@ class CallEventWorkerTest {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.failure(), result)
+        }
+
+    @Test
+    fun `doWork retries on DataStoreWriteTimeoutException when handling call start`() =
+        runTest {
+            whenever(
+                callTracker.onCallStarted(
+                    any(),
+                    any()
+                )
+            ).thenAnswer { throw DataStoreWriteTimeoutException("saveCallSession") }
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, "OFFHOOK")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, 1)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, 100L)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .setRunAttemptCount(0)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `doWork retries on DataStoreWriteTimeoutException when handling call end`() =
+        runTest {
+            whenever(
+                callTracker.onCallEnded(
+                    any(),
+                    any()
+                )
+            ).thenAnswer { throw DataStoreWriteTimeoutException("clearCallSession") }
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, "IDLE")
+                    .putInt(CallEventWorker.EXTRA_SUB_ID, 1)
+                    .putLong(CallEventWorker.EXTRA_EVENT_ELAPSED_REALTIME, 100L)
+                    .build()
+
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .setRunAttemptCount(0)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
         }
 }

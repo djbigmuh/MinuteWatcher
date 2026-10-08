@@ -1,7 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import com.example.minutewatcher.core.common.util.AppLogger
-import com.example.minutewatcher.core.data.util.DataStoreReadTimeoutException
+import com.example.minutewatcher.core.data.util.DataStoreTimeoutException
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
 
@@ -16,7 +16,7 @@ internal object CallSessionFailureHandler {
             throw error
         }
 
-        val isTimeout = error is DataStoreReadTimeoutException
+        val isTimeout = error is DataStoreTimeoutException
         val message =
             if (isTimeout) {
                 "Timeout reading session data for subId $subId"

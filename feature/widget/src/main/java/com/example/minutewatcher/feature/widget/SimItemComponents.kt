@@ -29,6 +29,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimLayoutComponent
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetUiState
+import com.example.minutewatcher.core.model.util.buildSimSummary
 import androidx.glance.unit.ColorProvider as IColorProvider
 
 /**
@@ -44,18 +45,7 @@ internal fun SimItem(
     sim: SimUiState,
     uiState: WidgetUiState,
 ) {
-    val summary =
-        if (uiState.strings.simStatusSummaryFormat.isNotEmpty()) {
-            String.format(
-                uiState.strings.locale,
-                uiState.strings.simStatusSummaryFormat,
-                sim.operatorName,
-                sim.minutesText,
-                sim.trafficText,
-            )
-        } else {
-            "${sim.operatorName}: ${sim.minutesText}, ${sim.trafficText}"
-        }
+    val summary = buildSimSummary(uiState.strings, sim)
 
     Column(
         modifier =
