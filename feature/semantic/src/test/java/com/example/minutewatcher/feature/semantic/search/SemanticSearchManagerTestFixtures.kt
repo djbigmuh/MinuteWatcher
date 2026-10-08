@@ -196,7 +196,6 @@ abstract class SemanticSearchManagerTestFixtures {
         var failPutDocuments = false
         var failRemoveByDocumentId = false
         var putDocumentsResultCode: Int = AppSearchResult.RESULT_OK
-        var queryResult: List<androidx.appsearch.app.SearchResult> = emptyList()
 
         override suspend fun setSchema(request: SetSchemaRequest) {
             val exceptionCode =
@@ -237,11 +236,6 @@ abstract class SemanticSearchManagerTestFixtures {
             }
             removeRequests.add(request)
         }
-
-        override suspend fun query(
-            queryExpression: String,
-            spec: androidx.appsearch.app.SearchSpec,
-        ): List<androidx.appsearch.app.SearchResult> = queryResult
 
         override fun close() {
             isClosed = true

@@ -21,6 +21,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -119,6 +120,26 @@ class WidgetSettingsRepositoryTest {
 
             val result = repository.load()
             assertEquals(3, result.simStates.size)
+        }
+
+    @Test
+    fun `load correctly populates assistant access enabled from app settings`() =
+        runTest {
+            val activeSims = createMockActiveSims()
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+
+            val simSettings = SimSettingsState(showSim = true)
+            whenever(simWidgetVisibilityRepository.getSimSettingsBatch(any())).thenReturn(
+                flowOf(mapOf("id0" to simSettings, "id1" to simSettings, "id2" to simSettings)),
+            )
+
+            val appSettings = AppSettings(isLoaded = true, assistantAccessEnabled = true)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
+
+            val result = repository.load()
+
+            assertNotNull(result)
+            assertTrue(result.assistantAccessEnabled)
         }
 
     @Test

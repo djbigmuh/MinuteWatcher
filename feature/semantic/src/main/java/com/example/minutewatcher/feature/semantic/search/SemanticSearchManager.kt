@@ -2,8 +2,6 @@ package com.example.minutewatcher.feature.semantic.search
 
 import androidx.annotation.VisibleForTesting
 import androidx.appsearch.app.AppSearchResult
-import androidx.appsearch.app.SearchResult
-import androidx.appsearch.app.SearchSpec
 import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
@@ -395,49 +393,6 @@ class SemanticSearchManager
         }
 
         /**
-         * Queries the AppSearch index.
-         *
-         * @param queryExpression The search query.
-         * @param limit Limits the number of returned SearchResults; page control via platform API is not available.
-         * @return A Result containing a list of search results.
-         */
-        suspend fun query(
-            queryExpression: String,
-            limit: Int = 10,
-        ): Result<List<SearchResult>> =
-            withContext(ioDispatcher) {
-                if (!sessionManager.ensureSession({ transitionStatus(it) })) {
-                    return@withContext Result.failure(
-                        AppSearchException(
-                            AppSearchResult.RESULT_INTERNAL_ERROR,
-                            "Session not ready",
-                        ),
-                    )
-                }
-
-                val currentSession =
-                    sessionManager.session ?: return@withContext Result.failure(
-                        AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR, "Session is null"),
-                    )
-
-                try {
-                    val spec =
-                        SearchSpec
-                            .Builder()
-                            .setSnippetCount(SNIPPETS_PER_DOCUMENT)
-                            .addFilterNamespaces(AppSearchConstants.NAMESPACE)
-                            .build()
-                    val results = currentSession.query(queryExpression, spec)
-                    Result.success(results.take(limit))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("AppSearch query failed", e)
-                    Result.failure(e)
-                }
-            }
-
-        /**
          * Performs an initial indexing of the given snapshot.
          *
          * This is a public wrapper for [indexSnapshot] intended for use during
@@ -446,8 +401,6 @@ class SemanticSearchManager
         suspend fun indexInitialSnapshot(snapshot: GlobalSnapshot): IndexResult = indexSnapshot(snapshot)
 
         companion object {
-            private const val SNIPPETS_PER_DOCUMENT = 2
-
             /**
              * Number of consecutive indexing skips due to a busy [indexMutex]
              * after which the indexing loop is considered stuck.

@@ -49,15 +49,14 @@ fun SimCardsSettingsSection(
         )
     } else {
         activeSims.forEach { simUi ->
-            state.simStates[simUi.slot]?.let { simState ->
-                SimSettingsSection(
-                    slot = simUi.slot,
-                    operatorName = simUi.operatorName,
-                    sim = simState,
-                    enabled = true,
-                ) { update ->
-                    onUpdateSimSettings(simUi.slot, update)
-                }
+            val simState = state.simStates[simUi.slot] ?: SimSettingsState()
+            SimSettingsSection(
+                slot = simUi.slot,
+                operatorName = simUi.operatorName,
+                sim = simState,
+                enabled = true,
+            ) { update ->
+                onUpdateSimSettings(simUi.slot, update)
             }
         }
     }

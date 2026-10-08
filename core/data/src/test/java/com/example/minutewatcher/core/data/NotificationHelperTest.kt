@@ -14,7 +14,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
@@ -228,5 +231,37 @@ class NotificationHelperTest {
             }
         val nullServiceHelper = NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
         assertFalse(nullServiceHelper.isAodSummaryNotificationActive())
+    }
+
+    @Test
+    fun `createNotificationChannel handles runtime exceptions from notification manager gracefully`() {
+        val mockManager: NotificationManager = mock()
+        doThrow(RuntimeException("Platform error")).whenever(mockManager).createNotificationChannel(any())
+        whenever(mockManager.getNotificationChannel(any())).thenReturn(null)
+
+        val wrappedContext =
+            object : android.content.ContextWrapper(context) {
+                override fun getSystemService(name: String): Any? {
+                    if (name == Context.NOTIFICATION_SERVICE) {
+                        return mockManager
+                    }
+                    return super.getSystemService(name)
+                }
+
+                override fun getSystemServiceName(serviceClass: Class<*>): String? {
+                    if (serviceClass == NotificationManager::class.java) {
+                        return Context.NOTIFICATION_SERVICE
+                    }
+                    return super.getSystemServiceName(serviceClass)
+                }
+            }
+
+        val testHelper = NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+
+        verify(mockManager, org.mockito.kotlin.times(2)).createNotificationChannel(any())
+
+        whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+        assertFalse(testHelper.isAodSummaryAvailable())
+        assertFalse(testHelper.sendAodSummaryNotification("Title", "Line", "Expanded"))
     }
 }

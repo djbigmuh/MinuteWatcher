@@ -1,7 +1,5 @@
 package com.example.minutewatcher.feature.semantic.search
 
-import androidx.appsearch.app.AppSearchResult
-import androidx.appsearch.exceptions.AppSearchException
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,18 +84,6 @@ class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
             assertTrue("Status should be Ready, but was $status", status is TrackingStatus.Ready)
             val readyStatus = status as TrackingStatus.Ready
             assertEquals(currentTime, readyStatus.lastUpdateTimestamp)
-        }
-
-    @Test
-    fun `query during indexing or error returns controlled failure result`() =
-        runTest(testDispatcher) {
-            val manager = createManager(appScope)
-            fakeWrapper.failSessionCreationWith = AppSearchException(AppSearchResult.RESULT_INTERNAL_ERROR)
-
-            val result = manager.query("test")
-
-            assertTrue(result.isFailure)
-            assertTrue(result.exceptionOrNull() is AppSearchException)
         }
 
     @Test

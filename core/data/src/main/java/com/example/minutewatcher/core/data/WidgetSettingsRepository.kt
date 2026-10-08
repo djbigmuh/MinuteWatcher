@@ -90,6 +90,7 @@ class WidgetSettingsRepository
                     notifyLowTraffic = settings.notifyLowTraffic,
                     aodSummaryEnabled = settings.aodSummaryEnabled,
                     callTrackingEnabled = settings.callTrackingEnabled,
+                    assistantAccessEnabled = settings.assistantAccessEnabled,
                     simStates = simStates,
                     widgetLimitExceeded = settings.widgetLimitExceeded,
                     settingsLoadFailed = false,

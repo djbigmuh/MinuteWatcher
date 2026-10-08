@@ -99,8 +99,7 @@
             android:exported="false"
             android:theme="@style/Theme.MinuteWatcher.WidgetSettings"
             android:parentActivityName=".MainActivity"
-            android:launchMode="singleTop"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:launchMode="singleTop" />
 
         <!-- Widget -->
         <receiver

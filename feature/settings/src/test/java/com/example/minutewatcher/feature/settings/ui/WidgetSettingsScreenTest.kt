@@ -16,6 +16,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
 import com.example.minutewatcher.core.model.SimSettingsState
+import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -466,5 +467,49 @@ class WidgetSettingsScreenTest {
 
         verify(viewModel, never()).updateSettings(any())
         assertFalse("Dialog must be closed after cancelling", dialog.isShowing)
+    }
+
+    @Test
+    fun `sim cards section renders default state when slot settings are missing from simStates`() {
+        val settings =
+            WidgetSettingsState(
+                simStates = emptyMap(),
+                simListLoadFailed = false,
+            )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 12345L,
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(
+                            slot = 0,
+                            identity = "id0",
+                            operatorName = "Operator",
+                            entities = emptyMap(),
+                            autoResetDay = 1,
+                        ),
+                    ),
+                capabilities = emptyList(),
+            )
+
+        whenever(viewModel.state)
+            .doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
+        whenever(viewModel.snapshot)
+            .doReturn(MutableStateFlow(snapshot))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(
+                context.getString(R.string.sim_card_generic, 1),
+                substring = true,
+            ).performScrollTo()
+            .assertIsDisplayed()
     }
 }
