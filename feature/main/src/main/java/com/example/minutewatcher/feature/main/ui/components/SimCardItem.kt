@@ -160,9 +160,10 @@ private fun SimCardHeader(
             text = model.operatorName,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .weight(1f)
-                .semantics { contentDescription = simCardDetailsDesc },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .semantics { contentDescription = simCardDetailsDesc },
         )
         OutlinedButton(
             onClick = onSetLimits,
@@ -194,9 +195,13 @@ private fun AutoResetSection(
     onEditAutoResetDay: () -> Unit,
 ) {
     val toggleAutoResetDesc = stringResource(id = R.string.toggle_auto_reset_content_desc)
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
-        .fillMaxWidth()
-        .padding(top = 4.dp)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+    ) {
         Text(text = stringResource(id = R.string.reset_label), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.width(8.dp))
         EditableValueBox(

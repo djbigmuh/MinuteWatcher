@@ -92,15 +92,15 @@ internal class CallAttributionResolver
                 subId
             }
 
-    suspend fun resolveSessionIdentity(subId: Int): String? =
-        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-            simIdentityRepository
-                .observeActiveSims()
-                .firstOrNull()
-                ?.find { it.subscriptionId == subId }
-                ?.identity
-                ?.stableId
-        }
+        suspend fun resolveSessionIdentity(subId: Int): String? =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                simIdentityRepository
+                    .observeActiveSims()
+                    .firstOrNull()
+                    ?.find { it.subscriptionId == subId }
+                    ?.identity
+                    ?.stableId
+            }
 
         suspend fun resolveIdentity(subId: Int): String? =
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
