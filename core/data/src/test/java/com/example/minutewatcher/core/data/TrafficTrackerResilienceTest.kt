@@ -1,6 +1,9 @@
 package com.example.minutewatcher.core.data
 
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
+import com.example.minutewatcher.core.common.util.Logger
+import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
@@ -16,15 +19,21 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.clearInvocations
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.reset
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -45,9 +54,27 @@ class TrafficTrackerResilienceTest {
     @Before
     fun setup() {
         initTestLogger()
+        clearInvocations(
+            simIdentityRepository,
+            simUsageRepository,
+            simUsageResetRepository,
+            permissionManager,
+            baselineManager,
+            deltaCalculator,
+            simChangeHandler,
+            targetResolver,
+            permissionChecker,
+            permissionStateNotifier,
+        )
         // Default permission success
         whenever(permissionChecker.checkPermissions(any())).thenReturn(true)
         whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow())
+    }
+
+    @After
+    fun tearDown() {
+        AppLogger.resetForTest()
+        reset(simIdentityRepository)
     }
 
     private fun createTracker(scope: TestScope): TrafficTracker {
@@ -225,5 +252,65 @@ class TrafficTrackerResilienceTest {
                 TrackingStatus.Idle,
                 currentStatus,
             )
+        }
+
+    @Test
+    fun `exhausted initialization retries preserve and log last root cause`() =
+        runTest {
+            val errorLogs = mutableListOf<Pair<String, Throwable?>>()
+            val capturingLogger =
+                object : Logger by NoOpLogger() {
+                    override fun e(
+                        tag: String,
+                        message: String,
+                        throwable: Throwable?,
+                    ) {
+                        if (message.contains("initialization failed after 3 attempts")) {
+                            errorLogs.add(message to throwable)
+                        }
+                    }
+                }
+            val mockContext: android.content.Context =
+                mock {
+                    on { filesDir } doReturn null
+                }
+            AppLogger.resetForTest()
+            AppLogger.init(mockContext, capturingLogger)
+
+            val exception1 = IOException("Attempt 1 failure")
+            val exception2 = IllegalStateException("Attempt 2 failure")
+            val exception3 = RuntimeException("Attempt 3 failure")
+
+            var attempt = 0
+            whenever(simIdentityRepository.observeActiveSims()).thenAnswer {
+                attempt++
+                when (attempt) {
+                    1 -> throw exception1
+                    2 -> throw exception2
+                    3 -> throw exception3
+                    else -> throw exception3
+                }
+            }
+
+            val tracker = createTracker(this)
+            runCurrent()
+
+            advanceTimeBy(1000.milliseconds)
+            runCurrent()
+            advanceTimeBy(2000.milliseconds)
+            runCurrent()
+            advanceTimeBy(4000.milliseconds)
+            runCurrent()
+
+            val status = tracker.status.value as? TrackingStatus.Error
+            assertNotNull(status)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, status?.type)
+
+            val terminalLog = errorLogs.find { it.first.contains("initialization failed after 3 attempts") }
+            assertNotNull(terminalLog)
+            assertEquals(exception3.message, terminalLog?.second?.message)
+            assertEquals(exception3::class, terminalLog?.second?.let { it::class })
+
+            AppLogger.resetForTest()
         }
 }

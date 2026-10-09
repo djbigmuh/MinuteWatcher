@@ -264,6 +264,7 @@ class TrafficTracker
 
         private suspend fun performInitializeWithRetry() {
             val startElapsed = timeProvider.elapsedRealtime()
+            var lastException: Exception? = null
             for (attempt in 1..MAX_INIT_ATTEMPTS) {
                 try {
                     updateTrafficUsageLogic()
@@ -278,6 +279,7 @@ class TrafficTracker
                         handleInitError(startElapsed, e)
                         return
                     }
+                    lastException = e
                     if (attempt >= MAX_INIT_ATTEMPTS) break
 
                     val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
@@ -286,9 +288,10 @@ class TrafficTracker
                 }
             }
             initializationFailed.set(true)
+            AppLogger.e("TrafficTracker: initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException)
             handleInitError(
                 startElapsed,
-                IllegalStateException("Initialization failed after $MAX_INIT_ATTEMPTS attempts"),
+                IllegalStateException("Initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException),
             )
         }
 
