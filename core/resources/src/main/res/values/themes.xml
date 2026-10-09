@@ -37,8 +37,6 @@
 
     <!-- Theme for widget settings -->
     <style name="Theme.MinuteWatcher.WidgetSettings" parent="Theme.MinuteWatcher">
-        <item name="android:statusBarColor">?attr/colorSurface</item>
-        <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
