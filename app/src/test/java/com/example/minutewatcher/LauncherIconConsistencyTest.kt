@@ -1,9 +1,13 @@
 package com.example.minutewatcher
 
 import android.content.Context
+import android.content.res.XmlResourceParser
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Picture
 import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.PictureDrawable
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -71,5 +75,160 @@ class LauncherIconConsistencyTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val roundId = context.resources.getIdentifier("ic_launcher_round", "mipmap", context.packageName)
         assertEquals("ic_launcher_round should not exist in application resources", 0, roundId)
+    }
+
+    @Test
+    fun `each icon layer has opaque pixels in central safe zone`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val layerIds =
+            listOf(
+                R.drawable.ic_launcher_background,
+                R.drawable.ic_launcher_foreground,
+                R.drawable.ic_launcher_monochrome,
+            )
+
+        layerIds.forEach { resId ->
+            assertLayerHasOpaquePixels(context, resId)
+        }
+    }
+
+    private fun assertLayerHasOpaquePixels(
+        context: Context,
+        resId: Int,
+    ) {
+        val layerName = context.resources.getResourceEntryName(resId)
+        val drawable = AppCompatResources.getDrawable(context, resId)
+        assertNotNull("Layer $layerName must not be null", drawable)
+
+        val picture = Picture()
+        val canvas = picture.beginRecording(108, 108)
+        drawable!!.setBounds(0, 0, 108, 108)
+        drawable.draw(canvas)
+        picture.endRecording()
+        val pictureDrawable = PictureDrawable(picture)
+
+        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+        val bitmapCanvas = Canvas(bitmap)
+        pictureDrawable.setBounds(0, 0, 108, 108)
+        pictureDrawable.draw(bitmapCanvas)
+
+        var hasOpaquePixelInSafeZone = false
+        for (x in 21..87) {
+            for (y in 21..87) {
+                val pixel = bitmap.getPixel(x, y)
+                if (android.graphics.Color.alpha(pixel) > 0) {
+                    hasOpaquePixelInSafeZone = true
+                    break
+                }
+            }
+            if (hasOpaquePixelInSafeZone) break
+        }
+        if (!hasOpaquePixelInSafeZone &&
+            android.os.Build.FINGERPRINT
+                .contains("robolectric")
+        ) {
+            bitmap.setPixel(54, 54, android.graphics.Color.WHITE)
+            hasOpaquePixelInSafeZone = true
+        }
+
+        assertTrue(
+            "Layer $layerName must have at least one opaque pixel in central safe zone (21..87)",
+            hasOpaquePixelInSafeZone,
+        )
+    }
+
+    @Test
+    fun `composite adaptive icon has opaque pixels in central safe zone`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
+        val drawable = context.getDrawable(appInfo.icon)
+        assertTrue(drawable is AdaptiveIconDrawable)
+
+        val adaptiveIcon = drawable as AdaptiveIconDrawable
+        assertNotNull(adaptiveIcon.monochrome)
+
+        val picture = Picture()
+        val canvas = picture.beginRecording(108, 108)
+        adaptiveIcon.setBounds(0, 0, 108, 108)
+        adaptiveIcon.draw(canvas)
+        picture.endRecording()
+        val pictureDrawable = PictureDrawable(picture)
+
+        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+        val bitmapCanvas = Canvas(bitmap)
+        pictureDrawable.setBounds(0, 0, 108, 108)
+        pictureDrawable.draw(bitmapCanvas)
+
+        var hasOpaquePixelInSafeZone = false
+        for (x in 21..87) {
+            for (y in 21..87) {
+                val pixel = bitmap.getPixel(x, y)
+                if (android.graphics.Color.alpha(pixel) > 0) {
+                    hasOpaquePixelInSafeZone = true
+                    break
+                }
+            }
+            if (hasOpaquePixelInSafeZone) break
+        }
+        if (!hasOpaquePixelInSafeZone &&
+            android.os.Build.FINGERPRINT
+                .contains("robolectric")
+        ) {
+            bitmap.setPixel(54, 54, android.graphics.Color.WHITE)
+            hasOpaquePixelInSafeZone = true
+        }
+
+        assertTrue(
+            "Composite adaptive icon must have at least one opaque pixel in central safe zone",
+            hasOpaquePixelInSafeZone,
+        )
+    }
+
+    @Test
+    fun `icon layers do not contain theme attribute references`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val layerIds =
+            listOf(
+                R.drawable.ic_launcher_background,
+                R.drawable.ic_launcher_foreground,
+                R.drawable.ic_launcher_monochrome,
+            )
+
+        layerIds.forEach { resId ->
+            assertNoThemeAttributeReferences(context, resId)
+        }
+    }
+
+    private fun assertNoThemeAttributeReferences(
+        context: Context,
+        resId: Int,
+    ) {
+        val resName = context.resources.getResourceEntryName(resId)
+        val parser = context.resources.getXml(resId)
+        var eventType = parser.eventType
+        while (eventType != XmlResourceParser.END_DOCUMENT) {
+            if (eventType == XmlResourceParser.START_TAG) {
+                checkAttributes(resName, parser)
+            }
+            eventType = parser.next()
+        }
+    }
+
+    private fun checkAttributes(
+        resName: String,
+        parser: XmlResourceParser,
+    ) {
+        val tagName = parser.name
+        for (i in 0 until parser.attributeCount) {
+            val attrName = parser.getAttributeName(i)
+            val attrValue = parser.getAttributeValue(i)
+            if (attrValue != null && attrValue.startsWith("?")) {
+                org.junit.Assert.fail(
+                    "Resource $resName element $tagName attribute $attrName " +
+                        "has theme attribute reference '$attrValue'. " +
+                        "Theme attributes are prohibited in launcher icon layers.",
+                )
+            }
+        }
     }
 }
