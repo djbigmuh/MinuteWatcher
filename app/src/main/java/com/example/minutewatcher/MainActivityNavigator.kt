@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
@@ -16,54 +17,68 @@ import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
  * Helper for MainActivity navigation and widget management.
  */
 object MainActivityNavigator {
+    @VisibleForTesting
+    internal var startActivityOverride: ((Context, Intent) -> Unit)? = null
+
+    private fun launchActivity(
+        context: Context,
+        intent: Intent,
+    ) {
+        val override = startActivityOverride
+        if (override != null) {
+            override(context, intent)
+        } else {
+            context.startActivity(intent)
+        }
+    }
+
     fun openWidgetSettings(context: Context) {
         context.startActivity(Intent(context, WidgetSettingsActivity::class.java))
     }
 
+    /**
+     * Opens application settings directly.
+     * Logs an error if ActivityNotFoundException or SecurityException is thrown.
+     */
     fun openAppSettings(context: Context) {
         val intent = NavigationIntentFactory.getAppSettingsIntent(context)
-        if (context.packageManager.resolveActivity(intent, 0) != null) {
-            try {
-                context.startActivity(intent)
-            } catch (e: ActivityNotFoundException) {
-                AppLogger.e("AppSettings activity not found", e)
-            }
-        } else {
-            AppLogger.e("No activity resolved for AppSettings intent")
+        try {
+            launchActivity(context, intent)
+        } catch (e: ActivityNotFoundException) {
+            AppLogger.e("AppSettings activity not found", e)
+        } catch (e: SecurityException) {
+            AppLogger.e("AppSettings security exception", e)
         }
     }
 
+    /**
+     * Opens usage access settings directly, falling back to the generic usage access list
+     * and finally to app settings if specific intents cannot be launched.
+     */
     fun openUsageAccessSettings(context: Context) {
-        // Priority: "Usage Access" screen for the specific app.
+        // Priority: Usage access settings for the specific app package.
         val usageIntent = NavigationIntentFactory.getUsageAccessSettingsIntent(context)
-        if (context.packageManager.resolveActivity(usageIntent, 0) != null) {
-            try {
-                context.startActivity(usageIntent)
-                return
-            } catch (e: ActivityNotFoundException) {
-                AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
-            } catch (e: Exception) {
-                AppLogger.w("Package-scoped usage access settings failed, trying generic list", e)
-            }
-        } else {
-            AppLogger.w("Package-scoped usage access settings intent not resolved, trying generic list")
+        try {
+            launchActivity(context, usageIntent)
+            return
+        } catch (e: ActivityNotFoundException) {
+            AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
+        } catch (e: SecurityException) {
+            AppLogger.w("Package-scoped usage access settings security exception, trying generic list", e)
         }
 
-        // Fallback: generic list of apps with usage access.
+        // Fallback 1: Generic usage access settings list.
         val genericIntent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-        if (context.packageManager.resolveActivity(genericIntent, 0) != null) {
-            try {
-                context.startActivity(genericIntent)
-                return
-            } catch (e: ActivityNotFoundException) {
-                AppLogger.e("Usage access settings activity not found, opening app details", e)
-            } catch (e: Exception) {
-                AppLogger.e("Usage access settings failed, opening app details", e)
-            }
-        } else {
-            AppLogger.e("Generic usage access settings intent not resolved, opening app details")
+        try {
+            launchActivity(context, genericIntent)
+            return
+        } catch (e: ActivityNotFoundException) {
+            AppLogger.w("Generic usage access settings unavailable, opening app settings", e)
+        } catch (e: SecurityException) {
+            AppLogger.w("Generic usage access settings security exception, opening app settings", e)
         }
 
+        // Fallback 2: Application details settings.
         openAppSettings(context)
     }
 
