@@ -134,14 +134,24 @@ class TrafficTracker
             }
         }
 
+        /**
+         * Starts initialization, waiting for the previous initialization job up to
+         * [Constants.Flow.SHORT_TIMEOUT_MS]. If the timeout expires, initialization proceeds
+         * without waiting further for the previous job.
+         */
         @VisibleForTesting
         internal suspend fun startInitialization() {
             val oldJob = initJob.getAndSet(currentCoroutineContext().job)
-            oldJob?.cancel()
-            try {
-                oldJob?.join()
-            } catch (_: Exception) {
-                // job is already completed or canceled
+            if (oldJob != null) {
+                oldJob.cancel()
+                val completed =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        oldJob.join()
+                        true
+                    } ?: false
+                if (!completed) {
+                    AppLogger.w("TrafficTracker: previous initialization job did not complete within timeout, proceeding")
+                }
             }
             currentCoroutineContext().ensureActive()
             performInitializeWithRetry()
