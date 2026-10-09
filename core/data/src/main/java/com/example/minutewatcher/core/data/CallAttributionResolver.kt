@@ -40,14 +40,17 @@ internal class CallAttributionResolver
                 val matched = activeSims.find { it.subscriptionId == subId }
                 if (matched != null) {
                     targetIdentity = matched.identity.stableId
-                } else if (activeSims.isNotEmpty()) {
-                    // Fallback is allowed only when the slot is not identified.
-                    // Deterministically select SIM with lowest slotIndex, then lowest subscriptionId.
-                    val fallbackSim = activeSims.minWithOrNull(compareBy({ it.slotIndex }, { it.subscriptionId }))
-                    targetIdentity = fallbackSim?.identity?.stableId
+                } else if (activeSims.size == 1) {
+                    val fallbackSim = activeSims.first()
+                    targetIdentity = fallbackSim.identity.stableId
                     isFallbackUsed = true
                     AppLogger.w(
-                        "CallTracker: no SIM matched subId=$subId, using deterministic fallback $targetIdentity",
+                        "CallTracker: no SIM matched subId=$subId, single active SIM fallback used $targetIdentity",
+                    )
+                } else if (activeSims.size > 1) {
+                    AppLogger.w(
+                        "CallTracker: no SIM matched subId=$subId and " +
+                            "multiple active SIMs present, fallback refused",
                     )
                 }
             }
@@ -88,6 +91,16 @@ internal class CallAttributionResolver
             } else {
                 subId
             }
+
+    suspend fun resolveSessionIdentity(subId: Int): String? =
+        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+            simIdentityRepository
+                .observeActiveSims()
+                .firstOrNull()
+                ?.find { it.subscriptionId == subId }
+                ?.identity
+                ?.stableId
+        }
 
         suspend fun resolveIdentity(subId: Int): String? =
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {

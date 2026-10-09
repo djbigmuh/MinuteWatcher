@@ -1,12 +1,8 @@
 package com.example.minutewatcher.feature.semantic.appfunctions
 
-import android.content.Context
 import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.appfunctions.AppFunctionManager
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.AppFunctionAvailability
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,7 +11,7 @@ import javax.inject.Singleton
 internal class AppFunctionAvailabilityImpl
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        private val gateway: AppFunctionStateGateway,
     ) : AppFunctionAvailability {
         /**
          * Sets assistant access enabled status.
@@ -28,7 +24,10 @@ internal class AppFunctionAvailabilityImpl
                 return
             }
             try {
-                setAssistantAccessEnabledInternal(enabled)
+                gateway.setAppFunctionEnabled(
+                    MinuteWatcherAppFunctionService.FUNCTION_ID_GET_USAGE_SUMMARY,
+                    enabled,
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -40,23 +39,4 @@ internal class AppFunctionAvailabilityImpl
         }
 
         private fun isAppFunctionApiAvailable(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA
-
-        @RequiresApi(Build.VERSION_CODES.BAKLAVA)
-        private suspend fun setAssistantAccessEnabledInternal(enabled: Boolean) {
-            val manager = AppFunctionManager.getInstance(context)
-            if (manager == null) {
-                AppLogger.w("AppFunctionAvailabilityImpl: AppFunctionManager is null")
-                return
-            }
-            val state =
-                if (enabled) {
-                    AppFunctionManager.APP_FUNCTION_STATE_ENABLED
-                } else {
-                    AppFunctionManager.APP_FUNCTION_STATE_DISABLED
-                }
-            manager.setAppFunctionEnabled(
-                MinuteWatcherAppFunctionService.FUNCTION_ID_GET_USAGE_SUMMARY,
-                state,
-            )
-        }
     }

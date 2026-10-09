@@ -140,7 +140,7 @@ internal object DataStoreKeys {
 
     fun simOperatorKey(identity: String) = stringPreferencesKey("sim_operator_$identity")
 
-    fun customSimOperatorKey(identity: String) = stringPreferencesKey("custom_sim_operator_$identity")
+    const val CUSTOM_SIM_OPERATOR_PREFIX = "custom_sim_operator_"
 
     fun slotIndexKey(identity: String) = intPreferencesKey("slot_index_$identity")
 

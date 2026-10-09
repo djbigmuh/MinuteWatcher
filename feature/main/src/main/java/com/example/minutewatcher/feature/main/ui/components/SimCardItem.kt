@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -57,6 +59,7 @@ private fun getStatusColor(status: UsageStatus): Color = MaterialTheme.colorSche
 @Composable
 fun SimCardItem(
     model: SimCardUiModel,
+    highlighted: Boolean = false,
     onSetLimits: () -> Unit = {},
     onResetCounters: () -> Unit = {},
     onToggleAutoReset: (Boolean) -> Unit = {},
@@ -69,8 +72,10 @@ fun SimCardItem(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(vertical = 8.dp)
+                .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = if (highlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         SimCardContent(
             model = model,
@@ -155,15 +160,19 @@ private fun SimCardHeader(
             text = model.operatorName,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f).semantics { contentDescription = simCardDetailsDesc },
+            modifier = Modifier
+                .weight(1f)
+                .semantics { contentDescription = simCardDetailsDesc },
         )
         OutlinedButton(
             onClick = onSetLimits,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             modifier =
-                Modifier.height(32.dp).semantics {
-                    contentDescription = setLimitsDesc
-                },
+                Modifier
+                    .height(32.dp)
+                    .semantics {
+                        contentDescription = setLimitsDesc
+                    },
         ) {
             Text(text = stringResource(id = R.string.limit_button), fontSize = 12.sp)
         }
@@ -185,7 +194,9 @@ private fun AutoResetSection(
     onEditAutoResetDay: () -> Unit,
 ) {
     val toggleAutoResetDesc = stringResource(id = R.string.toggle_auto_reset_content_desc)
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+        .fillMaxWidth()
+        .padding(top = 4.dp)) {
         Text(text = stringResource(id = R.string.reset_label), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.width(8.dp))
         EditableValueBox(
@@ -209,9 +220,12 @@ private fun AutoResetSection(
             checked = model.autoResetEnabled,
             onCheckedChange = onToggleAutoReset,
             modifier =
-                Modifier.minimumInteractiveComponentSize().scale(Constants.UI.SWITCH_SCALE).semantics {
-                    contentDescription = toggleAutoResetDesc
-                },
+                Modifier
+                    .minimumInteractiveComponentSize()
+                    .scale(Constants.UI.SWITCH_SCALE)
+                    .semantics {
+                        contentDescription = toggleAutoResetDesc
+                    },
         )
     }
 }

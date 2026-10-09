@@ -82,9 +82,15 @@ fun SimLimitComposeDialog(
                 onConfirm = {
                     when (val result = state.validate(validationMessages, locale)) {
                         is SimLimitValidationResult.Valid -> {
+                            val finalTrafficMb =
+                                if (state.isTrafficUnchanged(locale)) {
+                                    state.initialTrafficMb
+                                } else {
+                                    (result.trafficGb * Constants.MB_PER_GB).roundToInt()
+                                }
                             onConfirm(
                                 result.minutes,
-                                (result.trafficGb * Constants.MB_PER_GB).roundToInt(),
+                                finalTrafficMb,
                                 state.rolloverEnabled,
                             )
                         }
@@ -144,11 +150,16 @@ private fun rememberSimLimitState(
         }
 
     return key(slot) {
-        rememberSaveable(saver = SimLimitState.Saver) {
+        rememberSaveable(
+            inputs = arrayOf<Any?>(initialMinutes, initialTrafficText, initialTrafficMb, initialRolloverEnabled),
+            saver = SimLimitState.Saver,
+        ) {
             SimLimitState(
                 initialMinutesText = initialMinutes.toString(),
                 initialTrafficText = initialTrafficText,
                 initialRolloverEnabled = initialRolloverEnabled,
+                initialTrafficMb = initialTrafficMb,
+                locale = locale,
             )
         }
     }
@@ -158,8 +169,17 @@ private fun rememberSimLimitState(
 internal class SimLimitState(
     initialMinutesText: String,
     initialTrafficText: String,
-    initialRolloverEnabled: Boolean,
+    initialRolloverEnabled: Boolean = false,
+    val initialTrafficMb: Int = 0,
+    locale: Locale = Locale.getDefault(),
 ) {
+    val initialTrafficNormalized: String = NumberInputNormalizer.normalize(initialTrafficText, locale)
+
+    fun isTrafficUnchanged(locale: Locale): Boolean {
+        val currentNormalized = NumberInputNormalizer.normalize(trafficText.text, locale)
+        return currentNormalized == initialTrafficNormalized
+    }
+
     var minutesText by
         mutableStateOf(
             TextFieldValue(
@@ -220,6 +240,12 @@ internal class SimLimitState(
     companion object {
         private const val MAX_MINUTES_CHARS = 6
         private const val MAX_TRAFFIC_CHARS = 10
+        private const val INDEX_MINUTES_TEXT = 0
+        private const val INDEX_TRAFFIC_TEXT = 1
+        private const val INDEX_ROLLOVER_ENABLED = 2
+        private const val INDEX_INITIAL_TRAFFIC_MB = 3
+        private const val INDEX_MINUTES_ERROR = 4
+        private const val INDEX_TRAFFIC_ERROR = 5
 
         val Saver: Saver<SimLimitState, *> =
             listSaver(
@@ -228,18 +254,21 @@ internal class SimLimitState(
                         it.minutesText.text,
                         it.trafficText.text,
                         it.rolloverEnabled,
+                        it.initialTrafficMb,
                         it.minutesError.orEmpty(),
                         it.trafficError.orEmpty(),
                     )
                 },
                 restore = {
                     SimLimitState(
-                        initialMinutesText = it[0] as String,
-                        initialTrafficText = it[1] as String,
-                        initialRolloverEnabled = it[2] as Boolean,
+                        initialMinutesText = it[INDEX_MINUTES_TEXT] as String,
+                        initialTrafficText = it[INDEX_TRAFFIC_TEXT] as String,
+                        initialRolloverEnabled = it[INDEX_ROLLOVER_ENABLED] as Boolean,
+                        initialTrafficMb = it[INDEX_INITIAL_TRAFFIC_MB] as Int,
+                        locale = Locale.getDefault(),
                     ).apply {
-                        minutesError = (it[3] as String).takeIf { it.isNotEmpty() }
-                        trafficError = (it[4] as String).takeIf { it.isNotEmpty() }
+                        minutesError = (it[INDEX_MINUTES_ERROR] as String).takeIf { str -> str.isNotEmpty() }
+                        trafficError = (it[INDEX_TRAFFIC_ERROR] as String).takeIf { str -> str.isNotEmpty() }
                     }
                 },
             )

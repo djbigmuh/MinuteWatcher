@@ -31,6 +31,7 @@ fun SimCardList(
     simCards: List<SimCardUiModel>,
     listState: LazyListState,
     viewModel: MainViewModel,
+    highlightedSlot: Int? = null,
 ) {
     var showResetConfirmSlot by remember { mutableStateOf<Int?>(null) }
 
@@ -49,6 +50,7 @@ fun SimCardList(
             SimCardListRow(
                 model = model,
                 viewModel = viewModel,
+                highlighted = highlightedSlot != null && highlightedSlot == model.slot,
                 onReset = { showResetConfirmSlot = model.slot },
             )
         }
@@ -80,10 +82,12 @@ fun SimCardList(
 private fun SimCardListRow(
     model: SimCardUiModel,
     viewModel: MainViewModel,
+    highlighted: Boolean,
     onReset: () -> Unit,
 ) {
     SimCardItem(
         model = model,
+        highlighted = highlighted,
         onSetLimits = {
             viewModel.setLimitDialog(
                 LimitDialogData(

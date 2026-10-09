@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.main.ui.components
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import com.example.minutewatcher.core.model.SimCardUiModel
 import org.junit.Rule
@@ -90,6 +91,30 @@ class SimCardItemTest {
 
         composeTestRule.onNodeWithText("+30 min.", substring = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("+0.5 GB", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `highlighted true renders testTag and card content`() {
+        val model = createMockSimCard()
+
+        composeTestRule.setContent {
+            SimCardItem(model = model, highlighted = true)
+        }
+
+        composeTestRule.onNodeWithTag("sim_card_highlighted").assertIsDisplayed()
+        composeTestRule.onNodeWithText("MTS").assertIsDisplayed()
+    }
+
+    @Test
+    fun `highlighted false does not render testTag but renders card content`() {
+        val model = createMockSimCard()
+
+        composeTestRule.setContent {
+            SimCardItem(model = model, highlighted = false)
+        }
+
+        composeTestRule.onNodeWithTag("sim_card_highlighted").assertDoesNotExist()
+        composeTestRule.onNodeWithText("MTS").assertIsDisplayed()
     }
 
     private fun createMockSimCard(

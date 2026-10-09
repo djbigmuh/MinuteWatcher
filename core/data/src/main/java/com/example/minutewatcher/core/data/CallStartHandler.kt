@@ -118,7 +118,7 @@ internal class CallStartHandler
                     label = "getCallIdentity",
                 ) { callSessionRepository.getCallIdentity(targetSubId) }
 
-            val currentIdentity = attributionResolver.resolveIdentity(targetSubId)
+            val currentIdentity = attributionResolver.resolveSessionIdentity(targetSubId)
             return CallStartData(
                 startTimeResult = startTimeResult,
                 bootTimeResult = bootTimeResult,

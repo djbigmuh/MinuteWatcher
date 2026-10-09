@@ -6,6 +6,8 @@ import com.example.minutewatcher.feature.semantic.ShortcutApplier
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.SystemShortcutApplier
 import com.example.minutewatcher.feature.semantic.appfunctions.AppFunctionAvailabilityImpl
+import com.example.minutewatcher.feature.semantic.appfunctions.AppFunctionStateGateway
+import com.example.minutewatcher.feature.semantic.appfunctions.PlatformAppFunctionStateGateway
 import com.example.minutewatcher.feature.semantic.search.AppSearchWrapper
 import com.example.minutewatcher.feature.semantic.search.AppSearchWrapperImpl
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
@@ -40,4 +42,8 @@ internal interface SemanticModule {
     @Binds
     @Singleton
     fun bindAppFunctionAvailability(impl: AppFunctionAvailabilityImpl): AppFunctionAvailability
+
+    @Binds
+    @Singleton
+    fun bindAppFunctionStateGateway(impl: PlatformAppFunctionStateGateway): AppFunctionStateGateway
 }

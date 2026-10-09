@@ -81,6 +81,7 @@ fun MainScreenContent(
                     uiState = uiState,
                     listState = listState,
                     viewModel = viewModel,
+                    highlightedSlot = highlightedSlot,
                     onGrantPhonePermission = { currentActionsState.value.onGrantPhonePermission() },
                 )
             }
@@ -116,6 +117,7 @@ private fun SimCardListContent(
     uiState: SimCardListState,
     listState: LazyListState,
     viewModel: MainViewModel,
+    highlightedSlot: Int?,
     onGrantPhonePermission: () -> Unit,
 ) {
     when (uiState) {
@@ -135,6 +137,7 @@ private fun SimCardListContent(
                 simCards = uiState.simCards,
                 listState = listState,
                 viewModel = viewModel,
+                highlightedSlot = highlightedSlot,
             )
         }
     }

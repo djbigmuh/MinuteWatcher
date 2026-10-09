@@ -18,6 +18,7 @@ object MainActivityThemeObserver {
         lifecycleScope: LifecycleCoroutineScope,
         lifecycle: Lifecycle,
         viewModel: MainViewModel,
+        onLocaleRestored: () -> Unit = {},
     ) {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -53,6 +54,7 @@ object MainActivityThemeObserver {
                                 AppCompatDelegate.setApplicationLocales(
                                     LocaleListCompat.forLanguageTags(action.language),
                                 )
+                                onLocaleRestored()
                             }
                         }
                     }

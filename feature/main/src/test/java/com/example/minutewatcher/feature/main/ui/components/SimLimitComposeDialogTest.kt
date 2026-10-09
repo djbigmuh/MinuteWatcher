@@ -234,4 +234,109 @@ class SimLimitComposeDialogTest {
             .onNodeWithText(context.getString(R.string.validation_error_field_required))
             .assertIsDisplayed()
     }
+
+    @Test
+    fun `confirm without editing traffic preserves exact initialTrafficMb`() {
+        var confirmedTraffic = -1
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 5120, // 5120 MB (5.0 GB)
+                onDismiss = {},
+                onConfirm = { _, trafficMb, _ -> confirmedTraffic = trafficMb },
+                onReset = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.set_button), ignoreCase = true)
+            .performClick()
+
+        assertEquals(5120, confirmedTraffic)
+    }
+
+    @Test
+    fun `confirm with edited traffic converts correctly`() {
+        var confirmedTraffic = -1
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 5120,
+                onDismiss = {},
+                onConfirm = { _, trafficMb, _ -> confirmedTraffic = trafficMb },
+                onReset = {},
+            )
+        }
+
+        composeTestRule
+            .onAllNodes(
+                androidx.compose.ui.test
+                    .hasSetTextAction(),
+            )[1]
+            .performTextClearance()
+        composeTestRule
+            .onAllNodes(
+                androidx.compose.ui.test
+                    .hasSetTextAction(),
+            )[1]
+            .performTextInput("6")
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.set_button), ignoreCase = true)
+            .performClick()
+
+        // 6 GB * 1024 = 6144 MB
+        assertEquals(6144, confirmedTraffic)
+    }
+
+    @Test
+    fun `confirm with text numerically equal to initial preserves exact initialTrafficMb`() {
+        var confirmedTraffic = -1
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 5120,
+                onDismiss = {},
+                onConfirm = { _, trafficMb, _ -> confirmedTraffic = trafficMb },
+                onReset = {},
+            )
+        }
+
+        composeTestRule
+            .onAllNodes(
+                androidx.compose.ui.test
+                    .hasSetTextAction(),
+            )[1]
+            .performTextClearance()
+        composeTestRule
+            .onAllNodes(
+                androidx.compose.ui.test
+                    .hasSetTextAction(),
+            )[1]
+            .performTextInput("5.0")
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.set_button), ignoreCase = true)
+            .performClick()
+
+        assertEquals(5120, confirmedTraffic)
+    }
+
+    @Test
+    fun `SimLimitState saver preserves initialTrafficMb`() {
+        val state = SimLimitState("100", "5.0", initialTrafficMb = 5120, initialRolloverEnabled = true)
+        assertEquals(5120, state.initialTrafficMb)
+    }
 }

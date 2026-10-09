@@ -8,32 +8,23 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
-import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Helper for MainActivity navigation and widget management.
  */
-object MainActivityNavigator {
-    @VisibleForTesting
-    internal var startActivityOverride: ((Context, Intent) -> Unit)? = null
-
-    private fun launchActivity(
-        context: Context,
-        intent: Intent,
+@Singleton
+class MainActivityNavigator
+@Inject
+constructor(
+    private val activityStarter: ActivityStarter,
     ) {
-        val override = startActivityOverride
-        if (override != null) {
-            override(context, intent)
-        } else {
-            context.startActivity(intent)
-        }
-    }
-
     fun openWidgetSettings(context: Context) {
-        context.startActivity(Intent(context, WidgetSettingsActivity::class.java))
+        activityStarter.startActivity(context, Intent(context, WidgetSettingsActivity::class.java))
     }
 
     /**
@@ -43,7 +34,7 @@ object MainActivityNavigator {
     fun openAppSettings(context: Context) {
         val intent = NavigationIntentFactory.getAppSettingsIntent(context)
         try {
-            launchActivity(context, intent)
+            activityStarter.startActivity(context, intent)
         } catch (e: ActivityNotFoundException) {
             AppLogger.e("AppSettings activity not found", e)
         } catch (e: SecurityException) {
@@ -59,7 +50,7 @@ object MainActivityNavigator {
         // Priority: Usage access settings for the specific app package.
         val usageIntent = NavigationIntentFactory.getUsageAccessSettingsIntent(context)
         try {
-            launchActivity(context, usageIntent)
+            activityStarter.startActivity(context, usageIntent)
             return
         } catch (e: ActivityNotFoundException) {
             AppLogger.w("Package-scoped usage access settings unavailable, trying generic list", e)
@@ -70,7 +61,7 @@ object MainActivityNavigator {
         // Fallback 1: Generic usage access settings list.
         val genericIntent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
         try {
-            launchActivity(context, genericIntent)
+            activityStarter.startActivity(context, genericIntent)
             return
         } catch (e: ActivityNotFoundException) {
             AppLogger.w("Generic usage access settings unavailable, opening app settings", e)

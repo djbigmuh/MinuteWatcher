@@ -59,6 +59,15 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".LocaleChangedReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <!--
           BenchmarkReceiver is exported but protected by DUMP permission.
           Only system/ADB tools (used by Macrobenchmark) can trigger it.

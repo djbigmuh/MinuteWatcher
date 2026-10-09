@@ -14,11 +14,10 @@ object SnapshotUtils {
      * - Package validity periods.
      * - Data source type (system/manual).
      * - Auto-reset settings (day of month).
+     * - Operator name.
      *
      * Excluded:
      * - Timestamps (lastUpdateTime, timestamp) — to avoid infinite update loops.
-     * - Operator name — to avoid unnecessary widget redraws during metadata updates,
-     *   if numeric indicators have not changed.
      * - [GlobalSnapshot.revision] is intentionally excluded as it's a technical counter for refresh().
      */
     fun calculateContentHash(snapshot: GlobalSnapshot): Int {
@@ -34,10 +33,11 @@ object SnapshotUtils {
                             sim.entities.values
                                 .sortedBy { it.packageType }
                                 .map { entity ->
-                                    // Exclude operatorName and lastUpdateTime for hash stability
+                                    // Exclude lastUpdateTime for hash stability
                                     listOf(
                                         entity.id,
                                         entity.simSlot,
+                                        entity.operatorName,
                                         entity.packageType,
                                         entity.limit,
                                         entity.used,

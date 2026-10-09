@@ -22,7 +22,10 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.controller.MainPermissionController
+import com.example.minutewatcher.core.common.di.ApplicationScope
+import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.Constants.IntentExtras
 import com.example.minutewatcher.feature.main.MainViewModel
@@ -31,6 +34,8 @@ import com.example.minutewatcher.feature.main.SimCardScreenActions
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -44,6 +49,16 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var permissionController: MainPermissionController
 
+    @Inject
+    lateinit var dataChangeNotifier: DataChangeNotifier
+
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
+
+    @Inject
+    lateinit var navigator: MainActivityNavigator
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -52,7 +67,15 @@ class MainActivity : AppCompatActivity() {
             lastPermissionState = savedInstanceState.getInt(KEY_LAST_PERMISSION_STATE, -1)
         }
 
-        MainActivityThemeObserver.observe(lifecycleScope, lifecycle, viewModel)
+        MainActivityThemeObserver.observe(lifecycleScope, lifecycle, viewModel) {
+            applicationScope.launch {
+                try {
+                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                } catch (e: Exception) {
+                    AppLogger.e("MainActivity: Failed to notify data change on locale restore", e)
+                }
+            }
+        }
         setupLocusContext()
 
         setContent {
@@ -80,10 +103,10 @@ class MainActivity : AppCompatActivity() {
                 color = MaterialTheme.colorScheme.background,
             ) {
                 val actions =
-                    remember(viewModel) {
+                    remember(viewModel, navigator) {
                         SimCardScreenActions(
-                            onOpenSettings = { MainActivityNavigator.openWidgetSettings(this@MainActivity) },
-                            onAddWidget = { MainActivityNavigator.addWidgetToHomeScreen(this@MainActivity) },
+                            onOpenSettings = { navigator.openWidgetSettings(this@MainActivity) },
+                            onAddWidget = { navigator.addWidgetToHomeScreen(this@MainActivity) },
                             onThemeChange = { theme -> viewModel.setTheme(theme) },
                             onLanguageChange = { lang -> handleLanguageChange(lang) },
                             onGrantPhonePermission = {
@@ -94,10 +117,10 @@ class MainActivity : AppCompatActivity() {
                                 viewModel.setUsageAccessDialog(true)
                             },
                             onOpenUsageAccessSettings = {
-                                MainActivityNavigator.openUsageAccessSettings(this@MainActivity)
+                                navigator.openUsageAccessSettings(this@MainActivity)
                             },
                             onOpenAppSettings = {
-                                MainActivityNavigator.openAppSettings(this@MainActivity)
+                                navigator.openAppSettings(this@MainActivity)
                             },
                             onGrantNotificationPermission = {
                                 permissionHandler.requestNotificationPermission()
@@ -121,6 +144,13 @@ class MainActivity : AppCompatActivity() {
             }
         AppCompatDelegate.setApplicationLocales(appLocale)
         viewModel.setLanguage(lang)
+        applicationScope.launch {
+            try {
+                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+            } catch (e: Exception) {
+                AppLogger.e("MainActivity: Failed to notify data change on language change", e)
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

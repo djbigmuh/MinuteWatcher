@@ -259,4 +259,45 @@ class SimLimitInputTest {
         assertEquals(0, state.trafficText.selection.start)
         assertEquals(3, state.trafficText.selection.end)
     }
+
+    @Test
+    fun `isTrafficUnchanged returns true when traffic text is unchanged`() {
+        val state =
+            SimLimitState(
+                "100",
+                "5.0",
+                initialTrafficMb = 5120,
+                initialRolloverEnabled = false,
+                locale = defaultLocale,
+            )
+        assertTrue(state.isTrafficUnchanged(defaultLocale))
+    }
+
+    @Test
+    fun `isTrafficUnchanged returns false when traffic text is changed`() {
+        val state =
+            SimLimitState(
+                "100",
+                "5.0",
+                initialTrafficMb = 5120,
+                initialRolloverEnabled = false,
+                locale = defaultLocale,
+            )
+        state.trafficText = TextFieldValue("6.0")
+        assertFalse(state.isTrafficUnchanged(defaultLocale))
+    }
+
+    @Test
+    fun `isTrafficUnchanged returns true when traffic text is numerically equal to initial`() {
+        val state =
+            SimLimitState(
+                "100",
+                "5.0",
+                initialTrafficMb = 5120,
+                initialRolloverEnabled = false,
+                locale = defaultLocale,
+            )
+        state.trafficText = TextFieldValue("5.0")
+        assertTrue(state.isTrafficUnchanged(defaultLocale))
+    }
 }

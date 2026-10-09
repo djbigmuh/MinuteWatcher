@@ -53,11 +53,11 @@ class SnapshotUtilsTest {
     }
 
     @Test
-    fun `hash remains same when only operatorName changes`() {
+    fun `hash changes when only operatorName changes`() {
         val s1 = createSnapshot(remaining = 90, operatorName = "Operator A")
         val s2 = createSnapshot(remaining = 90, operatorName = "Operator B")
 
-        assertEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
+        assertNotEquals(SnapshotUtils.calculateContentHash(s1), SnapshotUtils.calculateContentHash(s2))
     }
 
     @Test

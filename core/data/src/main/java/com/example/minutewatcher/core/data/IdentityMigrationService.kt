@@ -395,6 +395,14 @@ class IdentityMigrationService
                         )
                     }
             conflictMetadataKeys.forEach { prefs.remove(it) }
+
+            // Remove deprecated custom sim operator keys
+            val customOperatorKeys =
+                prefs
+                    .asMap()
+                    .keys
+                    .filter { it.name.startsWith(DataStoreKeys.CUSTOM_SIM_OPERATOR_PREFIX) }
+            customOperatorKeys.forEach { prefs.remove(it) }
         }
 
         private fun migrateSuffixes(

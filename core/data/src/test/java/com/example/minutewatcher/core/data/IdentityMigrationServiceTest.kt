@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.data.di.DataStoreKeys
@@ -149,6 +150,30 @@ class IdentityMigrationServiceTest {
 
             val prefs = simDataStore.data.first()
             assertNull(prefs[conflictKey])
+        }
+
+    @Test
+    fun `custom sim operator keys are cleaned up`() =
+        runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+            val customOperatorKey = stringPreferencesKey("custom_sim_operator_test_id")
+            simDataStore.edit { it[customOperatorKey] = "Custom Operator" }
+            advanceUntilIdle()
+
+            val activeIdentity =
+                SimIdentity(
+                    stableId = "sub_7",
+                    subscriptionId = 7,
+                    slotIndex = 0,
+                    source = IdentitySource.SUBSCRIPTION_ID,
+                    isStable = true,
+                )
+
+            service.migrateLegacyData(activeIdentity)
+            advanceUntilIdle()
+
+            val prefs = simDataStore.data.first()
+            assertNull(prefs[customOperatorKey])
         }
 
     @Test

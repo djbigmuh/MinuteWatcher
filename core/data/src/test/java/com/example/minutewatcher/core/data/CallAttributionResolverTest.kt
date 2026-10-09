@@ -73,77 +73,78 @@ class CallAttributionResolverTest {
         }
 
     @Test
-    fun `resolveTargetIdentity selects SIM with lowest slotIndex regardless of list order`() =
+    fun `resolveTargetIdentity returns null and false when no match and multiple active sims`() =
         runBlocking {
-            val simSlot0 =
+            val sim0 =
                 ActiveSimInfo(
-                    identity = SimIdentity("sim_slot_0", 10, 0, IdentitySource.ICCID, isStable = true),
-                    slotIndex = 0,
-                    subscriptionId = 10,
-                    iccId = "icc_0",
-                    displayName = "SIM 0",
-                    carrierName = "C0",
-                    mccMnc = "25001",
-                    isDefaultData = false,
-                    isDefaultVoice = false,
+                    SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, true),
+                    0,
+                    1,
+                    "i0",
+                    "S0",
+                    "C0",
+                    "m0",
+                    false,
+                    false,
                 )
-            val simSlot1 =
+            val sim1 =
                 ActiveSimInfo(
-                    identity = SimIdentity("sim_slot_1", 20, 1, IdentitySource.ICCID, isStable = true),
-                    slotIndex = 1,
-                    subscriptionId = 20,
-                    iccId = "icc_1",
-                    displayName = "SIM 1",
-                    carrierName = "C1",
-                    mccMnc = "25002",
-                    isDefaultData = false,
-                    isDefaultVoice = false,
+                    SimIdentity("sim_1", 2, 1, IdentitySource.ICCID, true),
+                    1,
+                    2,
+                    "i1",
+                    "S1",
+                    "C1",
+                    "m1",
+                    false,
+                    false,
                 )
-
-            // Order 1: slot 0, then slot 1
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simSlot0, simSlot1)))
-            val (identity1, isFallback1) = resolver.resolveTargetIdentity(subId = 999, savedIdentity = null)
-            assertEquals("sim_slot_0", identity1)
-            assertTrue(isFallback1)
-
-            // Order 2: slot 1, then slot 0
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simSlot1, simSlot0)))
-            val (identity2, isFallback2) = resolver.resolveTargetIdentity(subId = 999, savedIdentity = null)
-            assertEquals("sim_slot_0", identity2)
-            assertTrue(isFallback2)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0, sim1)))
+            val (identity, isFallback) =
+                resolver.resolveTargetIdentity(subId = 999, savedIdentity = null)
+            assertEquals(null, identity)
+            assertTrue(!isFallback)
         }
 
     @Test
-    fun `resolveTargetIdentity selects SIM with lowest subscriptionId when slotIndex is equal`() =
+    fun `resolveTargetIdentity returns fallback sim and true when no match and single active sim`() =
         runBlocking {
-            val simSub10 =
+            val sim0 =
                 ActiveSimInfo(
-                    identity = SimIdentity("sim_sub_10", 10, 0, IdentitySource.ICCID, isStable = true),
-                    slotIndex = 0,
-                    subscriptionId = 10,
-                    iccId = "icc_10",
-                    displayName = "SIM 10",
-                    carrierName = "C10",
-                    mccMnc = "25001",
-                    isDefaultData = false,
-                    isDefaultVoice = false,
+                    SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, true),
+                    0,
+                    1,
+                    "i0",
+                    "S0",
+                    "C0",
+                    "m0",
+                    false,
+                    false,
                 )
-            val simSub5 =
-                ActiveSimInfo(
-                    identity = SimIdentity("sim_sub_5", 5, 0, IdentitySource.ICCID, isStable = true),
-                    slotIndex = 0,
-                    subscriptionId = 5,
-                    iccId = "icc_5",
-                    displayName = "SIM 5",
-                    carrierName = "C5",
-                    mccMnc = "25001",
-                    isDefaultData = false,
-                    isDefaultVoice = false,
-                )
-
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simSub10, simSub5)))
-            val (identity, isFallback) = resolver.resolveTargetIdentity(subId = 999, savedIdentity = null)
-            assertEquals("sim_sub_5", identity)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0)))
+            val (identity, isFallback) =
+                resolver.resolveTargetIdentity(subId = 999, savedIdentity = null)
+            assertEquals("sim_0", identity)
             assertTrue(isFallback)
+        }
+
+    @Test
+    fun `resolveSessionIdentity resolves both stable and unstable identities`() =
+        runBlocking {
+            val simUnstable =
+                ActiveSimInfo(
+                    SimIdentity("sub_1", 1, 0, IdentitySource.SUBSCRIPTION_ID, false),
+                    0,
+                    1,
+                    null,
+                    "S1",
+                    "C1",
+                    "m1",
+                    false,
+                    false,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simUnstable)))
+            val resolved = resolver.resolveSessionIdentity(1)
+            assertEquals("sub_1", resolved)
         }
 }

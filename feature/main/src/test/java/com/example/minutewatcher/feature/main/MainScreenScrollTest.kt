@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.SimCardUiModel
@@ -147,6 +148,46 @@ class MainScreenScrollTest {
         assertEquals(0, listState?.firstVisibleItemIndex)
         composeTestRule.onNodeWithText("Operator 0").assertIsDisplayed()
         composeTestRule.onNodeWithText("Operator 5").assertIsNotDisplayed()
+    }
+
+    @Test
+    fun `highlightedSlot renders highlight tag on correct card`() {
+        val uiState = mutableStateOf<SimCardListState>(SimCardListState.Loading)
+        val highlightedSlot = mutableStateOf<Int?>(2)
+
+        val simCards = listOf(createMockSimCard(0), createMockSimCard(1), createMockSimCard(2))
+
+        val actions =
+            SimCardScreenActions(
+                onOpenSettings = {},
+                onAddWidget = {},
+                onThemeChange = {},
+                onLanguageChange = {},
+                onGrantPhonePermission = {},
+                onShowUsageAccessDialog = {},
+                onOpenUsageAccessSettings = {},
+                onOpenAppSettings = {},
+                onGrantNotificationPermission = {},
+            )
+
+        composeTestRule.setContent {
+            val state = rememberLazyListState()
+            MainScreenContent(
+                uiState = uiState.value,
+                paddingValues = PaddingValues(0.dp),
+                viewModel = mockViewModel,
+                trackingBannerState = TrackingBannerState(),
+                highlightedSlot = highlightedSlot.value,
+                actions = actions,
+                listState = state,
+            )
+        }
+
+        uiState.value = SimCardListState.Success(simCards)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("sim_card_highlighted").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Operator 2").assertIsDisplayed()
     }
 
     private fun createMockSimCard(slot: Int) =

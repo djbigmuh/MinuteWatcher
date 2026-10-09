@@ -6,7 +6,6 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
@@ -23,35 +22,52 @@ class MainActivityNavigatorTest {
         initTestLogger()
     }
 
-    @After
-    fun tearDown() {
-        MainActivityNavigator.startActivityOverride = null
-    }
-
     @Test
     fun `addWidgetToHomeScreen handles AppWidgetManager`() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
-        MainActivityNavigator.addWidgetToHomeScreen(appContext)
+        val fakeStarter =
+            object : ActivityStarter {
+                override fun startActivity(
+                    context: Context,
+                    intent: Intent,
+                ) {
+                    // No-op for test
+                }
+            }
+        val navigator = MainActivityNavigator(fakeStarter)
+        navigator.addWidgetToHomeScreen(appContext)
     }
 
     @Test
     fun `openAppSettings does not throw when ActivityNotFoundException occurs`() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
-        MainActivityNavigator.startActivityOverride = { _, _ ->
-            throw ActivityNotFoundException("Not found")
-        }
-        MainActivityNavigator.openAppSettings(appContext)
+        val fakeStarter =
+            object : ActivityStarter {
+                override fun startActivity(
+                    context: Context,
+                    intent: Intent,
+                ): Unit = throw ActivityNotFoundException("Not found")
+            }
+        val navigator = MainActivityNavigator(fakeStarter)
+        navigator.openAppSettings(appContext)
     }
 
     @Test
     fun `openUsageAccessSettings launches package scoped usage access intent successfully`() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         var launchedIntent: Intent? = null
-        MainActivityNavigator.startActivityOverride = { _, intent ->
-            launchedIntent = intent
-        }
+        val fakeStarter =
+            object : ActivityStarter {
+                override fun startActivity(
+                    context: Context,
+                    intent: Intent,
+                ) {
+                    launchedIntent = intent
+                }
+            }
+        val navigator = MainActivityNavigator(fakeStarter)
 
-        MainActivityNavigator.openUsageAccessSettings(appContext)
+        navigator.openUsageAccessSettings(appContext)
 
         assertNotNull(launchedIntent)
         assertEquals(Settings.ACTION_USAGE_ACCESS_SETTINGS, launchedIntent?.action)
@@ -63,14 +79,21 @@ class MainActivityNavigatorTest {
     fun `openUsageAccessSettings falls back to generic list when package scoped intent fails`() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         val launchedActions = mutableListOf<String?>()
-        MainActivityNavigator.startActivityOverride = { _, intent ->
-            launchedActions.add(intent.action)
-            if (intent.data != null) {
-                throw ActivityNotFoundException("Package intent failed")
+        val fakeStarter =
+            object : ActivityStarter {
+                override fun startActivity(
+                    context: Context,
+                    intent: Intent,
+                ) {
+                    launchedActions.add(intent.action)
+                    if (intent.data != null) {
+                        throw ActivityNotFoundException("Package intent failed")
+                    }
+                }
             }
-        }
+        val navigator = MainActivityNavigator(fakeStarter)
 
-        MainActivityNavigator.openUsageAccessSettings(appContext)
+        navigator.openUsageAccessSettings(appContext)
 
         assertEquals(2, launchedActions.size)
         assertEquals(Settings.ACTION_USAGE_ACCESS_SETTINGS, launchedActions[0])
@@ -81,12 +104,19 @@ class MainActivityNavigatorTest {
     fun `openUsageAccessSettings falls back to app details settings when both usage access launches fail`() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         val launchedActions = mutableListOf<String?>()
-        MainActivityNavigator.startActivityOverride = { _, intent ->
-            launchedActions.add(intent.action)
-            throw ActivityNotFoundException("All failed")
-        }
+        val fakeStarter =
+            object : ActivityStarter {
+                override fun startActivity(
+                    context: Context,
+                    intent: Intent,
+                ) {
+                    launchedActions.add(intent.action)
+                    throw ActivityNotFoundException("All failed")
+                }
+            }
+        val navigator = MainActivityNavigator(fakeStarter)
 
-        MainActivityNavigator.openUsageAccessSettings(appContext)
+        navigator.openUsageAccessSettings(appContext)
 
         assertEquals(3, launchedActions.size)
         assertEquals(Settings.ACTION_USAGE_ACCESS_SETTINGS, launchedActions[0])
