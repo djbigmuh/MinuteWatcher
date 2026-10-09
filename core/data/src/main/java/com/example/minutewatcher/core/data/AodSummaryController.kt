@@ -93,6 +93,7 @@ class AodSummaryController
             }
         }
 
+        @Suppress("UnusedParameter")
         private fun updateSummaryState(
             snapshot: GlobalSnapshot,
             settings: AppSettings,
