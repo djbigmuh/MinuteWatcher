@@ -26,9 +26,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.common.util.FormatUtils
+import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.resources.R
+import java.util.Locale
 
 /**
  * Renders traffic section for SIM card.
@@ -158,8 +160,8 @@ private fun TrafficRemainingRow(
 
 @Composable
 private fun TrafficAdjustment(model: SimCardUiModel) {
-    if (model.trafficAdjustmentGb != 0f) {
-        val locale = FormatUtils.getLocale(LocalContext.current)
+    val locale = FormatUtils.getLocale(LocalContext.current)
+    if (shouldShowTrafficAdjustmentLabel(model.trafficAdjustmentGb, locale)) {
         AdjustmentLabel(
             value = FormatUtils.formatTrafficGb(locale, model.trafficAdjustmentGb),
             unit = stringResource(R.string.gb_abbr),
@@ -167,3 +169,10 @@ private fun TrafficAdjustment(model: SimCardUiModel) {
         )
     }
 }
+
+fun shouldShowTrafficAdjustmentLabel(
+    adjustmentGb: Float,
+    locale: Locale,
+): Boolean =
+    adjustmentGb != 0f &&
+        !NumberInputNormalizer.isZeroValue(FormatUtils.formatTrafficGb(locale, adjustmentGb))
