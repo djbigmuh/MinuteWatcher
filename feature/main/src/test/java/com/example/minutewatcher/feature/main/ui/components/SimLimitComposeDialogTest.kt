@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main.ui.components
 
 import android.content.Context
+import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -12,9 +13,11 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.core.app.ApplicationProvider
+import com.example.minutewatcher.core.common.util.NumberInputNormalizer
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -90,7 +93,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `minutes - old 0, types 5 - results in 5`() {
-        val state = SimLimitState("0", "0.0", false)
+        val state = SimLimitState("0", "0.0", false, locale = defaultLocale)
         // Simulate typing '5' at the end of "0"
         state.onMinutesChange(TextFieldValue("05", selection = TextRange(2)), defaultLocale)
         assertEquals("5", state.minutesText.text)
@@ -98,7 +101,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `minutes - old 0, types 0 - results in 0`() {
-        val state = SimLimitState("0", "0.0", false)
+        val state = SimLimitState("0", "0.0", false, locale = defaultLocale)
         // Simulate typing '0' at the end of "0"
         state.onMinutesChange(TextFieldValue("00", selection = TextRange(2)), defaultLocale)
         assertEquals("0", state.minutesText.text)
@@ -106,7 +109,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `minutes - old 0, full selection, types 7 - results in 7`() {
-        val state = SimLimitState("0", "0.0", false)
+        val state = SimLimitState("0", "0.0", false, locale = defaultLocale)
         state.selectAllMinutes()
         // Simulate replacing selection "0" with "7"
         state.onMinutesChange(TextFieldValue("7", selection = TextRange(1)), defaultLocale)
@@ -115,7 +118,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `minutes - old 12, full selection, types 5 - results in 5`() {
-        val state = SimLimitState("12", "0.0", false)
+        val state = SimLimitState("12", "0.0", false, locale = defaultLocale)
         state.selectAllMinutes()
         // Simulate replacing selection "12" with "5"
         state.onMinutesChange(TextFieldValue("5", selection = TextRange(1)), defaultLocale)
@@ -124,7 +127,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `minutes - old 0, paste 100 - results in 100`() {
-        val state = SimLimitState("0", "0.0", false)
+        val state = SimLimitState("0", "0.0", false, locale = defaultLocale)
         // Paste "100" at the end: "0100"
         state.onMinutesChange(TextFieldValue("0100", selection = TextRange(4)), defaultLocale)
         assertEquals("100", state.minutesText.text)
@@ -132,7 +135,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `minutes - old 500, full selection, paste 100 - results in 100`() {
-        val state = SimLimitState("500", "0.0", false)
+        val state = SimLimitState("500", "0.0", false, locale = defaultLocale)
         state.selectAllMinutes()
         // Replace "500" with "100"
         state.onMinutesChange(TextFieldValue("100", selection = TextRange(3)), defaultLocale)
@@ -141,7 +144,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `traffic - old 0_0, types 5 - results in 5`() {
-        val state = SimLimitState("0", "0.0", false)
+        val state = SimLimitState("0", "0.0", false, locale = defaultLocale)
         // Simulate typing '5' at the end: "0.05"
         state.onTrafficChange(TextFieldValue("0.05", selection = TextRange(4)), defaultLocale)
         assertEquals("5", state.trafficText.text)
@@ -149,7 +152,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `traffic - old 0_0, full selection, paste 15_5 - results in 15_5`() {
-        val state = SimLimitState("0", "0.0", false)
+        val state = SimLimitState("0", "0.0", false, locale = defaultLocale)
         state.selectAllTraffic()
         // Replace "0.0" with "15.5"
         state.onTrafficChange(TextFieldValue("15.5", selection = TextRange(4)), defaultLocale)
@@ -158,7 +161,7 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `traffic - old 5, full selection, paste 500 - results in 500`() {
-        val state = SimLimitState("0", "5", false)
+        val state = SimLimitState("0", "5", false, locale = defaultLocale)
         state.selectAllTraffic()
         // Replace "5" with "500"
         state.onTrafficChange(TextFieldValue("500", selection = TextRange(3)), defaultLocale)
@@ -167,15 +170,15 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `traffic - old 0, paste 10_5 - results in 10_5`() {
-        val state = SimLimitState("0", "0", false)
+        val state = SimLimitState("0", "0", false, locale = defaultLocale)
         // Paste "10.5" at the end: "010.5"
-        state.onTrafficChange(TextFieldValue("010.5", selection = TextRange(5)), defaultLocale)
+        state.onTrafficChange(TextFieldValue("10.5", selection = TextRange(5)), defaultLocale)
         assertEquals("10.5", state.trafficText.text)
     }
 
     @Test
     fun `limit exceeded - ignores input`() {
-        val state = SimLimitState("0", "0", false)
+        val state = SimLimitState("0", "0", false, locale = defaultLocale)
         // Max 6 chars for minutes. Try to type 7th.
         state.onMinutesChange(TextFieldValue("1234567", selection = TextRange(7)), defaultLocale)
         assertEquals("0", state.minutesText.text)
@@ -336,7 +339,40 @@ class SimLimitComposeDialogTest {
 
     @Test
     fun `SimLimitState saver preserves initialTrafficMb`() {
-        val state = SimLimitState("100", "5.0", initialTrafficMb = 5120, initialRolloverEnabled = true)
+        val state =
+            SimLimitState("100", "5.0", initialTrafficMb = 5120, initialRolloverEnabled = true, locale = defaultLocale)
         assertEquals(5120, state.initialTrafficMb)
+    }
+
+    @Test
+    fun `SimLimitState saver preserves locale and properties`() {
+        val testLocale = if (Locale.getDefault() == Locale.GERMANY) Locale.FRANCE else Locale.GERMANY
+        val state =
+            SimLimitState(
+                initialMinutesText = "100",
+                initialTrafficText = "5,0",
+                initialRolloverEnabled = true,
+                initialTrafficMb = 5120,
+                locale = testLocale,
+            ).apply {
+                minutesError = "Min error"
+                trafficError = "Traffic error"
+            }
+
+        val saver = SimLimitState.saver(testLocale)
+        val saved = with(saver) { SaverScope { true }.save(state) }
+        assertNotNull(saved)
+        val restored = with(saver) { restore(saved!!) }
+
+        assertNotNull(restored)
+        val nonNullRestored = restored!!
+        assertEquals("100", nonNullRestored.minutesText.text)
+        assertEquals("5,0", nonNullRestored.trafficText.text)
+        assertTrue(nonNullRestored.rolloverEnabled)
+        assertEquals(5120, nonNullRestored.initialTrafficMb)
+        assertEquals("Min error", nonNullRestored.minutesError)
+        assertEquals("Traffic error", nonNullRestored.trafficError)
+        assertTrue(nonNullRestored.isTrafficUnchanged(testLocale))
+        assertEquals(NumberInputNormalizer.normalize("5,0", testLocale), nonNullRestored.initialTrafficNormalized)
     }
 }

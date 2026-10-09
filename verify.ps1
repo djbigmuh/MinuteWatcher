@@ -1,5 +1,5 @@
 # Local pre-commit verification (CI replacement: GitHub is not used).
-param([switch]$Quick)
+param([switch]$Quick, [switch]$Format, [string[]]$Tasks)
 
 $ErrorActionPreference = "Stop"
 $env:ANDROID_PREFS_ROOT = $null
@@ -53,7 +53,11 @@ if ($env:JAVA_HOME) {
     Write-Host "Java 21 detected in PATH." -ForegroundColor Green
 }
 
-$gradleArgs = if ($Quick) {
+$gradleArgs = if ($Tasks) {
+    $Tasks + '--continue'
+} elseif ($Format) {
+    @('ktlintFormat', '--continue')
+} elseif ($Quick) {
     @('ktlintCheck', 'detekt', '--continue')
 } else {
     @('ktlintCheck', 'detekt', 'lintDebug', 'testDebugUnitTest', 'assembleDebug', 'assembleRelease', '--continue')

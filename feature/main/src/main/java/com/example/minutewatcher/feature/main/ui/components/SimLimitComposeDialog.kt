@@ -149,10 +149,11 @@ private fun rememberSimLimitState(
             String.format(locale, "%.1f", gb)
         }
 
+    val saver = remember(locale) { SimLimitState.saver(locale) }
     return key(slot) {
         rememberSaveable(
             inputs = arrayOf<Any?>(initialMinutes, initialTrafficText, initialTrafficMb, initialRolloverEnabled),
-            saver = SimLimitState.Saver,
+            saver = saver,
         ) {
             SimLimitState(
                 initialMinutesText = initialMinutes.toString(),
@@ -171,7 +172,7 @@ internal class SimLimitState(
     initialTrafficText: String,
     initialRolloverEnabled: Boolean = false,
     val initialTrafficMb: Int = 0,
-    locale: Locale = Locale.getDefault(),
+    locale: Locale,
 ) {
     val initialTrafficNormalized: String = NumberInputNormalizer.normalize(initialTrafficText, locale)
 
@@ -247,7 +248,7 @@ internal class SimLimitState(
         private const val INDEX_MINUTES_ERROR = 4
         private const val INDEX_TRAFFIC_ERROR = 5
 
-        val Saver: Saver<SimLimitState, *> =
+        fun saver(locale: Locale): Saver<SimLimitState, Any> =
             listSaver(
                 save = {
                     listOf(
@@ -265,7 +266,7 @@ internal class SimLimitState(
                         initialTrafficText = it[INDEX_TRAFFIC_TEXT] as String,
                         initialRolloverEnabled = it[INDEX_ROLLOVER_ENABLED] as Boolean,
                         initialTrafficMb = it[INDEX_INITIAL_TRAFFIC_MB] as Int,
-                        locale = Locale.getDefault(),
+                        locale = locale,
                     ).apply {
                         minutesError = (it[INDEX_MINUTES_ERROR] as String).takeIf { str -> str.isNotEmpty() }
                         trafficError = (it[INDEX_TRAFFIC_ERROR] as String).takeIf { str -> str.isNotEmpty() }
