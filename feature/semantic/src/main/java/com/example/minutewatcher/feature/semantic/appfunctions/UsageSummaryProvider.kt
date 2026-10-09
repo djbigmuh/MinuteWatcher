@@ -1,15 +1,12 @@
 package com.example.minutewatcher.feature.semantic.appfunctions
 
 import androidx.appfunctions.AppFunctionElementNotFoundException
-import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.PackageType
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,13 +15,10 @@ class UsageSummaryProvider
     @Inject
     constructor(
         private val usageStateRepository: UsageStateRepository,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         suspend fun getUsageSummary(): UsageSummary {
             val snapshot = fetchAndValidateSnapshot()
-            return withContext(ioDispatcher) {
-                mapSnapshot(snapshot)
-            }
+            return mapSnapshot(snapshot)
         }
 
         private suspend fun fetchAndValidateSnapshot(): GlobalSnapshot {

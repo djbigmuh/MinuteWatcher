@@ -82,7 +82,7 @@ class UsageSummaryProviderTest {
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 12345L, listOf(sim), emptyList())
 
             val fakeRepo = FakeUsageStateRepository(snapshot)
-            val provider = UsageSummaryProvider(fakeRepo, testDispatcher)
+            val provider = UsageSummaryProvider(fakeRepo)
 
             withTimeout(5.seconds) {
                 val summary = provider.getUsageSummary()
@@ -106,7 +106,7 @@ class UsageSummaryProviderTest {
                     fakeRepo.snapshotFlow.value = filledSnapshot
                     RefreshResult.Success(filledSnapshot)
                 }
-            val provider = UsageSummaryProvider(fakeRepo, testDispatcher)
+            val provider = UsageSummaryProvider(fakeRepo)
 
             withTimeout(5.seconds) {
                 val summary = provider.getUsageSummary()
@@ -124,7 +124,7 @@ class UsageSummaryProviderTest {
                 FakeUsageStateRepository(emptySnapshot) {
                     RefreshResult.Timeout(emptySnapshot)
                 }
-            val provider = UsageSummaryProvider(fakeRepo, testDispatcher)
+            val provider = UsageSummaryProvider(fakeRepo)
 
             withTimeout(5.seconds) {
                 assertThrows(AppFunctionElementNotFoundException::class.java) {
@@ -140,7 +140,7 @@ class UsageSummaryProviderTest {
         runTest(testDispatcher) {
             val emptySimsSnapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 123L, emptyList(), emptyList())
             val fakeRepo = FakeUsageStateRepository(emptySimsSnapshot)
-            val provider = UsageSummaryProvider(fakeRepo, testDispatcher)
+            val provider = UsageSummaryProvider(fakeRepo)
 
             withTimeout(5.seconds) {
                 assertThrows(AppFunctionElementNotFoundException::class.java) {
@@ -160,7 +160,7 @@ class UsageSummaryProviderTest {
                 FakeUsageStateRepository(emptySnapshot) {
                     throw IllegalStateException("Network down")
                 }
-            val provider = UsageSummaryProvider(fakeRepo, testDispatcher)
+            val provider = UsageSummaryProvider(fakeRepo)
 
             withTimeout(5.seconds) {
                 assertThrows(AppFunctionElementNotFoundException::class.java) {
@@ -180,7 +180,7 @@ class UsageSummaryProviderTest {
                 FakeUsageStateRepository(emptySnapshot) {
                     throw CancellationException("Cancelled")
                 }
-            val provider = UsageSummaryProvider(fakeRepo, testDispatcher)
+            val provider = UsageSummaryProvider(fakeRepo)
 
             withTimeout(5.seconds) {
                 assertThrows(CancellationException::class.java) {
@@ -230,7 +230,7 @@ class UsageSummaryProviderTest {
 
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 999L, listOf(sim1, sim0), emptyList())
 
-            val provider = UsageSummaryProvider(mock(), testDispatcher)
+            val provider = UsageSummaryProvider(mock())
 
             withTimeout(5.seconds) {
                 val summary = provider.mapSnapshot(snapshot)
@@ -250,6 +250,21 @@ class UsageSummaryProviderTest {
                 assertFalse(summary.sims[1].dataLimitSet)
                 assertEquals(0.0, summary.sims[1].dataRemainingGb, 0.001)
                 assertEquals(1000L, summary.sims[1].periodEndMillis)
+            }
+        }
+
+    @Test
+    fun `mapSnapshot sets periodEndMillis to zero when sim has no entities`() =
+        runTest(testDispatcher) {
+            val sim = SimSnapshot(0, "sim0", "MTS", emptyMap(), 1)
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 999L, listOf(sim), emptyList())
+
+            val provider = UsageSummaryProvider(mock())
+
+            withTimeout(5.seconds) {
+                val summary = provider.mapSnapshot(snapshot)
+                assertEquals(1, summary.sims.size)
+                assertEquals(0L, summary.sims[0].periodEndMillis)
             }
         }
 }
