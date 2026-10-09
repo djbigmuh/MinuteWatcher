@@ -8,6 +8,7 @@ import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.di.DataStoreKeys
+import com.example.minutewatcher.core.model.Constants
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
@@ -304,5 +305,22 @@ class SimUsageRepositoryImplTest {
             assertEquals(0f, usage.trafficUsedMb)
             assertEquals(0, usage.manualAdjustment)
             assertEquals(0f, usage.trafficAdjustmentGb)
+        }
+
+    @Test
+    fun `incrementTrafficAndSetBaseline clamps traffic to MAX_TRAFFIC_LIMIT_MB and updates baseline`() =
+        runTest {
+            val identity = "test_sim"
+            repository.incrementTrafficAndSetBaseline(
+                identity,
+                Constants.MAX_TRAFFIC_LIMIT_MB.toFloat() + 1000f,
+                99999L,
+            )
+
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(Constants.MAX_TRAFFIC_LIMIT_MB.toFloat(), usage.trafficUsedMb, 0.001f)
+
+            val baseline = repository.getLastTotalBytes(identity).first()
+            assertEquals(99999L, baseline)
         }
 }

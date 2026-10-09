@@ -309,6 +309,13 @@ object Constants {
      * Maximum traffic limit in GB (10240 = 10 TB).
      * Chosen as a reasonable maximum for monthly traffic limit.
      * At values above this, Float loses precision below 1 MB.
+     * Linked with [MAX_TRAFFIC_LIMIT_MB] as the single traffic limit boundary.
      */
     const val MAX_TRAFFIC_LIMIT_GB = 10240f
+
+    /**
+     * Maximum traffic limit in MB, derived from [MAX_TRAFFIC_LIMIT_GB].
+     * Single upper bound for both user-set limits and accumulated usage clamping.
+     */
+    const val MAX_TRAFFIC_LIMIT_MB: Int = (MAX_TRAFFIC_LIMIT_GB * MB_PER_GB).toInt()
 }

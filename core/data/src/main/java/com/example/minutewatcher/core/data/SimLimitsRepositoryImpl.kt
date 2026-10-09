@@ -58,7 +58,7 @@ class SimLimitsRepositoryImpl
             rolloverEnabled: Boolean,
         ) {
             val safeMinutes = minutesLimit.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
-            val maxTrafficMb = (Constants.MAX_TRAFFIC_LIMIT_GB * Constants.MB_PER_GB).toInt()
+            val maxTrafficMb = Constants.MAX_TRAFFIC_LIMIT_MB
             val safeTraffic = trafficLimitMb.coerceIn(0, maxTrafficMb)
 
             dataStore.edit {

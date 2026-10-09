@@ -227,7 +227,8 @@ class SimUsageRepositoryImpl
                 val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                 val newValue = currentUsage + deltaMb.toDouble()
                 val rounded = ((newValue * TRAFFIC_ROUNDING_FACTOR).roundToLong() / TRAFFIC_ROUNDING_FACTOR).toFloat()
-                prefs[DataStoreKeys.trafficUsedKey(identity)] = rounded.coerceIn(0f, MAX_TRAFFIC_MB)
+                prefs[DataStoreKeys.trafficUsedKey(identity)] =
+                    rounded.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_MB.toFloat())
 
                 // 2. Update baseline
                 prefs[DataStoreKeys.lastTotalBytesKey(identity)] = totalBytes
@@ -284,14 +285,6 @@ class SimUsageRepositoryImpl
         }
 
         companion object {
-            /**
-             * Maximum traffic value in MB at which Float retains
-             * precision up to 1 MB. Above this value Float loses precision.
-             * In practice traffic does not reach such values in a single billing
-             * period, but the check guards against overflow on error.
-             */
-            private const val MAX_TRAFFIC_MB = 10_000_000f // ~10 TB
-
             private const val TRAFFIC_ROUNDING_FACTOR = 100.0
         }
     }
