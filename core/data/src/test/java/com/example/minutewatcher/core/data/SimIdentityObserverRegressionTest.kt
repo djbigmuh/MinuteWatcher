@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.SeedResolutionResult
 import com.example.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -131,6 +132,38 @@ class SimIdentityObserverRegressionTest {
             testScheduler.advanceTimeBy(1000.milliseconds)
 
             assertEquals(TrackingStatus.Active, observer.status.value)
+
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `unsupported SIM discovery sets NOT_SUPPORTED status and service unavailable code`() =
+        runTest(UnconfinedTestDispatcher()) {
+            whenever(seedRepository.seedFlow).thenReturn(MutableStateFlow("test_seed"))
+            whenever(seedRepository.getOrCreateSeedOrEphemeralFallback(any()))
+                .thenReturn(SeedResolutionResult.Persistent("test_seed"))
+
+            val subscriptionChanges = MutableSharedFlow<Unit>(replay = 1)
+            whenever(discovery.observeSubscriptionChanges()).thenReturn(subscriptionChanges)
+
+            whenever(fetcher.fetchActiveSimsWithRetry(any()))
+                .thenReturn(SimDiscoveryResult.Unsupported)
+
+            val observer = createObserver(backgroundScope)
+            val emittedList = mutableListOf<List<ActiveSimInfo>>()
+            val collectJob = launch { observer.activeSimsCache.collect { emittedList.add(it) } }
+
+            subscriptionChanges.emit(Unit)
+            testScheduler.advanceTimeBy(1000.milliseconds)
+
+            val status = observer.status.value
+            assertTrue(
+                "Expected status to be Error NOT_SUPPORTED, but was $status",
+                status is TrackingStatus.Error &&
+                    status.type == TrackingStatus.ErrorType.NOT_SUPPORTED &&
+                    status.code == TrackingStatus.ErrorCode.SERVICE_UNAVAILABLE,
+            )
+            assertTrue(emittedList.isNotEmpty() && emittedList.last().isEmpty())
 
             collectJob.cancel()
         }

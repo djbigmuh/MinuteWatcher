@@ -337,8 +337,9 @@ internal class SimIdentityObserver
                 is SimDiscoveryResult.Unsupported -> {
                     transitionStatus(
                         TrackingStatus.Error(
-                            TrackingStatus.ErrorType.UNKNOWN,
+                            TrackingStatus.ErrorType.NOT_SUPPORTED,
                             "SIM discovery unsupported",
+                            code = TrackingStatus.ErrorCode.SERVICE_UNAVAILABLE,
                         ),
                     )
                     emit(emptyList())
