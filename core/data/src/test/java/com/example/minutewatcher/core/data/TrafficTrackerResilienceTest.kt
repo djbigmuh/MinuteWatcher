@@ -11,6 +11,7 @@ import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
 import com.example.minutewatcher.core.domain.SimUsageResetRepository
 import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,6 +23,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -310,6 +312,56 @@ class TrafficTrackerResilienceTest {
             assertNotNull(terminalLog)
             assertEquals(exception3.message, terminalLog?.second?.message)
             assertEquals(exception3::class, terminalLog?.second?.let { it::class })
+
+            AppLogger.resetForTest()
+        }
+
+    @Test
+    fun `active sims fetch timeout logs single error and no utility timeout log`() =
+        runTest {
+            val errorLogs = mutableListOf<Pair<String, Throwable?>>()
+            val capturingLogger =
+                object : Logger by NoOpLogger() {
+                    override fun e(
+                        tag: String,
+                        message: String,
+                        throwable: Throwable?,
+                    ) {
+                        errorLogs.add(message to throwable)
+                    }
+
+                    override fun w(
+                        tag: String,
+                        message: String,
+                        throwable: Throwable?,
+                    ) {
+                        errorLogs.add(message to throwable)
+                    }
+                }
+            val mockContext: android.content.Context =
+                mock {
+                    on { filesDir } doReturn null
+                }
+            AppLogger.resetForTest()
+            AppLogger.init(mockContext, capturingLogger)
+
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
+
+            val tracker = createTracker(this)
+            runCurrent()
+
+            advanceTimeBy((Constants.Flow.SHORT_TIMEOUT_MS + 1000L).milliseconds)
+            runCurrent()
+
+            val status = tracker.status.value as? TrackingStatus.Error
+            assertNotNull(status)
+            assertEquals(TrackingStatus.ErrorCode.TIMEOUT, status?.code)
+
+            val singleErrorLog = errorLogs.find { it.first == "TrafficTracker: timeout fetching active sims" }
+            assertNotNull(singleErrorLog)
+
+            val utilityTimeoutLog = errorLogs.find { it.first.contains("Timeout reading from Flow") || it.first.contains("activeSims") }
+            assertTrue("Should not contain utility timeout log", utilityTimeoutLog == null)
 
             AppLogger.resetForTest()
         }
