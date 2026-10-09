@@ -8,7 +8,6 @@ import android.os.Build
 import android.os.Process
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
-import androidx.core.app.AppOpsManagerCompat
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.atomic.AtomicReference
@@ -104,20 +103,34 @@ class PermissionManager
             return granted
         }
 
+        @Suppress("DEPRECATION", "TooGenericExceptionCaught", "SwallowedException")
         fun hasUsageStatsPermission(): Boolean {
+            val appOps = context.getSystemService(AppOpsManager::class.java)
             val mode =
                 try {
-                    AppOpsManagerCompat.checkOrNoteProxyOp(
-                        context,
-                        Process.myUid(),
-                        AppOpsManager.OPSTR_GET_USAGE_STATS,
-                        context.packageName,
-                    )
+                    if (appOps == null) {
+                        AppOpsManager.MODE_ERRORED
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        appOps.unsafeCheckOpNoThrow(
+                            AppOpsManager.OPSTR_GET_USAGE_STATS,
+                            Process.myUid(),
+                            context.packageName,
+                        )
+                    } else {
+                        // checkOpNoThrow is the documented check API on API 26-28; deprecated since API 29,
+                        // where unsafeCheckOpNoThrow is used instead.
+                        @Suppress("DEPRECATION")
+                        appOps.checkOpNoThrow(
+                            AppOpsManager.OPSTR_GET_USAGE_STATS,
+                            Process.myUid(),
+                            context.packageName,
+                        )
+                    }
                 } catch (e: Exception) {
                     AppLogger.e("PermissionManager: Failed to check GET_USAGE_STATS op", e)
-                    AppOpsManagerCompat.MODE_IGNORED
+                    AppOpsManager.MODE_IGNORED
                 }
-            val granted = mode == AppOpsManagerCompat.MODE_ALLOWED
+            val granted = mode == AppOpsManager.MODE_ALLOWED
             logPermissionStateChange("Usage stats", usageStatsPermissionState, granted)
             return granted
         }

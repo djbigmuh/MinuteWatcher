@@ -41,27 +41,20 @@ class PermissionManagerTest {
     }
 
     // @Suppress("DEPRECATION") is required because legacy AppOpsManager methods
-    // (checkOpNoThrow, checkOp, noteOp) are deprecated in API 29+.
+    // (checkOpNoThrow) are deprecated in API 29+.
     @Suppress("DEPRECATION")
     private fun stubAppOpsMode(mode: Int) {
         whenever(appOps.checkOpNoThrow(any(), any(), any())).thenReturn(mode)
         whenever(appOps.unsafeCheckOpNoThrow(any(), any(), any())).thenReturn(mode)
-        whenever(appOps.noteOpNoThrow(any(), any(), any())).thenReturn(mode)
-        whenever(appOps.noteProxyOpNoThrow(any(), any())).thenReturn(mode)
-        whenever(appOps.noteProxyOp(any(), any())).thenReturn(mode)
-        whenever(appOps.checkOp(any(), any(), any())).thenReturn(mode)
     }
 
     // @Suppress("DEPRECATION") is required because legacy AppOpsManager methods
-    // (checkOpNoThrow, checkOp, noteOp) are deprecated in API 29+.
+    // (checkOpNoThrow) are deprecated in API 29+.
     @Suppress("DEPRECATION")
     private fun stubAppOpsException(e: Throwable) {
         whenever(appOps.checkOpNoThrow(any(), any(), any())).thenThrow(e)
         whenever(appOps.unsafeCheckOpNoThrow(any(), any(), any())).thenThrow(e)
-        whenever(appOps.noteOpNoThrow(any(), any(), any())).thenThrow(e)
         whenever(appOps.noteProxyOpNoThrow(any(), any())).thenThrow(e)
-        whenever(appOps.noteProxyOp(any(), any())).thenThrow(e)
-        whenever(appOps.checkOp(any(), any(), any())).thenThrow(e)
     }
 
     @Test
