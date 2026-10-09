@@ -190,7 +190,42 @@ class AodSummaryControllerTest {
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
 
+            whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(false)
             permissionFlow.value = false
+            testScope.advanceUntilIdle()
+
+            verify(notificationHelper, times(1)).cancelAodSummaryNotification()
+        }
+
+    @Test
+    fun `stale permission flow false with live availability true posts summary`() =
+        runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
+            permissionFlow.value = false
+            whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(true)
+            val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
+
+            controller.start()
+            testScope.advanceUntilIdle()
+
+            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+        }
+
+    @Test
+    fun `live availability turning false cancels posted summary`() =
+        runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
+            val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
+
+            controller.start()
+            testScope.advanceUntilIdle()
+
+            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+
+            whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(false)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0))
             testScope.advanceUntilIdle()
 
             verify(notificationHelper, times(1)).cancelAodSummaryNotification()

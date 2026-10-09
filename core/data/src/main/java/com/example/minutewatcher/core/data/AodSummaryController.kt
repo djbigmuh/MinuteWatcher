@@ -98,10 +98,12 @@ class AodSummaryController
             settings: AppSettings,
             permissionGranted: Boolean,
         ) {
+            // permissionGranted parameter from combine acts as a reactivity trigger when permission state changes;
+            // actual decision is made using live availability check from notificationHelper.
+            val availability = notificationHelper.isAodSummaryAvailable()
             val isAvailable =
                 settings.aodSummaryEnabled &&
-                    permissionGranted &&
-                    notificationHelper.isAodSummaryAvailable() &&
+                    availability &&
                     snapshot.timestamp != Constants.Data.EMPTY_TIMESTAMP
 
             val simLines = if (isAvailable) buildSimLines(snapshot) else emptyList()
@@ -110,8 +112,7 @@ class AodSummaryController
                 val reason =
                     when {
                         !settings.aodSummaryEnabled -> "setting disabled"
-                        !permissionGranted || !notificationHelper.isAodSummaryAvailable() ->
-                            "permission or channel unavailable"
+                        !availability -> "permission or channel unavailable"
                         snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP -> "empty snapshot timestamp"
                         else -> "no active SIM lines with limits"
                     }
