@@ -21,6 +21,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -76,56 +77,39 @@ class TrafficTrackerCancellationTest {
         runTest(testDispatcher) {
             val attempts = runPhase1InitializationFailure()
             assertTrue("Should have collected flow", attempts > 0)
-
             runPhase2CancelRecoverDuringInit()
-
             val finalAttempts = runPhase3VerifyRecoverability()
-            assertTrue(
-                "Should perform a full initialization attempt path of 3 retries",
-                finalAttempts >= 1,
-            )
+            assertTrue("Should perform recovery", finalAttempts >= 1)
         }
+
+    private fun setupCapturingLogger(warningLogs: MutableList<String>) {
+        val capturingLogger =
+            object : Logger by NoOpLogger() {
+                override fun w(
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                ) {
+                    warningLogs.add(message)
+                }
+            }
+        val mockContext: Context =
+            mock {
+                on { filesDir } doReturn null
+            }
+        AppLogger.resetForTest()
+        AppLogger.init(mockContext, capturingLogger)
+    }
 
     @Test
     fun `startInitialization proceeds after timeout when previous job hangs and logs warning`() =
         runTest(testDispatcher) {
             val warningLogs = mutableListOf<String>()
-            val capturingLogger =
-                object : Logger by NoOpLogger() {
-                    override fun w(
-                        tag: String,
-                        message: String,
-                        throwable: Throwable?,
-                    ) {
-                        warningLogs.add(message)
-                    }
-                }
-            val mockContext: Context =
-                mock {
-                    on { filesDir } doReturn null
-                }
-            AppLogger.resetForTest()
-            AppLogger.init(mockContext, capturingLogger)
+            setupCapturingLogger(warningLogs)
 
-            val deps =
-                createTrafficTrackerDependencies(
-                    simIdentityRepository,
-                    simUsageRepository,
-                    simUsageResetRepository,
-                    permissionManager,
-                    baselineManager,
-                    deltaCalculator,
-                    simChangeHandler,
-                    targetResolver,
-                    permissionChecker,
-                    permissionStateNotifier,
-                    dataChangeNotifier,
-                    timeProvider,
-                )
-
+            val deps = createTrackerDeps()
             trafficTracker = TrafficTracker(deps, backgroundScope)
 
-            // Start a non-cooperative hanging initialization job
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(
                 flow {
                     withContext(NonCancellable) {
@@ -135,35 +119,40 @@ class TrafficTrackerCancellationTest {
                 },
             )
 
-            val firstInitJob =
-                backgroundScope.launch {
-                    trafficTracker.startInitialization()
-                }
+            val firstInit = backgroundScope.launch { trafficTracker.startInitialization() }
             runCurrent()
 
-            // Now start a second initialization while first is hanging non-cooperatively
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(
-                flow {
-                    emit(emptyList())
-                },
-            )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            val secondInit = backgroundScope.launch { trafficTracker.startInitialization() }
 
-            val secondInitJob =
-                backgroundScope.launch {
-                    trafficTracker.startInitialization()
-                }
-
-            // Advance scheduler past short timeout
             testDispatcher.scheduler.advanceTimeBy(Constants.Flow.SHORT_TIMEOUT_MS + 1000L)
             runCurrent()
 
-            val hasTimeoutWarning = warningLogs.any { it.contains("previous initialization job did not complete within timeout") }
-            assertTrue("Expected warning log about previous initialization job timeout", hasTimeoutWarning)
+            val hasWarning =
+                warningLogs.any {
+                    it.contains("previous initialization job did not complete within timeout")
+                }
+            assertTrue("Expected timeout warning", hasWarning)
 
-            firstInitJob.cancel()
-            secondInitJob.cancel()
-            AppLogger.resetForTest()
+            firstInit.cancel()
+            secondInit.cancel()
         }
+
+    private fun createTrackerDeps() =
+        createTrafficTrackerDependencies(
+            simIdentityRepository,
+            simUsageRepository,
+            simUsageResetRepository,
+            permissionManager,
+            baselineManager,
+            deltaCalculator,
+            simChangeHandler,
+            targetResolver,
+            permissionChecker,
+            permissionStateNotifier,
+            dataChangeNotifier,
+            timeProvider,
+        )
 
     private fun TestScope.runPhase1InitializationFailure(): Int {
         var attempts = 0
@@ -173,25 +162,8 @@ class TrafficTrackerCancellationTest {
                 throw IOException("Init failure")
             },
         )
-
-        val deps =
-            createTrafficTrackerDependencies(
-                simIdentityRepository,
-                simUsageRepository,
-                simUsageResetRepository,
-                permissionManager,
-                baselineManager,
-                deltaCalculator,
-                simChangeHandler,
-                targetResolver,
-                permissionChecker,
-                permissionStateNotifier,
-                dataChangeNotifier,
-                timeProvider,
-            )
-
+        val deps = createTrackerDeps()
         trafficTracker = TrafficTracker(deps, backgroundScope).apply { ensureStarted() }
-
         testDispatcher.scheduler.advanceUntilIdle()
         runCurrent()
         return attempts
@@ -205,21 +177,11 @@ class TrafficTrackerCancellationTest {
                 awaitCancellation()
             },
         )
-
-        val recoverJob =
-            launch {
-                trafficTracker.recover()
-            }
+        val recoverJob = launch { trafficTracker.recover() }
         runCurrent()
-
-        withTimeout(10.seconds) {
-            reachedInit.await()
-        }
+        withTimeout(10.seconds) { reachedInit.await() }
         runCurrent()
-
-        withTimeout(10.seconds) {
-            recoverJob.cancelAndJoin()
-        }
+        withTimeout(10.seconds) { recoverJob.cancelAndJoin() }
     }
 
     private suspend fun TestScope.runPhase3VerifyRecoverability(): Int {
@@ -230,11 +192,7 @@ class TrafficTrackerCancellationTest {
                 throw IOException("Final failure")
             },
         )
-
-        val finalJob =
-            launch {
-                trafficTracker.recover()
-            }
+        val finalJob = launch { trafficTracker.recover() }
         testDispatcher.scheduler.advanceUntilIdle()
         runCurrent()
         finalJob.cancelAndJoin()

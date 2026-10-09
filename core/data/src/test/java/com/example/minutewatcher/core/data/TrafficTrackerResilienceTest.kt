@@ -360,7 +360,11 @@ class TrafficTrackerResilienceTest {
             val singleErrorLog = errorLogs.find { it.first == "TrafficTracker: timeout fetching active sims" }
             assertNotNull(singleErrorLog)
 
-            val utilityTimeoutLog = errorLogs.find { it.first.contains("Timeout reading from Flow") || it.first.contains("activeSims") }
+            val utilityTimeoutLog =
+                errorLogs.find {
+                    it.first.contains("Timeout reading from Flow") ||
+                        it.first.contains("activeSims")
+                }
             assertTrue("Should not contain utility timeout log", utilityTimeoutLog == null)
 
             AppLogger.resetForTest()

@@ -149,7 +149,9 @@ class TrafficTracker
                         true
                     } ?: false
                 if (!completed) {
-                    AppLogger.w("TrafficTracker: previous initialization job did not complete within timeout, proceeding")
+                    AppLogger.w(
+                        "TrafficTracker: previous initialization job did not complete within timeout, proceeding",
+                    )
                 }
             }
             currentCoroutineContext().ensureActive()
