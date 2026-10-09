@@ -21,10 +21,10 @@ class AutoResetScheduleRepositoryImpl
         @AppDataStore dataStore: DataStore<Preferences>,
     ) : BaseDataStoreRepository(dataStore),
         AutoResetScheduleRepository {
-    override suspend fun getLastCheckMillis(): Long? =
-        getValue(DataStoreKeys.AUTO_RESET_LAST_CHECK_MILLIS, -1L).takeIf { it != -1L }
+        override suspend fun getLastCheckMillis(): Long? =
+            getValue(DataStoreKeys.AUTO_RESET_LAST_CHECK_MILLIS, -1L).takeIf { it != -1L }
 
-    override suspend fun setLastCheckMillis(valueMillis: Long) {
+        override suspend fun setLastCheckMillis(valueMillis: Long) {
             val result =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     dataStore.edit { prefs ->
@@ -37,9 +37,9 @@ class AutoResetScheduleRepositoryImpl
             }
         }
 
-    override suspend fun getFailureCount(): Int = getValue(DataStoreKeys.AUTO_RESET_FAIL_COUNT, 0)
+        override suspend fun getFailureCount(): Int = getValue(DataStoreKeys.AUTO_RESET_FAIL_COUNT, 0)
 
-    override suspend fun setFailureCount(count: Int) {
+        override suspend fun setFailureCount(count: Int) {
             val result =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     dataStore.edit { prefs ->

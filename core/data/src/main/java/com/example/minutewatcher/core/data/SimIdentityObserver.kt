@@ -431,17 +431,17 @@ internal class SimIdentityObserver
                     null,
                 )
 
-    /**
-     * StateFlow of active SIMs for consumers expecting a non-null list (defaults to emptyList()).
-     */
-    val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
-        resolvedActiveSimsCache
-            .map { it ?: emptyList() }
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                emptyList(),
-            )
+        /**
+         * StateFlow of active SIMs for consumers expecting a non-null list (defaults to emptyList()).
+         */
+        val activeSimsCache: StateFlow<List<ActiveSimInfo>> =
+            resolvedActiveSimsCache
+                .map { it ?: emptyList() }
+                .stateIn(
+                    scope,
+                    SharingStarted.Eagerly,
+                    emptyList(),
+                )
 
         private fun cleanupCache(sims: List<ActiveSimInfo>) {
             val activeSlots = sims.asSequence().map { it.slotIndex }.toSet()

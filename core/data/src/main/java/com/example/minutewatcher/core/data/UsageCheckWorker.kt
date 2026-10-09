@@ -104,7 +104,7 @@ class UsageCheckWorker
             }
         }
 
-    private suspend fun executeRefreshAndProcess(): Result {
+        private suspend fun executeRefreshAndProcess(): Result {
             val refreshResult =
                 withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
                     deps.usageStateRepository.refresh()

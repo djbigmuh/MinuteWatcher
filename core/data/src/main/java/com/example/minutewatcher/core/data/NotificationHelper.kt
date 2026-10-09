@@ -48,7 +48,7 @@ class NotificationHelper
             createNotificationChannel()
         }
 
-    @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught")
         private fun createNotificationChannel() {
             val manager = notificationManager ?: return
             val channel =
@@ -70,16 +70,16 @@ class NotificationHelper
                     enableVibration(false)
                     setShowBadge(false)
                 }
-        try {
-            manager.createNotificationChannel(channel)
-        } catch (e: RuntimeException) {
-            AppLogger.e("Failed to create main notification channel", e)
-        }
-        try {
-            manager.createNotificationChannel(aodChannel)
-        } catch (e: RuntimeException) {
-            AppLogger.e("Failed to create AOD summary notification channel", e)
-        }
+            try {
+                manager.createNotificationChannel(channel)
+            } catch (e: RuntimeException) {
+                AppLogger.e("Failed to create main notification channel", e)
+            }
+            try {
+                manager.createNotificationChannel(aodChannel)
+            } catch (e: RuntimeException) {
+                AppLogger.e("Failed to create AOD summary notification channel", e)
+            }
         }
 
         /**
@@ -257,7 +257,7 @@ class NotificationHelper
             }
         }
 
-    @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught")
         fun cancelAodSummaryNotification() {
             val manager = notificationManager ?: return
             try {

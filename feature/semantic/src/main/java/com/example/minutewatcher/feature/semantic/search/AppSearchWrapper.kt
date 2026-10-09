@@ -52,8 +52,8 @@ interface AppSearchSessionWrapper : AutoCloseable {
 internal class AppSearchWrapperImpl
     @Inject
     constructor() : AppSearchWrapper {
-    @VisibleForTesting
-    internal fun isPlatformBackend(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        @VisibleForTesting
+        internal fun isPlatformBackend(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
         override suspend fun createSearchSession(
             context: Context,
@@ -65,19 +65,19 @@ internal class AppSearchWrapperImpl
                 createLocalSearchSession(context, databaseName)
             }
 
-    @RequiresApi(Build.VERSION_CODES.S)
-    private suspend fun createPlatformSearchSession(
-        context: Context,
-        databaseName: String,
-    ): AppSearchSessionWrapper {
-        val future =
-            PlatformStorage.createSearchSessionAsync(
-                PlatformStorage.SearchContext.Builder(context, databaseName).build(),
-            )
-        return AppSearchSessionWrapperImpl(future.await())
-    }
+        @RequiresApi(Build.VERSION_CODES.S)
+        private suspend fun createPlatformSearchSession(
+            context: Context,
+            databaseName: String,
+        ): AppSearchSessionWrapper {
+            val future =
+                PlatformStorage.createSearchSessionAsync(
+                    PlatformStorage.SearchContext.Builder(context, databaseName).build(),
+                )
+            return AppSearchSessionWrapperImpl(future.await())
+        }
 
-    private suspend fun createLocalSearchSession(
+        private suspend fun createLocalSearchSession(
             context: Context,
             databaseName: String,
         ): AppSearchSessionWrapper {
