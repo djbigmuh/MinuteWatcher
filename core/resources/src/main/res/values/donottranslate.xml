@@ -73,10 +73,6 @@
     <string name="operator_generic" translatable="false">Operator %1$d</string>
     <string name="operator_with_mcc" translatable="false">Operator (%1$s)</string>
 
-    <string name="language_system_icon" translatable="false">🌐</string>
-    <string name="theme_system_icon" translatable="false">🌓</string>
-    <string name="theme_light_icon" translatable="false">☀️</string>
-    <string name="theme_dark_icon" translatable="false">🌙</string>
     <string name="adjustment_mark" translatable="false">*adj</string>
     <string name="tile_operator_value_format" translatable="false">%1$s: %2$s</string>
 </resources>

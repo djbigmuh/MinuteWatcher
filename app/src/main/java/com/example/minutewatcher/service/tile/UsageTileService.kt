@@ -147,13 +147,19 @@ class UsageTileService : TileService() {
             } else {
                 // For older versions (API 26-28), subtitle is not supported.
                 // We use a compact "Name: Value" format in the label.
-                tile.label = "$operatorName: $remainingText"
+                tile.label =
+                    appLocaleContext.getString(R.string.tile_operator_value_format, operatorName, remainingText)
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 tile.stateDescription = remainingText
             }
-            tile.contentDescription = "$operatorName: $remainingText"
+            tile.contentDescription =
+                appLocaleContext.getString(
+                    R.string.tile_operator_value_format,
+                    operatorName,
+                    remainingText,
+                )
             tile.applyState(TileState.ACTIVE)
         } else {
             tile.label = operatorName
@@ -161,7 +167,12 @@ class UsageTileService : TileService() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.subtitle = appLocaleContext.getString(R.string.no_data)
             }
-            tile.contentDescription = "$operatorName: ${appLocaleContext.getString(R.string.no_data)}"
+            tile.contentDescription =
+                appLocaleContext.getString(
+                    R.string.tile_operator_value_format,
+                    operatorName,
+                    appLocaleContext.getString(R.string.no_data),
+                )
         }
 
         tile.updateTile()

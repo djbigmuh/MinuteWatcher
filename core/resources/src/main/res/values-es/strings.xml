@@ -15,12 +15,10 @@
     <string name="add_widget_button">Añadir widget</string>
 
     <!-- Settings: General -->
-    <string name="settings_saved_toast">Ajustes guardados</string>
     <string name="settings_save_partial_success">Ajustes generales guardados. Ajustes de SIM omitidos (lista de SIM no disponible)</string>
     <string name="settings_save_partial_failure">Ajustes generales guardados. No se pudieron guardar los ajustes de SIM</string>
     <string name="settings_save_partial_failure_slots">Ajustes generales guardados. No se pudieron guardar los ajustes de la SIM %1$s</string>
     <string name="settings_save_failed">Error al guardar</string>
-    <string name="settings_save_already_in_progress">Guardado ya en curso</string>
     <string name="language_system">Sistema</string>
     <string name="language_en">Inglés</string>
     <string name="language_ru">Ruso</string>
@@ -170,7 +168,6 @@
 
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Icono de tarjeta SIM</string>
-    <string name="widget_settings_content_desc">Ajustes del widget</string>
     <string name="sim_card_details_content_desc">Detalles de la tarjeta SIM %1$s</string>
     <string name="adjust_minutes_content_desc">Ajustar minutos restantes</string>
     <string name="adjust_traffic_content_desc">Ajustar tráfico restante</string>

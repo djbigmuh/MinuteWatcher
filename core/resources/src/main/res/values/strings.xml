@@ -15,12 +15,10 @@
     <string name="add_widget_button">Add Widget</string>
 
     <!-- Settings: General -->
-    <string name="settings_saved_toast">Settings saved</string>
     <string name="settings_save_partial_success">General settings saved. SIM settings skipped (SIM list unavailable)</string>
     <string name="settings_save_partial_failure">General settings saved. SIM-specific settings could not be saved</string>
     <string name="settings_save_partial_failure_slots">General settings saved. SIM-specific settings could not be saved for SIM %1$s</string>
     <string name="settings_save_failed">Save failed</string>
-    <string name="settings_save_already_in_progress">Saving already in progress</string>
     <string name="language_system">System</string>
     <string name="language_en">English</string>
     <string name="language_ru">Russian</string>
@@ -171,7 +169,6 @@
 
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">SIM card icon</string>
-    <string name="widget_settings_content_desc">Widget Settings</string>
     <string name="sim_card_details_content_desc">%1$s SIM card details</string>
     <string name="adjust_minutes_content_desc">Adjust remaining minutes</string>
     <string name="adjust_traffic_content_desc">Adjust remaining traffic</string>

@@ -15,12 +15,10 @@
     <string name="add_widget_button">Добавить виджет</string>
 
     <!-- Settings: General -->
-    <string name="settings_saved_toast">Настройки сохранены</string>
     <string name="settings_save_partial_success">Общие настройки сохранены. Настройки SIM пропущены (список SIM недоступен)</string>
     <string name="settings_save_partial_failure">Общие настройки сохранены. Настройки SIM не удалось сохранить</string>
     <string name="settings_save_partial_failure_slots">Общие настройки сохранены. Настройки SIM %1$s не удалось сохранить</string>
     <string name="settings_save_failed">Не удалось сохранить</string>
-    <string name="settings_save_already_in_progress">Сохранение уже выполняется</string>
     <string name="language_system">Системный</string>
     <string name="language_en">Английский</string>
     <string name="language_ru">Русский</string>
@@ -172,7 +170,6 @@
 
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Иконка SIM-карты</string>
-    <string name="widget_settings_content_desc">Настройки виджета</string>
     <string name="sim_card_details_content_desc">Детали SIM-карты %1$s</string>
     <string name="adjust_minutes_content_desc">Изменить остаток минут</string>
     <string name="adjust_traffic_content_desc">Изменить остаток трафика</string>
