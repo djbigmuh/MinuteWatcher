@@ -205,4 +205,46 @@ class WidgetPreviewLayoutTest {
 
         composeTestRule.onNodeWithText("Custom No Data").assertIsDisplayed()
     }
+
+    @Test
+    fun `stale data indicator padding layout parity`() {
+        val sim0 = createSimUiState(0, "MTS")
+        val sim1 = createSimUiState(1, "Beeline")
+        val warningText = "Unique Stale Data Warning Text"
+        val uiState =
+            createWidgetUiState(listOf(sim0, sim1), isHorizontal = true).copy(
+                refreshFailed = true,
+                strings =
+                    com.example.minutewatcher.core.model.WidgetStrings(
+                        usedText = "",
+                        minutesAbbr = "",
+                        limitText = "",
+                        gbAbbr = "",
+                        staleDataWarningText = warningText,
+                    ),
+            )
+
+        composeTestRule.setContent {
+            WidgetPreview(uiState = uiState)
+        }
+
+        composeTestRule.onNodeWithText(warningText).assertIsDisplayed()
+
+        val warningBounds = composeTestRule.onNodeWithText(warningText).getUnclippedBoundsInRoot()
+        val desc0 = "MTS: 100, 5.0 GB"
+        val simBounds = composeTestRule.onNodeWithContentDescription(desc0).getUnclippedBoundsInRoot()
+        println("DEBUG warningBounds: $warningBounds, simBounds: $simBounds")
+
+        val gap = (simBounds.top - warningBounds.bottom).value
+        assertTrue(
+            "Gap between warning text bottom and SIM cards top should be <= 5dp: gap=$gap",
+            gap <= 5f,
+        )
+
+        val topPadding = warningBounds.top.value
+        assertTrue(
+            "Top padding from preview top to warning text should be >= 3dp: top=$topPadding",
+            topPadding >= 3f,
+        )
+    }
 }

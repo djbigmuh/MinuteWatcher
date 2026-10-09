@@ -163,8 +163,9 @@ internal fun HorizontalSimLayout(
     sims: List<SimUiState>,
     uiState: WidgetUiState,
 ) {
+    // Parity contract with WidgetPreview: equal-width cells across full width
     Row(
-        modifier = GlanceModifier.wrapContentSize(),
+        modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         sims.forEachIndexed { index, sim ->
@@ -177,7 +178,7 @@ internal fun HorizontalSimLayout(
             if (
                 uiState.showSeparator && index < sims.size - 1
             ) {
-                SimSeparator(uiState, isHorizontal = true)
+                SimSeparator(sims, uiState, isHorizontal = true)
             }
         }
     }
@@ -185,7 +186,7 @@ internal fun HorizontalSimLayout(
 
 /**
  * Renders SIM cards vertically (in a column).
- * Each SIM card takes equal height (defaultWeight).
+ * Each SIM card takes natural height across full width.
  * Separator is displayed between SIM cards when showSeparator is true.
  *
  * @param sims List of SIM card states.
@@ -196,13 +197,14 @@ internal fun VerticalSimLayout(
     sims: List<SimUiState>,
     uiState: WidgetUiState,
 ) {
+    // Parity contract with WidgetPreview: natural height cells across full width
     Column(
-        modifier = GlanceModifier.wrapContentSize(),
+        modifier = GlanceModifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         sims.forEachIndexed { index, sim ->
             Box(
-                modifier = GlanceModifier.defaultWeight(),
+                modifier = GlanceModifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
                 SimItem(sim, uiState)
@@ -210,7 +212,7 @@ internal fun VerticalSimLayout(
             if (
                 uiState.showSeparator && index < sims.size - 1
             ) {
-                SimSeparator(uiState, isHorizontal = false)
+                SimSeparator(sims, uiState, isHorizontal = false)
             }
         }
     }
@@ -220,11 +222,13 @@ internal fun VerticalSimLayout(
  * Renders separator between SIM cards in widget.
  * Displayed when showSeparator = true and multiple SIMs are present.
  *
+ * @param sims List of visible SIM card states.
  * @param uiState Widget state.
  * @param isHorizontal true if separator is vertical (for horizontal layout).
  */
 @Composable
 internal fun SimSeparator(
+    sims: List<SimUiState>,
     uiState: WidgetUiState,
     isHorizontal: Boolean,
 ) {
@@ -233,7 +237,7 @@ internal fun SimSeparator(
             GlanceTheme.colors.outline
         } else {
             val color =
-                Color(uiState.simUiStates.firstOrNull()?.secondaryTextColor ?: AndroidColor.GRAY)
+                Color(sims.firstOrNull()?.secondaryTextColor ?: AndroidColor.GRAY)
                     .copy(alpha = Constants.Widget.SEPARATOR_ALPHA)
             ColorProvider(day = color, night = color)
         }
