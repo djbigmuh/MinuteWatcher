@@ -675,7 +675,16 @@ class TrafficTracker
                 if (!validateActiveIdentity(startElapsed, targetIdentity)) return@withLock
                 simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
                 val expectedLastResetDate = readResetDate(startElapsed, targetIdentity) ?: return@withLock
-                val currentRetryCount = readBaselineRetryCount(startElapsed, targetIdentity) ?: return@withLock
+                val retryResult = readBaselineRetryCount(targetIdentity)
+                if (retryResult.isFailure) {
+                    updateStatusOnError(
+                        startElapsed,
+                        "Timeout reading baseline retry count for $targetIdentity",
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    )
+                    return@withLock
+                }
+                val currentRetryCount = retryResult.getOrNull()
                 val statsResult = baselineManager.getCurrentMobileBytes(expectedLastResetDate)
                 handleTrafficUpdateExecution(
                     startElapsed,
@@ -731,31 +740,25 @@ class TrafficTracker
                     null
                 }
 
-        private suspend fun readBaselineRetryCount(
-            startElapsed: Long,
-            targetIdentity: String,
-        ): Int? {
-            val retryResult = baselineManager.getRetryCount(targetIdentity)
-            if (retryResult.isFailure) {
-                updateStatusOnError(
-                    startElapsed,
-                    "Timeout reading baseline retry count for $targetIdentity",
-                    code = TrackingStatus.ErrorCode.TIMEOUT,
-                )
-                return null
-            }
-            return retryResult.getOrNull()
-        }
+        /**
+         * Reads the baseline retry count for the given [targetIdentity].
+         *
+         * @return [Result.success] containing `null` if no retry count is set,
+         * [Result.success] containing `Int` if a retry count is present,
+         * or [Result.failure] if reading from DataStore failed.
+         */
+        private suspend fun readBaselineRetryCount(targetIdentity: String): Result<Int?> =
+            baselineManager.getRetryCount(targetIdentity)
 
         private suspend fun handleTrafficUpdateExecution(
             startElapsed: Long,
             target: TargetInfo,
             targetIdentity: String,
-            currentRetryCount: Int,
+            currentRetryCount: Int?,
             statsResult: StatsResult,
             expectedLastResetDate: Long,
         ) {
-            if (currentRetryCount >= 0) {
+            if (currentRetryCount != null) {
                 if (currentRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
                     baselineManager.removeRetry(targetIdentity)
                     updateStatusOnError(
