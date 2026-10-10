@@ -14,7 +14,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -53,11 +55,14 @@ class CallTrackerBootTest {
     }
 
     @Test
-    fun `onBootAwaited clears sessions synchronously`() =
+    fun `onBootAwaited performs selective cleanup via clearStaleSessions`() =
         runTest(testDispatcher) {
+            whenever(sessionCleaner.clearStaleSessions(any())).thenReturn(1)
+
             callTracker.onBootAwaited()
 
-            verify(sessionCleaner).clearAllSessions()
+            verify(sessionCleaner).clearStaleSessions(any())
+            verify(sessionCleaner, never()).clearAllSessions()
 
             // Wait for refreshStatus inside finally
             advanceUntilIdle()

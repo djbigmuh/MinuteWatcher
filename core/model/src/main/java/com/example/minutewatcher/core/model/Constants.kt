@@ -238,6 +238,14 @@ object Constants {
             MAX_CALL_DURATION_HOURS * Time.MINUTES_IN_HOUR * Time.SECONDS_IN_MINUTE * Time.MILLIS_IN_SECOND
 
         /**
+         * Documented tolerance boundary for wall-clock adjustments (e.g., network time synchronization)
+         * between session recording time and cleanup time; sessions within tolerance are preserved;
+         * erroneously preserved past boot sessions are limited by existing [MAX_CALL_DURATION_MS]
+         * checks and boot time comparison upon call end.
+         */
+        const val BOOT_EPOCH_TOLERANCE_MS = 15 * 60_000L
+
+        /**
          * Threshold for showing inaccurate attribution banner.
          * Why 3: three consecutive unassigned events indicate a systemic issue
          * rather than a transient race condition.

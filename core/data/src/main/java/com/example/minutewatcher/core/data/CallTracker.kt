@@ -352,8 +352,8 @@ class CallTracker
             var operationCompleted = false
             try {
                 callMutexHolder.mutex.withLock {
-                    sessionCleaner.clearAllSessions()
-                    AppLogger.d("CallTracker: cleared all sessions during $tag")
+                    val count = sessionCleaner.clearStaleSessions(this)
+                    AppLogger.d("CallTracker: cleared $count stale sessions during $tag")
                 }
                 operationCompleted = true
             } catch (e: CancellationException) {

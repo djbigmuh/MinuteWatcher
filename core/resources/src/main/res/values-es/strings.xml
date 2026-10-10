@@ -126,6 +126,10 @@
     <string name="notification_traffic_body">¡Uso de tráfico %1$s! Quedan %2$.1f GB (%3$d%%). El mes termina en %4$s.</string>
     <string name="notification_minutes_exhausted_body">El paquete de minutos para el periodo ha finalizado.</string>
     <string name="notification_traffic_exhausted_body">El paquete de tráfico para el periodo ha finalizado.</string>
+    <string name="notification_minutes_body_no_period">¡Uso de minutos %1$s! Quedan %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">¡Uso de tráfico %1$s! Quedan %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Límite de minutos alcanzado. El uso registrado sigue acumulándose hasta que lo restablezcas.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Límite de tráfico alcanzado. El uso registrado sigue acumulándose hasta que lo restablezcas.</string>
     <string name="usage_level_low">BAJO</string>
     <string name="usage_level_critical">CRÍTICAMENTE BAJO</string>
 

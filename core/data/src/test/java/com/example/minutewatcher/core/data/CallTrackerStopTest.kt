@@ -63,8 +63,9 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
             permissionChangesFlow.emit(Unit)
             advanceUntilIdle()
 
-            // Initial refresh from ensureStarted (1) + refresh from recover (1) + ONE from permission change (1) = 3
-            verify(callSessionRepository, times(3)).getActiveCallSubIds()
+            // Initial refresh from ensureStarted (1) + refresh from recover including stale cleanup (2)
+            // + ONE from permission change (1) = 4
+            verify(callSessionRepository, times(4)).getActiveCallSubIds()
         }
 
     @Test

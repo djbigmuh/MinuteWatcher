@@ -126,6 +126,10 @@
     <string name="notification_traffic_body">%1$s traffic usage! Left %2$.1f GB (%3$d%%). Month ends in %4$s.</string>
     <string name="notification_minutes_exhausted_body">Minutes package for the period has ended.</string>
     <string name="notification_traffic_exhausted_body">Traffic package for the period has ended.</string>
+    <string name="notification_minutes_body_no_period">%1$s minutes usage! Left %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s traffic usage! Left %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Minutes limit reached. Tracked usage keeps accumulating until you reset it.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Traffic limit reached. Tracked usage keeps accumulating until you reset it.</string>
     <string name="usage_level_low">LOW</string>
     <string name="usage_level_critical">CRITICAL LOW</string>
 

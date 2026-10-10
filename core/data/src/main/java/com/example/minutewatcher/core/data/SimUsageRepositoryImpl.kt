@@ -213,26 +213,54 @@ class SimUsageRepositoryImpl
         override suspend fun setLastTotalBytes(
             identity: String,
             bytes: Long,
-        ) {
-            dataStore.edit { it[DataStoreKeys.lastTotalBytesKey(identity)] = bytes }
+            expectedLastResetDate: Long,
+        ): Boolean {
+            var applied = false
+            dataStore.edit { prefs ->
+                val currentResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: Constants.Data.EMPTY_TIMESTAMP
+                if (currentResetDate == expectedLastResetDate ||
+                    expectedLastResetDate == Constants.Data.EMPTY_TIMESTAMP ||
+                    currentResetDate == Constants.Data.EMPTY_TIMESTAMP
+                ) {
+                    prefs[DataStoreKeys.lastTotalBytesKey(identity)] = bytes
+                    applied = true
+                }
+            }
+            return applied
         }
 
         override suspend fun incrementTrafficAndSetBaseline(
             identity: String,
             deltaMb: Float,
             totalBytes: Long,
-        ) {
+            expectedLastResetDate: Long,
+        ): Boolean {
+            var applied = false
             dataStore.edit { prefs ->
-                // 1. Increment traffic
-                val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
-                val newValue = currentUsage + deltaMb.toDouble()
-                val rounded = ((newValue * TRAFFIC_ROUNDING_FACTOR).roundToLong() / TRAFFIC_ROUNDING_FACTOR).toFloat()
-                prefs[DataStoreKeys.trafficUsedKey(identity)] =
-                    rounded.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_MB.toFloat())
+                val currentResetDate =
+                    prefs[DataStoreKeys.lastResetDateKey(identity)]
+                        ?: Constants.Data.EMPTY_TIMESTAMP
+                if (currentResetDate == expectedLastResetDate ||
+                    expectedLastResetDate == Constants.Data.EMPTY_TIMESTAMP ||
+                    currentResetDate == Constants.Data.EMPTY_TIMESTAMP
+                ) {
+                    // 1. Increment traffic
+                    val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
+                    val newValue = currentUsage + deltaMb.toDouble()
+                    val rounded =
+                        (
+                            (newValue * TRAFFIC_ROUNDING_FACTOR).roundToLong() /
+                                TRAFFIC_ROUNDING_FACTOR
+                            ).toFloat()
+                    prefs[DataStoreKeys.trafficUsedKey(identity)] =
+                        rounded.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_MB.toFloat())
 
-                // 2. Update baseline
-                prefs[DataStoreKeys.lastTotalBytesKey(identity)] = totalBytes
+                    // 2. Update baseline
+                    prefs[DataStoreKeys.lastTotalBytesKey(identity)] = totalBytes
+                    applied = true
+                }
             }
+            return applied
         }
 
         override suspend fun ensureTrackingWindowInitialized(identity: String): Boolean =

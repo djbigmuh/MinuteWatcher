@@ -23,18 +23,41 @@ class TrafficDeltaCalculator
             currentBytes: Long,
             lastTotalBytes: Long,
             target: TargetInfo,
-        ) {
+            expectedLastResetDate: Long,
+        ): Boolean {
             try {
                 if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
-                    simUsageResetRepository.setLastTotalBytes(targetIdentity, currentBytes)
-                    AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
+                    val applied =
+                        simUsageResetRepository.setLastTotalBytes(
+                            targetIdentity,
+                            currentBytes,
+                            expectedLastResetDate,
+                        )
+                    if (applied) {
+                        AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
+                    } else {
+                        AppLogger.d(
+                            "TrafficDeltaCalculator: baseline reset write skipped " +
+                                "due to window mismatch for $targetIdentity",
+                        )
+                    }
+                    return applied
                 } else {
-                    handleTrafficDelta(targetIdentity, currentBytes, lastTotalBytes, target.slot)
+                    return handleTrafficDelta(
+                        targetIdentity,
+                        currentBytes,
+                        lastTotalBytes,
+                        target.slot,
+                        expectedLastResetDate,
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("TrafficDeltaCalculator: Critical error updating baseline/usage for $targetIdentity", e)
+                AppLogger.e(
+                    "TrafficDeltaCalculator: Critical error updating baseline/usage for $targetIdentity",
+                    e,
+                )
                 throw e
             }
         }
@@ -44,24 +67,39 @@ class TrafficDeltaCalculator
             currentBytes: Long,
             lastTotalBytes: Long,
             slot: Int,
-        ) {
+            expectedLastResetDate: Long,
+        ): Boolean {
             try {
                 val deltaBytes = currentBytes - lastTotalBytes
                 if (deltaBytes > 0L) {
                     val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
                     if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
-                        simUsageResetRepository.incrementTrafficAndSetBaseline(
-                            identity,
-                            deltaMB,
-                            currentBytes,
-                        )
-                        AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
+                        val applied =
+                            simUsageResetRepository.incrementTrafficAndSetBaseline(
+                                identity,
+                                deltaMB,
+                                currentBytes,
+                                expectedLastResetDate,
+                            )
+                        if (applied) {
+                            AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
+                        } else {
+                            AppLogger.d(
+                                "TrafficDeltaCalculator: increment traffic write skipped " +
+                                    "due to window mismatch for $identity",
+                            )
+                        }
+                        return applied
                     }
                 }
+                return true
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("TrafficDeltaCalculator: Error calculating/persisting delta for $identity", e)
+                AppLogger.e(
+                    "TrafficDeltaCalculator: Error calculating/persisting delta for $identity",
+                    e,
+                )
                 throw e
             }
         }

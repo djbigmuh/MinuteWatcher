@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -136,7 +137,21 @@ class AutoResetSchedulerTest {
         }
 
     @Test
-    fun `checkOnStart does not run twice on same scheduler instance`() =
+    fun `checkOnStart runs again after successful check when interval has expired`() =
+        runTest {
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
+
+            scheduler.checkOnStart()
+            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+            val firstCheckTime = fakeRepository.lastCheckMillis!!
+
+            timeProvider.setTime(firstCheckTime + 4_000_000L)
+            scheduler.checkOnStart()
+            verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(false))
+        }
+
+    @Test
+    fun `checkOnStart does not run when interval has not expired`() =
         runTest {
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
 
@@ -145,6 +160,37 @@ class AutoResetSchedulerTest {
 
             scheduler.checkOnStart()
             verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+        }
+
+    @Test
+    fun `two concurrent calls result in single execution`() =
+        runTest {
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
+
+            kotlinx.coroutines.withTimeout(5000L) {
+                kotlinx.coroutines.coroutineScope {
+                    val j1 = launch { scheduler.checkOnStart() }
+                    val j2 = launch { scheduler.checkOnStart() }
+                    j1.join()
+                    j2.join()
+                }
+            }
+
+            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+        }
+
+    @Test
+    fun `call started after previous completion is not blocked by single flight flag`() =
+        runTest {
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
+
+            scheduler.checkOnStart()
+            verify(autoResetUseCase, times(1)).performAutoReset(shouldNotify = eq(false))
+
+            val t = fakeRepository.lastCheckMillis!! + 4_000_000L
+            timeProvider.setTime(t)
+            scheduler.checkOnStart()
+            verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(false))
         }
 
     @Test

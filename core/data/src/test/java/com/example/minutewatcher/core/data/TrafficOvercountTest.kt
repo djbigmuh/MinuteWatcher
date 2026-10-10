@@ -183,7 +183,8 @@ class TrafficOvercountTest {
 
             // 1. Setup SIM 1 with some initial state in DataStore
             simUsageResetRepository.ensureTrackingWindowInitialized(sim1Identity)
-            simUsageResetRepository.setLastTotalBytes(sim1Identity, 100L * Constants.BYTES_PER_MB)
+            val u1 = simUsageRepository.getSimUsage(sim1Identity).first()
+            simUsageResetRepository.setLastTotalBytes(sim1Identity, 100L * Constants.BYTES_PER_MB, u1.lastResetDate)
 
             // SIM 1 is active. Let's say it has 500MB used.
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(
@@ -201,7 +202,8 @@ class TrafficOvercountTest {
 
             // 2. Switch default data to SIM 2.
             simUsageResetRepository.ensureTrackingWindowInitialized(sim2Identity)
-            simUsageResetRepository.setLastTotalBytes(sim2Identity, 0L)
+            val u2 = simUsageRepository.getSimUsage(sim2Identity).first()
+            simUsageResetRepository.setLastTotalBytes(sim2Identity, 0L, u2.lastResetDate)
 
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(2)
             whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))

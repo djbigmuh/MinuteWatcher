@@ -97,6 +97,7 @@ class UsageCheckWorkerTest {
         minutesLimit: Int = 0,
         identity: String = "sim_0",
         autoResetDay: Int = 1,
+        autoReset: Boolean = true,
     ): GlobalSnapshot {
         val entity =
             SemanticEntity(
@@ -120,6 +121,7 @@ class UsageCheckWorkerTest {
                 operatorName = "MTS",
                 entities = mapOf(PackageType.MINUTES to entity),
                 autoResetDay = autoResetDay,
+                autoReset = autoReset,
             )
         return GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
@@ -135,6 +137,7 @@ class UsageCheckWorkerTest {
         limit: Long,
         remaining: Long,
         autoResetDay: Int = 1,
+        autoReset: Boolean = true,
     ): GlobalSnapshot {
         val entity =
             SemanticEntity(
@@ -158,6 +161,7 @@ class UsageCheckWorkerTest {
                 operatorName = "MTS",
                 entities = mapOf(PackageType.DATA to entity),
                 autoResetDay = autoResetDay,
+                autoReset = autoReset,
             )
         return GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
@@ -220,6 +224,59 @@ class UsageCheckWorkerTest {
             verify(notificationHelper).sendUsageNotification(
                 title = any(),
                 message = argThat { contains(expectedDaysText) },
+                simSlot = eq(0),
+                type = eq(NOTIFICATION_TYPE_MINUTES),
+            )
+        }
+
+    @Test
+    fun `low minutes notification when autoReset is false does not contain days text`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val nowMs = 1_700_000_000_000L
+            whenever(timeProvider.now()).thenReturn(nowMs)
+
+            val snapshot =
+                createUsageSnapshot(
+                    minutesUsed = 85,
+                    minutesLimit = 100,
+                    identity = "sim_no_reset",
+                    autoReset = false,
+                )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val expectedDaysRemaining = DateUtils.getDaysRemainingInMonth(1, nowMs)
+            val expectedDaysText = FormatUtils.formatDaysPlural(context, expectedDaysRemaining)
+
+            worker.doWork()
+
+            verify(notificationHelper).sendUsageNotification(
+                title = any(),
+                message = argThat { !contains(expectedDaysText) },
+                simSlot = eq(0),
+                type = eq(NOTIFICATION_TYPE_MINUTES),
+            )
+        }
+
+    @Test
+    fun `exhausted minutes notification when autoReset is false uses no period message`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val snapshot =
+                createUsageSnapshot(
+                    minutesUsed = 100,
+                    minutesLimit = 100,
+                    identity = "sim_no_reset_exhausted",
+                    autoReset = false,
+                )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            worker.doWork()
+
+            val expectedMessage = context.getString(R.string.notification_minutes_exhausted_body_no_period)
+            verify(notificationHelper).sendUsageNotification(
+                title = any(),
+                message = eq(expectedMessage),
                 simSlot = eq(0),
                 type = eq(NOTIFICATION_TYPE_MINUTES),
             )

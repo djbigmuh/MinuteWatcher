@@ -41,20 +41,24 @@ interface SimUsageResetRepository {
     fun getLastTotalBytes(identity: String): Flow<Long>
 
     /**
-     * Sets the last total bytes seen at reset.
+     * Sets the last total bytes seen at reset if the stored lastResetDate equals expectedLastResetDate.
      *
+     * @return true if write was applied, false if skipped due to window mismatch.
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun setLastTotalBytes(
         identity: String,
         bytes: Long,
-    )
+        expectedLastResetDate: Long,
+    ): Boolean
 
     /**
-     * Increment traffic usage and update baseline atomically in a single DataStore transaction.
-     * Prevents data loss or double counting if one operation fails.
+     * Increment traffic usage and update baseline atomically in a single DataStore transaction
+     * if the stored lastResetDate equals expectedLastResetDate.
+     * Prevents data loss or double counting if one operation fails or window changed.
      *
+     * @return true if write was applied, false if skipped due to window mismatch.
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is cancelled.
      */
@@ -62,7 +66,8 @@ interface SimUsageResetRepository {
         identity: String,
         deltaMb: Float,
         totalBytes: Long,
-    )
+        expectedLastResetDate: Long,
+    ): Boolean
 
     /**
      * Ensures that the tracking window (lastResetDate and lastTotalBytes) is initialized.

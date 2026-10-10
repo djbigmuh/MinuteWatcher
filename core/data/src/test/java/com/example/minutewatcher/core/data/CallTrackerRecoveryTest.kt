@@ -22,14 +22,15 @@ class CallTrackerRecoveryTest : CallTrackerTestFixtures() {
     override val testDispatcher = UnconfinedTestDispatcher()
 
     @Test
-    fun `onBootAwaited clears all call sessions`() =
+    fun `onBootAwaited performs selective cleanup`() =
         runTest(testDispatcher) {
             setupCommonMocks()
             val callTracker = createTracker(backgroundScope)
             callTracker.onBootAwaited()
             advanceUntilIdle()
 
-            verify(callSessionRepository).clearAllCallSessions()
+            verify(callSessionRepository, atLeastOnce()).getActiveCallSubIds()
+            verify(callSessionRepository, never()).clearAllCallSessions()
         }
 
     @Test

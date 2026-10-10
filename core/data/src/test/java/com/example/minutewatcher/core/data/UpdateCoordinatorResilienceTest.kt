@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -345,5 +346,63 @@ class UpdateCoordinatorResilienceTest {
 
             assertEquals(TrackingStatus.Active, coordinator.status.value)
             assertTrue("SIM observe calls should be controlled without racing setup jobs", simObserveCalls <= 3)
+        }
+
+    @Test
+    fun `monitoring job with stale generation completes without restart`() =
+        runTest {
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(snapshot))
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            testScheduler.runCurrent()
+
+            val obsJob = coordinator.currentObservationJob.get()!!
+            val staleGen = 0L
+            val monitoring = coordinator.launchMonitoringJobTest(obsJob, staleGen)
+
+            obsJob.cancel()
+            monitoring.join()
+            testScheduler.runCurrent()
+
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
+        }
+
+    @Test
+    fun `monitoring job where currentObservationJob points to different job completes without restart`() =
+        runTest {
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(snapshot))
+            whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
+
+            val coordinator =
+                UpdateCoordinator(
+                    dataRefreshNotifier,
+                    widgetUpdater,
+                    usageStateRepository,
+                    backgroundScope,
+                )
+            testScheduler.runCurrent()
+
+            val obsJob = coordinator.currentObservationJob.get()!!
+            val gen = coordinator.observationGeneration
+
+            val otherJob = backgroundScope.launch { delay(1000L) }
+            coordinator.currentObservationJob.set(otherJob)
+
+            val monitoring = coordinator.launchMonitoringJobTest(obsJob, gen)
+            obsJob.cancel()
+            monitoring.join()
+            testScheduler.runCurrent()
+
+            otherJob.cancel()
+            assertEquals(TrackingStatus.Active, coordinator.status.value)
         }
 }

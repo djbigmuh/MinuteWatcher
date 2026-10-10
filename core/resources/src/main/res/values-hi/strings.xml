@@ -126,6 +126,10 @@
     <string name="notification_traffic_body">%1$s ट्रैफ़िक उपयोग! शेष %2$.1f GB (%3$d%%). महीना %4$s में समाप्त होता है।</string>
     <string name="notification_minutes_exhausted_body">अवधि के लिए मिनट पैकेज समाप्त हो गया है।</string>
     <string name="notification_traffic_exhausted_body">अवधि के लिए ट्रैफ़िक पैकेज समाप्त हो गया है।</string>
+    <string name="notification_minutes_body_no_period">%1$s मिनट उपयोग! शेष %2$s (%3$d%%)।</string>
+    <string name="notification_traffic_body_no_period">%1$s ट्रैफ़िक उपयोग! शेष %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">मिनट सीमा समाप्त हो गई है। ट्रैक किया गया उपयोग तब तक जमा होता रहता है जब तक आप इसे रीसेट नहीं करते।</string>
+    <string name="notification_traffic_exhausted_body_no_period">ट्रैफ़िक सीमा समाप्त हो गई है। ट्रैक किया गया उपयोग तब तक जमा होता रहता है जब तक आप इसे रीसेट नहीं करते።</string>
     <string name="usage_level_low">कम</string>
     <string name="usage_level_critical">अत्यधिक कम</string>
 

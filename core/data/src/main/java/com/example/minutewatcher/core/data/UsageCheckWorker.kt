@@ -212,13 +212,18 @@ class UsageCheckWorker
         ) {
             val identity = simSnapshot.identity
             val now = deps.timeProvider.now()
-            val daysRemaining = DateUtils.getDaysRemainingInMonth(simSnapshot.autoResetDay, now)
+            val daysRemaining =
+                if (simSnapshot.autoReset) {
+                    DateUtils.getDaysRemainingInMonth(simSnapshot.autoResetDay, now)
+                } else {
+                    0
+                }
 
             simSnapshot.entities[PackageType.MINUTES]?.let {
-                checkMinutesUsage(it, daysRemaining, identity, appSettings)
+                checkMinutesUsage(it, daysRemaining, identity, appSettings, simSnapshot.autoReset)
             }
             simSnapshot.entities[PackageType.DATA]?.let {
-                checkTrafficUsage(it, daysRemaining, identity, appSettings)
+                checkTrafficUsage(it, daysRemaining, identity, appSettings, simSnapshot.autoReset)
             }
         }
 
@@ -227,11 +232,9 @@ class UsageCheckWorker
             daysRemaining: Int,
             identity: String,
             appSettings: AppSettings,
+            autoReset: Boolean,
         ) {
             if ((entity.limit <= 0) || !appSettings.notifyLowMinutes) return
-
-            val usagePercentage = ((entity.used.toDouble() * HUNDRED) / entity.limit).toInt()
-            val remainingPercentage = HUNDRED - usagePercentage
 
             val notifiedExhausted =
                 deps.simNotificationFlagsRepository
@@ -242,9 +245,10 @@ class UsageCheckWorker
                 }
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
+                    val bodyResId = getMinutesExhaustedResId(autoReset)
                     sendNotificationWithBodyRes(
                         entity.operatorName,
-                        R.string.notification_minutes_exhausted_body,
+                        bodyResId,
                         entity.simSlot,
                         NOTIFICATION_TYPE_MINUTES,
                     )
@@ -256,22 +260,23 @@ class UsageCheckWorker
                 }
                 handleLowMinutesAlert(
                     entity,
-                    remainingPercentage,
                     daysRemaining,
                     identity,
+                    autoReset,
                 )
             }
         }
 
         /**
-         * Handles the low minutes alert based on remaining percentage.
-         * Triggered when remaining is below [Constants.LOW_THRESHOLD_PERCENT_INT].
+         * Handles the low minutes alert based on precise integer threshold arithmetic using [Long].
+         * Safe from overflow for limits up to [Constants.Traffic.MAX_TRAFFIC_LIMIT_GB] in bytes.
+         * Text wording depends on [autoReset].
          */
         private suspend fun handleLowMinutesAlert(
             entity: SemanticEntity,
-            remPct: Int,
             daysRem: Int,
             identity: String,
+            autoReset: Boolean,
         ) {
             val notifiedLow =
                 deps.simNotificationFlagsRepository
@@ -281,33 +286,66 @@ class UsageCheckWorker
                     return
                 }
 
-            if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
+            val isBelowLowThreshold =
+                entity.remaining * HUNDRED < entity.limit * Constants.LOW_THRESHOLD_PERCENT_INT
+            val isNotBelowLowThreshold =
+                entity.remaining * HUNDRED >= entity.limit * Constants.LOW_THRESHOLD_PERCENT_INT
+            val isBelowCriticalThreshold =
+                entity.remaining * HUNDRED < entity.limit * Constants.CRITICAL_THRESHOLD_PERCENT_INT
+
+            if (isBelowLowThreshold && !notifiedLow && (entity.remaining > 0)) {
                 val appLocaleContext =
                     AppLocaleContexts
                         .forAppLocale(applicationContext)
                 val levelRes =
-                    if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
+                    if (isBelowCriticalThreshold) {
                         R.string.usage_level_critical
                     } else {
                         R.string.usage_level_low
                     }
                 val level = appLocaleContext.getString(levelRes)
                 val remText = FormatUtils.formatMinutesPlural(appLocaleContext, entity.remaining.toInt())
-                val daysText = FormatUtils.formatDaysPlural(appLocaleContext, daysRem)
+                val remainingPercent = ((entity.remaining * HUNDRED) / entity.limit).toInt()
+                val body = formatLowMinutesBody(appLocaleContext, autoReset, level, remText, remainingPercent, daysRem)
 
-                val body =
-                    appLocaleContext.getString(
-                        R.string.notification_minutes_body,
-                        level,
-                        remText,
-                        remPct,
-                        daysText,
-                    )
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_MINUTES)
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = true)
-            } else if ((remPct >= Constants.LOW_THRESHOLD_PERCENT_INT) && notifiedLow) {
+            } else if (isNotBelowLowThreshold && notifiedLow) {
                 deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, notified = false)
             }
+        }
+
+    private fun getMinutesExhaustedResId(autoReset: Boolean): Int =
+        if (autoReset) {
+            R.string.notification_minutes_exhausted_body
+        } else {
+            R.string.notification_minutes_exhausted_body_no_period
+        }
+
+    private fun formatLowMinutesBody(
+        appLocaleContext: Context,
+        autoReset: Boolean,
+        level: String,
+        remText: String,
+        remPct: Int,
+        daysRem: Int,
+    ): String =
+        if (autoReset) {
+                val daysText = FormatUtils.formatDaysPlural(appLocaleContext, daysRem)
+            appLocaleContext.getString(
+                R.string.notification_minutes_body,
+                level,
+                remText,
+                remPct,
+                daysText,
+            )
+        } else {
+            appLocaleContext.getString(
+                R.string.notification_minutes_body_no_period,
+                level,
+                remText,
+                remPct,
+            )
         }
 
         private fun sendNotificationWithBodyRes(
@@ -347,12 +385,9 @@ class UsageCheckWorker
             daysRemaining: Int,
             identity: String,
             appSettings: AppSettings,
+            autoReset: Boolean,
         ) {
             if ((entity.limit <= 0) || !appSettings.notifyLowTraffic) return
-
-            val usagePercentage = ((entity.used.toDouble() * HUNDRED) / entity.limit).toInt()
-            val remainingPercentage = HUNDRED - usagePercentage
-            val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
 
             val notifiedExhausted =
                 deps.simNotificationFlagsRepository
@@ -363,9 +398,10 @@ class UsageCheckWorker
                 }
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
+                    val bodyResId = getTrafficExhaustedResId(autoReset)
                     sendNotificationWithBodyRes(
                         entity.operatorName,
-                        R.string.notification_traffic_exhausted_body,
+                        bodyResId,
                         entity.simSlot,
                         NOTIFICATION_TYPE_TRAFFIC,
                     )
@@ -380,24 +416,24 @@ class UsageCheckWorker
                 }
                 handleLowTrafficAlert(
                     entity,
-                    remainingPercentage,
-                    remainingGb,
                     daysRemaining,
                     identity,
+                    autoReset,
                 )
             }
         }
 
         /**
-         * Handles the low traffic alert based on remaining percentage.
-         * Triggered when remaining is below [Constants.LOW_THRESHOLD_PERCENT_INT].
+         * Handles the low traffic alert based on precise integer threshold arithmetic using [Long].
+         * Safe from overflow for limits up to
+         * [com.example.minutewatcher.core.model.Constants.Traffic.MAX_TRAFFIC_LIMIT_GB] in bytes.
+         * Text wording depends on [autoReset].
          */
         private suspend fun handleLowTrafficAlert(
             entity: SemanticEntity,
-            remPct: Int,
-            remGb: Float,
             daysRem: Int,
             identity: String,
+            autoReset: Boolean,
         ) {
             val notifiedLow =
                 deps.simNotificationFlagsRepository
@@ -407,31 +443,74 @@ class UsageCheckWorker
                     return
                 }
 
-            if ((remPct < Constants.LOW_THRESHOLD_PERCENT_INT) && !notifiedLow && (entity.remaining > 0)) {
+            val isBelowLowThreshold =
+                entity.remaining * HUNDRED < entity.limit * Constants.LOW_THRESHOLD_PERCENT_INT
+            val isNotBelowLowThreshold =
+                entity.remaining * HUNDRED >= entity.limit * Constants.LOW_THRESHOLD_PERCENT_INT
+            val isBelowCriticalThreshold =
+                entity.remaining * HUNDRED < entity.limit * Constants.CRITICAL_THRESHOLD_PERCENT_INT
+
+            if (isBelowLowThreshold && !notifiedLow && (entity.remaining > 0)) {
                 val appLocaleContext =
                     AppLocaleContexts
                         .forAppLocale(applicationContext)
                 val levelRes =
-                    if (remPct < Constants.CRITICAL_THRESHOLD_PERCENT_INT) {
+                    if (isBelowCriticalThreshold) {
                         R.string.usage_level_critical
                     } else {
                         R.string.usage_level_low
                     }
                 val level = appLocaleContext.getString(levelRes)
-                val daysText = FormatUtils.formatDaysPlural(appLocaleContext, daysRem)
+                val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
+                val remainingPercent = ((entity.remaining * HUNDRED) / entity.limit).toInt()
                 val body =
-                    appLocaleContext.getString(
-                        R.string.notification_traffic_body,
+                    formatLowTrafficBody(
+                        appLocaleContext,
+                        autoReset,
                         level,
-                        remGb,
-                        remPct,
-                        daysText,
+                        remainingGb,
+                        remainingPercent,
+                        daysRem,
                     )
+
                 sendNotificationWithBody(entity.operatorName, body, entity.simSlot, NOTIFICATION_TYPE_TRAFFIC)
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = true)
-            } else if ((remPct >= Constants.LOW_THRESHOLD_PERCENT_INT) && notifiedLow) {
+            } else if (isNotBelowLowThreshold && notifiedLow) {
                 deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, notified = false)
             }
+        }
+
+    private fun getTrafficExhaustedResId(autoReset: Boolean): Int =
+        if (autoReset) {
+            R.string.notification_traffic_exhausted_body
+        } else {
+            R.string.notification_traffic_exhausted_body_no_period
+        }
+
+    private fun formatLowTrafficBody(
+        appLocaleContext: Context,
+        autoReset: Boolean,
+        level: String,
+        remGb: Float,
+        remPct: Int,
+        daysRem: Int,
+    ): String =
+        if (autoReset) {
+                val daysText = FormatUtils.formatDaysPlural(appLocaleContext, daysRem)
+            appLocaleContext.getString(
+                R.string.notification_traffic_body,
+                level,
+                remGb,
+                remPct,
+                daysText,
+            )
+        } else {
+            appLocaleContext.getString(
+                R.string.notification_traffic_body_no_period,
+                level,
+                remGb,
+                remPct,
+            )
         }
 
         companion object {

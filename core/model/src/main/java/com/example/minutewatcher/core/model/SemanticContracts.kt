@@ -73,6 +73,8 @@ data class SimSnapshot(
     val operatorName: String,
     val entities: Map<PackageType, SemanticEntity>,
     val autoResetDay: Int,
+    /** Whether automatic statistics reset is enabled for this SIM. */
+    val autoReset: Boolean = false,
 )
 
 /**

@@ -126,6 +126,10 @@
     <string name="notification_traffic_body">%1$s 流量使用！剩余 %2$.1f GB (%3$d%%)。本月还剩 %4$s。</string>
     <string name="notification_minutes_exhausted_body">本周期通话分钟套餐已用完。</string>
     <string name="notification_traffic_exhausted_body">本周期流量套餐已用完。</string>
+    <string name="notification_minutes_body_no_period">%1$s 通话分钟使用！剩余 %2$s (%3$d%%)。</string>
+    <string name="notification_traffic_body_no_period">%1$s 流量使用！剩余 %2$.1f GB (%3$d%%)。</string>
+    <string name="notification_minutes_exhausted_body_no_period">已达到通话分钟上限。跟踪的使用量将继续累积，直到您重置它。</string>
+    <string name="notification_traffic_exhausted_body_no_period">已达到流量上限。跟踪的使用量将继续累积，直到您重置它。</string>
     <string name="usage_level_low">不足</string>
     <string name="usage_level_critical">严重不足</string>
 

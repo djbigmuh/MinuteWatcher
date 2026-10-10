@@ -53,13 +53,20 @@ class TrafficTrackerRegressionTest {
         override suspend fun setLastTotalBytes(
             identity: String,
             bytes: Long,
-        ) {
+            expectedLastResetDate: Long,
+        ): Boolean {
             if (setLastTotalBytesDelayMs > 0) {
                 delay(setLastTotalBytesDelayMs)
-            } else {
-                delegate.setLastTotalBytes(identity, bytes)
             }
+            return delegate.setLastTotalBytes(identity, bytes, expectedLastResetDate)
         }
+
+        override suspend fun incrementTrafficAndSetBaseline(
+            identity: String,
+            deltaMb: Float,
+            totalBytes: Long,
+            expectedLastResetDate: Long,
+        ): Boolean = delegate.incrementTrafficAndSetBaseline(identity, deltaMb, totalBytes, expectedLastResetDate)
     }
 
     private val networkStatsProvider: NetworkStatsProvider = mock()

@@ -106,17 +106,27 @@ class TrafficBaselineManager
                 }
                 val statsResult = getCurrentMobileBytes(usage.lastResetDate)
 
-                // Synchronize data subId regardless of result
-                syncLastDataSubIdIfNeeded(identity, onSuccess)
-
                 if (statsResult is StatsResult.Success) {
                     val currentBytes = statsResult.bytes
-                    simUsageResetRepository.setLastTotalBytes(identity, currentBytes)
-                    AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
+                    val applied =
+                        simUsageResetRepository.setLastTotalBytes(
+                            identity,
+                            currentBytes,
+                            usage.lastResetDate,
+                        )
+                    if (applied) {
+                        AppLogger.d("Traffic baseline reset for $identity to $currentBytes")
 
-                    removeRetry(identity)
-                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
-                    updateStatus(TrackingStatus.Active)
+                        syncLastDataSubIdIfNeeded(identity, onSuccess)
+
+                        removeRetry(identity)
+                        dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
+                        updateStatus(TrackingStatus.Active)
+                    } else {
+                        AppLogger.w(
+                            "TrafficBaselineManager: baseline reset write skipped due to window mismatch for $identity",
+                        )
+                    }
                 } else {
                     val message =
                         if (statsResult is StatsResult.Error) {

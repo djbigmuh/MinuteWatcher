@@ -311,10 +311,13 @@ class SimUsageRepositoryImplTest {
     fun `incrementTrafficAndSetBaseline clamps traffic to MAX_TRAFFIC_LIMIT_MB and updates baseline`() =
         runTest {
             val identity = "test_sim"
+            repository.ensureTrackingWindowInitialized(identity)
+            val usage0 = repository.getSimUsage(identity).first()
             repository.incrementTrafficAndSetBaseline(
                 identity,
                 Constants.MAX_TRAFFIC_LIMIT_MB.toFloat() + 1000f,
                 99999L,
+                usage0.lastResetDate,
             )
 
             val usage = repository.getSimUsage(identity).first()
@@ -322,5 +325,43 @@ class SimUsageRepositoryImplTest {
 
             val baseline = repository.getLastTotalBytes(identity).first()
             assertEquals(99999L, baseline)
+        }
+
+    @Test
+    fun `incrementTrafficAndSetBaseline applies when expectedLastResetDate matches and skips when mismatched`() =
+        runTest {
+            val identity = "test_sim"
+            repository.ensureTrackingWindowInitialized(identity)
+            val initialUsage = repository.getSimUsage(identity).first()
+            val correctDate = initialUsage.lastResetDate
+            val wrongDate = correctDate + 1000L
+
+            val appliedWrong = repository.incrementTrafficAndSetBaseline(identity, 10f, 1000L, wrongDate)
+            assert(!appliedWrong)
+            val usageAfterWrong = repository.getSimUsage(identity).first()
+            assertEquals(0f, usageAfterWrong.trafficUsedMb, 0.001f)
+
+            val appliedCorrect = repository.incrementTrafficAndSetBaseline(identity, 10f, 1000L, correctDate)
+            assert(appliedCorrect)
+            val usageAfterCorrect = repository.getSimUsage(identity).first()
+            assertEquals(10f, usageAfterCorrect.trafficUsedMb, 0.001f)
+        }
+
+    @Test
+    fun `setLastTotalBytes applies when expectedLastResetDate matches and skips when mismatched`() =
+        runTest {
+            val identity = "test_sim"
+            repository.ensureTrackingWindowInitialized(identity)
+            val initialUsage = repository.getSimUsage(identity).first()
+            val correctDate = initialUsage.lastResetDate
+            val wrongDate = correctDate + 1000L
+
+            val appliedWrong = repository.setLastTotalBytes(identity, 5000L, wrongDate)
+            assert(!appliedWrong)
+
+            val appliedCorrect = repository.setLastTotalBytes(identity, 5000L, correctDate)
+            assert(appliedCorrect)
+            val baseline = repository.getLastTotalBytes(identity).first()
+            assertEquals(5000L, baseline)
         }
 }

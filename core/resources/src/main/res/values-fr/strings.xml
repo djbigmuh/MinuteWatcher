@@ -126,6 +126,10 @@
     <string name="notification_traffic_body">Utilisation du trafic %1$s ! Restant %2$.1f Go (%3$d%%). Fin du mois dans %4$s.</string>
     <string name="notification_minutes_exhausted_body">Le forfait de minutes pour la période est terminé.</string>
     <string name="notification_traffic_exhausted_body">Le forfait de données pour la période est terminé.</string>
+    <string name="notification_minutes_body_no_period">Utilisation des minutes %1$s ! Restant %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">Utilisation du trafic %1$s ! Restant %2$.1f Go (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Limite de minutes atteinte. L\'utilisation suivie continue de s\'accumuler jusqu\'à ce que vous la réinitialisiez.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Limite de données atteinte. L\'utilisation suivie continue de s\'accumuler jusqu\'à ce que vous la réinitialisiez.</string>
     <string name="usage_level_low">FAIBLE</string>
     <string name="usage_level_critical">CRITIQUE</string>
 

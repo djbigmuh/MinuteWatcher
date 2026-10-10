@@ -43,6 +43,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.lenient
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.doAnswer
@@ -93,6 +94,19 @@ class TrafficTrackerTest {
         setupUsageMocks()
         whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(0L))
         whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
+        runBlocking {
+            whenever(simUsageResetRepository.ensureTrackingWindowInitialized(any())).thenReturn(true)
+            lenient().whenever(simUsageResetRepository.setLastTotalBytes(any(), any(), any())).thenReturn(true)
+            lenient()
+                .whenever(
+                    simUsageResetRepository.incrementTrafficAndSetBaseline(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                    ),
+                ).thenReturn(true)
+        }
 
         whenever(simUsageResetRepository.getBaselineRetryCount(any())).thenAnswer {
             val identity = it.arguments[0] as String
@@ -245,6 +259,7 @@ class TrafficTrackerTest {
                 .thenThrow(SecurityException("No permission"))
 
             tracker.updateTrafficUsage()
+            runCurrent()
 
             val status = tracker.status.value
             assertTrue(status is TrackingStatus.Error)
@@ -274,7 +289,7 @@ class TrafficTrackerTest {
             tracker.updateTrafficUsage()
 
             val deltaMb = (34000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
-            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
+            verify(simUsageResetRepository).incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L), any())
         }
 
     @Test
@@ -283,7 +298,7 @@ class TrafficTrackerTest {
             val tracker = startTracker()
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(35000L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(1000L))
-            whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(any(), any(), any()))
+            whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(any(), any(), any(), any()))
                 .thenThrow(RuntimeException("DB failure"))
 
             tracker.updateTrafficUsage()
@@ -294,13 +309,20 @@ class TrafficTrackerTest {
             assertTrue(status is TrackingStatus.Error)
 
             // Now make it succeed
-            whenever(simUsageResetRepository.incrementTrafficAndSetBaseline(any(), any(), any())).thenReturn(Unit)
+            whenever(
+                simUsageResetRepository.incrementTrafficAndSetBaseline(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                ),
+            ).thenReturn(true)
             tracker.updateTrafficUsage()
             runCurrent()
 
             val deltaMb = (34000L.toDouble() / Constants.BYTES_PER_MB).toFloat()
             verify(simUsageResetRepository, times(2))
-                .incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L))
+                .incrementTrafficAndSetBaseline(eq("sim_0"), eq(deltaMb), eq(35000L), any())
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
@@ -330,8 +352,8 @@ class TrafficTrackerTest {
             val status = tracker.status.value
             assertTrue(status is TrackingStatus.Error)
             assertEquals("Stats unavailable", (status as TrackingStatus.Error).message)
-            verify(simUsageResetRepository, never()).incrementTrafficAndSetBaseline(any(), any(), any())
-            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
+            verify(simUsageResetRepository, never()).incrementTrafficAndSetBaseline(any(), any(), any(), any())
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any(), any())
         }
 
     @Test
@@ -415,7 +437,7 @@ class TrafficTrackerTest {
             runCurrent()
 
             // Verify baseline was reset for sim_1
-            verify(simUsageResetRepository, atLeast(1)).setLastTotalBytes(eq("sim_1"), any())
+            verify(simUsageResetRepository, atLeast(1)).setLastTotalBytes(eq("sim_1"), any(), any())
             verify(callSessionRepository, atLeast(1)).setLastDataSubId(2)
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
@@ -465,7 +487,7 @@ class TrafficTrackerTest {
             runCurrent()
 
             // Verify it didn't reset yet and status is Error
-            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any())
+            verify(simUsageResetRepository, never()).setLastTotalBytes(eq("sim_1"), any(), any())
             assertTrue(tracker.status.value is TrackingStatus.Error)
 
             // 2. Stats become available
@@ -476,7 +498,7 @@ class TrafficTrackerTest {
             runCurrent()
 
             // Verify baseline finally reset and status is Active
-            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(5000L))
+            verify(simUsageResetRepository).setLastTotalBytes(eq("sim_1"), eq(5000L), any())
             assertEquals(TrackingStatus.Active, tracker.status.value)
         }
 
@@ -720,7 +742,7 @@ class TrafficTrackerTest {
             val status = tracker.status.value
             assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
             assertEquals(TrackingStatus.ErrorCode.TIMEOUT, (status as TrackingStatus.Error).code)
-            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any())
+            verify(simUsageResetRepository, never()).setLastTotalBytes(any(), any(), any())
         }
 
     @Test
@@ -833,9 +855,9 @@ class TrafficTrackerTest {
     fun `construction has no side effects and ensureStarted is idempotent`() =
         runTest {
             val localPermissionNotifier: PermissionStateNotifier = mock()
-            whenever(localPermissionNotifier.changes).thenReturn(flow { })
+            whenever(localPermissionNotifier.changes).thenReturn(MutableSharedFlow())
             val localSimRepository: SimIdentityRepository = mock()
-            whenever(localSimRepository.observeActiveSims()).thenReturn(flow { })
+            whenever(localSimRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
             val localPermissionManager: PermissionManager = mock()
             whenever(localPermissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(localPermissionManager.hasUsageStatsPermission()).thenReturn(true)

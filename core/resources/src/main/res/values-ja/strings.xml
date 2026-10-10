@@ -126,6 +126,10 @@
     <string name="notification_traffic_body">%1$s 通信量を使用しています！残り %2$.1f GB (%3$d%%)。月末まであと %4$s。</string>
     <string name="notification_minutes_exhausted_body">期間内の通話時間パッケージが終了しました。</string>
     <string name="notification_traffic_exhausted_body">期間内の通信量パッケージが終了しました。</string>
+    <string name="notification_minutes_body_no_period">%1$s 通話時間を使用しています！残り %2$s (%3$d%%)。</string>
+    <string name="notification_traffic_body_no_period">%1$s 通信量を使用しています！残り %2$.1f GB (%3$d%%)。</string>
+    <string name="notification_minutes_exhausted_body_no_period">通話時間の上限に達しました。リセットするまで追跡された使用量が蓄積され続けます。</string>
+    <string name="notification_traffic_exhausted_body_no_period">データ通信量の上限に達しました。リセットするまで追跡された使用量が蓄積され続けます。</string>
     <string name="usage_level_low">少なめ</string>
     <string name="usage_level_critical">非常に少ない</string>
 

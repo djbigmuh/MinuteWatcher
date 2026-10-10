@@ -126,6 +126,10 @@
     <string name="notification_traffic_body">%1$s расход трафика! Осталось %2$.1f ГБ (%3$d%%). До конца месяца %4$s.</string>
     <string name="notification_minutes_exhausted_body">Пакет минут за период кончился.</string>
     <string name="notification_traffic_exhausted_body">Пакетный трафик за период кончился.</string>
+    <string name="notification_minutes_body_no_period">%1$s расход минут! Осталось %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s расход трафика! Осталось %2$.1f ГБ (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Лимит минут достигнут. Отслеживаемое использование продолжает накапливаться, пока вы его не сбросите.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Лимит трафика достигнут. Отслеживаемое использование продолжает накапливаться, пока вы его не сбросите.</string>
     <string name="usage_level_low">НИЗКИЙ</string>
     <string name="usage_level_critical">КРИТИЧЕСКИЙ</string>
 

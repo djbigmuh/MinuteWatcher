@@ -5,6 +5,7 @@ import android.telephony.TelephonyManager
 import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.util.DataStoreRetryHelper
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -133,7 +134,8 @@ abstract class CallTrackerTestFixtures {
     internal fun createSessionCleaner(
         attributionResolver: CallAttributionResolver,
         repo: CallSessionRepository = callSessionRepository,
-    ) = CallSessionCleaner(repo, attributionResolver)
+        timeProvider: TimeProvider = this.timeProvider,
+    ) = CallSessionCleaner(repo, attributionResolver, timeProvider)
 
     internal fun createSettingsHandler() =
         CallTrackingSettingsHandler(

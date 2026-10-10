@@ -183,12 +183,12 @@ class TrafficTrackerResilienceTest {
             runCurrent()
             verify(simIdentityRepository, times(4)).observeActiveSims()
 
-            // Act: Recover should try again and succeed (5th call)
+            // Act: Recover should try again and succeed
             tracker.recover()
             runCurrent()
 
-            // Total calls: 1 (observer) + 3 (init) + 1 (recover) = 5
-            verify(simIdentityRepository, times(5)).observeActiveSims()
+            // Total calls: 1 (observer) + 3 (init) + 1 (observer restart in recover) + 1 (recover init) = 6
+            verify(simIdentityRepository, times(6)).observeActiveSims()
             verify(permissionStateNotifier, atLeast(1)).changes
             assertEquals(TrackingStatus.Idle, tracker.status.value)
         }

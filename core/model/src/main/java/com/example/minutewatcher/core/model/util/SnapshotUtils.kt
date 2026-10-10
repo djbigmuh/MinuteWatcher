@@ -19,6 +19,9 @@ object SnapshotUtils {
      * Excluded:
      * - Timestamps (lastUpdateTime, timestamp) — to avoid infinite update loops.
      * - [GlobalSnapshot.revision] is intentionally excluded as it's a technical counter for refresh().
+     * - [com.example.minutewatcher.core.model.SimSnapshot.autoReset]
+     *   (auto-reset enabled flag) is intentionally excluded as it does
+     *   not affect the visual presentation of the widget.
      */
     fun calculateContentHash(snapshot: GlobalSnapshot): Int {
         var result = snapshot.version.hashCode()

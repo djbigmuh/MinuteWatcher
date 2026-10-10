@@ -1,5 +1,6 @@
 package com.example.minutewatcher.core.data
 
+import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FlowObservationScope
@@ -97,12 +98,17 @@ class UpdateCoordinator
         private var consecutiveUpdateFailures = 0
         private var observationRestartCount = 0
         private var degradedCycleCount = 0
+
+    @VisibleForTesting
+    internal var observationGeneration = 0L
         private val stateMutex = Mutex()
 
         private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
         private val setupJob = AtomicReference<Job?>(null)
         private val monitoringJob = AtomicReference<Job?>(null)
-        private val currentObservationJob = AtomicReference<Job?>(null)
+
+    @VisibleForTesting
+    internal val currentObservationJob = AtomicReference<Job?>(null)
         private val currentUpdateJob = AtomicReference<Job?>(null)
         private val takeoverUpdateJob = AtomicReference<Job?>(null)
 
@@ -123,7 +129,9 @@ class UpdateCoordinator
             val currentJob = observationScope.currentJob
             if ((currentJob != null) && currentJob.isActive && (currentObservationJob.get() !== currentJob)) {
                 currentObservationJob.set(currentJob)
-                monitoringJob.getAndSet(launchMonitoringJob(currentJob))?.cancel()
+                observationGeneration++
+                val currentGen = observationGeneration
+                monitoringJob.getAndSet(launchMonitoringJob(currentJob, currentGen))?.cancel()
                 transitionStatus(TrackingStatus.Active)
             }
         }
@@ -281,7 +289,9 @@ class UpdateCoordinator
                             }
                         newJob = job
                         currentObservationJob.set(job)
-                        monitoringJob.getAndSet(launchMonitoringJob(job))?.cancel()
+                        observationGeneration++
+                        val currentGen = observationGeneration
+                        monitoringJob.getAndSet(launchMonitoringJob(job, currentGen))?.cancel()
                         transitionStatus(TrackingStatus.Active)
                     }
                 } catch (e: CancellationException) {
@@ -372,10 +382,16 @@ class UpdateCoordinator
             }
         }
 
-        private fun launchMonitoringJob(newJob: Job): Job {
+    private fun launchMonitoringJob(
+        newJob: Job,
+        generation: Long = observationGeneration,
+    ): Job {
             /**
              * Monitoring completion: if observation job fails (due to terminal error or unexpected exception)
              * this monitoring job will perform a restart with exponential delay.
+             *
+             * Invariant: Generation counter and observation job identity ([generation] + [newJob])
+             * form the sole criterion for currency, ensuring independence from registration order.
              *
              * Note: external cancellations (takeover, recover, shutdown) are handled via join()
              * and ensureActive() to avoid restarting when deliberately stopped.
@@ -385,10 +401,10 @@ class UpdateCoordinator
 
                 currentCoroutineContext().ensureActive()
 
-                // Atomically check if this job is still the current one under mutex
+                // Atomically check if this job is still current using generation and job identity
                 val isCurrent =
                     stateMutex.withLock {
-                        monitoringJob.get() === currentCoroutineContext()[Job] &&
+                        observationGeneration == generation &&
                             currentObservationJob.get() === newJob
                     }
                 if (!isCurrent) return@launch
@@ -420,10 +436,11 @@ class UpdateCoordinator
                 )
                 delay(delayMs.milliseconds)
 
-                // Re-check current job before initiating restart
+                // Re-check current generation and job before initiating restart
                 val shouldInitiateRestart =
                     stateMutex.withLock {
-                        currentObservationJob.get() === newJob
+                        observationGeneration == generation &&
+                            currentObservationJob.get() === newJob
                     }
 
                 if (shouldInitiateRestart) {
@@ -439,6 +456,12 @@ class UpdateCoordinator
                 }
             }
         }
+
+    @VisibleForTesting
+    internal fun launchMonitoringJobTest(
+        newJob: Job,
+        generation: Long,
+    ): Job = launchMonitoringJob(newJob, generation)
 
         private suspend fun handleDegradedMode(
             restartCount: Int,

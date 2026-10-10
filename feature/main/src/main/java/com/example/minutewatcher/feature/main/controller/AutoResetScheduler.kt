@@ -43,6 +43,9 @@ class AutoResetScheduler
 
         /**
          * Checks necessity of auto-reset on start.
+         *
+         * The flag [isCheckStarted] ensures only concurrent single execution; periodicity
+         * is determined by the persisted check timestamp and internal reset limiters.
          */
         suspend fun checkOnStart() {
             if (!isCheckStarted.compareAndSet(false, true)) return
@@ -50,7 +53,6 @@ class AutoResetScheduler
             try {
                 performCheckInternal()
             } catch (e: CancellationException) {
-                isCheckStarted.set(false)
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("Auto-reset failed during initialization", e)
@@ -60,13 +62,12 @@ class AutoResetScheduler
                         scheduleRepository.setFailureCount(currentFailCount + 1)
                     }
                 } catch (e2: CancellationException) {
-                    isCheckStarted.set(false)
                     throw e2
                 } catch (e2: Exception) {
                     AppLogger.w("Failed to update failure count during auto-reset error handling", e2)
-                } finally {
-                    isCheckStarted.set(false)
                 }
+            } finally {
+                isCheckStarted.set(false)
             }
         }
 

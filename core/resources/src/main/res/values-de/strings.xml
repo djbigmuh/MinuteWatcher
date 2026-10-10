@@ -126,6 +126,10 @@
     <string name="notification_traffic_body">%1$s Datenverbrauch! Verbleibend %2$.1f GB (%3$d%%). Monat endet in %4$s.</string>
     <string name="notification_minutes_exhausted_body">Minutenpaket für den Zeitraum ist aufgebraucht.</string>
     <string name="notification_traffic_exhausted_body">Datenpaket für den Zeitraum ist aufgebraucht.</string>
+    <string name="notification_minutes_body_no_period">%1$s Minutenverbrauch! Verbleibend %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s Datenverbrauch! Verbleibend %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Minutenlimit erreicht. Die erfasste Nutzung sammelt sich weiter an, bis Sie sie zurücksetzen.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Datenlimit erreicht. Die erfasste Nutzung sammelt sich weiter an, bis Sie sie zurücksetzen.</string>
     <string name="usage_level_low">NIEDRIG</string>
     <string name="usage_level_critical">KRITISCH</string>
 

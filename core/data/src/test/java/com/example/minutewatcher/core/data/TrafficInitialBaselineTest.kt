@@ -167,6 +167,7 @@ class TrafficInitialBaselineTest {
             // 2. Perform update.
             // It SHOULD call ensureTrackingWindowInitialized.
             tracker.updateTrafficUsage()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             verify(simUsageResetRepository).ensureTrackingWindowInitialized(eq(sim1Identity))
         }
@@ -183,8 +184,8 @@ class TrafficInitialBaselineTest {
             ).thenReturn(flowOf(createSimUsage(sim1Identity, 1, 0, lastResetDate = 0L)))
             whenever(simUsageResetRepository.getLastTotalBytes(sim1Identity)).thenReturn(flowOf(-1L))
 
-            // This will call ensureTrackingWindowInitialized, which will set lastResetDate = now and baseline = 0.
             tracker.updateTrafficUsage()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Phase 2: Consumption. Update mocks to reflect initialized state.
             whenever(
@@ -201,6 +202,7 @@ class TrafficInitialBaselineTest {
             )
 
             tracker.updateTrafficUsage()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Verify that 100MB was added.
             verify(simUsageResetRepository).incrementTrafficAndSetBaseline(
@@ -209,6 +211,7 @@ class TrafficInitialBaselineTest {
                 eq(
                     100L * Constants.BYTES_PER_MB,
                 ),
+                any(),
             )
         }
 

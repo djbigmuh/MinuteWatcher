@@ -257,6 +257,7 @@ class UsageStateRepositoryImpl
                 operatorName = operatorName,
                 entities = entities,
                 autoResetDay = usage.autoResetDay,
+                autoReset = usage.autoReset,
             )
         }
 
