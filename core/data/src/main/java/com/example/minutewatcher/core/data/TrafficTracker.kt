@@ -95,9 +95,34 @@ class TrafficTracker
         private val trafficMutex = Mutex()
         private val updateMutex = Mutex()
         private val initializationFailed = AtomicBoolean(false)
-        private val isInitializing = AtomicBoolean(false)
         private val isInitStarted = AtomicBoolean(false)
         private val bothPermissionsGranted = AtomicBoolean(false)
+
+        private class InitToken {
+            var started: Boolean = false
+            var superseded: Boolean = false
+        }
+
+        private val currentInitToken = AtomicReference<InitToken?>(null)
+
+        private fun releaseInitialization(token: InitToken) {
+            currentInitToken.compareAndSet(token, null)
+        }
+
+        private suspend fun runInitializationWithToken(token: InitToken) {
+            val shouldRun =
+                synchronized(token) {
+                    if (token.superseded) {
+                        false
+                    } else {
+                        token.started = true
+                        true
+                    }
+                }
+            if (shouldRun) {
+                startInitialization()
+            }
+        }
 
         @VisibleForTesting
         internal val lastSuccessElapsed = AtomicLong(0L)
@@ -112,25 +137,25 @@ class TrafficTracker
         internal val simObserverJob = AtomicReference<Job?>(null)
         private var lastObservedDataSubId: Int? = null
 
-        private fun tryClaimInitialization(): Boolean = isInitializing.compareAndSet(false, true)
-
-        private fun releaseInitialization() {
-            isInitializing.set(false)
-        }
-
         /**
          * Explicitly starts the traffic tracking initialization and automatic recovery observers.
          *
          * This method is idempotent and thread-safe. Subsequent calls are no-ops.
          * Should be called from Application.onCreate after dependencies are ready.
+         *
+         * If initialization is claimed but not yet started when [updateTrafficUsage] is called,
+         * [updateTrafficUsage] atomically supersedes the initialization, executing it instead.
          */
         fun ensureStarted() {
-            if (isInitStarted.compareAndSet(false, true) && tryClaimInitialization()) {
-                scope.launch {
-                    try {
-                        startInitialization()
-                    } finally {
-                        releaseInitialization()
+            if (isInitStarted.compareAndSet(false, true)) {
+                val token = InitToken()
+                if (currentInitToken.compareAndSet(null, token)) {
+                    scope.launch {
+                        try {
+                            runInitializationWithToken(token)
+                        } finally {
+                            releaseInitialization(token)
+                        }
                     }
                 }
             }
@@ -349,14 +374,16 @@ class TrafficTracker
         }
 
         private fun checkAndScheduleAutoRecovery(reason: String) {
-            val shouldStart = initializationFailed.get() && tryClaimInitialization()
-            if (shouldStart) {
-                AppLogger.d("TrafficTracker: attempting auto-recovery after $reason")
-                scope.launch {
-                    try {
-                        startInitialization()
-                    } finally {
-                        releaseInitialization()
+            if (initializationFailed.get()) {
+                val token = InitToken()
+                if (currentInitToken.compareAndSet(null, token)) {
+                    AppLogger.d("TrafficTracker: attempting auto-recovery after $reason")
+                    scope.launch {
+                        try {
+                            runInitializationWithToken(token)
+                        } finally {
+                            releaseInitialization(token)
+                        }
                     }
                 }
             }
@@ -425,17 +452,19 @@ class TrafficTracker
         override suspend fun recover() {
             startAutomaticRecoveryObservers()
 
-            val shouldStart = initializationFailed.get() && tryClaimInitialization()
-            if (shouldStart) {
-                AppLogger.d("TrafficTracker: attempting manual recovery")
-                try {
-                    performInitializeWithRetry()
-                } finally {
-                    releaseInitialization()
+            if (initializationFailed.get()) {
+                val token = InitToken().apply { started = true }
+                if (currentInitToken.compareAndSet(null, token)) {
+                    AppLogger.d("TrafficTracker: attempting manual recovery")
+                    try {
+                        startInitialization()
+                    } finally {
+                        releaseInitialization(token)
+                    }
+                    return
                 }
-            } else {
-                updateTrafficUsage()
             }
+            updateTrafficUsage()
         }
 
         suspend fun resetBaseline(identity: String) {
@@ -472,6 +501,10 @@ class TrafficTracker
         /**
          * Updates mobile traffic usage for the current default data SIM.
          *
+         * If initialization is currently claimed but has not yet started executing,
+         * this call atomically intercepts (supersedes) the initialization, executing
+         * the initialization contract instead of a normal update cycle.
+         *
          * Errors, including timeout, are not thrown, but reported in [status] as [TrackingStatus.Error]
          * with machine-readable `type` and `code`. The calling side that needs to react to a timeout
          * checks [status] for [TrackingStatus.ErrorCode.TIMEOUT] after returning from the method.
@@ -481,8 +514,38 @@ class TrafficTracker
          */
         suspend fun updateTrafficUsage() {
             val startElapsed = timeProvider.elapsedRealtime()
-            try {
+            val token = currentInitToken.get()
+            if (token != null) {
+                val intercepted =
+                    synchronized(token) {
+                        if (!token.started && !token.superseded) {
+                            token.superseded = true
+                            token.started = true
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                if (intercepted) {
+                    currentInitToken.compareAndSet(token, null)
+                    runCatchingTrafficUpdate(startElapsed) {
+                        performInitializeWithRetry()
+                    }
+                    return
+                }
+            }
+
+            runCatchingTrafficUpdate(startElapsed) {
                 updateTrafficUsageLogic()
+            }
+        }
+
+        private suspend fun runCatchingTrafficUpdate(
+            startElapsed: Long,
+            block: suspend () -> Unit,
+        ) {
+            try {
+                block()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SecurityException) {
