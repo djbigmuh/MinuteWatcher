@@ -315,38 +315,38 @@ class UsageCheckWorker
             }
         }
 
-    private fun getMinutesExhaustedResId(autoReset: Boolean): Int =
-        if (autoReset) {
-            R.string.notification_minutes_exhausted_body
-        } else {
-            R.string.notification_minutes_exhausted_body_no_period
-        }
+        private fun getMinutesExhaustedResId(autoReset: Boolean): Int =
+            if (autoReset) {
+                R.string.notification_minutes_exhausted_body
+            } else {
+                R.string.notification_minutes_exhausted_body_no_period
+            }
 
-    private fun formatLowMinutesBody(
-        appLocaleContext: Context,
-        autoReset: Boolean,
-        level: String,
-        remText: String,
-        remPct: Int,
-        daysRem: Int,
-    ): String =
-        if (autoReset) {
+        private fun formatLowMinutesBody(
+            appLocaleContext: Context,
+            autoReset: Boolean,
+            level: String,
+            remText: String,
+            remPct: Int,
+            daysRem: Int,
+        ): String =
+            if (autoReset) {
                 val daysText = FormatUtils.formatDaysPlural(appLocaleContext, daysRem)
-            appLocaleContext.getString(
-                R.string.notification_minutes_body,
-                level,
-                remText,
-                remPct,
-                daysText,
-            )
-        } else {
-            appLocaleContext.getString(
-                R.string.notification_minutes_body_no_period,
-                level,
-                remText,
-                remPct,
-            )
-        }
+                appLocaleContext.getString(
+                    R.string.notification_minutes_body,
+                    level,
+                    remText,
+                    remPct,
+                    daysText,
+                )
+            } else {
+                appLocaleContext.getString(
+                    R.string.notification_minutes_body_no_period,
+                    level,
+                    remText,
+                    remPct,
+                )
+            }
 
         private fun sendNotificationWithBodyRes(
             operator: String,
@@ -480,38 +480,38 @@ class UsageCheckWorker
             }
         }
 
-    private fun getTrafficExhaustedResId(autoReset: Boolean): Int =
-        if (autoReset) {
-            R.string.notification_traffic_exhausted_body
-        } else {
-            R.string.notification_traffic_exhausted_body_no_period
-        }
+        private fun getTrafficExhaustedResId(autoReset: Boolean): Int =
+            if (autoReset) {
+                R.string.notification_traffic_exhausted_body
+            } else {
+                R.string.notification_traffic_exhausted_body_no_period
+            }
 
-    private fun formatLowTrafficBody(
-        appLocaleContext: Context,
-        autoReset: Boolean,
-        level: String,
-        remGb: Float,
-        remPct: Int,
-        daysRem: Int,
-    ): String =
-        if (autoReset) {
+        private fun formatLowTrafficBody(
+            appLocaleContext: Context,
+            autoReset: Boolean,
+            level: String,
+            remGb: Float,
+            remPct: Int,
+            daysRem: Int,
+        ): String =
+            if (autoReset) {
                 val daysText = FormatUtils.formatDaysPlural(appLocaleContext, daysRem)
-            appLocaleContext.getString(
-                R.string.notification_traffic_body,
-                level,
-                remGb,
-                remPct,
-                daysText,
-            )
-        } else {
-            appLocaleContext.getString(
-                R.string.notification_traffic_body_no_period,
-                level,
-                remGb,
-                remPct,
-            )
-        }
+                appLocaleContext.getString(
+                    R.string.notification_traffic_body,
+                    level,
+                    remGb,
+                    remPct,
+                    daysText,
+                )
+            } else {
+                appLocaleContext.getString(
+                    R.string.notification_traffic_body_no_period,
+                    level,
+                    remGb,
+                    remPct,
+                )
+            }
 
         companion object {
             private const val HUNDRED = 100

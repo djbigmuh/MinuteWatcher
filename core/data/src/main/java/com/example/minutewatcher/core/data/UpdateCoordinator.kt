@@ -99,16 +99,16 @@ class UpdateCoordinator
         private var observationRestartCount = 0
         private var degradedCycleCount = 0
 
-    @VisibleForTesting
-    internal var observationGeneration = 0L
+        @VisibleForTesting
+        internal var observationGeneration = 0L
         private val stateMutex = Mutex()
 
         private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
         private val setupJob = AtomicReference<Job?>(null)
         private val monitoringJob = AtomicReference<Job?>(null)
 
-    @VisibleForTesting
-    internal val currentObservationJob = AtomicReference<Job?>(null)
+        @VisibleForTesting
+        internal val currentObservationJob = AtomicReference<Job?>(null)
         private val currentUpdateJob = AtomicReference<Job?>(null)
         private val takeoverUpdateJob = AtomicReference<Job?>(null)
 
@@ -382,10 +382,10 @@ class UpdateCoordinator
             }
         }
 
-    private fun launchMonitoringJob(
-        newJob: Job,
-        generation: Long = observationGeneration,
-    ): Job {
+        private fun launchMonitoringJob(
+            newJob: Job,
+            generation: Long = observationGeneration,
+        ): Job {
             /**
              * Monitoring completion: if observation job fails (due to terminal error or unexpected exception)
              * this monitoring job will perform a restart with exponential delay.
@@ -457,11 +457,11 @@ class UpdateCoordinator
             }
         }
 
-    @VisibleForTesting
-    internal fun launchMonitoringJobTest(
-        newJob: Job,
-        generation: Long,
-    ): Job = launchMonitoringJob(newJob, generation)
+        @VisibleForTesting
+        internal fun launchMonitoringJobTest(
+            newJob: Job,
+            generation: Long,
+        ): Job = launchMonitoringJob(newJob, generation)
 
         private suspend fun handleDegradedMode(
             restartCount: Int,

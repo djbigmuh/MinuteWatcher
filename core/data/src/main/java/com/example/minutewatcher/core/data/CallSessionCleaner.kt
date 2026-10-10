@@ -47,146 +47,146 @@ internal class CallSessionCleaner
             attributionResolver.clearAllFailures()
         }
 
-    suspend fun clearStaleSessions(context: CallTrackingContext): Int {
-        val activeSubIds = callSessionRepository.getActiveCallSubIds()
-        if (activeSubIds == null) {
-            AppLogger.e("CallSessionCleaner: getActiveCallSubIds returned null")
-            context.updateStatus(
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "Active call subIds read timed out or failed",
-                    TrackingStatus.ErrorCode.TIMEOUT,
-                ),
-            )
-            return 0
+        suspend fun clearStaleSessions(context: CallTrackingContext): Int {
+            val activeSubIds = callSessionRepository.getActiveCallSubIds()
+            if (activeSubIds == null) {
+                AppLogger.e("CallSessionCleaner: getActiveCallSubIds returned null")
+                context.updateStatus(
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.UNKNOWN,
+                        "Active call subIds read timed out or failed",
+                        TrackingStatus.ErrorCode.TIMEOUT,
+                    ),
+                )
+                return 0
+            }
+
+            var clearedCount = 0
+            val now = timeProvider.now()
+            val currentRealtime = timeProvider.elapsedRealtime()
+
+            for (subId in activeSubIds) {
+                if (processSubId(subId, context, now, currentRealtime)) {
+                    clearedCount++
+                }
+            }
+
+            return clearedCount
         }
 
-        var clearedCount = 0
-        val now = timeProvider.now()
-        val currentRealtime = timeProvider.elapsedRealtime()
+        private suspend fun processSubId(
+            subId: Int,
+            context: CallTrackingContext,
+            now: Long,
+            currentRealtime: Long,
+        ): Boolean {
+            val startTime = readStartTime(subId)
+            val bootTime = readBootTime(subId)
+            if (startTime == null || bootTime == null) return false
 
-        for (subId in activeSubIds) {
-            if (processSubId(subId, context, now, currentRealtime)) {
-                clearedCount++
+            val shouldClear =
+                isIncompleteRecord(startTime, bootTime) ||
+                    isBootTimeInFuture(bootTime, currentRealtime) ||
+                    isEpochDriftExceeded(startTime, bootTime, now, currentRealtime)
+
+            return if (shouldClear) {
+                clearSessionSafely(subId, context, getStaleCriterion(startTime, bootTime, currentRealtime))
+            } else {
+                AppLogger.d("CallSessionCleaner: preserving valid session for subId $subId")
+                false
             }
         }
 
-        return clearedCount
-    }
+        private fun getStaleCriterion(
+            startTime: Long,
+            bootTime: Long,
+            currentRealtime: Long,
+        ): String =
+            when {
+                isIncompleteRecord(startTime, bootTime) -> "incomplete record"
+                isBootTimeInFuture(bootTime, currentRealtime) -> "bootTime in future"
+                else -> "epoch drift exceeded"
+            }
 
-    private suspend fun processSubId(
-        subId: Int,
-        context: CallTrackingContext,
-        now: Long,
-        currentRealtime: Long,
-    ): Boolean {
-        val startTime = readStartTime(subId)
-        val bootTime = readBootTime(subId)
-        if (startTime == null || bootTime == null) return false
+        private suspend fun readStartTime(subId: Int): Long? =
+            try {
+                callSessionRepository
+                    .getCallStartTime(subId)
+                    .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("CallSessionCleaner: failed to read startTime for subId $subId", e)
+                null
+            }
 
-        val shouldClear =
-            isIncompleteRecord(startTime, bootTime) ||
-                isBootTimeInFuture(bootTime, currentRealtime) ||
-                isEpochDriftExceeded(startTime, bootTime, now, currentRealtime)
+        private suspend fun readBootTime(subId: Int): Long? =
+            try {
+                callSessionRepository
+                    .getBootTime(subId)
+                    .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w("CallSessionCleaner: failed to read bootTime for subId $subId", e)
+                null
+            }
 
-        return if (shouldClear) {
-            clearSessionSafely(subId, context, getStaleCriterion(startTime, bootTime, currentRealtime))
-        } else {
-            AppLogger.d("CallSessionCleaner: preserving valid session for subId $subId")
-            false
+        private suspend fun clearSessionSafely(
+            subId: Int,
+            context: CallTrackingContext,
+            criterion: String,
+        ): Boolean =
+            try {
+                callSessionRepository.clearCallSession(subId)
+                attributionResolver.clearFailures(subId)
+                AppLogger.d("CallSessionCleaner: cleared stale session for subId $subId due to $criterion")
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("CallSessionCleaner: failed to clear session for subId $subId", e)
+                context.updateStatus(
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Failed to clear session for subId $subId: ${e.message}",
+                    ),
+                )
+                false
+            }
+
+        /**
+         * Checks if the call session record is incomplete (`startTime <= 0` or `bootTime <= 0`).
+         */
+        private fun isIncompleteRecord(
+            startTime: Long,
+            bootTime: Long,
+        ): Boolean = startTime <= 0L || bootTime <= 0L
+
+        /**
+         * Checks if `bootTime` exceeds the current device `elapsedRealtime`, violating
+         * the monotonicity invariant of `elapsedRealtime` within a single device boot session.
+         */
+        private fun isBootTimeInFuture(
+            bootTime: Long,
+            currentElapsedRealtime: Long,
+        ): Boolean = bootTime > currentElapsedRealtime
+
+        /**
+         * Checks if the calculated device boot epoch differs from the current wall-clock epoch
+         * minus `elapsedRealtime` by more than [Constants.Calls.BOOT_EPOCH_TOLERANCE_MS], indicating
+         * a stale session from a previous boot session where wall-clock time shifted significantly.
+         *
+         * Invariant: `elapsedRealtime` is strictly monotonic within a boot session.
+         */
+        private fun isEpochDriftExceeded(
+            startTime: Long,
+            bootTime: Long,
+            now: Long,
+            currentElapsedRealtime: Long,
+        ): Boolean {
+            val currentBootEpoch = now - currentElapsedRealtime
+            val sessionBootEpoch = startTime - bootTime
+            return abs(currentBootEpoch - sessionBootEpoch) > Constants.Calls.BOOT_EPOCH_TOLERANCE_MS
         }
-    }
-
-    private fun getStaleCriterion(
-        startTime: Long,
-        bootTime: Long,
-        currentRealtime: Long,
-    ): String =
-        when {
-            isIncompleteRecord(startTime, bootTime) -> "incomplete record"
-            isBootTimeInFuture(bootTime, currentRealtime) -> "bootTime in future"
-            else -> "epoch drift exceeded"
-        }
-
-    private suspend fun readStartTime(subId: Int): Long? =
-        try {
-            callSessionRepository
-                .getCallStartTime(subId)
-                .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.w("CallSessionCleaner: failed to read startTime for subId $subId", e)
-            null
-        }
-
-    private suspend fun readBootTime(subId: Int): Long? =
-        try {
-            callSessionRepository
-                .getBootTime(subId)
-                .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.w("CallSessionCleaner: failed to read bootTime for subId $subId", e)
-            null
-        }
-
-    private suspend fun clearSessionSafely(
-        subId: Int,
-        context: CallTrackingContext,
-        criterion: String,
-    ): Boolean =
-        try {
-            callSessionRepository.clearCallSession(subId)
-            attributionResolver.clearFailures(subId)
-            AppLogger.d("CallSessionCleaner: cleared stale session for subId $subId due to $criterion")
-            true
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("CallSessionCleaner: failed to clear session for subId $subId", e)
-            context.updateStatus(
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.DATABASE_ERROR,
-                    "Failed to clear session for subId $subId: ${e.message}",
-                ),
-            )
-            false
-        }
-
-    /**
-     * Checks if the call session record is incomplete (`startTime <= 0` or `bootTime <= 0`).
-     */
-    private fun isIncompleteRecord(
-        startTime: Long,
-        bootTime: Long,
-    ): Boolean = startTime <= 0L || bootTime <= 0L
-
-    /**
-     * Checks if `bootTime` exceeds the current device `elapsedRealtime`, violating
-     * the monotonicity invariant of `elapsedRealtime` within a single device boot session.
-     */
-    private fun isBootTimeInFuture(
-        bootTime: Long,
-        currentElapsedRealtime: Long,
-    ): Boolean = bootTime > currentElapsedRealtime
-
-    /**
-     * Checks if the calculated device boot epoch differs from the current wall-clock epoch
-     * minus `elapsedRealtime` by more than [Constants.Calls.BOOT_EPOCH_TOLERANCE_MS], indicating
-     * a stale session from a previous boot session where wall-clock time shifted significantly.
-     *
-     * Invariant: `elapsedRealtime` is strictly monotonic within a boot session.
-     */
-    private fun isEpochDriftExceeded(
-        startTime: Long,
-        bootTime: Long,
-        now: Long,
-        currentElapsedRealtime: Long,
-    ): Boolean {
-        val currentBootEpoch = now - currentElapsedRealtime
-        val sessionBootEpoch = startTime - bootTime
-        return abs(currentBootEpoch - sessionBootEpoch) > Constants.Calls.BOOT_EPOCH_TOLERANCE_MS
-    }
     }

@@ -251,7 +251,7 @@ class SimUsageRepositoryImpl
                         (
                             (newValue * TRAFFIC_ROUNDING_FACTOR).roundToLong() /
                                 TRAFFIC_ROUNDING_FACTOR
-                            ).toFloat()
+                        ).toFloat()
                     prefs[DataStoreKeys.trafficUsedKey(identity)] =
                         rounded.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_MB.toFloat())
 
