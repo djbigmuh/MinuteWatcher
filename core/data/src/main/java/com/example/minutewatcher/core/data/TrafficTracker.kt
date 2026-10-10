@@ -192,13 +192,15 @@ class TrafficTracker
             startSimRecoveryObserver()
         }
 
+        private val observerLock = Any()
+
         private fun startPermissionRecoveryObserver() {
-            permissionObserverJob.updateAndGet { existing ->
-                if (existing != null && existing.isActive) {
-                    existing
-                } else {
+            synchronized(observerLock) {
+                val existing = permissionObserverJob.get()
+                if (existing == null || !existing.isActive) {
                     existing?.cancel()
-                    scope.launch { runPermissionObserver() }
+                    val newJob = scope.launch { runPermissionObserver() }
+                    permissionObserverJob.set(newJob)
                 }
             }
         }
@@ -303,12 +305,12 @@ class TrafficTracker
         }
 
         private fun startSimRecoveryObserver() {
-            simObserverJob.updateAndGet { existing ->
-                if (existing != null && existing.isActive) {
-                    existing
-                } else {
+            synchronized(observerLock) {
+                val existing = simObserverJob.get()
+                if (existing == null || !existing.isActive) {
                     existing?.cancel()
-                    scope.launch { runSimObserver() }
+                    val newJob = scope.launch { runSimObserver() }
+                    simObserverJob.set(newJob)
                 }
             }
         }
