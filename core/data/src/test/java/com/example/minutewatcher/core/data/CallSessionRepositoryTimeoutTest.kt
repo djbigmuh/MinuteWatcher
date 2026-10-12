@@ -49,7 +49,7 @@ class CallSessionRepositoryTimeoutTest {
                         repository.saveCallSession(
                             subId = 1,
                             startTime = 1000L,
-                            bootTime = 2000L,
+                            elapsedRealtime = 2000L,
                             uptime = 3000L,
                             identity = "sub1",
                         )

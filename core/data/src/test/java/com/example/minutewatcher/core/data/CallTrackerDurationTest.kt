@@ -28,7 +28,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             val currentUptime = timeProvider.uptimeMillis()
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(currentRealtime))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(currentRealtime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(currentUptime))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
@@ -53,7 +53,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime - 1000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(now + 2000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
@@ -77,7 +77,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             val uptime = timeProvider.uptimeMillis()
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
@@ -104,7 +104,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             // 1. Start recorded at T=1000ms
             timeProvider.setRealtime(1000L)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(500000000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_0"))
 
@@ -129,7 +129,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             val realtime = timeProvider.elapsedRealtime()
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 
@@ -150,7 +150,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             val realtime = timeProvider.elapsedRealtime()
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 
@@ -174,7 +174,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             val realtime = timeProvider.elapsedRealtime()
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 
@@ -198,7 +198,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             val realtime = timeProvider.elapsedRealtime()
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 
@@ -222,7 +222,7 @@ class CallTrackerDurationTest : CallTrackerTestFixtures() {
             val realtime = timeProvider.elapsedRealtime()
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis()))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 

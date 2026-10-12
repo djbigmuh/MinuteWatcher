@@ -58,7 +58,7 @@ class CallEndTrackingSettingsTest {
 
             // 2. Verify NO DataStore reads were performed
             verify(callSessionRepository, never()).getCallStartTime(any())
-            verify(callSessionRepository, never()).getBootTime(any())
+            verify(callSessionRepository, never()).getElapsedRealtime(any())
             verify(callSessionRepository, never()).getUptime(any())
             verify(callSessionRepository, never()).getCallIdentity(any())
         }

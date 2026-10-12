@@ -18,21 +18,6 @@ import com.example.minutewatcher.core.android.ui.onHorizontalSwipe
 import com.example.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
 import com.example.minutewatcher.core.model.Constants
 
-/**
- * Main SIM cards screen.
- * Acts as the central screen of the application, displaying the current state
- * of minutes and mobile traffic consumption for all active SIM cards.
- *
- * Screen structure:
- * - TopAppBar: Theme and language management, navigation to widget settings.
- * - Content: List of SIM cards with detailed statistics and status banners.
- * - FloatingActionButton: Quick access to widget adding instructions.
- * - SnackbarHost: Displays operation execution errors.
- *
- * @param viewModel ViewModel for screen state management. Provides
- *   reactive data updates and dialog state management.
- * @param actions Container of stable callbacks for handling user actions.
- */
 @Composable
 fun SimCardScreen(
     viewModel: MainViewModel,
@@ -45,22 +30,9 @@ fun SimCardScreen(
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val showOnboardingDialog by viewModel.showOnboardingDialog.collectAsStateWithLifecycle()
     val showUsageAccessDialog by viewModel.showUsageAccessDialog.collectAsStateWithLifecycle()
+    val showAboutDialog by viewModel.showAboutDialog.collectAsStateWithLifecycle()
 
-    val lastOperationError by viewModel.lastOperationError.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    lastOperationError?.let { error ->
-        // SpreadOperator: vararg arguments are required by Compose stringResource API.
-        @Suppress("SpreadOperator")
-        val message = stringResource(error.messageRes, *error.args.toTypedArray())
-        LaunchedEffect(error) {
-            snackbarHostState.showSnackbar(
-                message = message,
-                withDismissAction = true,
-            )
-            viewModel.dismissOperationError()
-        }
-    }
+    SimCardErrorHost(viewModel = viewModel)
 
     Scaffold(
         modifier =
@@ -80,10 +52,11 @@ fun SimCardScreen(
                 onThemeChange = actions.onThemeChange,
                 onLanguageChange = actions.onLanguageChange,
                 onOpenSettings = actions.onOpenSettings,
+                onShowAbout = actions.onShowAbout,
             )
         },
         floatingActionButton = { MainFab(onAddWidget = actions.onAddWidget) },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { SnackbarHost(hostState = remember { SnackbarHostState() }) },
     ) { paddingValues ->
         MainScreenContent(
             uiState = uiState,
@@ -98,7 +71,27 @@ fun SimCardScreen(
             viewModel = viewModel,
             showUsageAccessDialog = showUsageAccessDialog,
             showOnboardingDialog = showOnboardingDialog,
+            showAboutDialog = showAboutDialog,
             onOpenUsageAccessSettings = actions.onOpenUsageAccessSettings,
+            onEmailAuthor = actions.onEmailAuthor,
         )
+    }
+}
+
+@Composable
+private fun SimCardErrorHost(viewModel: MainViewModel) {
+    val lastOperationError by viewModel.lastOperationError.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    lastOperationError?.let { error ->
+        @Suppress("SpreadOperator")
+        val message = stringResource(error.messageRes, *error.args.toTypedArray())
+        LaunchedEffect(error) {
+            snackbarHostState.showSnackbar(
+                message = message,
+                withDismissAction = true,
+            )
+            viewModel.dismissOperationError()
+        }
     }
 }

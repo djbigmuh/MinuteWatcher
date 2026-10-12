@@ -29,4 +29,6 @@ data class SimCardScreenActions(
     val onOpenUsageAccessSettings: () -> Unit,
     val onOpenAppSettings: () -> Unit,
     val onGrantNotificationPermission: () -> Unit,
+    val onShowAbout: () -> Unit,
+    val onEmailAuthor: () -> Unit,
 )

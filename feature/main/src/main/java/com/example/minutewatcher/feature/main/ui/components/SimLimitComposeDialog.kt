@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.common.util.NumberInputNormalizer
@@ -75,7 +76,13 @@ fun SimLimitComposeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.limits_for_operator, operatorName)) },
+        title = {
+            Text(
+                text = stringResource(id = R.string.limits_for_operator, operatorName),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
         text = { DialogFields(state = state, locale = locale) },
         confirmButton = {
             DialogButtons(

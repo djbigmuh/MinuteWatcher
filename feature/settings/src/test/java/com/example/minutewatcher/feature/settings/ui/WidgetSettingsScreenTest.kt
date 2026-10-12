@@ -156,7 +156,37 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun navigateUpContentDescResolvesAndIsNotEmptyInAllConfiguredLocales() {
-        val supportedLocales = listOf("en", "ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
+        val supportedLocales =
+            listOf(
+                "en",
+                "ar",
+                "bho",
+                "bn",
+                "de",
+                "es",
+                "fa",
+                "fr",
+                "gu",
+                "ha",
+                "hi",
+                "id",
+                "it",
+                "ja",
+                "jv",
+                "ko",
+                "mr",
+                "pa",
+                "pt-BR",
+                "pt-PT",
+                "ru",
+                "ta",
+                "te",
+                "tr",
+                "ur",
+                "vi",
+                "yo",
+                "zh",
+            )
         supportedLocales.forEach { lang ->
             val locale = Locale.forLanguageTag(lang)
             val config = Configuration(context.resources.configuration)
@@ -278,7 +308,37 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun aodSummaryStringsAreNonEmptyInAllConfiguredLocales() {
-        val supportedLocales = listOf("en", "ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
+        val supportedLocales =
+            listOf(
+                "en",
+                "ar",
+                "bho",
+                "bn",
+                "de",
+                "es",
+                "fa",
+                "fr",
+                "gu",
+                "ha",
+                "hi",
+                "id",
+                "it",
+                "ja",
+                "jv",
+                "ko",
+                "mr",
+                "pa",
+                "pt-BR",
+                "pt-PT",
+                "ru",
+                "ta",
+                "te",
+                "tr",
+                "ur",
+                "vi",
+                "yo",
+                "zh",
+            )
         val stringResIds =
             listOf(
                 R.string.aod_summary_title,
@@ -375,7 +435,37 @@ class WidgetSettingsScreenTest {
 
     @Test
     fun trackingStringsAreNonEmptyInAllConfiguredLocales() {
-        val supportedLocales = listOf("en", "ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
+        val supportedLocales =
+            listOf(
+                "en",
+                "ar",
+                "bho",
+                "bn",
+                "de",
+                "es",
+                "fa",
+                "fr",
+                "gu",
+                "ha",
+                "hi",
+                "id",
+                "it",
+                "ja",
+                "jv",
+                "ko",
+                "mr",
+                "pa",
+                "pt-BR",
+                "pt-PT",
+                "ru",
+                "ta",
+                "te",
+                "tr",
+                "ur",
+                "vi",
+                "yo",
+                "zh",
+            )
         val stringResIds =
             listOf(
                 R.string.tracking_title,
@@ -441,6 +531,36 @@ class WidgetSettingsScreenTest {
         composeTestRule.waitForIdle()
 
         verify(viewModel).updateSettings(any())
+    }
+
+    @Test
+    fun confirmingColorPickerDialogClosesDialogAndCallsUpdateSettingsOnce() {
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.custom_color)).performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        val dialog = ShadowDialog.getLatestDialog() as? androidx.appcompat.app.AlertDialog
+        assertNotNull("Dialog must be displayed", dialog)
+        assertTrue("Dialog must be showing", dialog!!.isShowing)
+
+        val positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        assertNotNull("Positive button must exist", positiveButton)
+        positiveButton.performClick()
+        org.robolectric.Shadows
+            .shadowOf(android.os.Looper.getMainLooper())
+            .idle()
+        composeTestRule.waitForIdle()
+
+        verify(viewModel, org.mockito.kotlin.times(1)).updateSettings(any())
+        assertFalse("Dialog must be closed after confirming", dialog.isShowing)
     }
 
     @Test

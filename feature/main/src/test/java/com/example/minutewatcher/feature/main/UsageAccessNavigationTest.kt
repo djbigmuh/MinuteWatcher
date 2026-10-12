@@ -127,12 +127,16 @@ class UsageAccessNavigationTest {
         val controllers = createControllers(scope)
         val initController = createInitController(controllers.refresh)
         val dialogController = MainDialogController(savedStateHandle)
+        val appInfoProvider: com.example.minutewatcher.core.domain.AppInfoProvider = mock()
+        whenever(appInfoProvider.versionName).thenReturn("1.0.0")
+        whenever(appInfoProvider.code).thenReturn(1)
 
         return MainViewModel(
             controllers = controllers,
             dialogController = dialogController,
             initController = initController,
             timeProvider = timeProvider,
+            appInfoProvider = appInfoProvider,
             savedStateHandle = savedStateHandle,
         )
     }
@@ -167,6 +171,7 @@ class UsageAccessNavigationTest {
                 simLimitsRepository = simLimitsRepository,
                 usageUseCase = usageUseCase,
                 dataChangeNotifier = mock(),
+                trackingStatusRepository = mock(),
                 ioDispatcher = testDispatcher,
                 scope = scope,
             )
@@ -213,7 +218,7 @@ class UsageAccessNavigationTest {
             isMinutesLimitSet = false,
             trafficUsedMb = 0f,
             trafficLimitMb = 0,
-            trafficRemainingGb = 0f,
+            trafficRemainingGb = null,
             effectiveTrafficLimitGb = 0f,
             trafficAdjustmentGb = 0f,
             isTrafficLimitSet = false,

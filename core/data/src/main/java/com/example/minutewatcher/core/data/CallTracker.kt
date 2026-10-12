@@ -123,6 +123,8 @@ class CallTracker
             if (shouldStart) {
                 try {
                     startPermissionObserver()
+                    val previousInit = initJob.getAndSet(null)
+                    previousInit?.cancel()
                     val newInitJob =
                         scope.launch {
                             try {
@@ -142,7 +144,9 @@ class CallTracker
                                 initDeferred.completeExceptionally(e)
                             }
                         }
-                    initJob.set(newInitJob)
+                    if (!initJob.compareAndSet(null, newInitJob)) {
+                        newInitJob.cancel()
+                    }
                 } catch (e: Exception) {
                     AppLogger.e("CallTracker: Failed to start initialization", e)
                     trackerState.set(State.FAILED)
@@ -153,12 +157,14 @@ class CallTracker
         }
 
         @VisibleForTesting
-        fun isStarted(): Boolean {
+        internal fun isStarted(): Boolean {
             val current = trackerState.get()
             return current == State.INITIALIZED || current == State.INITIALIZING
         }
 
         private fun startPermissionObserver() {
+            val previous = permissionObserverJob.getAndSet(null)
+            previous?.cancel()
             val changesFlow = permissionStateNotifier.changes
             val newJob =
                 scope.launch {
@@ -195,7 +201,9 @@ class CallTracker
                             }
                         }
                 }
-            permissionObserverJob.getAndSet(newJob)?.cancel()
+            if (!permissionObserverJob.compareAndSet(null, newJob)) {
+                newJob.cancel()
+            }
         }
 
         /**
@@ -418,7 +426,7 @@ class CallTracker
          * Used for testing purposes to ensure isolation.
          */
         @VisibleForTesting
-        fun stop() {
+        internal fun stop() {
             initJob.getAndSet(null)?.cancel()
             permissionObserverJob.getAndSet(null)?.cancel()
             synchronized(this) {

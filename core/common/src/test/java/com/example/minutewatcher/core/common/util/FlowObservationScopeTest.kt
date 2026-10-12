@@ -194,4 +194,56 @@ class FlowObservationScopeTest {
                 assertNotNull("New job must be launched after timeout even if previous stuck", newJob)
             }
         }
+
+    @Test
+    fun `FlowObservationScope does not hold strong reference to collector after job cancellation`() =
+        runTest {
+            val scope = FlowObservationScope<Int>(backgroundScope, "test")
+            val flow = MutableSharedFlow<Int>()
+
+            class CollectorHolder {
+                var counter = 0
+
+                fun collect() {
+                    counter++
+                }
+            }
+
+            var holder: CollectorHolder? = CollectorHolder()
+            val weakRef = java.lang.ref.WeakReference(holder)
+
+            val job =
+                scope.observe(flow) {
+                    holder?.collect()
+                }
+            runCurrent()
+
+            job.cancel()
+            runCurrent()
+
+            holder = null
+            System.gc()
+
+            assertNull("Collector instance should be garbage collected", weakRef.get())
+        }
+
+    @Test
+    fun `ObservationMode COMPLETE processes all emissions without dropping intermediate values`() =
+        runTest {
+            val scope = FlowObservationScope<Int>(backgroundScope, "test", ObservationMode.COMPLETE)
+            val flow = MutableSharedFlow<Int>(replay = 10)
+            val processedValues = mutableListOf<Int>()
+
+            scope.observe(flow) { value ->
+                processedValues.add(value)
+            }
+            runCurrent()
+
+            flow.emit(1)
+            flow.emit(2)
+            flow.emit(3)
+            runCurrent()
+
+            assertEquals(listOf(1, 2, 3), processedValues)
+        }
 }

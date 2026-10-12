@@ -42,10 +42,11 @@ class SnapshotIndexer
         suspend fun performIndexUpdate(
             session: AppSearchSessionWrapper,
             snapshot: GlobalSnapshot,
-        ) {
+            updateStatus: (TrackingStatus) -> Unit = {},
+        ): Boolean {
             if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
                 AppLogger.d("SnapshotIndexer: snapshot not loaded yet, skipping index update (no wipe)")
-                return
+                return false
             }
 
             val documents = UsageDocument.fromGlobalSnapshot(snapshot)
@@ -73,19 +74,26 @@ class SnapshotIndexer
                 }
             }
 
-            var removeException: Exception? = null
-            if ((putException == null) && staleIds.isNotEmpty()) {
+            errorHandler.throwIfErrors(putException, null)
+
+            var removeFailed = false
+            if (staleIds.isNotEmpty()) {
                 try {
                     session.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.w("SnapshotIndexer: failure during removeByDocumentId", e)
-                    removeException = e
+                    AppLogger.e("SnapshotIndexer: failure during removeByDocumentId", e)
+                    removeFailed = true
+                    updateStatus(
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            e.message ?: "Stale document removal failed",
+                        ),
+                    )
                 }
             }
-
-            errorHandler.throwIfErrors(putException, removeException)
+            return removeFailed
         }
 
         suspend fun cleanupStalePackageTypes(

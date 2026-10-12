@@ -74,16 +74,31 @@ class TrafficBaselineManager
          * @param startTime must be a valid timestamp (greater than 0).
          * Typically this is the `lastResetDate` of the SIM usage.
          * If [startTime] is 0 or negative, returns [StatsResult.Error] with [IllegalArgumentException] as cause.
+         * Invariant: window [startTime, now] requires now >= startTime; if violated, returns [StatsResult.Unavailable].
+         * Contract: invalid window [startTime, now] (including startTime <= 0) does not invoke NetworkStatsManager.
          */
-        fun getCurrentMobileBytes(startTime: Long): StatsResult {
-            if (startTime <= 0L) {
-                return StatsResult.Error(
-                    IllegalArgumentException("startTime must be greater than 0, but was $startTime"),
-                )
+        fun getCurrentMobileBytes(startTime: Long): StatsResult =
+            when {
+                startTime <= 0L ->
+                    StatsResult.Error(
+                        IllegalArgumentException("startTime must be greater than 0, but was $startTime"),
+                    )
+
+                else -> {
+                    val now = timeProvider.now()
+                    when {
+                        now < startTime -> {
+                            AppLogger.w(
+                                "TrafficBaselineManager: invalid time window, " +
+                                    "now ($now) is earlier than startTime ($startTime)",
+                            )
+                            StatsResult.Unavailable
+                        }
+
+                        else -> networkStatsProvider.queryMobileBytes(startTime, now)
+                    }
+                }
             }
-            val now = timeProvider.now()
-            return networkStatsProvider.queryMobileBytes(startTime, now)
-        }
 
         suspend fun resetBaseline(
             identity: String,

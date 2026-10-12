@@ -10,7 +10,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -66,5 +68,44 @@ class TrafficBaselineManagerTest {
             val active = setOf("id1", "id2")
             manager.cleanupRetries(active)
             verify(simUsageResetRepository).cleanupBaselineRetries(active)
+        }
+
+    @Test
+    fun `getCurrentMobileBytes returns Unavailable when now is less than startTime`() =
+        runTest {
+            whenever(timeProvider.now()).thenReturn(100L)
+            val result = manager.getCurrentMobileBytes(200L)
+            assertEquals(StatsResult.Unavailable, result)
+            verify(networkStatsProvider, never()).queryMobileBytes(any(), any())
+        }
+
+    @Test
+    fun `getCurrentMobileBytes returns Error when startTime is zero or negative`() =
+        runTest {
+            val resultZero = manager.getCurrentMobileBytes(0L)
+            assert(resultZero is StatsResult.Error)
+            assertEquals(
+                "startTime must be greater than 0, but was 0",
+                (resultZero as StatsResult.Error).exception.message,
+            )
+
+            val resultNegative = manager.getCurrentMobileBytes(-1L)
+            assert(resultNegative is StatsResult.Error)
+            assertEquals(
+                "startTime must be greater than 0, but was -1",
+                (resultNegative as StatsResult.Error).exception.message,
+            )
+
+            verify(networkStatsProvider, never()).queryMobileBytes(any(), any())
+        }
+
+    @Test
+    fun `getCurrentMobileBytes queries provider when now is greater than or equal to startTime`() =
+        runTest {
+            whenever(timeProvider.now()).thenReturn(300L)
+            whenever(networkStatsProvider.queryMobileBytes(200L, 300L)).thenReturn(StatsResult.Success(1000L))
+            val result = manager.getCurrentMobileBytes(200L)
+            assertEquals(StatsResult.Success(1000L), result)
+            verify(networkStatsProvider).queryMobileBytes(200L, 300L)
         }
 }

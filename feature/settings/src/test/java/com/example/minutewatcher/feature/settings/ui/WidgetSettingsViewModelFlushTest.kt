@@ -25,7 +25,7 @@ class WidgetSettingsViewModelFlushTest : BaseWidgetSettingsViewModelFixture() {
             viewModel.updateSettings { it.copy(transparency = 75) }
             runCurrent()
 
-            viewModel.onClearedForTest()
+            clearViewModel()
             testScheduler.advanceTimeBy(1.seconds)
             runCurrent()
             advanceUntilIdle()
@@ -38,7 +38,7 @@ class WidgetSettingsViewModelFlushTest : BaseWidgetSettingsViewModelFixture() {
         runTest {
             initViewModel()
 
-            viewModel.onClearedForTest()
+            clearViewModel()
             advanceUntilIdle()
 
             verify(saver, never()).save(any(), any())
@@ -55,7 +55,7 @@ class WidgetSettingsViewModelFlushTest : BaseWidgetSettingsViewModelFixture() {
 
             verify(saver, times(1)).save(argThat { transparency == 75 }, any())
 
-            viewModel.onClearedForTest()
+            clearViewModel()
             advanceUntilIdle()
 
             verify(saver, times(1)).save(any(), any())
@@ -75,7 +75,7 @@ class WidgetSettingsViewModelFlushTest : BaseWidgetSettingsViewModelFixture() {
             viewModel.updateSettings { it.copy(transparency = 90) }
             runCurrent()
 
-            viewModel.onClearedForTest()
+            clearViewModel()
             testScheduler.advanceTimeBy(1.seconds)
             runCurrent()
             advanceUntilIdle()

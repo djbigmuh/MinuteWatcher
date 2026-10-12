@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>ఒకే లైన్‌లో</item>
+        <item>రెండు లైన్లు</item>
+        <item>మూడు లైన్లు</item>
+        <item>ఆరు లైన్లు</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>పక్కపక్కనే</item>
+        <item>నిలువు వరుసలో</item>
+    </string-array>
+</resources>

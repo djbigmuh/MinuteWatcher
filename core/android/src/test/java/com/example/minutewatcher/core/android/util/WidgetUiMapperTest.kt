@@ -514,7 +514,7 @@ class WidgetUiMapperTest {
 
         val simUiState = uiState.simUiStates[0]
         assertTrue("showMinutes should be true when used > 0", simUiState.showMinutes)
-        assertEquals("-", simUiState.minutesText)
+        assertEquals("—", simUiState.minutesText)
     }
 
     @Test

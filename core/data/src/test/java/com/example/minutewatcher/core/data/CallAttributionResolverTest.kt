@@ -107,7 +107,7 @@ class CallAttributionResolverTest {
         }
 
     @Test
-    fun `resolveTargetIdentity returns fallback sim and true when no match and single active sim`() =
+    fun `resolveTargetIdentity returns fallback sim and true when no match and single active sim is stable`() =
         runBlocking {
             val sim0 =
                 ActiveSimInfo(
@@ -129,7 +129,29 @@ class CallAttributionResolverTest {
         }
 
     @Test
-    fun `resolveSessionIdentity resolves both stable and unstable identities`() =
+    fun `resolveTargetIdentity returns null and false when no match and single active sim is unstable`() =
+        runBlocking {
+            val sim0 =
+                ActiveSimInfo(
+                    SimIdentity("sub_0", 1, 0, IdentitySource.SUBSCRIPTION_ID, false),
+                    0,
+                    1,
+                    null,
+                    "S0",
+                    "C0",
+                    "m0",
+                    false,
+                    false,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(sim0)))
+            val (identity, isFallback) =
+                resolver.resolveTargetIdentity(subId = 999, savedIdentity = null)
+            assertEquals(null, identity)
+            assertTrue(!isFallback)
+        }
+
+    @Test
+    fun `resolveIdentity returns stableId for stable SIM and null for unstable SIM`() =
         runBlocking {
             val simUnstable =
                 ActiveSimInfo(
@@ -143,8 +165,24 @@ class CallAttributionResolverTest {
                     false,
                     false,
                 )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simUnstable)))
-            val resolved = resolver.resolveSessionIdentity(1)
-            assertEquals("sub_1", resolved)
+            val simStable =
+                ActiveSimInfo(
+                    SimIdentity("icc_2", 2, 1, IdentitySource.ICCID, true),
+                    1,
+                    2,
+                    "icc_2",
+                    "S2",
+                    "C2",
+                    "m2",
+                    false,
+                    false,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simUnstable, simStable)))
+
+            val resolvedUnstable = resolver.resolveIdentity(1)
+            val resolvedStable = resolver.resolveIdentity(2)
+
+            assertEquals(null, resolvedUnstable)
+            assertEquals("icc_2", resolvedStable)
         }
 }

@@ -47,6 +47,7 @@ dependencies {
 
     testImplementation(testFixtures(project(":core:android")))
     testImplementation(testFixtures(project(":core:common")))
+    testImplementation(testFixtures(project(":core:resources")))
     testImplementation(libs.junit)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.robolectric)

@@ -57,6 +57,7 @@ class WidgetLimitManagerRegressionTest {
             }
 
             val limitManager = WidgetLimitManager(appSettingsRepository, backgroundScope)
+            limitManager.start()
             runCurrent()
 
             val updater =
@@ -90,6 +91,7 @@ class WidgetLimitManagerRegressionTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(MutableStateFlow(settings))
 
             val limitManager = WidgetLimitManager(appSettingsRepository, backgroundScope)
+            limitManager.start()
             runCurrent()
 
             val updater =

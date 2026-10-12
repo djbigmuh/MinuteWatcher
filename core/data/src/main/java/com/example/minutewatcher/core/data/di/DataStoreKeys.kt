@@ -17,6 +17,37 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  */
 @Suppress("TooManyFunctions")
 internal object DataStoreKeys {
+    /**
+     * **Schema Migration Invariant:** All DataStore key string values and prefixes defined here
+     * represent the persistent storage schema contract. They MUST remain unchanged across schema versions
+     * to ensure backward compatibility and prevent data loss or migration failures.
+     */
+    const val LAST_TOTAL_BYTES_PREFIX = "last_total_bytes_"
+    const val NOTIFIED_LOW_MINUTES_PREFIX = "notified_low_minutes_"
+    const val NOTIFIED_LOW_TRAFFIC_PREFIX = "notified_low_traffic_"
+    const val NOTIFIED_EXHAUSTED_MINUTES_PREFIX = "notified_exhausted_minutes_"
+    const val NOTIFIED_EXHAUSTED_TRAFFIC_PREFIX = "notified_exhausted_traffic_"
+    const val MONTHLY_LIMIT_PREFIX = "monthly_limit_"
+    const val TRAFFIC_LIMIT_PREFIX = "traffic_limit_"
+    const val MINUTES_USED_PREFIX = "minutes_used_"
+    const val LAST_COUNTED_CALL_MARKER_PREFIX = "last_counted_call_marker_"
+    const val MANUAL_ADJUSTMENT_PREFIX = "manual_adjustment_"
+    const val TRAFFIC_ADJUSTMENT_PREFIX = "traffic_adjustment_"
+    const val TRAFFIC_USED_PREFIX = "traffic_used_"
+    const val AUTO_RESET_PREFIX = "auto_reset_"
+    const val AUTO_RESET_DAY_PREFIX = "auto_reset_day_"
+    const val LAST_RESET_DATE_PREFIX = "last_reset_date_"
+    const val SIM_OPERATOR_PREFIX = "sim_operator_"
+    const val SLOT_INDEX_PREFIX = "slot_index_"
+    const val ROLLOVER_ENABLED_PREFIX = "rollover_enabled_"
+    const val WIDGET_SHOW_SIM_PREFIX = "widget_show_sim_"
+    const val WIDGET_SHOW_SIM_ICON_PREFIX = "widget_show_sim_icon_"
+    const val WIDGET_SHOW_SIM_NAME_PREFIX = "widget_show_sim_name_"
+    const val WIDGET_SHOW_MINUTES_PREFIX = "widget_show_minutes_"
+    const val WIDGET_SHOW_MINUTES_LIMIT_PREFIX = "widget_show_minutes_limit_"
+    const val WIDGET_SHOW_TRAFFIC_PREFIX = "widget_show_traffic_"
+    const val WIDGET_SHOW_TRAFFIC_LIMIT_PREFIX = "widget_show_traffic_limit_"
+
     // App settings (SettingsKeys)
     val APP_THEME = intPreferencesKey("app_theme")
 
@@ -93,79 +124,84 @@ internal object DataStoreKeys {
 
     fun callIdentityKey(subId: Int) = stringPreferencesKey("$CALL_IDENTITY_PREFIX$subId")
 
-    fun lastTotalBytesKey(identity: String) = longPreferencesKey("last_total_bytes_$identity")
+    fun lastTotalBytesKey(identity: String) = longPreferencesKey("$LAST_TOTAL_BYTES_PREFIX$identity")
 
     fun baselineRetryCountKey(identity: String) = intPreferencesKey("$BASELINE_RETRY_COUNT_PREFIX$identity")
 
     // Notification states (NotificationSettingsKeys)
-    fun notifiedLowMinutesKey(identity: String) = booleanPreferencesKey("notified_low_minutes_$identity")
+    const val NOTIFIED_CRITICAL_MINUTES_PREFIX = "notified_critical_minutes_"
+    const val NOTIFIED_CRITICAL_TRAFFIC_PREFIX = "notified_critical_traffic_"
 
-    fun notifiedLowTrafficKey(identity: String) = booleanPreferencesKey("notified_low_traffic_$identity")
+    fun notifiedLowMinutesKey(identity: String) = booleanPreferencesKey("$NOTIFIED_LOW_MINUTES_PREFIX$identity")
+
+    fun notifiedLowTrafficKey(identity: String) = booleanPreferencesKey("$NOTIFIED_LOW_TRAFFIC_PREFIX$identity")
+
+    fun notifiedCriticalMinutesKey(identity: String) =
+        booleanPreferencesKey("$NOTIFIED_CRITICAL_MINUTES_PREFIX$identity")
+
+    fun notifiedCriticalTrafficKey(identity: String) =
+        booleanPreferencesKey("$NOTIFIED_CRITICAL_TRAFFIC_PREFIX$identity")
 
     fun notifiedExhaustedMinutesKey(identity: String) =
-        booleanPreferencesKey(
-            "notified_exhausted_minutes_$identity",
-        )
+        booleanPreferencesKey("$NOTIFIED_EXHAUSTED_MINUTES_PREFIX$identity")
 
     fun notifiedExhaustedTrafficKey(identity: String) =
-        booleanPreferencesKey(
-            "notified_exhausted_traffic_$identity",
-        )
+        booleanPreferencesKey("$NOTIFIED_EXHAUSTED_TRAFFIC_PREFIX$identity")
 
     // SIM settings (SimSettingsKeys)
-    fun monthlyLimitKey(identity: String) = intPreferencesKey("monthly_limit_$identity")
+    fun monthlyLimitKey(identity: String) = intPreferencesKey("$MONTHLY_LIMIT_PREFIX$identity")
 
-    fun trafficLimitKey(identity: String) = intPreferencesKey("traffic_limit_$identity")
+    fun trafficLimitKey(identity: String) = intPreferencesKey("$TRAFFIC_LIMIT_PREFIX$identity")
 
-    fun minutesUsedKey(identity: String) = intPreferencesKey("minutes_used_$identity")
+    fun minutesUsedKey(identity: String) = intPreferencesKey("$MINUTES_USED_PREFIX$identity")
 
     const val LAST_COUNTED_CALL_SIGNATURE_PREFIX = "last_counted_call_signature_"
 
     fun lastCountedCallSignatureKey(identity: String) =
         stringPreferencesKey("$LAST_COUNTED_CALL_SIGNATURE_PREFIX$identity")
 
-    fun lastCountedCallMarkerKey(identity: String) = longPreferencesKey("last_counted_call_marker_$identity")
+    fun lastCountedCallMarkerKey(identity: String) = longPreferencesKey("$LAST_COUNTED_CALL_MARKER_PREFIX$identity")
 
-    fun manualAdjustmentKey(identity: String) = intPreferencesKey("manual_adjustment_$identity")
+    fun manualAdjustmentKey(identity: String) = intPreferencesKey("$MANUAL_ADJUSTMENT_PREFIX$identity")
 
-    fun trafficAdjustmentKey(identity: String) = floatPreferencesKey("traffic_adjustment_$identity")
+    fun trafficAdjustmentKey(identity: String) = floatPreferencesKey("$TRAFFIC_ADJUSTMENT_PREFIX$identity")
 
-    fun trafficUsedKey(identity: String) = floatPreferencesKey("traffic_used_$identity")
+    fun trafficUsedKey(identity: String) = floatPreferencesKey("$TRAFFIC_USED_PREFIX$identity")
 
-    fun autoResetKey(identity: String) = booleanPreferencesKey("auto_reset_$identity")
+    fun autoResetKey(identity: String) = booleanPreferencesKey("$AUTO_RESET_PREFIX$identity")
 
-    fun autoResetDayKey(identity: String) = intPreferencesKey("auto_reset_day_$identity")
+    fun autoResetDayKey(identity: String) = intPreferencesKey("$AUTO_RESET_DAY_PREFIX$identity")
 
-    fun lastResetDateKey(identity: String) = longPreferencesKey("last_reset_date_$identity")
+    fun lastResetDateKey(identity: String) = longPreferencesKey("$LAST_RESET_DATE_PREFIX$identity")
 
-    fun simOperatorKey(identity: String) = stringPreferencesKey("sim_operator_$identity")
+    fun simOperatorKey(identity: String) = stringPreferencesKey("$SIM_OPERATOR_PREFIX$identity")
 
     const val CUSTOM_SIM_OPERATOR_PREFIX = "custom_sim_operator_"
 
-    fun slotIndexKey(identity: String) = intPreferencesKey("slot_index_$identity")
+    fun slotIndexKey(identity: String) = intPreferencesKey("$SLOT_INDEX_PREFIX$identity")
 
     const val SUBSCRIPTION_ID_PREFIX = "subscription_id_"
     const val CONFLICT_PREFIX = "conflict_"
 
     fun subscriptionIdKey(identity: String) = intPreferencesKey("$SUBSCRIPTION_ID_PREFIX$identity")
 
-    fun rolloverEnabledKey(identity: String) = booleanPreferencesKey("rollover_enabled_$identity")
+    fun rolloverEnabledKey(identity: String) = booleanPreferencesKey("$ROLLOVER_ENABLED_PREFIX$identity")
 
     // Widget settings (WidgetSettingsKeys)
 
-    fun showSimKey(identity: String) = booleanPreferencesKey("widget_show_sim_$identity")
+    fun showSimKey(identity: String) = booleanPreferencesKey("$WIDGET_SHOW_SIM_PREFIX$identity")
 
-    fun showSimIconKey(identity: String) = booleanPreferencesKey("widget_show_sim_icon_$identity")
+    fun showSimIconKey(identity: String) = booleanPreferencesKey("$WIDGET_SHOW_SIM_ICON_PREFIX$identity")
 
-    fun showSimNameKey(identity: String) = booleanPreferencesKey("widget_show_sim_name_$identity")
+    fun showSimNameKey(identity: String) = booleanPreferencesKey("$WIDGET_SHOW_SIM_NAME_PREFIX$identity")
 
-    fun showMinutesKey(identity: String) = booleanPreferencesKey("widget_show_minutes_$identity")
+    fun showMinutesKey(identity: String) = booleanPreferencesKey("$WIDGET_SHOW_MINUTES_PREFIX$identity")
 
-    fun showMinutesLimitKey(identity: String) = booleanPreferencesKey("widget_show_minutes_limit_$identity")
+    fun showMinutesLimitKey(identity: String) = booleanPreferencesKey("$WIDGET_SHOW_MINUTES_LIMIT_PREFIX$identity")
 
-    fun showTrafficKey(identity: String) = booleanPreferencesKey("widget_show_traffic_$identity")
+    fun showTrafficKey(identity: String) = booleanPreferencesKey("$WIDGET_SHOW_TRAFFIC_PREFIX$identity")
 
-    fun showTrafficLimitKey(identity: String) = booleanPreferencesKey("widget_show_traffic_limit_$identity")
+    fun showTrafficLimitKey(identity: String) = booleanPreferencesKey("$WIDGET_SHOW_TRAFFIC_LIMIT_PREFIX$identity")
 
     // Identity Seed (SimIdentitySeedRepositoryImpl)
     val SIM_IDENTITY_SEED = stringPreferencesKey("sim_identity_seed")

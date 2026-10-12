@@ -1,10 +1,10 @@
 package com.example.minutewatcher.core.android.util
 
 import android.content.Context
+import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.WidgetStrings
 import com.example.minutewatcher.core.resources.R
-import java.util.Locale
 
 /**
  * Widget strings factory.
@@ -13,12 +13,7 @@ import java.util.Locale
 object WidgetStringsFactory {
     fun create(context: Context): WidgetStrings {
         val appLocaleContext = AppLocaleContexts.forAppLocale(context)
-        val effectiveLocale =
-            appLocaleContext
-                .resources
-                .configuration
-                .locales
-                .get(0) ?: Locale.getDefault()
+        val effectiveLocale = FormatUtils.getLocale(appLocaleContext)
 
         return WidgetStrings(
             usedText = appLocaleContext.getString(R.string.used_text),
@@ -31,6 +26,9 @@ object WidgetStringsFactory {
             noSimFoundText = appLocaleContext.getString(R.string.no_sim_found),
             staleDataWarningText = appLocaleContext.getString(R.string.stale_data_warning),
             simStatusSummaryFormat = appLocaleContext.getString(R.string.sim_status_summary),
+            valuePlaceholder = appLocaleContext.getString(R.string.value_placeholder),
+            labelValueFormat = appLocaleContext.getString(R.string.label_value_colon_format),
+            limitSuffixFormat = appLocaleContext.getString(R.string.limit_suffix_format),
             locale = effectiveLocale,
         )
     }

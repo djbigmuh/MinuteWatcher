@@ -73,5 +73,7 @@ class SimUsageResetLogic
             prefs[DataStoreKeys.notifiedLowTrafficKey(identity)] = false
             prefs[DataStoreKeys.notifiedExhaustedMinutesKey(identity)] = false
             prefs[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = false
+            prefs[DataStoreKeys.notifiedCriticalMinutesKey(identity)] = false
+            prefs[DataStoreKeys.notifiedCriticalTrafficKey(identity)] = false
         }
     }

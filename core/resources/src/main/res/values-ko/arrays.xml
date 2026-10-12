@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>한 줄로 표시</item>
+        <item>두 줄</item>
+        <item>세 줄</item>
+        <item>여섯 줄</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>나란히</item>
+        <item>세로 열로</item>
+    </string-array>
+</resources>

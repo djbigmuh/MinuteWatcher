@@ -69,4 +69,16 @@ class CallTrackerBootTest {
 
             assertEquals(TrackingStatus.Idle, callTracker.status.value)
         }
+
+    @Test
+    fun `ensureStarted called repeatedly replaces permission observer cleanly`() =
+        runTest(testDispatcher) {
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
+        }
 }

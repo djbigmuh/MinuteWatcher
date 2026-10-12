@@ -1,7 +1,5 @@
 package com.example.minutewatcher.core.model.util
 
-import com.example.minutewatcher.core.model.Constants
-
 /**
  * Centralized selection of usage statuses.
  */
@@ -9,12 +7,5 @@ object ColorProvider {
     fun getUsageStatus(
         remaining: Float,
         limit: Float,
-    ): UsageStatus =
-        when {
-            limit <= 0 -> UsageStatus.NORMAL
-            remaining <= 0 -> UsageStatus.CRITICAL
-            remaining < limit * Constants.CRITICAL_REMAINING_THRESHOLD_FRACTION -> UsageStatus.CRITICAL
-            remaining < limit * Constants.LOW_REMAINING_THRESHOLD_FRACTION -> UsageStatus.LOW
-            else -> UsageStatus.NORMAL
-        }
+    ): UsageStatus = UsageLevelResolver.resolve(remaining.toLong(), limit.toLong())
 }

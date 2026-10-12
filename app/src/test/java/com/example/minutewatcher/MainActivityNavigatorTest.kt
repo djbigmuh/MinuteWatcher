@@ -36,20 +36,31 @@ class MainActivityNavigatorTest {
             }
         val navigator = MainActivityNavigator(fakeStarter)
         navigator.addWidgetToHomeScreen(appContext)
+        val appWidgetManager = appContext.getSystemService(android.appwidget.AppWidgetManager::class.java)
+        assertNotNull(appWidgetManager)
     }
 
     @Test
     fun `openAppSettings does not throw when ActivityNotFoundException occurs`() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
+        var launchedIntent: Intent? = null
         val fakeStarter =
             object : ActivityStarter {
                 override fun startActivity(
                     context: Context,
                     intent: Intent,
-                ): Unit = throw ActivityNotFoundException("Not found")
+                ) {
+                    launchedIntent = intent
+                    throw ActivityNotFoundException("Not found")
+                }
             }
         val navigator = MainActivityNavigator(fakeStarter)
         navigator.openAppSettings(appContext)
+
+        assertNotNull(launchedIntent)
+        assertEquals(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, launchedIntent?.action)
+        assertEquals("package", launchedIntent?.data?.scheme)
+        assertEquals(appContext.packageName, launchedIntent?.data?.schemeSpecificPart)
     }
 
     @Test
@@ -122,5 +133,28 @@ class MainActivityNavigatorTest {
         assertEquals(Settings.ACTION_USAGE_ACCESS_SETTINGS, launchedActions[0])
         assertEquals(Settings.ACTION_USAGE_ACCESS_SETTINGS, launchedActions[1])
         assertEquals(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, launchedActions[2])
+    }
+
+    @Test
+    fun `openEmailComposer launches sendto intent with mailto uri and handles ActivityNotFoundException`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        var launchedIntent: Intent? = null
+        val fakeStarter =
+            object : ActivityStarter {
+                override fun startActivity(
+                    context: Context,
+                    intent: Intent,
+                ) {
+                    launchedIntent = intent
+                    throw ActivityNotFoundException("No email app")
+                }
+            }
+        val navigator = MainActivityNavigator(fakeStarter)
+        navigator.openEmailComposer(appContext, "dj.bigmuh@gmail.com")
+
+        assertNotNull(launchedIntent)
+        assertEquals(Intent.ACTION_SENDTO, launchedIntent?.action)
+        assertEquals("mailto", launchedIntent?.data?.scheme)
+        assertEquals("dj.bigmuh@gmail.com", launchedIntent?.data?.schemeSpecificPart)
     }
 }

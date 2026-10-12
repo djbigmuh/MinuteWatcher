@@ -9,7 +9,7 @@ import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.model.SimUiState
 import com.example.minutewatcher.core.model.WidgetLayoutMode
 import com.example.minutewatcher.core.model.WidgetStrings
-import com.example.minutewatcher.core.model.util.ColorProvider
+import com.example.minutewatcher.core.model.util.UsageLevelResolver
 
 /**
  * Factory to create [SimUiState] from a snapshot and settings.
@@ -94,20 +94,32 @@ object WidgetSimUiFactory {
         val used = entity?.used ?: 0L
         val rem = entity?.remaining ?: 0L
         val hasData = limit > 0 || used > 0
-        val status = ColorProvider.getUsageStatus(rem.toFloat(), limit.toFloat())
+        val status = UsageLevelResolver.resolve(rem, limit)
 
         val showMinutes = (config?.showMinutes ?: true) && entity != null && hasData
         val showLimit = (config?.showMinutesLimit ?: false) && limit > 0
 
         return PackageUiData(
             show = showMinutes,
-            text = if (entity == null || limit <= 0) "-" else rem.toString(),
+            text = if (entity == null || limit <= 0) strings.valuePlaceholder else rem.toString(),
             suffix = strings.minutesAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = if (showLimit) "/$limit" else "",
-            usedFull = "${strings.usedText}: ${formatWithSuffix(used.toString(), strings.minutesAbbr)}",
-            limitFull = "${strings.limitText}: ${formatWithSuffix(limit.toString(), strings.minutesAbbr)}",
+            limitText = if (showLimit) String.format(strings.locale, strings.limitSuffixFormat, limit) else "",
+            usedFull =
+                String.format(
+                    strings.locale,
+                    strings.labelValueFormat,
+                    strings.usedText,
+                    formatWithSuffix(used.toString(), strings.minutesAbbr),
+                ),
+            limitFull =
+                String.format(
+                    strings.locale,
+                    strings.labelValueFormat,
+                    strings.limitText,
+                    formatWithSuffix(limit.toString(), strings.minutesAbbr),
+                ),
         )
     }
 
@@ -118,11 +130,12 @@ object WidgetSimUiFactory {
         luminance: Double,
     ): PackageUiData {
         val limitBytes = entity?.limit ?: 0L
+        val remBytes = entity?.remaining ?: 0L
         val limitGb = (limitBytes.toDouble() / Constants.BYTES_PER_GB).toFloat()
         val remGb = calculateRemainingGb(entity, limitBytes)
         val usedGb = ((entity?.used ?: 0L).toDouble() / Constants.BYTES_PER_GB).toFloat()
 
-        val status = ColorProvider.getUsageStatus(remGb, limitGb)
+        val status = UsageLevelResolver.resolve(remBytes, limitBytes)
         val showTraffic = (config?.showTraffic ?: true) && entity != null && (limitGb > 0f || usedGb > 0f)
         val showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f
 
@@ -132,25 +145,45 @@ object WidgetSimUiFactory {
             suffix = strings.gbAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = if (showLimit) "/${FormatUtils.formatTrafficGb(strings.locale, limitGb)}" else "",
-            usedFull = "${strings.usedText}: ${
-                formatWithSuffix(
-                    FormatUtils.formatTrafficGb(strings.locale, usedGb),
-                    strings.gbAbbr,
-                )
-            }",
-            limitFull = "${strings.limitText}: ${
-                formatWithSuffix(FormatUtils.formatTrafficGb(strings.locale, limitGb), strings.gbAbbr)
-            }",
+            limitText =
+                if (showLimit) {
+                    String.format(
+                        strings.locale,
+                        strings.limitSuffixFormat,
+                        FormatUtils.formatTrafficGb(strings.locale, limitGb),
+                    )
+                } else {
+                    ""
+                },
+            usedFull =
+                String.format(
+                    strings.locale,
+                    strings.labelValueFormat,
+                    strings.usedText,
+                    formatWithSuffix(
+                        FormatUtils.formatTrafficGb(strings.locale, usedGb),
+                        strings.gbAbbr,
+                    ),
+                ),
+            limitFull =
+                String.format(
+                    strings.locale,
+                    strings.labelValueFormat,
+                    strings.limitText,
+                    formatWithSuffix(
+                        FormatUtils.formatTrafficGb(strings.locale, limitGb),
+                        strings.gbAbbr,
+                    ),
+                ),
         )
     }
 
     private fun calculateRemainingGb(
         entity: SemanticEntity?,
         limitBytes: Long,
-    ): Float {
-        if (limitBytes <= 0) return -1f
-        val remBytes = entity?.remaining ?: 0L
+    ): Float? {
+        if (entity == null || limitBytes <= 0) return null
+        val remBytes = entity.remaining
         return maxOf(0f, (remBytes.toDouble() / Constants.BYTES_PER_GB).toFloat())
     }
 
@@ -158,9 +191,9 @@ object WidgetSimUiFactory {
         strings: WidgetStrings,
         entity: SemanticEntity?,
         limitGb: Float,
-        remGb: Float,
+        remGb: Float?,
     ): String {
-        if (entity == null || limitGb <= 0f) return "-"
+        if (entity == null || limitGb <= 0f || remGb == null) return strings.valuePlaceholder
         return FormatUtils.formatTrafficGb(strings.locale, remGb)
     }
 

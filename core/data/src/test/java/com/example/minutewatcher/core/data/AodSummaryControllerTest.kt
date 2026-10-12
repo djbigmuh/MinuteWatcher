@@ -22,10 +22,12 @@ import com.example.minutewatcher.core.model.SemanticEntity
 import com.example.minutewatcher.core.model.SimSnapshot
 import com.example.minutewatcher.core.resources.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -41,6 +43,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.util.Locale
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -179,7 +182,7 @@ class AodSummaryControllerTest {
         }
 
     @Test
-    fun `permission revoked cancels posted summary`() =
+    fun `permission flow value change re-evaluates aod summary availability`() =
         runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
@@ -189,11 +192,13 @@ class AodSummaryControllerTest {
             testScope.advanceUntilIdle()
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+            verify(notificationHelper, times(1)).isAodSummaryAvailable()
 
             whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(false)
             permissionFlow.value = false
             testScope.advanceUntilIdle()
 
+            verify(notificationHelper, times(2)).isAodSummaryAvailable()
             verify(notificationHelper, times(1)).cancelAodSummaryNotification()
         }
 
@@ -232,7 +237,7 @@ class AodSummaryControllerTest {
         }
 
     @Test
-    fun `channel blocked cancels posted summary`() =
+    fun `channel unavailability cancels posted summary`() =
         runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
@@ -251,7 +256,7 @@ class AodSummaryControllerTest {
         }
 
     @Test
-    fun `deduplication prevents duplicate send for identical content`() =
+    fun `duplicate text prevents re-sending notification`() =
         runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
@@ -267,7 +272,7 @@ class AodSummaryControllerTest {
         }
 
     @Test
-    fun `content change triggers new send`() =
+    fun `changed text triggers new send`() =
         runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
@@ -284,7 +289,7 @@ class AodSummaryControllerTest {
         }
 
     @Test
-    fun `disabling setting cancels summary and re-enabling resends`() =
+    fun `aodSummaryEnabled false cancels posted summary and re-enabling resends`() =
         runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
@@ -305,14 +310,16 @@ class AodSummaryControllerTest {
         }
 
     @Test
-    fun `calling start multiple times does not duplicate observers`() =
+    fun `calling start multiple times is idempotent and does not duplicate observers`() =
         runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
             controller.start()
+            val initialJob = controller.observationJob
             controller.start()
+            assertEquals(initialJob, controller.observationJob)
             testScope.advanceUntilIdle()
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
@@ -467,7 +474,9 @@ class AodSummaryControllerTest {
             testScope.advanceUntilIdle()
 
             verify(notificationHelper, times(2)).sendAodSummaryNotification(any(), any(), any())
-            controller.observationJob?.cancel()
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
@@ -480,6 +489,8 @@ class AodSummaryControllerTest {
             testScope.advanceUntilIdle()
 
             verify(notificationHelper).cancelAodSummaryNotification()
-            controller.observationJob?.cancel()
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 }

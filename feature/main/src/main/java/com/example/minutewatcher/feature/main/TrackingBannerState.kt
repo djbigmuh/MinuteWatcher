@@ -20,6 +20,14 @@ data class TrackingBannerState(
     val notificationsGrantedActual: Boolean = true,
     val observationFailed: Boolean = false,
     val isStorageDegraded: Boolean = false,
+    /**
+     * Whether to show the SIM discovery error banner.
+     */
+    val showSimDiscoveryErrorBanner: Boolean = false,
+    /**
+     * Whether to show the calls attribution error banner (Situation B - ambiguous attribution).
+     */
+    val showCallsAttributionErrorBanner: Boolean = false,
 )
 
 @Stable

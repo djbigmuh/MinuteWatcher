@@ -1,7 +1,11 @@
 package com.example.minutewatcher.core.data
 
 import android.telephony.TelephonyManager
+import com.example.minutewatcher.core.model.ActiveSimInfo
+import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.IdentitySource
+import com.example.minutewatcher.core.model.SimIdentity
 import com.example.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -51,14 +55,14 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             val now = timeProvider.now()
             val realtime = timeProvider.elapsedRealtime()
             val startTime = now - 1000L
-            val bootTime = realtime - 1000L
+            val elapsedRealtime = realtime - 1000L
             val uptime = timeProvider.uptimeMillis() - 1000L
 
             // Multiple active calls make heuristic impossible
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(startTime))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(elapsedRealtime))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime))
             // No identity found in repository
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
@@ -158,19 +162,19 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             timeProvider.setTime(now)
             timeProvider.setRealtime(realtime)
 
-            // Stale session: started 13 hours ago (by bootTime)
-            val staleBootTime = realtime - (Constants.Calls.MAX_CALL_DURATION_MS + 3600000L)
+            // Stale session: started 13 hours ago (by elapsedRealtime)
+            val staleElapsedRealtime = realtime - (Constants.Calls.MAX_CALL_DURATION_MS + 3600000L)
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(staleSubId, activeSubId))
 
             // staleSubId data
             whenever(callSessionRepository.getCallStartTime(staleSubId)).thenReturn(flowOf(now - 13 * 3600000L))
-            whenever(callSessionRepository.getBootTime(staleSubId)).thenReturn(flowOf(staleBootTime))
-            whenever(callSessionRepository.getUptime(staleSubId)).thenReturn(flowOf(staleBootTime))
+            whenever(callSessionRepository.getElapsedRealtime(staleSubId)).thenReturn(flowOf(staleElapsedRealtime))
+            whenever(callSessionRepository.getUptime(staleSubId)).thenReturn(flowOf(staleElapsedRealtime))
             whenever(callSessionRepository.getCallIdentity(staleSubId)).thenReturn(flowOf("id_1"))
 
             // activeSubId data
             whenever(callSessionRepository.getCallStartTime(activeSubId)).thenReturn(flowOf(now - 1000L))
-            whenever(callSessionRepository.getBootTime(activeSubId)).thenReturn(flowOf(realtime - 1000L))
+            whenever(callSessionRepository.getElapsedRealtime(activeSubId)).thenReturn(flowOf(realtime - 1000L))
             whenever(callSessionRepository.getUptime(activeSubId))
                 .thenReturn(flowOf(timeProvider.uptimeMillis() - 1000L))
             whenever(callSessionRepository.getCallIdentity(activeSubId)).thenReturn(flowOf("id_2"))
@@ -198,8 +202,8 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             // 1. Manually add entries to attributionFailures using public API
             val inactiveSubId = 99
             val activeSubId = 1
-            resolver.setFailureCountForTest(inactiveSubId, 1)
-            resolver.setFailureCountForTest(activeSubId, 1)
+            resolver.setFailureCount(inactiveSubId, 1)
+            resolver.setFailureCount(activeSubId, 1)
 
             // 2. Mock active calls to only include activeSubId
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(activeSubId))
@@ -224,7 +228,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             val voiceSubId = 1
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(voiceSubId))
             whenever(callSessionRepository.getCallStartTime(voiceSubId)).thenReturn(flowOf(now - 10000L))
-            whenever(callSessionRepository.getBootTime(voiceSubId)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getElapsedRealtime(voiceSubId)).thenReturn(flowOf(realtime - 10000L))
             whenever(callSessionRepository.getUptime(voiceSubId))
                 .thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
             whenever(callSessionRepository.getCallIdentity(voiceSubId)).thenReturn(flowOf("id_voice"))
@@ -266,7 +270,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
 
             // Setup active call data for sub 2
             whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 10000L))
-            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getElapsedRealtime(2)).thenReturn(flowOf(realtime - 10000L))
             whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
             whenever(callSessionRepository.getCallIdentity(2)).thenReturn(flowOf("id_sub2"))
 
@@ -316,7 +320,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             whenever(failingManager.callStateForSubscription).thenThrow(IllegalStateException("Telecom error"))
 
             whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(now - 10000L))
-            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getElapsedRealtime(subId)).thenReturn(flowOf(realtime - 10000L))
             whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf("id_single"))
 
@@ -347,7 +351,7 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             whenever(sub2Manager.callStateForSubscription).thenThrow(RuntimeException("Service unavailable"))
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 10000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime - 10000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_sub1"))
 
@@ -357,5 +361,179 @@ class CallTrackerAttributionTest : CallTrackerTestFixtures() {
             // isDeviceIdle returns false, and Sub 1 is chosen as single IDLE target
             verify(callSessionRepository, atLeastOnce()).clearCallSession(eq(1))
             verify(callSessionRepository, never()).clearCallSession(eq(2))
+        }
+
+    @Test
+    fun `attribution failure limit triggers cleanup action and resets failure counter`() =
+        runTest(testDispatcher) {
+            val resolver = CallAttributionResolver(mock(), mock(), mock())
+            val subId = 1
+            var cleaned = false
+            repeat(Constants.Calls.ATTRIBUTION_FAILURE_LIMIT) {
+                resolver.handleAttributionFailure(
+                    subId = subId,
+                    updateStatus = {},
+                    cleanupAction = {
+                        cleaned = true
+                        resolver.clearFailures(it)
+                    },
+                )
+            }
+            assertTrue(cleaned)
+            assertEquals(0, resolver.getFailureCount(subId))
+        }
+
+    @Test
+    fun `fallback attribution with single active SIM increments inaccurate attribution count`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val handler =
+                CallTrackingSettingsHandler(
+                    appSettingsRepository,
+                    simUsageRepository,
+                    dataChangeNotifier,
+                    mock(),
+                )
+            val initialSettings = AppSettings(inaccurateCallAttributionsCount = 0)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(initialSettings))
+            var updatedSettings = initialSettings
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer { invocation ->
+                val block = invocation.getArgument<AppSettings.() -> AppSettings>(0)
+                updatedSettings = updatedSettings.block()
+            }
+            whenever(simUsageRepository.incrementMinutesUsedForCall(any(), any(), any())).thenReturn(true)
+
+            handler.writeCallDuration("sim_1", 10, isFallbackUsed = true, notify = true, callSignature = "sig_1")
+            assertEquals(1, updatedSettings.inaccurateCallAttributionsCount)
+        }
+
+    @Test
+    fun `ambiguous attribution with multiple active sessions does not change inaccurate attribution count`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val handler =
+                CallTrackingSettingsHandler(
+                    appSettingsRepository,
+                    simUsageRepository,
+                    dataChangeNotifier,
+                    mock(),
+                )
+            val initialSettings = AppSettings(inaccurateCallAttributionsCount = 2)
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(initialSettings))
+            var updatedSettings = initialSettings
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer { invocation ->
+                val block = invocation.getArgument<AppSettings.() -> AppSettings>(0)
+                updatedSettings = updatedSettings.block()
+            }
+            whenever(simUsageRepository.incrementMinutesUsedForCall(any(), any(), any())).thenReturn(true)
+
+            handler.writeCallDuration("sim_1", 10, isFallbackUsed = false, notify = true, callSignature = "sig_1")
+            assertEquals(2, updatedSettings.inaccurateCallAttributionsCount)
+        }
+
+    @Test
+    fun `start call with unstable SIM identity saves session with null identity`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val simUnstable =
+                ActiveSimInfo(
+                    SimIdentity("sub_1", 1, 0, IdentitySource.SUBSCRIPTION_ID, false),
+                    0,
+                    1,
+                    null,
+                    "S1",
+                    "C1",
+                    "m1",
+                    false,
+                    false,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simUnstable)))
+
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            verify(callSessionRepository, atLeastOnce()).saveCallSession(
+                eq(1),
+                any(),
+                any(),
+                any(),
+                eq(null),
+            )
+        }
+
+    @Test
+    fun `start call with stable SIM identity saves session with stableId`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            val simStable =
+                ActiveSimInfo(
+                    SimIdentity("icc_1", 1, 0, IdentitySource.ICCID, true),
+                    0,
+                    1,
+                    "icc_1",
+                    "S1",
+                    "C1",
+                    "m1",
+                    false,
+                    false,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simStable)))
+
+            callTracker.onCallStarted(subId = 1)
+            advanceUntilIdle()
+
+            verify(callSessionRepository, atLeastOnce()).saveCallSession(
+                eq(1),
+                any(),
+                any(),
+                any(),
+                eq("icc_1"),
+            )
+        }
+
+    @Test
+    fun `end call fallback only uses stable identity and unstable fallback fails attribution`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            val now = timeProvider.now()
+            val realtime = timeProvider.elapsedRealtime()
+
+            // Active call on subId 999 with no saved identity
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(999))
+            whenever(callSessionRepository.getCallStartTime(999)).thenReturn(flowOf(now - 10000L))
+            whenever(callSessionRepository.getElapsedRealtime(999)).thenReturn(flowOf(realtime - 10000L))
+            whenever(callSessionRepository.getUptime(999)).thenReturn(flowOf(timeProvider.uptimeMillis() - 10000L))
+            whenever(callSessionRepository.getCallIdentity(999)).thenReturn(flowOf(null))
+
+            // Single active SIM exists, but its identity is UNSTABLE
+            val unstableSim =
+                ActiveSimInfo(
+                    SimIdentity("sub_1", 1, 0, IdentitySource.SUBSCRIPTION_ID, false),
+                    0,
+                    1,
+                    null,
+                    "S1",
+                    "C1",
+                    "m1",
+                    false,
+                    false,
+                )
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(unstableSim)))
+
+            timeProvider.advance(10000)
+
+            callTracker.onCallEnded(subId = 999)
+            advanceUntilIdle()
+
+            val status = callTracker.status.value
+            assertTrue("Expected Error status, but was $status", status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, (status as TrackingStatus.Error).type)
+            verify(simUsageRepository, never()).incrementMinutesUsedForCall(any(), any(), any())
         }
 }

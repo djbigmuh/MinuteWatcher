@@ -5,13 +5,11 @@ import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.feature.main.MainViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
@@ -33,19 +31,16 @@ class MainPermissionControllerTest {
     private val permissionManager: PermissionManager = mock()
     private val workScheduler: WorkScheduler = mock()
     private val testDispatcher = StandardTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
     private lateinit var controller: MainPermissionController
 
-    private val viewModel: MainViewModel = mock()
     private val appSettingsFlow = MutableStateFlow(AppSettings(isLoaded = false))
+    private val isInitialSetupCompletedFlow = MutableStateFlow(false)
 
     @Before
     fun setup() {
         initTestLogger()
         controller = MainPermissionController(permissionManager, workScheduler, testDispatcher)
-        whenever(viewModel.appSettings).thenReturn(appSettingsFlow)
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
-        whenever(viewModel.isInitialSetupCompleted).thenReturn(MutableStateFlow(false))
     }
 
     @Test
@@ -55,7 +50,8 @@ class MainPermissionControllerTest {
 
             controller.checkPermissionsAndInit(
                 scope = this,
-                viewModel = viewModel,
+                isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                appSettingsLoaded = appSettingsFlow,
                 lastPermissionState = -1,
                 onShowUsageAccessDialog = {},
                 onRequestPhonePermission = { phoneRequested = true },
@@ -83,7 +79,8 @@ class MainPermissionControllerTest {
 
             controller.checkPermissionsAndInit(
                 scope = this,
-                viewModel = viewModel,
+                isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                appSettingsLoaded = appSettingsFlow,
                 lastPermissionState = -1,
                 onShowUsageAccessDialog = {},
                 onRequestPhonePermission = {},
@@ -98,13 +95,11 @@ class MainPermissionControllerTest {
     @Test
     fun `checkPermissionsAndInit handles appSettings timeout`() =
         runTest(testDispatcher) {
-            // Never emits loaded settings
-            whenever(viewModel.appSettings).thenReturn(MutableStateFlow(AppSettings(isLoaded = false)))
-
             var phoneRequested = false
             controller.checkPermissionsAndInit(
                 scope = this,
-                viewModel = viewModel,
+                isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                appSettingsLoaded = MutableStateFlow(AppSettings(isLoaded = false)),
                 lastPermissionState = 0,
                 onShowUsageAccessDialog = {},
                 onRequestPhonePermission = { phoneRequested = true },
@@ -125,12 +120,10 @@ class MainPermissionControllerTest {
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
             appSettingsFlow.value = AppSettings(isLoaded = true)
 
-            // never completes setup check
-            whenever(viewModel.isInitialSetupCompleted).thenReturn(flow { awaitCancellation() })
-
             controller.checkPermissionsAndInit(
                 scope = this,
-                viewModel = viewModel,
+                isInitialSetupCompleted = flow { awaitCancellation() },
+                appSettingsLoaded = appSettingsFlow,
                 lastPermissionState = 0,
                 onShowUsageAccessDialog = {},
                 onRequestPhonePermission = {},
@@ -150,13 +143,13 @@ class MainPermissionControllerTest {
             withTimeout(5000.milliseconds) {
                 whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
                 whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
-                whenever(viewModel.appSettings).thenReturn(MutableStateFlow(AppSettings(isLoaded = false)))
 
                 var showUsageAccessDialogCalled = false
 
                 controller.checkPermissionsAndInit(
                     scope = this,
-                    viewModel = viewModel,
+                    isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                    appSettingsLoaded = MutableStateFlow(AppSettings(isLoaded = false)),
                     lastPermissionState = -1,
                     onShowUsageAccessDialog = { showUsageAccessDialogCalled = true },
                     onRequestPhonePermission = {},
@@ -170,5 +163,65 @@ class MainPermissionControllerTest {
                     showUsageAccessDialogCalled,
                 )
             }
+        }
+
+    @Test
+    fun `checkPermissionsAndInit cancels previous job when new job is launched`() =
+        runTest(testDispatcher) {
+            val flow1 = MutableStateFlow(AppSettings(isLoaded = false))
+            val flow2 = MutableStateFlow(AppSettings(isLoaded = false))
+
+            var requested1 = false
+            var requested2 = false
+
+            controller.checkPermissionsAndInit(
+                scope = this,
+                isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                appSettingsLoaded = flow1,
+                lastPermissionState = -1,
+                onShowUsageAccessDialog = {},
+                onRequestPhonePermission = { requested1 = true },
+                onCheckNotifications = {},
+            )
+
+            controller.checkPermissionsAndInit(
+                scope = this,
+                isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                appSettingsLoaded = flow2,
+                lastPermissionState = -1,
+                onShowUsageAccessDialog = {},
+                onRequestPhonePermission = { requested2 = true },
+                onCheckNotifications = {},
+            )
+
+            // Emit on flow1, should be ignored because job was cancelled
+            flow1.value = AppSettings(isLoaded = true, wasPhonePermissionRequestedBefore = false)
+            runCurrent()
+            assertFalse(requested1)
+
+            // Emit on flow2, should trigger request2
+            flow2.value = AppSettings(isLoaded = true, wasPhonePermissionRequestedBefore = false)
+            runCurrent()
+            assertTrue(requested2)
+        }
+
+    @Test
+    fun `checkNotifications requests permission when not granted and settings loaded`() =
+        runTest(testDispatcher) {
+            whenever(permissionManager.hasNotificationPermission()).thenReturn(false)
+            var notificationRequested = false
+
+            controller.checkNotifications(
+                scope = this,
+                appSettingsLoaded =
+                    MutableStateFlow(
+                        AppSettings(isLoaded = true, notificationPermissionRequested = false),
+                    ),
+                autoRequest = true,
+                onRequest = { notificationRequested = true },
+            )
+
+            runCurrent()
+            assertTrue(notificationRequested)
         }
 }

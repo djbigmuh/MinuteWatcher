@@ -153,7 +153,7 @@ class CallTrackerRaceTest {
             whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L), flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L), flowOf(2000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(0L), flowOf(2000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
@@ -186,7 +186,7 @@ class CallTrackerRaceTest {
     fun `concurrent call start and end for different subIds`() =
         runTest(testDispatcher) {
             whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
-            whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getElapsedRealtime(any())).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf(null))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 

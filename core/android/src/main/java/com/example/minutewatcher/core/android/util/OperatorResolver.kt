@@ -23,10 +23,18 @@ object OperatorResolver {
     @Volatile
     private var db: Map<String, String>? = null
 
+    private var loadAttempts = 0
+
+    /**
+     * Maximum number of attempts to load the asset before entering terminal state;
+     * retries are executed by standard WorkManager mechanism with exponential backoff specified at scheduling time.
+     */
+    private const val MAX_DB_LOAD_ATTEMPTS = 3
+
     private val genericSimRegex = Regex("^sim\\s*\\d*$", RegexOption.IGNORE_CASE)
 
-    private val tokenSplitWithDashRegex = Regex("[^a-z0-9&-]+")
-    private val tokenSplitWithoutDashRegex = Regex("[^a-z0-9&]+")
+    private val tokenSplitWithDashRegex = Regex("[^a-z0-9&\u0400-\u04FF-]+")
+    private val tokenSplitWithoutDashRegex = Regex("[^a-z0-9&\u0400-\u04FF]+")
 
     @VisibleForTesting
     internal val operatorResourceMap =
@@ -102,12 +110,19 @@ object OperatorResolver {
     internal val tokenToResKey =
         mapOf(
             "mts" to "operator_mts",
+            "мтс" to "operator_mts",
             "beeline" to "operator_beeline",
+            "билайн" to "operator_beeline",
             "megafon" to "operator_megafon",
+            "мегафон" to "operator_megafon",
             "tele2" to "operator_tele2",
+            "теле2" to "operator_tele2",
             "t2" to "operator_tele2",
+            "т2" to "operator_tele2",
             "mgts" to "operator_mgts",
+            "мгтс" to "operator_mgts",
             "yota" to "operator_yota",
+            "йота" to "operator_yota",
             "vodafone" to "operator_vodafone",
             "t-mobile" to "operator_t_mobile",
             "telekom" to "operator_telekom",
@@ -168,10 +183,14 @@ object OperatorResolver {
             "2degrees" to "operator_2degrees",
         )
 
+    /**
+     * Resets the cache state completely, clearing the database map and load attempt counter.
+     */
     @VisibleForTesting
-    fun resetForTest() {
+    internal fun reset() {
         synchronized(this) {
             db = null
+            loadAttempts = 0
         }
     }
 
@@ -179,12 +198,31 @@ object OperatorResolver {
      * Returns the cached MCC/MNC database.
      * Uses Double-Checked Locking for thread-safe initialization.
      */
-    private fun loadDb(context: Context): Map<String, String> =
-        db ?: synchronized(this) {
-            // If loadDbInternal returns emptyMap (on error), this value will be cached
-            // in db, preventing repeated attempts to read corrupted assets.
-            db ?: loadDbInternal(context).also { db = it }
+    private fun loadDb(context: Context): Map<String, String> {
+        db?.let { return it }
+        return synchronized(this) {
+            val currentDb = db
+            when {
+                currentDb != null -> currentDb
+                loadAttempts >= MAX_DB_LOAD_ATTEMPTS -> emptyMap()
+                else -> {
+                    loadAttempts++
+                    val loaded = loadDbInternal(context)
+                    if (loadAttempts >= MAX_DB_LOAD_ATTEMPTS && loaded.isEmpty()) {
+                        AppLogger.e(
+                            "OperatorResolver: MCC/MNC database failed to load after $MAX_DB_LOAD_ATTEMPTS attempts",
+                        )
+                    }
+                    if (loaded.isNotEmpty()) {
+                        db = loaded
+                        loaded
+                    } else {
+                        emptyMap()
+                    }
+                }
+            }
         }
+    }
 
     /**
      * Loads the MCC/MNC database from assets.

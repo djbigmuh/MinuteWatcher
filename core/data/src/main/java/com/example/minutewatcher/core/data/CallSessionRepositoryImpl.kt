@@ -70,7 +70,7 @@ class CallSessionRepositoryImpl
         override suspend fun saveCallSession(
             subId: Int,
             startTime: Long,
-            bootTime: Long,
+            elapsedRealtime: Long,
             uptime: Long,
             identity: String?,
         ) {
@@ -78,7 +78,7 @@ class CallSessionRepositoryImpl
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     dataStore.edit { prefs ->
                         prefs[DataStoreKeys.callStartTimeKey(subId)] = startTime
-                        prefs[DataStoreKeys.bootTimeKey(subId)] = bootTime
+                        prefs[DataStoreKeys.bootTimeKey(subId)] = elapsedRealtime
                         prefs[DataStoreKeys.uptimeKey(subId)] = uptime
                         val identityKey = DataStoreKeys.callIdentityKey(subId)
                         if (identity == null) {
@@ -123,11 +123,11 @@ class CallSessionRepositoryImpl
         override fun getCallStartTime(subId: Int): Flow<Long> = getData(DataStoreKeys.callStartTimeKey(subId), 0L)
 
         /**
-         * Returns the device boot time recorded when the call started on the given subId.
+         * Returns the device elapsed realtime recorded when the call started on the given subId.
          *
          * Safe to call from any coroutine context.
          */
-        override fun getBootTime(subId: Int): Flow<Long> = getData(DataStoreKeys.bootTimeKey(subId), 0L)
+        override fun getElapsedRealtime(subId: Int): Flow<Long> = getData(DataStoreKeys.bootTimeKey(subId), 0L)
 
         /**
          * Returns the device uptime recorded when the call started on the given subId.

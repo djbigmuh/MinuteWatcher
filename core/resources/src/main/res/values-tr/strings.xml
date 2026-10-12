@@ -1,0 +1,186 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">SIM Kartlar</string>
+    <string name="no_sim_found">SIM kart bulunamadı</string>
+    <string name="check_permissions_sim">İzinleri ve SIM kart durumunu kontrol edin</string>
+    <string name="no_data">Veri yok</string>
+    <string name="error">Hata</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">Sıfırla</string>
+    <string name="theme_system">Sistem</string>
+    <string name="theme_light">Açık</string>
+    <string name="theme_dark">Koyu</string>
+    <string name="limit_button">Limit</string>
+    <string name="add_widget_button">Widget Ekle</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">Genel ayarlar kaydedildi. SIM ayarları atlandı (SIM listesi kullanılamıyor)</string>
+    <string name="settings_save_partial_failure">Genel ayarlar kaydedildi. SIM\'e özel ayarlar kaydedilemedi</string>
+    <string name="settings_save_partial_failure_slots">Genel ayarlar kaydedildi. SIM %1$s için özel ayarlar kaydedilemedi</string>
+    <string name="settings_save_failed">Kaydetme başarısız</string>
+    <string name="language_system">Sistem</string>
+    <string name="usage_access_dialog_title">Veri Kullanımı Takibi</string>
+    <string name="usage_access_dialog_description">Mobil veri kullanımınızı takip etmek için MinuteWatcher\'ın \"Kullanım Erişimi\" iznine ihtiyacı vardır.\n\nBu, uygulamanın hücresel ağ üzerinden ne kadar veri gönderilip alındığını görmesini sağlayan sistem düzeyinde bir izindir.</string>
+    <string name="phone_permission_permanent_denial">Telefon izni kalıcı olarak reddedildi.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">Widget Ayarları</string>
+    <string name="widget_description">Her SIM kart için kalan dakikaları ve mobil veriyi görüntüler.</string>
+    <string name="background_transparency">Arka Plan Şeffaflığı</string>
+    <string name="display_minutes">Dakikaları göster</string>
+    <string name="display_minutes_limit">Dakika limitini göster</string>
+    <string name="display_traffic">Veriyi göster</string>
+    <string name="display_traffic_limit">Veri limitini göster</string>
+    <string name="display_name">İsmi göster</string>
+    <string name="display_icon">Simgeyi göster</string>
+    <string name="show_sim_checkbox">Bu SIM kartı göster</string>
+    <string name="preview">Önizleme</string>
+    <string name="layout_mode_title">Düzen modu</string>
+    <string name="sim_arrangement_prompt">SIM düzenini seçin</string>
+    <string name="color_background">Arka plan rengi:</string>
+    <string name="custom_color">Özel&#8230;</string>
+    <string name="font_size">Yazı Tipi Boyutu</string>
+    <string name="traffic_tracking_limitation_title">Veri Takibi Sınırlaması</string>
+    <string name="traffic_tracking_limitation_body">Android, mobil veri kullanımını tüm cihaz için toplu bir değer olarak sağlar.\n\nMinuteWatcher tüm mobil veriyi sistem ayarlarınızda \"Varsayılan Veri SIM\'i\" olarak seçilen SIM karta atar.</string>
+    <string name="tracking_banner_phone_permission">SIM kartları tanımlamak için telefon izni gereklidir.</string>
+    <string name="tracking_banner_usage_access">Veri kullanımını doğru takip etmek için Kullanım Erişimi gereklidir.</string>
+    <string name="tracking_banner_sim_discovery_error">SIM kartlar algılanamadı. Lütfen tekrar deneyin.</string>
+    <string name="tracking_banner_traffic_error">Veri bilgileri güncellenirken bir hata oluştu.</string>
+    <string name="tracking_banner_calls_error">Arama takip verileri güncellenirken bir hata oluştu.</string>
+    <string name="tracking_banner_appsearch_error">AppSearch dizine ekleme başarısız.</string>
+    <string name="tracking_banner_shortcuts_error">Dinamik kısayol güncellemesi başarısız.</string>
+    <string name="tracking_banner_notification_permission">Kullanım uyarılarını almak için bildirim izni önerilir.</string>
+    <string name="tracking_banner_widget_error">Sistem sınırlamaları nedeniyle widget güncellenemiyor.</string>
+    <string name="tracking_banner_inaccurate_calls">Bazı aramalar bir SIM kartla eşleştirilemedi.</string>
+    <string name="tracking_banner_calls_attribution_error">Birden fazla eşzamanlı arama algılandı. SIM kart belirlenemedi.</string>
+    <string name="tracking_banner_observation_failed">Birden fazla hatadan sonra veri takip hizmeti durdu. Lütfen uygulamayı yeniden başlatın.</string>
+    <string name="tracking_banner_storage_degraded">Depolama azaldı: uygulama yeniden başlatıldıktan sonra istatistikler sıfırlanabilir.</string>
+    <string name="settings_load_error">Ayarlar yükleme hatası</string>
+    <string name="sim_list_unavailable_error">SIM listesi kullanılamıyor. Yeniden yüklendikten sonra ayarlar kullanılabilir olacak.</string>
+    <string name="refresh_error">Veri yenileme hatası</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">Veriler eski olabilir</string>
+    <string name="notification_permission_permanent_denial">Bildirimler devre dışı. Uyarıları almak için lütfen Uygulama Ayarlarından etkinleştirin.</string>
+    <string name="action_grant">İzin Ver</string>
+    <string name="action_settings">Ayarlar</string>
+    <string name="action_app_settings">Uygulama Ayarları</string>
+    <string name="action_retry">Tekrar Dene</string>
+    <string name="validation_error_invalid_range">Lütfen %1$s ile %2$s arasında bir değer girin</string>
+    <string name="validation_error_invalid_number">Lütfen geçerli bir sayı girin</string>
+    <string name="validation_error_field_required">Alan boş bırakılamaz</string>
+    <string name="widget_pin_unsupported">Başlatıcınız otomatik widget yerleştirmeyi desteklemiyor.</string>
+    <string name="widget_already_added">Widget zaten ana ekrana eklendi</string>
+    <string name="widget_added_success">Widget ana ekrana eklendi</string>
+    <string name="onboarding_title">MinuteWatcher\'a Hoş Geldiniz!</string>
+    <string name="onboarding_message">MinuteWatcher paket detaylarınızı operatörünüzden otomatik olarak alamaz.\n\nTakibe başlamak için lütfen her SIM kart için dakika/veri limitlerinizi ve aylık sıfırlama gününü manuel olarak ayarlayın.</string>
+    <string name="onboarding_button">Anlaşıldı</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">Geçersiz SIM yuvası indeksi: %1$d</string>
+    <string name="error_storage_unavailable">Yuva %1$d için depolama alanı yok. Daha sonra tekrar deneyin.</string>
+    <string name="error_sim_removed">SIM kart yuva %1$d\'den çıkarıldı</string>
+    <string name="error_operation_failed_retry">Yeniden denedikten sonra da işlem başarısız oldu.</string>
+    <string name="error_unknown">Bilinmeyen hata: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">İptal</string>
+    <string name="save_button">Kaydet</string>
+    <string name="set_button">Ayarla</string>
+    <string name="action_ok">Tamam</string>
+    <string name="reset_limits_button">Limitleri sıfırla</string>
+    <string name="reset_counters">Sayaçları sıfırla</string>
+    <string name="reset_confirmation_title">Sayaçlar Sıfırlansın mı?</string>
+    <string name="reset_confirmation_body">Bu işlem bu SIM kart için takip edilen tüm kullanımı temizleyecektir.</string>
+    <string name="reset_limits_confirmation_title">Limitler sıfırlansın mı?</string>
+    <string name="reset_limits_confirmation_body">Bu işlem dakika ve veri limitlerini temizleyecektir.</string>
+    <string name="choose_reset_day">Otomatik sıfırlama için ayın gününü seçin:</string>
+    <string name="choose_reset_day_dialog_title">Sıfırlama gününü seçin</string>
+    <string name="rollover_label">Kalanı devret</string>
+    <string name="set_minutes_limit">Aylık dakika limitini ayarlayın:</string>
+    <string name="minutes_limit_hint">Dakika limiti</string>
+    <string name="set_traffic_limit">Aylık veri limitini (GB) ayarlayın:</string>
+    <string name="traffic_limit_gb_hint_dialog">GB cinsinden veri limiti</string>
+    <string name="limits_for_operator">%1$s için limitler</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Bildirimler</string>
+    <string name="notify_low_minutes_title">Dakika azaldığında bildir</string>
+    <string name="notify_low_traffic_title">Veri azaldığında bildir</string>
+    <string name="aod_summary_title">Always-on Display özeti</string>
+    <string name="aod_summary_description">Kalan dakika ve verileri gösteren kalıcı sessiz bir bildirim görüntüler.</string>
+    <string name="aod_summary_unavailable">Bu özelliği kullanmak için bildirimleri etkinleştirin</string>
+    <string name="notification_channel_name">Kullanım Takibi</string>
+    <string name="notification_channel_desc">Dakika ve veri kullanımını takip etme</string>
+    <string name="notification_channel_aod_summary_name">Always-on Display Özeti</string>
+    <string name="notification_channel_aod_summary_desc">Kalan dakika ve verilerin kalıcı sessiz özeti</string>
+    <string name="notification_minutes_title">Dakika kullanımı %1$s</string>
+    <string name="notification_minutes_body">%1$s dakika kullanımı! Kalan %2$s (%%%3$d). Ay %4$s içinde bitiyor.</string>
+    <string name="notification_traffic_title">Veri kullanımı %1$s</string>
+    <string name="notification_traffic_body">%1$s veri kullanımı! Kalan %2$.1f GB (%%%3$d). Ay %4$s içinde bitiyor.</string>
+    <string name="notification_minutes_exhausted_body">Dönem için dakika paketi bitti.</string>
+    <string name="notification_traffic_exhausted_body">Dönem için veri paketi bitti.</string>
+    <string name="notification_minutes_body_no_period">%1$s dakika kullanımı! Kalan %2$s (%%%3$d).</string>
+    <string name="notification_traffic_body_no_period">%1$s veri kullanımı! Kalan %2$.1f GB (%%%3$d).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Dakika limitine ulaşıldı.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Veri limitine ulaşıldı.</string>
+    <string name="usage_level_low">DÜŞÜK</string>
+    <string name="usage_level_critical">KRİTİK DÜŞÜK</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">Kalan:</string>
+    <string name="used_text">Kullanılan</string>
+    <string name="limit_text">Limit</string>
+    <string name="minutes_abbr">dk.</string>
+    <string name="unit_minutes">dk</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">Veri</string>
+    <string name="traffic_remaining_text">Kalan veri:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">ayın günü</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d dakika</item>
+        <item quantity="other">%1$d dakika</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d gün</item>
+        <item quantity="other">%1$d gün</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">SIM kart simgesi</string>
+    <string name="sim_card_details_content_desc">%1$s SIM kart detayları</string>
+    <string name="adjust_minutes_content_desc">Kalan dakikaları ayarla</string>
+    <string name="adjust_traffic_content_desc">Kalan veriyi ayarla</string>
+    <string name="traffic_info_content_desc">Veri takibi hakkında daha fazla bilgi</string>
+    <string name="set_limits_content_desc">%1$s için limitleri ayarla</string>
+    <string name="change_auto_reset_day_content_desc">Otomatik sıfırlama gününü değiştir</string>
+    <string name="toggle_auto_reset_content_desc">Otomatik sıfırlamayı aç veya kapat</string>
+    <string name="menu_language_content_desc">Dili değiştir</string>
+    <string name="menu_theme_content_desc">Temayı değiştir</string>
+    <string name="navigate_up_content_desc">Yukarı git</string>
+    <string name="banner_dismiss_content_desc">Afişi kapat</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Takip</string>
+    <string name="call_tracking_title">Arama dakikalarını takip et</string>
+    <string name="call_tracking_description">Her SIM kart için arama dakikalarını sayın.</string>
+    <string name="assistant_access_title">Asistan erişimi</string>
+    <string name="assistant_access_description">Cihaz içi asistanın kalan dakikalarınızı ve verilerinizi istemesine izin verin.</string>
+    <string name="app_functions_display_description">Kalan dakikaları ve mobil verileri cihaz içi asistanla paylaşır</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">Hakkında</string>
+    <string name="about_message">MinuteWatcher, kalan dakikaları ve mobil veri kullanımını takip etmek için bir uygulamadır.</string>
+    <string name="about_author_name">Yazar: Pavel Mukhin</string>
+    <string name="about_email_label">E-posta:</string>
+    <string name="about_signoff">Saygılarımla,</string>
+    <string name="about_version_format">Sürüm %1$s (%2$d)</string>
+    <string name="about_content_desc">Hakkında bilgisi</string>
+</resources>

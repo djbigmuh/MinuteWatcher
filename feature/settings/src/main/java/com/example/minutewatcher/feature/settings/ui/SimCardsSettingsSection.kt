@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
@@ -84,6 +85,8 @@ fun SimSettingsSection(
                 text = "${stringResource(id = R.string.sim_card_generic, slot + 1)} ($operatorName)",
                 style = MaterialTheme.typography.titleSmall,
                 color = enabledContentColor(enabled),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
 
             CheckboxSetting(

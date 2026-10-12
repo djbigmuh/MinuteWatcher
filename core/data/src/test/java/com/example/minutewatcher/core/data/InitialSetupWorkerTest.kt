@@ -44,6 +44,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -655,6 +656,89 @@ class InitialSetupWorkerTest {
             val result = createWorker().doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
+        }
+
+    @Test
+    fun `doWork schedules periodic usage check unconditionally even when phone state permission denied`() =
+        runTest {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(workScheduler).schedulePeriodicUsageCheck()
+            verify(migrationFlagsRepository).setInitialSetupCompleted(true)
+        }
+
+    @Test
+    fun `doWork retries and skips setting initial setup completed when schedulePeriodicUsageCheck throws exception`() =
+        runTest {
+            whenever(workScheduler.schedulePeriodicUsageCheck()).thenThrow(RuntimeException("Scheduling failed"))
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            verify(migrationFlagsRepository, never()).setInitialSetupCompleted(true)
+        }
+
+    @Test
+    fun `doWork schedules periodic usage check before setting initial setup completed`() =
+        runTest {
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            inOrder(workScheduler, migrationFlagsRepository).apply {
+                verify(workScheduler).schedulePeriodicUsageCheck()
+                verify(migrationFlagsRepository).setInitialSetupCompleted(true)
+            }
+        }
+
+    @Test
+    fun `doWork returns retry when migration decision is RETRY`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = false))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
+            whenever(migrationService.hasLegacyData(any())).thenReturn(null)
+            whenever(migrationService.hasLegacyData()).thenReturn(null)
+
+            val worker =
+                TestListenableWorkerBuilder<InitialSetupWorker>(context)
+                    .setRunAttemptCount(0)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = InitialSetupWorker(appContext, workerParameters, deps)
+                        },
+                    ).build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `doWork returns success when migration decision is PROCEED`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+        }
+
+    @Test
+    fun `doWork returns failure when setup encounters unrecoverable error`() =
+        runTest {
+            whenever(migrationFlagsRepository.isMigrationV1Completed())
+                .thenThrow(IllegalStateException("Unrecoverable DataStore corruption"))
+
+            val result = createWorker().doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
         }
 
     private open class FakeUsageStateRepository : UsageStateRepository {

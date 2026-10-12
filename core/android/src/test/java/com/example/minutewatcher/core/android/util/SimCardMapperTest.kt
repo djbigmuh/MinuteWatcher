@@ -23,7 +23,7 @@ class SimCardMapperTest {
     @Before
     fun setup() {
         initTestLogger(context)
-        SimCardMapper.resetForTest()
+        SimCardMapper.reset()
     }
 
     @Test
@@ -53,7 +53,7 @@ class SimCardMapperTest {
         // Assert
         assertEquals(TEST_EFFECTIVE_TRAFFIC_LIMIT_GB, model.effectiveTrafficLimitGb, TEST_DELTA)
         assertEquals(TEST_TRAFFIC_ADJUSTMENT_GB, model.trafficAdjustmentGb, TEST_DELTA)
-        assertEquals(TEST_TRAFFIC_REMAINING_GB, model.trafficRemainingGb, TEST_DELTA)
+        assertEquals(TEST_TRAFFIC_REMAINING_GB, model.trafficRemainingGb ?: 0f, TEST_DELTA)
     }
 
     @Test
@@ -84,7 +84,33 @@ class SimCardMapperTest {
         assertEquals(TEST_ZERO_INT, model.effectiveMinutesLimit)
         assertEquals(TEST_ZERO_FLOAT, model.effectiveTrafficLimitGb, TEST_DELTA)
         assertEquals(TEST_ZERO_INT, model.minutesRemaining)
-        assertEquals(TEST_ZERO_FLOAT, model.trafficRemainingGb, TEST_DELTA)
+        assertEquals(TEST_ZERO_FLOAT, model.trafficRemainingGb ?: 0f, TEST_DELTA)
+    }
+
+    @Test
+    fun `map sets trafficRemainingGb to null when traffic limit is not set`() {
+        val usage =
+            SimUsage(
+                identity = TEST_IDENTITY,
+                slotIndex = TEST_SLOT_0,
+                subscriptionId = TEST_SUB_ID_1,
+                operator = TEST_OPERATOR,
+                minutesUsed = TEST_ZERO_INT,
+                minutesLimit = TEST_MINUTES_LIMIT,
+                manualAdjustment = TEST_ZERO_INT,
+                trafficUsedMb = TEST_ZERO_FLOAT,
+                trafficLimitMb = 0,
+                trafficAdjustmentGb = TEST_ZERO_FLOAT,
+                autoReset = false,
+                autoResetDay = TEST_RESET_DAY,
+                lastResetDate = TEST_LAST_RESET_DATE,
+                rolloverEnabled = false,
+            )
+
+        val model = SimCardMapper.map(context, TEST_SLOT_0, usage)
+
+        assertEquals(false, model.isTrafficLimitSet)
+        org.junit.Assert.assertNull(model.trafficRemainingGb)
     }
 
     @Test

@@ -42,6 +42,20 @@ class SimUtilsTest {
     }
 
     @Test
+    fun `getOperatorIconResource returns correct icons for cyrillic brand names`() {
+        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("МТС"))
+        assertEquals(R.drawable.ic_megafon, SimUtils.getOperatorIconResource("МегаФон"))
+        assertEquals(R.drawable.ic_beeline, SimUtils.getOperatorIconResource("Билайн"))
+        assertEquals(R.drawable.ic_tele2, SimUtils.getOperatorIconResource("Теле2"))
+        assertEquals(R.drawable.ic_tele2, SimUtils.getOperatorIconResource("Т2"))
+        assertEquals(R.drawable.ic_mgts, SimUtils.getOperatorIconResource("МГТС"))
+        assertEquals(R.drawable.ic_yota, SimUtils.getOperatorIconResource("Йота"))
+        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("МТС Россия"))
+        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("MTS МТС"))
+        assertEquals(R.drawable.ic_unknown, SimUtils.getOperatorIconResource("СберМобайл"))
+    }
+
+    @Test
     fun `getOperatorIconResource is case insensitive`() {
         assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("mts"))
     }
@@ -62,12 +76,12 @@ class SimUtilsTest {
     }
 
     @Test
-    fun `getShortOperatorName truncates long names`() {
-        val longName = "This is a very long operator name that should be truncated"
+    fun `getShortOperatorName returns full long names without truncation`() {
+        val longName = "This is a very long operator name that should not be truncated"
         val result = SimUtils.getShortOperatorName(context, longName, 0)
 
-        assertEquals(20, result.length)
-        assertTrue(result.endsWith("..."))
+        assertEquals(longName, result)
+        assertFalse(result.contains("..."))
     }
 
     @Test
@@ -100,7 +114,14 @@ class SimUtilsTest {
     }
 
     @Test
-    fun `getShortOperatorName returns truncated original name on resource exception when original name is non-empty`() {
+    fun `getShortOperatorName returns resource string for cyrillic brand operator name`() {
+        whenever(context.getString(R.string.operator_mts)).thenReturn("МТС")
+        val result = SimUtils.getShortOperatorName(context, "МТС", 0)
+        assertEquals("МТС", result)
+    }
+
+    @Test
+    fun `getShortOperatorName returns original full name on resource exception when original name is non-empty`() {
         whenever(context.getString(R.string.operator_mts)).thenThrow(RuntimeException("Resource error"))
         val result = SimUtils.getShortOperatorName(context, "MTS RUS", 0)
         assertEquals("MTS RUS", result)
@@ -114,11 +135,12 @@ class SimUtilsTest {
     }
 
     @Test
-    fun `getShortOperatorName truncates name on resource exception for operator name longer than 20 characters`() {
+    fun `getShortOperatorName returns full name on resource exception for long operator names`() {
         whenever(context.getString(R.string.operator_mts)).thenThrow(RuntimeException("Resource error"))
         val longName = "MTS Russia Telecommunications Network"
         val result = SimUtils.getShortOperatorName(context, longName, 0)
-        assertEquals("MTS Russia Teleco...", result)
+        assertEquals("MTS Russia Telecommunications Network", result)
+        assertFalse(result.contains("..."))
     }
 
     @Test

@@ -105,33 +105,69 @@ class MainInitializationController
             onUpdateLastRefreshAt: (Long) -> Unit,
         ): Boolean {
             val isSuccess =
-                (outcome is MainSimRefreshController.RefreshOutcome.Completed) &&
-                    (outcome.result is RefreshResult.Success)
+                when (outcome) {
+                    is MainSimRefreshController.RefreshOutcome.SkippedAlreadyInProgress -> false
+                    is MainSimRefreshController.RefreshOutcome.Failed -> false
+                    is MainSimRefreshController.RefreshOutcome.Completed -> {
+                        when (outcome.result) {
+                            is RefreshResult.Success -> {
+                                if (lastRefreshAt == 0L) {
+                                    onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
+                                }
+                                true
+                            }
 
-            if (isSuccess) {
-                if (lastRefreshAt == 0L) {
-                    onUpdateLastRefreshAt(timeProvider.elapsedRealtime())
+                            is RefreshResult.Timeout -> {
+                                AppLogger.w("initializeApp: refresh timed out on attempt ${attempt + 1}")
+                                false
+                            }
+
+                            is RefreshResult.Failure -> {
+                                AppLogger.e(
+                                    "initializeApp: refresh failed on attempt ${attempt + 1}",
+                                    outcome.result.cause,
+                                )
+                                false
+                            }
+                        }
+                    }
                 }
-                return true
-            }
 
-            logFailure(outcome, attempt)
-            return false
+            if (!isSuccess) {
+                logFailure(outcome, attempt)
+            }
+            return isSuccess
         }
 
         private fun logFailure(
             outcome: MainSimRefreshController.RefreshOutcome,
             attempt: Int,
         ) {
-            if (outcome is MainSimRefreshController.RefreshOutcome.Failed &&
-                outcome.exception is SecurityException
-            ) {
-                AppLogger.e("initializeApp: SecurityException during refresh, stopping", outcome.exception)
-            } else {
-                if (outcome is MainSimRefreshController.RefreshOutcome.SkippedAlreadyInProgress) {
+            when (outcome) {
+                is MainSimRefreshController.RefreshOutcome.Failed -> {
+                    if (outcome.exception is SecurityException) {
+                        AppLogger.e("initializeApp: SecurityException during refresh, stopping", outcome.exception)
+                    } else {
+                        AppLogger.w("initializeApp: attempt ${attempt + 1} failed with exception", outcome.exception)
+                    }
+                }
+
+                is MainSimRefreshController.RefreshOutcome.SkippedAlreadyInProgress -> {
                     AppLogger.d("initializeApp: refresh already in progress, will retry")
                 }
-                AppLogger.w("initializeApp: attempt ${attempt + 1} failed with outcome: $outcome")
+
+                is MainSimRefreshController.RefreshOutcome.Completed -> {
+                    when (outcome.result) {
+                        is RefreshResult.Success -> {}
+                        is RefreshResult.Timeout -> {
+                            AppLogger.w("initializeApp: attempt ${attempt + 1} timed out")
+                        }
+
+                        is RefreshResult.Failure -> {
+                            AppLogger.e("initializeApp: attempt ${attempt + 1} failed", outcome.result.cause)
+                        }
+                    }
+                }
             }
         }
 

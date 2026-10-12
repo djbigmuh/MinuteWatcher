@@ -81,16 +81,16 @@ internal class CallSessionCleaner
             currentRealtime: Long,
         ): Boolean {
             val startTime = readStartTime(subId)
-            val bootTime = readBootTime(subId)
-            if (startTime == null || bootTime == null) return false
+            val elapsedRealtime = readElapsedRealtime(subId)
+            if (startTime == null || elapsedRealtime == null) return false
 
             val shouldClear =
-                isIncompleteRecord(startTime, bootTime) ||
-                    isBootTimeInFuture(bootTime, currentRealtime) ||
-                    isEpochDriftExceeded(startTime, bootTime, now, currentRealtime)
+                isIncompleteRecord(startTime, elapsedRealtime) ||
+                    isElapsedRealtimeInFuture(elapsedRealtime, currentRealtime) ||
+                    isEpochDriftExceeded(startTime, elapsedRealtime, now, currentRealtime)
 
             return if (shouldClear) {
-                clearSessionSafely(subId, context, getStaleCriterion(startTime, bootTime, currentRealtime))
+                clearSessionSafely(subId, context, getStaleCriterion(startTime, elapsedRealtime, currentRealtime))
             } else {
                 AppLogger.d("CallSessionCleaner: preserving valid session for subId $subId")
                 false
@@ -99,12 +99,12 @@ internal class CallSessionCleaner
 
         private fun getStaleCriterion(
             startTime: Long,
-            bootTime: Long,
+            elapsedRealtime: Long,
             currentRealtime: Long,
         ): String =
             when {
-                isIncompleteRecord(startTime, bootTime) -> "incomplete record"
-                isBootTimeInFuture(bootTime, currentRealtime) -> "bootTime in future"
+                isIncompleteRecord(startTime, elapsedRealtime) -> "incomplete record"
+                isElapsedRealtimeInFuture(elapsedRealtime, currentRealtime) -> "elapsedRealtime in future"
                 else -> "epoch drift exceeded"
             }
 
@@ -120,15 +120,15 @@ internal class CallSessionCleaner
                 null
             }
 
-        private suspend fun readBootTime(subId: Int): Long? =
+    private suspend fun readElapsedRealtime(subId: Int): Long? =
             try {
                 callSessionRepository
-                    .getBootTime(subId)
+                    .getElapsedRealtime(subId)
                     .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.w("CallSessionCleaner: failed to read bootTime for subId $subId", e)
+                AppLogger.w("CallSessionCleaner: failed to read elapsedRealtime for subId $subId", e)
                 null
             }
 
@@ -156,21 +156,21 @@ internal class CallSessionCleaner
             }
 
         /**
-         * Checks if the call session record is incomplete (`startTime <= 0` or `bootTime <= 0`).
+         * Checks if the call session record is incomplete (`startTime <= 0` or `elapsedRealtime <= 0`).
          */
         private fun isIncompleteRecord(
             startTime: Long,
-            bootTime: Long,
-        ): Boolean = startTime <= 0L || bootTime <= 0L
+            elapsedRealtime: Long,
+        ): Boolean = startTime <= 0L || elapsedRealtime <= 0L
 
         /**
-         * Checks if `bootTime` exceeds the current device `elapsedRealtime`, violating
+         * Checks if `elapsedRealtime` exceeds the current device `elapsedRealtime`, violating
          * the monotonicity invariant of `elapsedRealtime` within a single device boot session.
          */
-        private fun isBootTimeInFuture(
-            bootTime: Long,
+        private fun isElapsedRealtimeInFuture(
+            elapsedRealtime: Long,
             currentElapsedRealtime: Long,
-        ): Boolean = bootTime > currentElapsedRealtime
+        ): Boolean = elapsedRealtime > currentElapsedRealtime
 
         /**
          * Checks if the calculated device boot epoch differs from the current wall-clock epoch
@@ -181,12 +181,12 @@ internal class CallSessionCleaner
          */
         private fun isEpochDriftExceeded(
             startTime: Long,
-            bootTime: Long,
+            elapsedRealtime: Long,
             now: Long,
             currentElapsedRealtime: Long,
         ): Boolean {
             val currentBootEpoch = now - currentElapsedRealtime
-            val sessionBootEpoch = startTime - bootTime
+            val sessionBootEpoch = startTime - elapsedRealtime
             return abs(currentBootEpoch - sessionBootEpoch) > Constants.Calls.BOOT_EPOCH_TOLERANCE_MS
         }
     }

@@ -1,0 +1,186 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">सिम कार्डे</string>
+    <string name="no_sim_found">सिम कार्डे सापडली नाहीत</string>
+    <string name="check_permissions_sim">परवानग्या आणि सिम उपस्थिती तपासा</string>
+    <string name="no_data">डेटा नाही</string>
+    <string name="error">त्रुटी</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">रिसेट</string>
+    <string name="theme_system">सिस्टम</string>
+    <string name="theme_light">लाइट</string>
+    <string name="theme_dark">डार्क</string>
+    <string name="limit_button">मर्यादा</string>
+    <string name="add_widget_button">विजेट जोडा</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">सामान्य सेटिंग्ज जतन केल्या. सिम सेटिंग्ज वगळल्या (सिम सूची उपलब्ध नाही)</string>
+    <string name="settings_save_partial_failure">सामान्य सेटिंग्ज जतन केल्या. सिम-विशिष्ट सेटिंग्ज जतन करता आल्या नाहीत</string>
+    <string name="settings_save_partial_failure_slots">सामान्य सेटिंग्ज जतन केल्या. सिम %1$s साठी सिम-विशिष्ट सेटिंग्ज जतन करता आल्या नाहीत</string>
+    <string name="settings_save_failed">जतन करणे अयशस्वी</string>
+    <string name="language_system">सिस्टम</string>
+    <string name="usage_access_dialog_title">डेटा वापर ट्रॅकिंग</string>
+    <string name="usage_access_dialog_description">तुमचा मोबाइल डेटा वापर ट्रॅक करण्यासाठी MinuteWatcher ला \"वापर अ‍ॅक्सेस\" परवानगीची आवश्यकता आहे.\n\nही सिस्टीम-स्तरीय परवानगी आहे जी अ‍ॅपला सेल्युलर नेटवर्कवर किती डेटा पाठवला आणि प्राप्त झाला हे पाहण्याची अनुमती देते.</string>
+    <string name="phone_permission_permanent_denial">फोन परवानगी कायमची नाकारली आहे.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">विजेट सेटिंग्ज</string>
+    <string name="widget_description">प्रत्येक सिम कार्डसाठी उर्वरित मिनिटे आणि मोबाइल डेटा प्रदर्शित करते.</string>
+    <string name="background_transparency">पार्श्वभूमी पारदर्शकता</string>
+    <string name="display_minutes">मिनिटे दाखवा</string>
+    <string name="display_minutes_limit">मिनिटे मर्यादा दाखवा</string>
+    <string name="display_traffic">डेटा दाखवा</string>
+    <string name="display_traffic_limit">डेटा मर्यादा दाखवा</string>
+    <string name="display_name">नाव दाखवा</string>
+    <string name="display_icon">आयकॉन दाखवा</string>
+    <string name="show_sim_checkbox">हे सिम कार्ड दाखवा</string>
+    <string name="preview">पूर्वावलोकन</string>
+    <string name="layout_mode_title">लेआउट मोड</string>
+    <string name="sim_arrangement_prompt">सिम व्यवस्था निवडा</string>
+    <string name="color_background">पार्श्वभूमी रंग:</string>
+    <string name="custom_color">कस्टम&#8230;</string>
+    <string name="font_size">फॉन्ट आकार</string>
+    <string name="traffic_tracking_limitation_title">डेटा ट्रॅकिंग मर्यादा</string>
+    <string name="traffic_tracking_limitation_body">Android संपूर्ण उपकरणासाठी एकूण मूल्य म्हणून मोबाइल डेटा वापर प्रदान करते.\n\nMinuteWatcher सर्व मोबाइल ट्रॅफिक तुमच्या सिस्टम सेटिंग्जमध्ये सध्या \"डिफॉल्ट डेटा सिम\" म्हणून निवडलेल्या सिम कार्डला नियुक्त करते.</string>
+    <string name="tracking_banner_phone_permission">सिम कार्डे ओळखण्यासाठी फोन परवानगी आवश्यक आहे.</string>
+    <string name="tracking_banner_usage_access">मोबाइल डेटा वापर ट्रॅक करण्यासाठी वापर अ‍ॅक्सेस आवश्यक आहे.</string>
+    <string name="tracking_banner_sim_discovery_error">सिम कार्डे शोधणे अयशस्वी. कृपया पुन्हा प्रयत्न करा.</string>
+    <string name="tracking_banner_traffic_error">डेटा माहिती अपडेट करताना त्रुटी आली.</string>
+    <string name="tracking_banner_calls_error">कॉल ट्रॅकिंग डेटा अपडेट करताना त्रुटी आली.</string>
+    <string name="tracking_banner_appsearch_error">AppSearch इंडेक्सिंग अयशस्वी.</string>
+    <string name="tracking_banner_shortcuts_error">डायनामिक शॉर्टकट अपडेट अयशस्वी.</string>
+    <string name="tracking_banner_notification_permission">वापर अ‍ॅलर्ट प्राप्त करण्यासाठी सूचना परवानगीची शिफारस केली जाते.</string>
+    <string name="tracking_banner_widget_error">सिस्टम मर्यादांमुळे विजेट अपडेट केले जाऊ शकत नाही.</string>
+    <string name="tracking_banner_inaccurate_calls">काही कॉल सिम कार्डशी जुळवता आले नाहीत.</string>
+    <string name="tracking_banner_calls_attribution_error">एकाधिक एकाच वेळी कॉल आढळले. सिम कार्ड निर्धारित करण्यात अक्षम.</string>
+    <string name="tracking_banner_observation_failed">अनेक त्रुटींनंतर डेटा ट्रॅकिंग सेवा थांबली आहे. कृपया अ‍ॅप पुन्हा सुरू करा.</string>
+    <string name="tracking_banner_storage_degraded">स्टोरेज कमी झाले: अ‍ॅप रीस्टार्ट केल्यानंतर आकडेवारी रिसेट होऊ शकते.</string>
+    <string name="settings_load_error">सेटिंग्ज लोड करताना त्रुटी</string>
+    <string name="sim_list_unavailable_error">सिम सूची उपलब्ध नाही. रीलोड केल्यानंतर सेटिंग्ज उपलब्ध होतील.</string>
+    <string name="refresh_error">डेटा रीफ्रेश त्रुटी</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">डेटा जुना असू शकतो</string>
+    <string name="notification_permission_permanent_denial">सूचना अक्षम केल्या आहेत. अ‍ॅलर्ट मिळवण्यासाठी कृपया अ‍ॅप सेटिंग्जमध्ये त्या सक्षम करा.</string>
+    <string name="action_grant">परवानगी द्या</string>
+    <string name="action_settings">सेटिंग्ज</string>
+    <string name="action_app_settings">अ‍ॅप सेटिंग्ज</string>
+    <string name="action_retry">पुन्हा प्रयत्न करा</string>
+    <string name="validation_error_invalid_range">कृपया %1$s आणि %2$s दरम्यान मूल्य प्रविष्ट करा</string>
+    <string name="validation_error_invalid_number">कृपया वैध संख्या प्रविष्ट करा</string>
+    <string name="validation_error_field_required">फील्ड रिकामे असू शकत नाही</string>
+    <string name="widget_pin_unsupported">तुमचा लाँचर स्वयंचलित विजेट प्लेसमेंटला सपोर्ट करत नाही.</string>
+    <string name="widget_already_added">विजेट आधीच होम स्क्रीनवर जोडले आहे</string>
+    <string name="widget_added_success">विजेट होम स्क्रीनवर जोडले</string>
+    <string name="onboarding_title">MinuteWatcher मध्ये आपले स्वागत आहे!</string>
+    <string name="onboarding_message">MinuteWatcher तुमच्या मोबाइल कॅरियरकडून तुमच्या प्लॅनचे तपशील आपोआप मिळवू शकत नाही.\n\nट्रॅकिंग सुरू करण्यासाठी, कृपया प्रत्येक सिम कार्डसाठी तुमचे मिनिटे/डेटा मर्यादा आणि मासिक रिसेट दिवस मॅन्युअली सेट करा.</string>
+    <string name="onboarding_button">समजले</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">अवैध सिम स्लॉट निर्देशांक: %1$d</string>
+    <string name="error_storage_unavailable">स्लॉट %1$d साठी स्टोरेज उपलब्ध नाही. नंतर पुन्हा प्रयत्न करा.</string>
+    <string name="error_sim_removed">स्लॉट %1$d मधून सिम काढले गेले</string>
+    <string name="error_operation_failed_retry">पुन्हा प्रयत्न केल्यानंतरही क्रिया अयशस्वी झाली.</string>
+    <string name="error_unknown">अज्ञात त्रुटी: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">रद्द करा</string>
+    <string name="save_button">जतन करा</string>
+    <string name="set_button">सेट करा</string>
+    <string name="action_ok">ठीक आहे</string>
+    <string name="reset_limits_button">मर्यादा रिसेट करा</string>
+    <string name="reset_counters">काउंटर रिसेट करा</string>
+    <string name="reset_confirmation_title">काउंटर रिसेट करायचे?</string>
+    <string name="reset_confirmation_body">यामुळे या सिम कार्डसाठीचा सर्व ट्रॅक केलेला वापर साफ होईल.</string>
+    <string name="reset_limits_confirmation_title">मर्यादा रिसेट करायची?</string>
+    <string name="reset_limits_confirmation_body">यामुळे मिनिटे आणि डेटा मर्यादा साफ होतील.</string>
+    <string name="choose_reset_day">स्वयंचलित रिसेटसाठी महिन्याचा दिवस निवडा:</string>
+    <string name="choose_reset_day_dialog_title">रिसेट दिवस निवडा</string>
+    <string name="rollover_label">उर्वरित जमा करा</string>
+    <string name="set_minutes_limit">मासिक मिनिट मर्यादा सेट करा:</string>
+    <string name="minutes_limit_hint">मिनिट मर्यादा</string>
+    <string name="set_traffic_limit">मासिक डेटा मर्यादा (GB) सेट करा:</string>
+    <string name="traffic_limit_gb_hint_dialog">GB मध्ये डेटा मर्यादा</string>
+    <string name="limits_for_operator">%1$s साठी मर्यादा</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">सूचना</string>
+    <string name="notify_low_minutes_title">कमी मिनिटे शिल्लक असताना सूचित करा</string>
+    <string name="notify_low_traffic_title">कमी डेटा शिल्लक असताना सूचित करा</string>
+    <string name="aod_summary_title">ऑलवेज-ऑन डिस्प्ले सारांश</string>
+    <string name="aod_summary_description">उर्वरित मिनिटे आणि डेटासह सतत शांत सूचना दाखवा.</string>
+    <string name="aod_summary_unavailable">हे वैशिष्ट्य वापरण्यासाठी सूचना सक्षम करा</string>
+    <string name="notification_channel_name">वापर मॉनिटरिंग</string>
+    <string name="notification_channel_desc">मिनिटे आणि डेटा वापर ट्रॅक करणे</string>
+    <string name="notification_channel_aod_summary_name">ऑलवेज-ऑन डिस्प्ले सारांश</string>
+    <string name="notification_channel_aod_summary_desc">उर्वरित मिनिटे आणि डेटाचा सतत शांत सारांश</string>
+    <string name="notification_minutes_title">मिनिटे वापर %1$s</string>
+    <string name="notification_minutes_body">%1$s मिनिटे वापर! शिल्लक %2$s (%3$d%%). महिना %4$s मध्ये संपतो.</string>
+    <string name="notification_traffic_title">डेटा वापर %1$s</string>
+    <string name="notification_traffic_body">%1$s डेटा वापर! शिल्लक %2$.1f GB (%3$d%%). महिना %4$s मध्ये संपतो.</string>
+    <string name="notification_minutes_exhausted_body">या कालावधीसाठी मिनिट पॅकेज संपले आहे.</string>
+    <string name="notification_traffic_exhausted_body">या कालावधीसाठी डेटा पॅकेज संपले आहे.</string>
+    <string name="notification_minutes_body_no_period">%1$s मिनिटे वापर! शिल्लक %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s डेटा वापर! शिल्लक %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">मिनिट मर्यादा गाठली.</string>
+    <string name="notification_traffic_exhausted_body_no_period">डेटा मर्यादा गाठली.</string>
+    <string name="usage_level_low">कमी</string>
+    <string name="usage_level_critical">अत्यंत कमी</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">शिल्लक:</string>
+    <string name="used_text">वापरले</string>
+    <string name="limit_text">मर्यादा</string>
+    <string name="minutes_abbr">मिनिटे</string>
+    <string name="unit_minutes">मिनिट</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">डेटा</string>
+    <string name="traffic_remaining_text">शिल्लक डेटा:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">महिन्याचा दिवस</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d मिनिट</item>
+        <item quantity="other">%1$d मिनिटे</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d दिवस</item>
+        <item quantity="other">%1$d दिवस</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">सिम कार्ड आयकॉन</string>
+    <string name="sim_card_details_content_desc">%1$s सिम कार्ड तपशील</string>
+    <string name="adjust_minutes_content_desc">उर्वरित मिनिटे समायोजित करा</string>
+    <string name="adjust_traffic_content_desc">उर्वरित डेटा समायोजित करा</string>
+    <string name="traffic_info_content_desc">डेटा ट्रॅकिंगबद्दल अधिक माहिती</string>
+    <string name="set_limits_content_desc">%1$s साठी मर्यादा सेट करा</string>
+    <string name="change_auto_reset_day_content_desc">स्वयंचलित रिसेट दिवस बदला</string>
+    <string name="toggle_auto_reset_content_desc">स्वयंचलित रिसेट सक्षम किंवा अक्षम करा</string>
+    <string name="menu_language_content_desc">भाषा बदला</string>
+    <string name="menu_theme_content_desc">थीम बदला</string>
+    <string name="navigate_up_content_desc">वर जा</string>
+    <string name="banner_dismiss_content_desc">बॅनर बंद करा</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">ट्रॅकिंग</string>
+    <string name="call_tracking_title">कॉल मिनिटे ट्रॅक करा</string>
+    <string name="call_tracking_description">प्रत्येक सिम कार्डसाठी कॉल मिनिटे मोजा.</string>
+    <string name="assistant_access_title">असिस्टंट अ‍ॅक्सेस</string>
+    <string name="assistant_access_description">ऑन-डिव्हाइस असिस्टंटला तुमची उर्वरित मिनिटे आणि डेटाची विनंती करण्याची अनुमती द्या.</string>
+    <string name="app_functions_display_description">ऑन-डिव्हाइस असिस्टंटसोबत उर्वरित मिनिटे आणि मोबाइल डेटा शेअर करते</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">बद्दल</string>
+    <string name="about_message">MinuteWatcher अ‍ॅप उर्वरित मिनिटे आणि मोबाइल डेटा वापर ट्रॅक करण्यासाठी आहे.</string>
+    <string name="about_author_name">लेखक: Pavel Mukhin</string>
+    <string name="about_email_label">ईमेल:</string>
+    <string name="about_signoff">आपला,</string>
+    <string name="about_version_format">आवृत्ती %1$s (%2$d)</string>
+    <string name="about_content_desc">माहितीबद्दल</string>
+</resources>

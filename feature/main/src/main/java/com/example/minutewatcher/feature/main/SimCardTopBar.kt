@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,12 +23,19 @@ fun SimCardTopBar(
     onThemeChange: (AppTheme) -> Unit,
     onLanguageChange: (String?) -> Unit,
     onOpenSettings: () -> Unit,
+    onShowAbout: () -> Unit,
 ) {
     TopAppBar(
         title = { Text(stringResource(id = R.string.app_name)) },
         actions = {
             ThemeMenu(currentTheme = currentTheme, onThemeChange = onThemeChange)
             LanguageMenu(currentLanguage = currentLanguage, onLanguageChange = onLanguageChange)
+            IconButton(onClick = onShowAbout) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = stringResource(id = R.string.about_content_desc),
+                )
+            }
             IconButton(onClick = onOpenSettings) {
                 Icon(Icons.Default.Settings, contentDescription = stringResource(id = R.string.settings_widget_title))
             }

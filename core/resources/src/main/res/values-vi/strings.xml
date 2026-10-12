@@ -1,0 +1,184 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">Thẻ SIM</string>
+    <string name="no_sim_found">Không tìm thấy thẻ SIM</string>
+    <string name="check_permissions_sim">Kiểm tra quyền và sự hiện diện của SIM</string>
+    <string name="no_data">Không có dữ liệu</string>
+    <string name="error">Lỗi</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">Đặt lại</string>
+    <string name="theme_system">Hệ thống</string>
+    <string name="theme_light">Sáng</string>
+    <string name="theme_dark">Tối</string>
+    <string name="limit_button">Hạn mức</string>
+    <string name="add_widget_button">Thêm tiện ích</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">Đã lưu cài đặt chung. Đã bỏ qua cài đặt SIM (danh sách SIM không khả dụng)</string>
+    <string name="settings_save_partial_failure">Đã lưu cài đặt chung. Không thể lưu cài đặt cụ thể cho SIM</string>
+    <string name="settings_save_partial_failure_slots">Đã lưu cài đặt chung. Không thể lưu cài đặt cụ thể cho SIM %1$s</string>
+    <string name="settings_save_failed">Lưu thất bại</string>
+    <string name="language_system">Hệ thống</string>
+    <string name="usage_access_dialog_title">Theo dõi sử dụng dữ liệu</string>
+    <string name="usage_access_dialog_description">Để theo dõi mức sử dụng dữ liệu di động của bạn, MinuteWatcher cần quyền \"Quyền truy cập sử dụng\".\n\nĐầy là quyền cấp hệ thống cho phép ứng dụng xem dung lượng dữ liệu đã gửi và nhận qua mạng di động.\n\nChúng tôi không theo dõi ứng dụng bạn sử dụng hoặc lịch sử duyệt web của bạn.</string>
+    <string name="phone_permission_permanent_denial">Quyền điện thoại bị từ chối vĩnh viễn. Một số tính năng sẽ không hoạt động cho đến khi bạn bật nó trong Cài đặt ứng dụng.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">Cài đặt tiện ích</string>
+    <string name="widget_description">Hiển thị số phút còn lại và dung lượng dữ liệu di động cho từng thẻ SIM.</string>
+    <string name="background_transparency">Độ trong suốt nền</string>
+    <string name="display_minutes">Hiển thị số phút</string>
+    <string name="display_minutes_limit">Hiển thị hạn mức phút</string>
+    <string name="display_traffic">Hiển thị dữ liệu</string>
+    <string name="display_traffic_limit">Hiển thị hạn mức dữ liệu</string>
+    <string name="display_name">Hiển thị tên</string>
+    <string name="display_icon">Hiển thị biểu tượng</string>
+    <string name="show_sim_checkbox">Hiển thị thẻ SIM này</string>
+    <string name="preview">Xem trước</string>
+    <string name="layout_mode_title">Chế độ bố cục</string>
+    <string name="sim_arrangement_prompt">Chọn cách sắp xếp SIM</string>
+    <string name="color_background">Màu nền:</string>
+    <string name="custom_color">Tùy chỉnh&#8230;</string>
+    <string name="font_size">Cỡ chữ</string>
+    <string name="traffic_tracking_limitation_title">Giới hạn theo dõi dữ liệu</string>
+    <string name="traffic_tracking_limitation_body">Android cung cấp mức sử dụng dữ liệu di động dưới dạng giá trị tổng gộp cho toàn bộ thiết bị.\n\nMinuteWatcher gán tất cả lưu lượng di động cho thẻ SIM hiện được chọn làm \"SIM dữ liệu mặc định\" trong cài đặt hệ thống của bạn.</string>
+    <string name="tracking_banner_phone_permission">Cần có quyền điện thoại để xác định thẻ SIM. Một số tính năng có thể không hoạt động.</string>
+    <string name="tracking_banner_usage_access">Cần có Quyền truy cập sử dụng để theo dõi chính xác dữ liệu di động.</string>
+    <string name="tracking_banner_sim_discovery_error">Không thể phát hiện thẻ SIM. Vui lòng thử lại.</string>
+    <string name="tracking_banner_traffic_error">Có lỗi khi cập nhật dữ liệu lưu lượng.</string>
+    <string name="tracking_banner_calls_error">Có lỗi khi cập nhật dữ liệu theo dõi cuộc gọi.</string>
+    <string name="tracking_banner_appsearch_error">Lập chỉ mục AppSearch thất bại.</string>
+    <string name="tracking_banner_shortcuts_error">Cập nhật lối tắt động thất bại.</string>
+    <string name="tracking_banner_notification_permission">Nên bật quyền thông báo để nhận cảnh báo sử dụng.</string>
+    <string name="tracking_banner_widget_error">Không thể cập nhật tiện ích do giới hạn hệ thống.</string>
+    <string name="tracking_banner_inaccurate_calls">Một số cuộc gọi không thể khớp với thẻ SIM.</string>
+    <string name="tracking_banner_calls_attribution_error">Phát hiện nhiều cuộc gọi đồng thời. Không thể xác định thẻ SIM.</string>
+    <string name="tracking_banner_observation_failed">Dịch vụ theo dõi dữ liệu đã dừng sau nhiều lỗi. Vui lòng khởi động lại ứng dụng.</string>
+    <string name="tracking_banner_storage_degraded">Bộ nhớ bị suy giảm: số liệu thống kê có thể bị đặt lại sau khi khởi động lại ứng dụng.</string>
+    <string name="settings_load_error">Lỗi tải cài đặt</string>
+    <string name="sim_list_unavailable_error">Danh sách SIM không khả dụng. Cài đặt SIM sẽ khả dụng sau khi tải lại.</string>
+    <string name="refresh_error">Lỗi làm mới dữ liệu</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">Dữ liệu có thể đã cũ</string>
+    <string name="notification_permission_permanent_denial">Thông báo đã bị tắt. Vui lòng bật trong Cài đặt ứng dụng để nhận cảnh báo.</string>
+    <string name="action_grant">Cấp quyền</string>
+    <string name="action_settings">Cài đặt</string>
+    <string name="action_app_settings">Cài đặt ứng dụng</string>
+    <string name="action_retry">Thử lại</string>
+    <string name="validation_error_invalid_range">Vui lòng nhập giá trị trong khoảng từ %1$s đến %2$s</string>
+    <string name="validation_error_invalid_number">Vui lòng nhập số hợp lệ</string>
+    <string name="validation_error_field_required">Trường này không được để trống</string>
+    <string name="widget_pin_unsupported">Trình khởi chạy của bạn không hỗ trợ đặt tiện ích tự động. Vui lòng thêm tiện ích thủ công.</string>
+    <string name="widget_already_added">Tiện ích đã được thêm vào màn hình chính</string>
+    <string name="widget_added_success">Đã thêm tiện ích vào màn hình chính</string>
+    <string name="onboarding_title">Chào mừng đến với MinuteWatcher!</string>
+    <string name="onboarding_message">MinuteWatcher không thể tự động lấy chi tiết gói cước của bạn từ nhà mạng di động.\n\nĐể bắt đầu theo dõi, vui lòng cài đặt thủ công hạn mức phút/dữ liệu và ngày đặt lại hàng tháng cho từng thẻ SIM.</string>
+    <string name="onboarding_button">Đã hiểu</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">Chỉ số khe SIM không hợp lệ: %1$d</string>
+    <string name="error_storage_unavailable">Bộ nhớ không khả dụng cho khe %1$d. Thử lại sau.</string>
+    <string name="error_sim_removed">SIM đã bị xóa khỏi khe %1$d</string>
+    <string name="error_operation_failed_retry">Thao tác thất bại sau khi thử lại.</string>
+    <string name="error_unknown">Lỗi không xác định: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">Hủy</string>
+    <string name="save_button">Lưu</string>
+    <string name="set_button">Đặt</string>
+    <string name="action_ok">OK</string>
+    <string name="reset_limits_button">Đặt lại hạn mức</string>
+    <string name="reset_counters">Đặt lại bộ đếm</string>
+    <string name="reset_confirmation_title">Đặt lại bộ đếm?</string>
+    <string name="reset_confirmation_body">Thao tác này sẽ xóa tất cả dữ liệu sử dụng đã theo dõi cho thẻ SIM này.</string>
+    <string name="reset_limits_confirmation_title">Đặt lại hạn mức?</string>
+    <string name="reset_limits_confirmation_body">Thao tác này sẽ xóa hạn mức phút và dữ liệu cho thẻ SIM này.</string>
+    <string name="choose_reset_day">Chọn ngày trong tháng để tự động đặt lại:</string>
+    <string name="choose_reset_day_dialog_title">Chọn ngày đặt lại</string>
+    <string name="rollover_label">Cộng dồn số dư</string>
+    <string name="set_minutes_limit">Đặt hạn mức phút hàng tháng:</string>
+    <string name="minutes_limit_hint">Hạn mức phút</string>
+    <string name="set_traffic_limit">Đặt hạn mức dữ liệu hàng tháng (GB):</string>
+    <string name="traffic_limit_gb_hint_dialog">Hạn mức dữ liệu tính bằng GB</string>
+    <string name="limits_for_operator">Hạn mức cho %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Thông báo</string>
+    <string name="notify_low_minutes_title">Thông báo khi sắp hết phút</string>
+    <string name="notify_low_traffic_title">Thông báo khi sắp hết dữ liệu</string>
+    <string name="aod_summary_title">Tóm tắt Always-on Display</string>
+    <string name="aod_summary_description">Hiển thị thông báo im lặng cố định về số phút và dữ liệu còn lại.</string>
+    <string name="aod_summary_unavailable">Bật thông báo để sử dụng tính năng này</string>
+    <string name="notification_channel_name">Giám sát sử dụng</string>
+    <string name="notification_channel_desc">Theo dõi sử dụng phút và dữ liệu</string>
+    <string name="notification_channel_aod_summary_name">Tóm tắt Always-on Display</string>
+    <string name="notification_channel_aod_summary_desc">Tóm tắt cố định về số phút và dữ liệu còn lại</string>
+    <string name="notification_minutes_title">Sử dụng phút %1$s</string>
+    <string name="notification_minutes_body">%1$s sử dụng phút! Còn lại %2$s (%3$d%%). Tháng kết thúc sau %4$s.</string>
+    <string name="notification_traffic_title">Sử dụng dữ liệu %1$s</string>
+    <string name="notification_traffic_body">%1$s sử dụng dữ liệu! Còn lại %2$.1f GB (%3$d%%). Tháng kết thúc sau %4$s.</string>
+    <string name="notification_minutes_exhausted_body">Gói phút cho chu kỳ đã hết.</string>
+    <string name="notification_traffic_exhausted_body">Gói dữ liệu cho chu kỳ đã hết.</string>
+    <string name="notification_minutes_body_no_period">%1$s sử dụng phút! Còn lại %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s sử dụng dữ liệu! Còn lại %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Đã đạt hạn mức phút.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Đã đạt hạn mức dữ liệu.</string>
+    <string name="usage_level_low">THẤP</string>
+    <string name="usage_level_critical">RẤT THẤP</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">Còn lại:</string>
+    <string name="used_text">Đã dùng</string>
+    <string name="limit_text">Hạn mức</string>
+    <string name="minutes_abbr">phút</string>
+    <string name="unit_minutes">phút</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">Dữ liệu</string>
+    <string name="traffic_remaining_text">Dữ liệu còn lại:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">ngày trong tháng</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="other">%1$d phút</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="other">%1$d ngày</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">Biểu tượng thẻ SIM</string>
+    <string name="sim_card_details_content_desc">Chi tiết thẻ SIM %1$s</string>
+    <string name="adjust_minutes_content_desc">Điều chỉnh số phút còn lại</string>
+    <string name="adjust_traffic_content_desc">Điều chỉnh dung lượng dữ liệu còn lại</string>
+    <string name="traffic_info_content_desc">Thêm thông tin về theo dõi dữ liệu</string>
+    <string name="set_limits_content_desc">Đặt hạn mức cho %1$s</string>
+    <string name="change_auto_reset_day_content_desc">Thay đổi ngày tự động đặt lại</string>
+    <string name="toggle_auto_reset_content_desc">Bật hoặc tắt tự động đặt lại</string>
+    <string name="menu_language_content_desc">Thay đổi ngôn ngữ</string>
+    <string name="menu_theme_content_desc">Thay đổi giao diện</string>
+    <string name="navigate_up_content_desc">Đi lên</string>
+    <string name="banner_dismiss_content_desc">Ẩn biểu ngữ</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Theo dõi</string>
+    <string name="call_tracking_title">Theo dõi phút gọi</string>
+    <string name="call_tracking_description">Đếm số phút gọi cho mỗi thẻ SIM.</string>
+    <string name="assistant_access_title">Quyền truy cập trợ lý</string>
+    <string name="assistant_access_description">Cho phép trợ lý trên thiết bị yêu cầu số phút và dữ liệu còn lại của bạn.</string>
+    <string name="app_functions_display_description">Chia sẻ số phút và dữ liệu còn lại với trợ lý trên thiết bị</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">Giới thiệu</string>
+    <string name="about_message">MinuteWatcher là ứng dụng theo dõi số phút còn lại và dung lượng dữ liệu di động.</string>
+    <string name="about_author_name">Tác giả: Pavel Mukhin</string>
+    <string name="about_email_label">Email:</string>
+    <string name="about_signoff">Trân trọng,</string>
+    <string name="about_version_format">Phiên bản %1$s (%2$d)</string>
+    <string name="about_content_desc">Thông tin giới thiệu</string>
+</resources>

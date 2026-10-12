@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>Tutto in una riga</item>
+        <item>Due righe</item>
+        <item>Tre righe</item>
+        <item>Sei righe</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>Fianco a fianco</item>
+        <item>In una colonna</item>
+    </string-array>
+</resources>

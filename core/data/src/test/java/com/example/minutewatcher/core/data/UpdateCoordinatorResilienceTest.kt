@@ -26,9 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -92,7 +90,10 @@ class UpdateCoordinatorResilienceTest {
             // Should eventually succeed and reach Active status
             assertEquals(TrackingStatus.Active, coordinator.status.value)
             // One call per attempt in loop (3) + one call for the main observation loop (1) = 4
-            assertTrue("Call count should be at least 4, but was $callCount", callCount >= 4)
+            assertTrue(
+                "Call count should be at least 4, but was $callCount",
+                callCount >= 4,
+            )
         }
 
     @Test
@@ -125,7 +126,10 @@ class UpdateCoordinatorResilienceTest {
             testScheduler.runCurrent()
 
             val status = coordinator.status.value
-            assertTrue("Status should be Error after max retries, but was $status", status is TrackingStatus.Error)
+            assertTrue(
+                "Status should be Error after max retries, but was $status",
+                status is TrackingStatus.Error,
+            )
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
             assertEquals(3, callCount)
         }
@@ -148,14 +152,14 @@ class UpdateCoordinatorResilienceTest {
 
             // Wait for initial Active status
             testScheduler.advanceTimeBy(10.seconds)
-            runCurrent()
+            testScheduler.runCurrent()
             assertEquals(TrackingStatus.Active, coordinator.status.value)
 
             coordinator.recover()
 
             // Wait for recovery startup
             testScheduler.advanceTimeBy(10.seconds)
-            runCurrent()
+            testScheduler.runCurrent()
 
             assertEquals("Should be Active after recovery", TrackingStatus.Active, coordinator.status.value)
         }
@@ -199,25 +203,25 @@ class UpdateCoordinatorResilienceTest {
 
             // Emit initial snapshot so observation activates
             snapshotFlow.value = snapshot1
-            runCurrent()
+            testScheduler.runCurrent()
             testScheduler.advanceTimeBy(10.seconds)
-            runCurrent()
+            testScheduler.runCurrent()
 
             assertEquals(TrackingStatus.Active, coordinator.status.value)
             assertEquals(1, callCount)
 
             // Trigger terminal failure on second update
             snapshotFlow.value = snapshot2
-            runCurrent()
+            testScheduler.runCurrent()
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            runCurrent()
+            testScheduler.runCurrent()
 
             assertEquals(2, callCount)
             assertTrue(coordinator.status.value is TrackingStatus.Error)
 
             // Wait for restart delay (5s)
             testScheduler.advanceTimeBy(10.seconds)
-            runCurrent()
+            testScheduler.runCurrent()
 
             // Monitoring should restart observation and succeed on subsequent attempt
             assertEquals(3, callCount)
@@ -260,19 +264,19 @@ class UpdateCoordinatorResilienceTest {
                 )
 
             testScheduler.advanceTimeBy(10.seconds)
-            runCurrent()
+            testScheduler.runCurrent()
             assertEquals(1, callCount)
 
             snapshotFlow.value = snapshot2
-            runCurrent()
+            testScheduler.runCurrent()
             testScheduler.advanceTimeBy(Constants.Widget.DEBOUNCE_MS.milliseconds + 100.milliseconds)
-            runCurrent()
+            testScheduler.runCurrent()
 
             assertEquals(2, callCount)
             assertTrue(coordinator.status.value is TrackingStatus.Error)
 
             testScheduler.advanceTimeBy(10.seconds)
-            runCurrent()
+            testScheduler.runCurrent()
 
             assertEquals(3, callCount)
             assertEquals(TrackingStatus.Active, coordinator.status.value)
@@ -342,17 +346,21 @@ class UpdateCoordinatorResilienceTest {
             coordinator.recover()
 
             testScheduler.advanceTimeBy(10.seconds)
-            runCurrent()
+            testScheduler.runCurrent()
 
             assertEquals(TrackingStatus.Active, coordinator.status.value)
-            assertTrue("SIM observe calls should be controlled without racing setup jobs", simObserveCalls <= 3)
+            assertTrue(
+                "SIM observe calls should be controlled without racing setup jobs",
+                simObserveCalls <= 3,
+            )
         }
 
     @Test
-    fun `monitoring job with stale generation completes without restart`() =
+    fun `stale observation termination after recovery does not interfere with new active state`() =
         runTest {
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(snapshot))
+            val flow = MutableStateFlow(snapshot)
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(flow)
             whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
 
             val coordinator =
@@ -364,22 +372,26 @@ class UpdateCoordinatorResilienceTest {
                 )
             testScheduler.runCurrent()
 
-            val obsJob = coordinator.currentObservationJob.get()!!
-            val staleGen = 0L
-            val monitoring = coordinator.launchMonitoringJobTest(obsJob, staleGen)
+            val initialJob = coordinator.currentObservationJob.get()!!
 
-            obsJob.cancel()
-            monitoring.join()
+            // Trigger recovery which increments observationGeneration and starts new observation
+            coordinator.recover()
+            testScheduler.runCurrent()
+
+            // Cancel the initial observation job
+            initialJob.cancel()
             testScheduler.runCurrent()
 
             assertEquals(TrackingStatus.Active, coordinator.status.value)
         }
 
     @Test
-    fun `monitoring job where currentObservationJob points to different job completes without restart`() =
+    fun `old observation job completion when active job changed completes without restart`() =
         runTest {
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
-            whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(snapshot))
+            val flow1 = MutableStateFlow(snapshot)
+            val flow2 = MutableStateFlow(snapshot)
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(flow1, flow2)
             whenever(widgetUpdater.updateAll()).thenReturn(WidgetUpdateResult.Success())
 
             val coordinator =
@@ -391,18 +403,22 @@ class UpdateCoordinatorResilienceTest {
                 )
             testScheduler.runCurrent()
 
-            val obsJob = coordinator.currentObservationJob.get()!!
-            val gen = coordinator.observationGeneration
+            val oldJob = coordinator.currentObservationJob.get()!!
 
-            val otherJob = backgroundScope.launch { delay(1000L) }
-            coordinator.currentObservationJob.set(otherJob)
-
-            val monitoring = coordinator.launchMonitoringJobTest(obsJob, gen)
-            obsJob.cancel()
-            monitoring.join()
+            // Trigger takeover or recovery which points currentObservationJob to new job
+            coordinator.recover()
             testScheduler.runCurrent()
 
-            otherJob.cancel()
+            val newJob = coordinator.currentObservationJob.get()!!
+            assertTrue(
+                "Observation job should be updated",
+                oldJob !== newJob,
+            )
+
+            // Cancel the old job
+            oldJob.cancel()
+            testScheduler.runCurrent()
+
             assertEquals(TrackingStatus.Active, coordinator.status.value)
         }
 }

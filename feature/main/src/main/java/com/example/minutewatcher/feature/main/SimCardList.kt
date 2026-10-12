@@ -111,7 +111,7 @@ private fun SimCardListRow(
         },
         onAdjustTraffic = {
             viewModel.setAdjustDialog(
-                AdjustDialogData(model.slot, model.trafficRemainingGb, false),
+                AdjustDialogData(model.slot, model.trafficRemainingGb ?: 0f, false),
             )
         },
         onShowTrafficInfo = { viewModel.setTrafficLimitationDialog(true) },

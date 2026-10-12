@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>એક જ લીટીમાં</item>
+        <item>બે લીટીઓ</item>
+        <item>ત્રણ લીટીઓ</item>
+        <item>છ લીટીઓ</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>પાસપાસે</item>
+        <item>એક કોલમમાં</item>
+    </string-array>
+</resources>

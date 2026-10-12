@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>ਇੱਕੋ ਲਾਈਨ ਵਿੱਚ</item>
+        <item>ਦੋ ਲਾਈਨਾਂ</item>
+        <item>ਤਿੰਨ ਲਾਈਨਾਂ</item>
+        <item>ਛੇ ਲਾਈਨਾਂ</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>ਨਾਲ਼-ਨਾਲ਼</item>
+        <item>ਇੱਕ ਕਾਲਮ ਵਿੱਚ</item>
+    </string-array>
+</resources>

@@ -9,10 +9,22 @@ sealed interface TrackingStatus {
 
     data object Idle : TrackingStatus
 
+    /**
+     * Ready tracking status with last update timestamp.
+     *
+     * @property lastUpdateTimestamp Timestamp of the last successful update.
+     */
     data class Ready(
         val lastUpdateTimestamp: Long,
     ) : TrackingStatus
 
+    /**
+     * Error tracking status with error details.
+     *
+     * @property type Error type enum value.
+     * @property message Human-readable error message, or null.
+     * @property code Machine-readable error code, or null.
+     */
     data class Error(
         val type: ErrorType,
         val message: String? = null,

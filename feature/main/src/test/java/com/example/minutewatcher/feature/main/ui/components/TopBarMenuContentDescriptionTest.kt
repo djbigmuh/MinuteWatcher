@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import com.example.minutewatcher.core.model.AppTheme
+import com.example.minutewatcher.feature.main.SimCardTopBar
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,5 +34,21 @@ class TopBarMenuContentDescriptionTest {
         }
 
         composeTestRule.onNodeWithContentDescription("Смена темы").assertIsDisplayed()
+    }
+
+    @Test
+    fun `sim card top bar displays about info button content description in Russian`() {
+        composeTestRule.setContent {
+            SimCardTopBar(
+                currentTheme = AppTheme.FOLLOW_SYSTEM,
+                currentLanguage = null,
+                onThemeChange = {},
+                onLanguageChange = {},
+                onOpenSettings = {},
+                onShowAbout = {},
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("О приложении").assertIsDisplayed()
     }
 }

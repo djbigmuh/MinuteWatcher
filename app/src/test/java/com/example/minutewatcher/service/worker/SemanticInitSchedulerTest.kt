@@ -11,6 +11,8 @@ import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -19,6 +21,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = com.example.minutewatcher.MinuteWatcherTestApp::class)
@@ -59,43 +62,55 @@ class SemanticInitSchedulerTest {
     }
 
     @Test
-    fun `schedule enqueues one time semantic_init work without initial delay`() {
-        SemanticInitScheduler.schedule(workManager)
-        ShadowLooper.idleMainLooper()
+    fun `schedule enqueues one time semantic_init work without initial delay`() =
+        runBlocking {
+            SemanticInitScheduler.schedule(workManager)
+            ShadowLooper.idleMainLooper()
 
-        val workInfos = workManager.getWorkInfosForUniqueWork(SemanticInitScheduler.SEMANTIC_INIT_WORK_NAME).get()
-        assertEquals(1, workInfos.size)
-        assertTrue(
-            "Work state should be ENQUEUED or RUNNING",
-            workInfos[0].state == WorkInfo.State.ENQUEUED || workInfos[0].state == WorkInfo.State.RUNNING,
-        )
-    }
+            val workInfos =
+                withTimeout(5.seconds) {
+                    workManager.getWorkInfosForUniqueWork(SemanticInitScheduler.SEMANTIC_INIT_WORK_NAME).get()
+                }
+            assertEquals(1, workInfos.size)
+            assertTrue(
+                "Work state should be ENQUEUED or RUNNING",
+                workInfos[0].state == WorkInfo.State.ENQUEUED || workInfos[0].state == WorkInfo.State.RUNNING,
+            )
+        }
 
     @Test
-    fun `schedule with REPLACE policy cancels previous enqueued work and enqueues new one`() {
-        SemanticInitScheduler.schedule(workManager)
-        ShadowLooper.idleMainLooper()
-        val initialWorkInfos =
-            workManager
-                .getWorkInfosForUniqueWork(
-                    SemanticInitScheduler.SEMANTIC_INIT_WORK_NAME,
-                ).get()
-        assertEquals(1, initialWorkInfos.size)
-        val initialWorkId = initialWorkInfos[0].id
+    fun `schedule with KEEP policy preserves previous enqueued work`() =
+        runBlocking {
+            SemanticInitScheduler.schedule(workManager)
+            ShadowLooper.idleMainLooper()
+            val initialWorkInfos =
+                withTimeout(5.seconds) {
+                    workManager
+                        .getWorkInfosForUniqueWork(
+                            SemanticInitScheduler.SEMANTIC_INIT_WORK_NAME,
+                        ).get()
+                }
+            assertEquals(1, initialWorkInfos.size)
+            val initialWorkId = initialWorkInfos[0].id
 
-        SemanticInitScheduler.schedule(workManager)
-        ShadowLooper.idleMainLooper()
-        val updatedWorkInfos =
-            workManager
-                .getWorkInfosForUniqueWork(
-                    SemanticInitScheduler.SEMANTIC_INIT_WORK_NAME,
-                ).get()
-        assertEquals(1, updatedWorkInfos.size)
+            SemanticInitScheduler.schedule(workManager)
+            ShadowLooper.idleMainLooper()
+            val updatedWorkInfos =
+                withTimeout(5.seconds) {
+                    workManager
+                        .getWorkInfosForUniqueWork(
+                            SemanticInitScheduler.SEMANTIC_INIT_WORK_NAME,
+                        ).get()
+                }
+            assertEquals(1, updatedWorkInfos.size)
 
-        val previousWorkInfo = workManager.getWorkInfoById(initialWorkId).get()
-        assertTrue(
-            "Previous work should be CANCELLED or removed",
-            previousWorkInfo == null || previousWorkInfo.state == WorkInfo.State.CANCELLED,
-        )
-    }
+            val previousWorkInfo =
+                withTimeout(5.seconds) {
+                    workManager.getWorkInfoById(initialWorkId).get()
+                }
+            assertTrue(
+                "Previous work should NOT be CANCELLED",
+                previousWorkInfo == null || previousWorkInfo.state != WorkInfo.State.CANCELLED,
+            )
+        }
 }

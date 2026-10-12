@@ -1,6 +1,10 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -17,12 +21,6 @@ import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.supportedLanguageOptions
 
-// LanguageMenu — dropdown menu for selecting language.
-// Contains options: System, English, Russian, etc.
-// onLanguageChange is called when a language is selected.
-//
-// DropdownMenu is displayed on icon click.
-// Menu closes on language selection.
 @Composable
 fun LanguageMenu(
     currentLanguage: String?,
@@ -39,16 +37,18 @@ fun LanguageMenu(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             supportedLanguageOptions.forEach { option ->
-                val name = stringResource(option.nameRes)
                 DropdownMenuItem(
-                    text = { Text("${option.flag} $name") },
+                    text = { Text(stringResource(option.nameRes)) },
                     onClick = {
                         onLanguageChange(option.code)
                         expanded = false
                     },
                     trailingIcon = {
                         if (currentLanguage == option.code) {
-                            Text(stringResource(R.string.check_mark))
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = stringResource(R.string.check_mark),
+                            )
                         }
                     },
                 )
@@ -57,12 +57,12 @@ fun LanguageMenu(
     }
 }
 
-// ThemeMenu — dropdown menu for selecting theme.
-// Contains options: System, Light, Dark.
-// onThemeChange is called when a theme is selected.
-//
-// DropdownMenu is displayed on icon click.
-// Menu closes on theme selection.
+private data class ThemeOption(
+    val theme: AppTheme,
+    @StringRes val labelRes: Int,
+    @DrawableRes val iconRes: Int,
+)
+
 @Composable
 fun ThemeMenu(
     currentTheme: AppTheme,
@@ -71,9 +71,9 @@ fun ThemeMenu(
     var expanded by remember { mutableStateOf(false) }
     val themes =
         listOf(
-            Triple(AppTheme.FOLLOW_SYSTEM, stringResource(R.string.theme_system), "🌓"),
-            Triple(AppTheme.LIGHT, stringResource(R.string.theme_light), "☀️"),
-            Triple(AppTheme.DARK, stringResource(R.string.theme_dark), "🌙"),
+            ThemeOption(AppTheme.FOLLOW_SYSTEM, R.string.theme_system, R.drawable.ic_theme_system),
+            ThemeOption(AppTheme.LIGHT, R.string.theme_light, R.drawable.ic_theme_light),
+            ThemeOption(AppTheme.DARK, R.string.theme_dark, R.drawable.ic_theme_dark),
         )
 
     Box {
@@ -84,16 +84,25 @@ fun ThemeMenu(
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            themes.forEach { (theme, name, icon) ->
+            themes.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text("$icon $name") },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(item.iconRes),
+                            contentDescription = null,
+                        )
+                    },
+                    text = { Text(stringResource(item.labelRes)) },
                     onClick = {
-                        onThemeChange(theme)
+                        onThemeChange(item.theme)
                         expanded = false
                     },
                     trailingIcon = {
-                        if (currentTheme == theme) {
-                            Text(stringResource(R.string.check_mark))
+                        if (currentTheme == item.theme) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = stringResource(R.string.check_mark),
+                            )
                         }
                     },
                 )

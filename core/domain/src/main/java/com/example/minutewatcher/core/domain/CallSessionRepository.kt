@@ -27,7 +27,7 @@ interface CallSessionRepository {
      *
      * @param subId Subscription ID.
      * @param startTime Local start time of the call.
-     * @param bootTime Device elapsedRealtime when the call started.
+     * @param elapsedRealtime Device elapsedRealtime when the call started.
      * @param uptime Device uptime when the call started.
      * @param identity Stable SIM identity. If null, the identity key is removed.
      * @throws IOException if storage access fails.
@@ -35,7 +35,7 @@ interface CallSessionRepository {
     suspend fun saveCallSession(
         subId: Int,
         startTime: Long,
-        bootTime: Long,
+        elapsedRealtime: Long,
         uptime: Long,
         identity: String?,
     )
@@ -53,9 +53,9 @@ interface CallSessionRepository {
     fun getCallStartTime(subId: Int): Flow<Long>
 
     /**
-     * Returns a flow of the boot time for the given subscription.
+     * Returns a flow of the elapsed realtime for the given subscription.
      */
-    fun getBootTime(subId: Int): Flow<Long>
+    fun getElapsedRealtime(subId: Int): Flow<Long>
 
     /**
      * Returns a flow of the uptime for the given subscription.

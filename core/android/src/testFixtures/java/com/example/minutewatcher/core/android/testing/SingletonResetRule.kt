@@ -2,7 +2,7 @@ package com.example.minutewatcher.core.android.testing
 
 import com.example.minutewatcher.core.android.util.OperatorResolver
 import com.example.minutewatcher.core.android.util.SimCardMapper
-import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.resetAppLoggerForTest
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
@@ -20,8 +20,8 @@ class SingletonResetRule : TestWatcher() {
     }
 
     private fun resetAll() {
-        AppLogger.resetForTest()
-        SimCardMapper.resetForTest()
-        OperatorResolver.resetForTest()
+        resetAppLoggerForTest()
+        SimCardMapper.reset()
+        OperatorResolver.reset()
     }
 }

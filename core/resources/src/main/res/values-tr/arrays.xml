@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>Tek satırda</item>
+        <item>İki satır</item>
+        <item>Üç satır</item>
+        <item>Altı satır</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>Yan yana</item>
+        <item>Tek sütunda</item>
+    </string-array>
+</resources>

@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.common.util.resetAppLoggerForTest
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
@@ -69,7 +70,7 @@ class TrafficTrackerCancellationTest {
 
     @After
     fun tearDown() {
-        AppLogger.resetForTest()
+        resetAppLoggerForTest()
     }
 
     @Test
@@ -97,7 +98,7 @@ class TrafficTrackerCancellationTest {
             mock {
                 on { filesDir } doReturn null
             }
-        AppLogger.resetForTest()
+        resetAppLoggerForTest()
         AppLogger.init(mockContext, capturingLogger)
     }
 

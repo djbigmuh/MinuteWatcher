@@ -3,15 +3,12 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.domain.AppSettingsRepository
-import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -19,6 +16,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -56,61 +54,61 @@ class WidgetUpdaterErrorTest {
     }
 
     @Test(timeout = 10000)
-    fun `coalesced calls do not hang when update process throws Error`() =
+    fun `OutOfMemoryError thrown by renderer propagates out of updateAll`() =
         runTest {
-            val updateStartedSignal = CompletableDeferred<Unit>()
-            val finishSignal = CompletableDeferred<Unit>()
-
             val oomRenderer =
                 object : WidgetRenderer {
                     override suspend fun renderAll(
                         context: Context,
                         forceFull: Boolean,
-                    ) {
-                        updateStartedSignal.complete(Unit)
-                        withTimeoutOrNull(30.seconds) { finishSignal.await() }
-                            ?: throw AssertionError("Timed out waiting for finishSignal")
-                        throw OutOfMemoryError("Simulated OOM")
-                    }
+                    ): Unit = throw OutOfMemoryError("Simulated OOM")
                 }
             val updater = createUpdater(backgroundScope, oomRenderer)
 
-            // First call starts the update
-            val firstCall =
-                async {
+            val result =
+                runCatching {
+                    withTimeout(5.seconds) {
+                        updater.updateAll()
+                    }
+                }
+            assertTrue(
+                "Should propagate OutOfMemoryError, but got: ${result.exceptionOrNull()}",
+                result.exceptionOrNull() is OutOfMemoryError,
+            )
+        }
+
+    @Test(timeout = 10000)
+    fun `activeUpdate is released after OutOfMemoryError so subsequent update runs independently`() =
+        runTest {
+            val renderCount = AtomicInteger(0)
+            val oomRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ): Unit =
+                        run {
+                            renderCount.incrementAndGet()
+                            throw OutOfMemoryError("Simulated OOM")
+                        }
+                }
+            val updater = createUpdater(backgroundScope, oomRenderer)
+
+            runCatching {
+                withTimeout(5.seconds) {
                     updater.updateAll()
                 }
+            }
 
-            withTimeoutOrNull(30.seconds) { updateStartedSignal.await() }
-                ?: throw AssertionError("Timed out waiting for updateStartedSignal")
+            assertEquals(1, renderCount.get())
 
-            // Second call should coalesce and wait for the same deferred
-            val secondCall =
-                async {
+            // Subsequent update should run independently and throw OOM again
+            runCatching {
+                withTimeout(5.seconds) {
                     updater.updateAll()
                 }
+            }
 
-            finishSignal.complete(Unit)
-
-            val result1 =
-                withTimeoutOrNull(30.seconds) { firstCall.await() }
-                    ?: throw AssertionError("Timed out waiting for firstCall")
-
-            assertTrue(
-                "First call should return terminal failure without throwing. Result was: $result1",
-                result1 is WidgetUpdateResult.Failure,
-            )
-            assertEquals(WidgetUpdateResult.FailureReason.TERMINAL, (result1 as WidgetUpdateResult.Failure).reason)
-
-            val result2 =
-                withTimeoutOrNull(30.seconds) { secondCall.await() }
-                    ?: throw AssertionError("Timed out waiting for secondCall")
-
-            assertTrue(
-                "Second call should return failure, not hang. Result was: $result2",
-                result2 is WidgetUpdateResult.Failure,
-            )
-            assertEquals(WidgetUpdateResult.FailureReason.TERMINAL, (result2 as WidgetUpdateResult.Failure).reason)
-            assertTrue("Result should be marked as coalesced", result2.wasCoalesced)
+            assertEquals(2, renderCount.get())
         }
 }

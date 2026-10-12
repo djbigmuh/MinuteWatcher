@@ -1,0 +1,186 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">ਸਿਮ ਕਾਰਡ</string>
+    <string name="no_sim_found">ਕੋਈ ਸਿਮ ਕਾਰਡ ਨਹੀਂ ਮਿਲਿਆ</string>
+    <string name="check_permissions_sim">ਮਨਜ਼ੂਰੀਆਂ ਅਤੇ ਸਿਮ ਦੀ ਮੌਜੂਦਗੀ ਦੀ ਜਾਂਚ ਕਰੋ</string>
+    <string name="no_data">ਕੋਈ ਡਾਟਾ ਨਹੀਂ</string>
+    <string name="error">ਗਲਤੀ</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">ਰੀਸੈੱਟ</string>
+    <string name="theme_system">ਸਿਸਟਮ</string>
+    <string name="theme_light">ਲਾਇਟ</string>
+    <string name="theme_dark">ਡਾਰਕ</string>
+    <string name="limit_button">ਸੀਮਾ</string>
+    <string name="add_widget_button">ਵਿਜੇਟ ਜੋੜੋ</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">ਆਮ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਗਈਆਂ। ਸਿਮ ਸੈਟਿੰਗਾਂ ਛੱਡੀਆਂ ਗਈਆਂ (ਸਿਮ ਸੂਚੀ ਉਪਲਬਧ ਨਹੀਂ)</string>
+    <string name="settings_save_partial_failure">ਆਮ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਗਈਆਂ। ਸਿਮ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਨਹੀਂ ਜਾ ਸਕੀਆਂ</string>
+    <string name="settings_save_partial_failure_slots">ਆਮ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਗਈਆਂ। ਸਿਮ %1$s ਲਈ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਨਹੀਂ ਜਾ ਸਕੀਆਂ</string>
+    <string name="settings_save_failed">ਸੰਭਾਲਣਾ ਅਸਫਲ ਰਿਹਾ</string>
+    <string name="language_system">ਸਿਸਟਮ</string>
+    <string name="usage_access_dialog_title">ਡਾਟਾ ਵਰਤੋਂ ਟਰੈਕਿੰਗ</string>
+    <string name="usage_access_dialog_description">ਮੋਬਾਈਲ ਡਾਟਾ ਵਰਤੋਂ ਨੂੰ ਟਰੈਕ ਕਰਨ ਲਈ MinuteWatcher ਨੂੰ \"ਵਰਤੋਂ ਪਹੁੰਚ\" ਇਜਾਜ਼ਤ ਦੀ ਲੋੜ ਹੈ।\n\nਇਹ ਇੱਕ ਸਿਸਟਮ ਪੱਧਰ ਦੀ ਇਜਾਜ਼ਤ ਹੈ ਜੋ ਐਪ ਨੂੰ ਇਹ ਦੇਖਣ ਦੀ ਇਜਾਜ਼ਤ ਦਿੰਦੀ ਹੈ ਕਿ ਮੋਬਾਈਲ ਨੈੱਟਵਰਕ \'ਤੇ ਕਿੰਨਾ ਡਾਟਾ ਭੇਜਿਆ ਅਤੇ ਪ੍ਰਾਪਤ ਕੀਤਾ ਗਿਆ ਹੈ।</string>
+    <string name="phone_permission_permanent_denial">ਫੋਨ ਦੀ ਇਜਾਜ਼ਤ ਪੱਕੇ ਤੌਰ \'ਤੇ ਨਕਾਰੀ ਗਈ ਹੈ।</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">ਵਿਜੇਟ ਸੈਟਿੰਗਾਂ</string>
+    <string name="widget_description">ਹਰੇਕ ਸਿਮ ਕਾਰਡ ਲਈ ਬਾਕੀ ਰਹਿੰਦੇ ਮਿੰਟ ਅਤੇ ਮੋਬਾਈਲ ਡਾਟਾ ਦਿਖਾਉਂਦਾ ਹੈ।</string>
+    <string name="background_transparency">ਬੈਕਗ੍ਰਾਊਂਡ ਪਾਰਦਰਸ਼ਤਾ</string>
+    <string name="display_minutes">ਮਿੰਟ ਦਿਖਾਓ</string>
+    <string name="display_minutes_limit">ਮਿੰਟ ਸੀਮਾ ਦਿਖਾਓ</string>
+    <string name="display_traffic">ਡਾਟਾ ਦਿਖਾਓ</string>
+    <string name="display_traffic_limit">ਡਾਟਾ ਸੀਮਾ ਦਿਖਾਓ</string>
+    <string name="display_name">ਨਾਮ ਦਿਖਾਓ</string>
+    <string name="display_icon">ਆਈਕਨ ਦਿਖਾਓ</string>
+    <string name="show_sim_checkbox">ਇਹ ਸਿਮ ਕਾਰਡ ਦਿਖਾਓ</string>
+    <string name="preview">ਪੂਰਵ-ਝਲਕ</string>
+    <string name="layout_mode_title">ਲੇਆਊਟ ਮੋਡ</string>
+    <string name="sim_arrangement_prompt">ਸਿਮ ਤਰਤੀਬ ਚੁਣੋ</string>
+    <string name="color_background">ਬੈਕਗ੍ਰਾਊਂਡ ਰੰਗ:</string>
+    <string name="custom_color">ਕਸਟਮ&#8230;</string>
+    <string name="font_size">ਫੌਂਟ ਦਾ ਆਕਾਰ</string>
+    <string name="traffic_tracking_limitation_title">ਡਾਟਾ ਟਰੈਕਿੰਗ ਸੀਮਾ</string>
+    <string name="traffic_tracking_limitation_body">Android ਪੂਰੀ ਡਿਵਾਈਸ ਲਈ ਇੱਕ ਕੁੱਲ ਮੁੱਲ ਵਜੋਂ ਮੋਬਾਈਲ ਡਾਟਾ ਵਰਤੋਂ ਪ੍ਰਦਾਨ ਕਰਦਾ ਹੈ।\n\nMinuteWatcher ਸਾਰੇ ਮੋਬਾਈਲ ਡਾਟਾ ਵਰਤੋਂ ਨੂੰ ਉਸ ਸਿਮ ਕਾਰਡ ਨਾਲ ਜੋੜਦਾ ਹੈ ਜੋ ਤੁਹਾਡੀਆਂ ਸਿਸਟਮ ਸੈਟਿੰਗਾਂ ਵਿੱਚ \"ਡਿਫਾਲਟ ਡਾਟਾ ਸਿਮ\" ਵਜੋਂ ਚੁਣਿਆ ਗਿਆ ਹੈ।</string>
+    <string name="tracking_banner_phone_permission">ਸਿਮ ਕਾਰਡਾਂ ਦੀ ਪਛਾਣ ਕਰਨ ਲਈ ਫੋਨ ਇਜਾਜ਼ਤ ਦੀ ਲੋੜ ਹੈ।</string>
+    <string name="tracking_banner_usage_access">ਡਾਟਾ ਵਰਤੋਂ ਨੂੰ ਟਰੈਕ ਕਰਨ ਲਈ ਵਰਤੋਂ ਪਹੁੰਚ ਦੀ ਲੋੜ ਹੈ।</string>
+    <string name="tracking_banner_sim_discovery_error">ਸਿਮ ਕਾਰਡ ਲੱਭਣ ਵਿੱਚ ਅਸਫਲ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="tracking_banner_traffic_error">ਡਾਟਾ ਅਪਡੇਟ ਕਰਨ ਵਿੱਚ ਗਲਤੀ ਆਈ।</string>
+    <string name="tracking_banner_calls_error">ਕਾਲ ਟਰੈਕਿੰਗ ਡਾਟਾ ਅਪਡੇਟ ਕਰਨ ਵਿੱਚ ਗਲਤੀ ਆਈ।</string>
+    <string name="tracking_banner_appsearch_error">AppSearch ਇੰਡੈਕਸਿੰਗ ਅਸਫਲ ਰਹੀ।</string>
+    <string name="tracking_banner_shortcuts_error">ਡਾਇਨਾਮਿਕ ਸ਼ਾਰਟਕੱਟ ਅਪਡੇਟ ਅਸਫਲ ਰਿਹਾ।</string>
+    <string name="tracking_banner_notification_permission">ਵਰਤੋਂ ਚੇਤਾਵਨੀਆਂ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ ਨੋਟੀਫਿਕੇਸ਼ਨ ਇਜਾਜ਼ਤ ਦੀ ਸਿਫਾਰਸ਼ ਕੀਤੀ ਜਾਂਦੀ ਹੈ।</string>
+    <string name="tracking_banner_widget_error">ਸਿਸਟਮ ਸੀਮਾਵਾਂ ਕਾਰਨ ਵਿਜੇਟ ਅਪਡੇਟ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ।</string>
+    <string name="tracking_banner_inaccurate_calls">ਕੁਝ ਕਾਲਾਂ ਨੂੰ ਸਿਮ ਕਾਰਡ ਨਾਲ ਮੇਲ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ।</string>
+    <string name="tracking_banner_calls_attribution_error">ਇੱਕੋ ਸਮੇਂ ਕਈ ਕਾਲਾਂ ਮਿਲੀਆਂ। ਸਿਮ ਕਾਰਡ ਦਾ ਨਿਰਧਾਰਨ ਕਰਨ ਵਿੱਚ ਅਸਮਰੱਥ।</string>
+    <string name="tracking_banner_observation_failed">ਕਈ ਗਲਤੀਆਂ ਤੋਂ ਬਾਅਦ ਡਾਟਾ ਟਰੈਕਿੰਗ ਸੇਵਾ ਬੰਦ ਹੋ ਗਈ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਐਪ ਦੁਬਾਰਾ ਚਾਲੂ ਕਰੋ।</string>
+    <string name="tracking_banner_storage_degraded">ਸਟੋਰੇਜ ਘਟ ਗਈ ਹੈ: ਐਪ ਦੁਬਾਰਾ ਚਾਲੂ ਕਰਨ ਤੋਂ ਬਾਅਦ ਅੰਕੜੇ ਰੀਸੈੱਟ ਹੋ ਸਕਦੇ ਹਨ।</string>
+    <string name="settings_load_error">ਸੈਟਿੰਗਾਂ ਲੋਡ ਕਰਨ ਵਿੱਚ ਗਲਤੀ</string>
+    <string name="sim_list_unavailable_error">ਸਿਮ ਸੂਚੀ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਰੀਲੋਡ ਕਰਨ ਤੋਂ ਬਾਅਦ ਸੈਟਿੰਗਾਂ ਉਪਲਬਧ ਹੋਣਗੀਆਂ।</string>
+    <string name="refresh_error">ਡਾਟਾ ਰਿਫ੍ਰੈਸ਼ ਗਲਤੀ</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">ਡਾਟਾ ਪੁਰਾਣਾ ਹੋ ਸਕਦਾ ਹੈ</string>
+    <string name="notification_permission_permanent_denial">ਨੋਟੀਫਿਕੇਸ਼ਨ ਬੰਦ ਹਨ। ਚੇਤਾਵਨੀਆਂ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ ਕਿਰਪਾ ਕਰਕੇ ਐਪ ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਚਾਲੂ ਕਰੋ।</string>
+    <string name="action_grant">ਮਨਜ਼ੂਰੀ ਦਿਓ</string>
+    <string name="action_settings">ਸੈਟਿੰਗਾਂ</string>
+    <string name="action_app_settings">ਐਪ ਸੈਟਿੰਗਾਂ</string>
+    <string name="action_retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="validation_error_invalid_range">ਕਿਰਪਾ ਕਰਕੇ %1$s ਅਤੇ %2$s ਵਿਚਕਾਰ ਮੁੱਲ ਦਰਜ ਕਰੋ</string>
+    <string name="validation_error_invalid_number">ਕਿਰਪਾ ਕਰਕੇ ਇੱਕ ਵੈਧ ਨੰਬਰ ਦਰਜ ਕਰੋ</string>
+    <string name="validation_error_field_required">ਇਹ ਖਾਨਾ ਖਾਲੀ ਨਹੀਂ ਹੋ ਸਕਦਾ</string>
+    <string name="widget_pin_unsupported">ਤੁਹਾਡਾ ਲਾਂਚਰ ਆਟੋਮੈਟਿਕ ਵਿਜੇਟ ਜੋੜਨ ਦਾ ਸਮਰਥਨ ਨਹੀਂ ਕਰਦਾ।</string>
+    <string name="widget_already_added">ਵਿਜੇਟ ਪਹਿਲਾਂ ਹੀ ਹੋਮ ਸਕ੍ਰੀਨ \'ਤੇ ਜੋੜਿਆ ਗਿਆ ਹੈ</string>
+    <string name="widget_added_success">ਵਿਜੇਟ ਹੋਮ ਸਕ੍ਰੀਨ \'ਤੇ ਜੋੜਿਆ ਗਿਆ</string>
+    <string name="onboarding_title">MinuteWatcher ਵਿੱਚ ਜੀ ਆਇਆਂ ਨੂੰ!</string>
+    <string name="onboarding_message">MinuteWatcher ਤੁਹਾਡੇ ਮੋਬਾਈਲ ਆਪਰੇਟਰ ਤੋਂ ਤੁਹਾਡੇ ਪਲਾਨ ਦੇ ਵੇਰਵੇ ਆਟੋਮੈਟਿਕ ਪ੍ਰਾਪਤ ਨਹੀਂ ਕਰ ਸਕਦਾ।\n\nਟਰੈਕਿੰਗ ਸ਼ੁਰੂ ਕਰਨ ਲਈ, ਕਿਰਪਾ ਕਰਕੇ ਹਰੇਕ ਸਿਮ ਕਾਰਡ ਲਈ ਮਿੰਟ/ਡਾਟਾ ਸੀਮਾ ਅਤੇ ਮਹੀਨਾਵਾਰ ਰੀਸੈੱਟ ਦਿਨ ਖੁਦ ਸੈੱਟ ਕਰੋ।</string>
+    <string name="onboarding_button">ਸਮਝ ਗਿਆ</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">ਅਵੈਧ ਸਿਮ ਸਲਾਟ ਇੰਡੈਕਸ: %1$d</string>
+    <string name="error_storage_unavailable">ਸਲਾਟ %1$d ਲਈ ਸਟੋਰੇਜ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਬਾਅਦ ਵਿੱਚ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="error_sim_removed">ਸਲਾਟ %1$d ਤੋਂ ਸਿਮ ਹਟਾ ਦਿੱਤਾ ਗਿਆ</string>
+    <string name="error_operation_failed_retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਬਾਅਦ ਵੀ ਕਾਰਵਾਈ ਅਸਫਲ ਰਹੀ।</string>
+    <string name="error_unknown">ਅਣਜਾਣ ਗਲਤੀ: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">ਰੱਦ ਕਰੋ</string>
+    <string name="save_button">ਸੰਭਾਲੋ</string>
+    <string name="set_button">ਸੈੱਟ ਕਰੋ</string>
+    <string name="action_ok">ਠੀਕ ਹੈ</string>
+    <string name="reset_limits_button">ਸੀਮਾਵਾਂ ਰੀਸੈੱਟ ਕਰੋ</string>
+    <string name="reset_counters">ਕਾਊਂਟਰ ਰੀਸੈੱਟ ਕਰੋ</string>
+    <string name="reset_confirmation_title">ਕਾਊਂਟਰ ਰੀਸੈੱਟ ਕਰਨੇ ਹਨ?</string>
+    <string name="reset_confirmation_body">ਇਸ ਨਾਲ ਇਸ ਸਿਮ ਕਾਰਡ ਲਈ ਸਾਰੀ ਟਰੈਕ ਕੀਤੀ ਵਰਤੋਂ ਮਿਟ ਜਾਵੇਗੀ।</string>
+    <string name="reset_limits_confirmation_title">ਸੀਮਾਵਾਂ ਰੀਸੈੱਟ ਕਰਨੀਆਂ ਹਨ?</string>
+    <string name="reset_limits_confirmation_body">ਇਸ ਨਾਲ ਮਿੰਟ ਅਤੇ ਡਾਟਾ ਸੀਮਾਵਾਂ ਮਿਟ ਜਾਣਗੀਆਂ।</string>
+    <string name="choose_reset_day">ਆਟੋਮੈਟਿਕ ਰੀਸੈੱਟ ਲਈ ਮਹੀਨੇ ਦਾ ਦਿਨ ਚੁਣੋ:</string>
+    <string name="choose_reset_day_dialog_title">ਰੀਸੈੱਟ ਦਿਨ ਚੁਣੋ</string>
+    <string name="rollover_label">ਬਾਕੀ ਬਚਿਆ ਇਕੱਠਾ ਕਰੋ</string>
+    <string name="set_minutes_limit">ਮਹੀਨਾਵਾਰ ਮਿੰਟ ਸੀਮਾ ਸੈੱਟ ਕਰੋ:</string>
+    <string name="minutes_limit_hint">ਮਿੰਟ ਸੀਮਾ</string>
+    <string name="set_traffic_limit">ਮਹੀਨਾਵਾਰ ਡਾਟਾ ਸੀਮਾ (GB) ਸੈੱਟ ਕਰੋ:</string>
+    <string name="traffic_limit_gb_hint_dialog">GB ਵਿੱਚ ਡਾਟਾ ਸੀਮਾ</string>
+    <string name="limits_for_operator">%1$s ਲਈ ਸੀਮਾਵਾਂ</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">ਨੋਟੀਫਿਕੇਸ਼ਨ</string>
+    <string name="notify_low_minutes_title">ਘੱਟ ਮਿੰਟ ਬਾਕੀ ਰਹਿਣ \'ਤੇ ਸੂਚਿਤ ਕਰੋ</string>
+    <string name="notify_low_traffic_title">ਘੱਟ ਡਾਟਾ ਬਾਕੀ ਰਹਿਣ \'ਤੇ ਸੂਚਿਤ ਕਰੋ</string>
+    <string name="aod_summary_title">ਆਲਵੇਜ਼-ਆਨ ਡਿਸਪਲੇਅ ਸਾਰਾਂਸ਼</string>
+    <string name="aod_summary_description">ਬਾਕੀ ਰਹਿੰਦੇ ਮਿੰਟਾਂ ਅਤੇ ਡਾਟਾ ਨਾਲ ਇੱਕ ਲਗਾਤਾਰ ਸ਼ਾਂਤ ਨੋਟੀਫਿਕੇਸ਼ਨ ਦਿਖਾਉਂਦਾ ਹੈ।</string>
+    <string name="aod_summary_unavailable">ਇਸ ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਵਰਤੋਂ ਕਰਨ ਲਈ ਨੋਟੀਫਿਕੇਸ਼ਨ ਚਾਲੂ ਕਰੋ</string>
+    <string name="notification_channel_name">ਵਰਤੋਂ ਨਿਗਰਾਨੀ</string>
+    <string name="notification_channel_desc">ਮਿੰਟਾਂ ਅਤੇ ਡਾਟਾ ਵਰਤੋਂ ਦੀ ਟਰੈਕਿੰਗ</string>
+    <string name="notification_channel_aod_summary_name">ਆਲਵੇਜ਼-ਆਨ ਡਿਸਪਲੇਅ ਸਾਰਾਂਸ਼</string>
+    <string name="notification_channel_aod_summary_desc">ਬਾਕੀ ਰਹਿੰਦੇ ਮਿੰਟਾਂ ਅਤੇ ਡਾਟਾ ਦਾ ਲਗਾਤਾਰ ਸਾਰਾਂਸ਼</string>
+    <string name="notification_minutes_title">ਮਿੰਟ ਵਰਤੋਂ %1$s</string>
+    <string name="notification_minutes_body">%1$s ਮਿੰਟ ਵਰਤੋਂ! ਬਾਕੀ %2$s (%3$d%%)। ਮਹੀਨਾ %4$s ਵਿੱਚ ਖਤਮ ਹੁੰਦਾ ਹੈ।</string>
+    <string name="notification_traffic_title">ਡਾਟਾ ਵਰਤੋਂ %1$s</string>
+    <string name="notification_traffic_body">%1$s ਡਾਟਾ ਵਰਤੋਂ! ਬਾਕੀ %2$.1f GB (%3$d%%)। ਮਹੀਨਾ %4$s ਵਿੱਚ ਖਤਮ ਹੁੰਦਾ ਹੈ।</string>
+    <string name="notification_minutes_exhausted_body">ਮਿਆਦ ਲਈ ਮਿੰਟ ਪੈਕੇਜ ਖਤਮ ਹੋ ਗਿਆ ਹੈ।</string>
+    <string name="notification_traffic_exhausted_body">ਮਿਆਦ ਲਈ ਡਾਟਾ ਪੈਕੇਜ ਖਤਮ ਹੋ ਗਿਆ ਹੈ।</string>
+    <string name="notification_minutes_body_no_period">%1$s ਮਿੰਟ ਵਰਤੋਂ! ਬਾਕੀ %2$s (%3$d%%)।</string>
+    <string name="notification_traffic_body_no_period">%1$s ਡਾਟਾ ਵਰਤੋਂ! ਬਾਕੀ %2$.1f GB (%3$d%%)।</string>
+    <string name="notification_minutes_exhausted_body_no_period">ਮਿੰਟ ਸੀਮਾ ਪੂਰੀ ਹੋ ਗਈ ਹੈ।</string>
+    <string name="notification_traffic_exhausted_body_no_period">ਡਾਟਾ ਸੀਮਾ ਪੂਰੀ ਹੋ ਗਈ ਹੈ।</string>
+    <string name="usage_level_low">ਘੱਟ</string>
+    <string name="usage_level_critical">ਬਹੁਤ ਘੱਟ</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">ਬਾਕੀ:</string>
+    <string name="used_text">ਵਰਤਿਆ ਗਿਆ</string>
+    <string name="limit_text">ਸੀਮਾ</string>
+    <string name="minutes_abbr">ਮਿੰਟ</string>
+    <string name="unit_minutes">ਮਿੰਟ</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">ਡਾਟਾ</string>
+    <string name="traffic_remaining_text">ਬਾਕੀ ਡਾਟਾ:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">ਮਹੀਨੇ ਦਾ ਦਿਨ</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d ਮਿੰਟ</item>
+        <item quantity="other">%1$d ਮਿੰਟ</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d ਦਿਨ</item>
+        <item quantity="other">%1$d ਦਿਨ</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">ਸਿਮ ਕਾਰਡ ਆਈਕਨ</string>
+    <string name="sim_card_details_content_desc">%1$s ਸਿਮ ਕਾਰਡ ਵੇਰਵੇ</string>
+    <string name="adjust_minutes_content_desc">ਬਾਕੀ ਮਿੰਟਾਂ ਨੂੰ ਵਿਵਸਥਿਤ ਕਰੋ</string>
+    <string name="adjust_traffic_content_desc">ਬਾਕੀ ਡਾਟਾ ਵਿਵਸਥਿਤ ਕਰੋ</string>
+    <string name="traffic_info_content_desc">ਡਾਟਾ ਟਰੈਕਿੰਗ ਬਾਰੇ ਹੋਰ ਜਾਣਕਾਰੀ</string>
+    <string name="set_limits_content_desc">%1$s ਲਈ ਸੀਮਾਵਾਂ ਸੈੱਟ ਕਰੋ</string>
+    <string name="change_auto_reset_day_content_desc">ਆਟੋ-ਰੀਸੈੱਟ ਦਿਨ ਬਦਲੋ</string>
+    <string name="toggle_auto_reset_content_desc">ਆਟੋ-ਰੀਸੈੱਟ ਚਾਲੂ ਜਾਂ ਬੰਦ ਕਰੋ</string>
+    <string name="menu_language_content_desc">ਭਾਸ਼ਾ ਬਦਲੋ</string>
+    <string name="menu_theme_content_desc">ਥੀਮ ਬਦਲੋ</string>
+    <string name="navigate_up_content_desc">ਉੱਪਰ ਜਾਓ</string>
+    <string name="banner_dismiss_content_desc">ਬੈਨਰ ਹਟਾਓ</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">ਟਰੈਕਿੰਗ</string>
+    <string name="call_tracking_title">ਕਾਲ ਮਿੰਟ ਟਰੈਕ ਕਰੋ</string>
+    <string name="call_tracking_description">ਹਰੇਕ ਸਿਮ ਕਾਰਡ ਲਈ ਕਾਲ ਮਿੰਟ ਗਿਣੋ।</string>
+    <string name="assistant_access_title">ਸਹਾਇਕ ਪਹੁੰਚ</string>
+    <string name="assistant_access_description">ਡਿਵਾਈਸ \'ਤੇ ਸਹਾਇਕ ਨੂੰ ਤੁਹਾਡੇ ਬਾਕੀ ਰਹਿੰਦੇ ਮਿੰਟਾਂ ਅਤੇ ਡਾਟਾ ਦੀ ਬੇਨਤੀ ਕਰਨ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ।</string>
+    <string name="app_functions_display_description">ਡਿਵਾਈਸ ਸਹਾਇਕ ਨਾਲ ਬਾਕੀ ਮਿੰਟ ਅਤੇ ਮੋਬਾਈਲ ਡਾਟਾ ਸਾਂਝਾ ਕਰਦਾ ਹੈ</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">ਬਾਰੇ</string>
+    <string name="about_message">MinuteWatcher ਬਾਕੀ ਮਿੰਟਾਂ ਅਤੇ ਮੋਬਾਈਲ ਡਾਟਾ ਵਰਤੋਂ ਨੂੰ ਟਰੈਕ ਕਰਨ ਲਈ ਇੱਕ ਐਪ ਹੈ।</string>
+    <string name="about_author_name">ਲੇਖਕ: Pavel Mukhin</string>
+    <string name="about_email_label">ਈਮੇਲ:</string>
+    <string name="about_signoff">ਸ਼ੁਭਕਾਮਨਾਵਾਂ,</string>
+    <string name="about_version_format">ਵਰਜਨ %1$s (%2$d)</string>
+    <string name="about_content_desc">ਜਾਣਕਾਰੀ ਬਾਰੇ</string>
+</resources>

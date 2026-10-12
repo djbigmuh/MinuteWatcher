@@ -66,7 +66,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             // Arrange: saved boot time is in the future relative to current
             timeProvider.setRealtime(5000L)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(10000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(10000L))
 
             // Act
             callTracker.onCallStarted(subId = 1)
@@ -93,7 +93,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             // Arrange: stale session
             timeProvider.setRealtime(5000L)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(5000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(10000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(10000L))
 
             // Arrange: clearSession throws exception
             whenever(callSessionRepository.clearCallSession(eq(1)))
@@ -219,7 +219,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
             clearInvocations(callSessionRepository)
 
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
@@ -321,7 +321,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
 
             // 2. Mock that there's an active session
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 
             // 3. Second OFFHOOK event
@@ -344,7 +344,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
 
             // Arrange: active session with identity "id_1"
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 
             // Act: NEW event with identity "id_new"

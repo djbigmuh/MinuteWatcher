@@ -60,7 +60,7 @@ object SemanticMapper {
         val limitBytes = (model.effectiveLimitGb.toDouble() * Constants.BYTES_PER_GB).toLong()
         val usedBytes = (model.usedMb.toDouble() * Constants.BYTES_PER_MB).toLong()
         val remainingBytes =
-            if (model.remainingGb >= 0) {
+            if (model.remainingGb != null) {
                 (model.remainingGb.toDouble() * Constants.BYTES_PER_GB).toLong()
             } else {
                 0L

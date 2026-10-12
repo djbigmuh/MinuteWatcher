@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -108,5 +109,18 @@ class UsageModelsTest {
 
         assertEquals(3f, model.effectiveLimitGb)
         assertEquals(2f, model.remainingGb)
+    }
+
+    @Test
+    fun `TrafficModel returns null remainingGb when limit is not set`() {
+        val model =
+            TrafficModel.calculate(
+                usedMb = 512f,
+                limitMb = 0,
+                manualAdjustmentGb = 0f,
+            )
+
+        assertEquals(false, model.isLimitSet)
+        assertNull(model.remainingGb)
     }
 }

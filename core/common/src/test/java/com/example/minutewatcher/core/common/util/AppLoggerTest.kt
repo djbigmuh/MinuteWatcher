@@ -72,6 +72,9 @@ class AppLoggerTest {
         AppLogger.d("test")
         AppLogger.w("test", RuntimeException())
         AppLogger.e("test", RuntimeException())
+
+        val logFile = File(tmpFolder.root, "logs.txt")
+        assertFalse("Log file should not be created when logger is uninitialized", logFile.exists())
     }
 
     @Test
@@ -150,6 +153,8 @@ class AppLoggerTest {
         AppLogger.d("After failure entry")
         AppLogger.w("Warning after failure")
         AppLogger.e("Error after failure")
+
+        assertTrue("Read-only log file should exist", readOnlyFile.exists())
     }
 
     @Test
@@ -331,10 +336,10 @@ class AppLoggerTest {
         pollUntil(timeoutMs, "Log marker '$marker' in ${targetDir.name}/logs.txt") {
             logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
         }
-        assertTrue("AppLogger quiescent state", AppLogger.awaitQuiescentForTest(timeoutMs))
+        assertTrue("AppLogger quiescent state", kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) })
     }
 
     private fun waitForChannelDrain(timeoutMs: Long = 10000L) {
-        assertTrue("AppLogger quiescent state", AppLogger.awaitQuiescentForTest(timeoutMs))
+        assertTrue("AppLogger quiescent state", kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) })
     }
 }

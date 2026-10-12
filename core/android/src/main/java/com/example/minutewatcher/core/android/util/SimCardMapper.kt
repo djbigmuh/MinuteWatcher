@@ -41,7 +41,7 @@ object SimCardMapper {
      * Clears all cache entries for testing.
      */
     @VisibleForTesting
-    fun resetForTest() {
+    internal fun reset() {
         negativeLogged.clear()
     }
 
@@ -158,7 +158,7 @@ object SimCardMapper {
         isMinutesLimitSet = false,
         trafficUsedMb = 0f,
         trafficLimitMb = 0,
-        trafficRemainingGb = 0f,
+        trafficRemainingGb = null,
         effectiveTrafficLimitGb = 0f,
         trafficAdjustmentGb = 0f,
         isTrafficLimitSet = false,

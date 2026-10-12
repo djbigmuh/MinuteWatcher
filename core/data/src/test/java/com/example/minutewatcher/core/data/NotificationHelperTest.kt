@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import androidx.core.app.NotificationCompat
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.model.Constants
@@ -36,7 +37,8 @@ class NotificationHelperTest {
         context =
             androidx.test.core.app.ApplicationProvider
                 .getApplicationContext()
-        notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         whenever(navigationProvider.mainActivityClassName).thenReturn("MainActivity")
 
         helper = NotificationHelper(context, navigationProvider, permissionManager)
@@ -44,7 +46,10 @@ class NotificationHelperTest {
 
     @Test
     fun `aod summary channel is created with min importance`() {
-        val channel = notificationManager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+        val channel =
+            notificationManager.getNotificationChannel(
+                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
+            )
         assertNotNull(channel)
         assertEquals(NotificationManager.IMPORTANCE_MIN, channel.importance)
         assertEquals(
@@ -57,7 +62,7 @@ class NotificationHelperTest {
     fun `sendUsageNotification does nothing if permission is missing`() {
         whenever(permissionManager.hasNotificationPermission()).thenReturn(false)
 
-        helper.sendUsageNotification("Title", "Message", 0, 1)
+        helper.sendUsageNotification("Title", "Message", 0, UsageNotificationType.TRAFFIC)
 
         val shadowNotificationManager = shadowOf(notificationManager)
         assertEquals(0, shadowNotificationManager.allNotifications.size)
@@ -67,13 +72,76 @@ class NotificationHelperTest {
     fun `sendUsageNotification notifies if permission is granted`() {
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
 
-        helper.sendUsageNotification("Title", "Message", 0, 1)
+        helper.sendUsageNotification("Title", "Message", 0, UsageNotificationType.TRAFFIC)
 
         val shadowNotificationManager = shadowOf(notificationManager)
-        assertEquals(1, shadowNotificationManager.allNotifications.size)
-        val notification = shadowNotificationManager.allNotifications[0]
-        assertEquals("Title", notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString())
-        assertEquals("Message", notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString())
+        // 1 usage notification + 1 group summary notification = 2
+        assertEquals(2, shadowNotificationManager.allNotifications.size)
+        val usageId =
+            NotificationHelper.BASE_NOTIFICATION_ID +
+                (0 * NotificationHelper.SLOT_OFFSET) +
+                UsageNotificationType.TRAFFIC.idOffset
+        val notification = shadowNotificationManager.getNotification(usageId)
+        assertNotNull(notification)
+        val title =
+            notification!!
+                .extras
+                .getCharSequence(android.app.Notification.EXTRA_TITLE)
+                .toString()
+        val text =
+            notification.extras
+                .getCharSequence(android.app.Notification.EXTRA_TEXT)
+                .toString()
+        assertEquals("Title", title)
+        assertEquals("Message", text)
+    }
+
+    @Test
+    fun `sendUsageNotification publishes group summary notification with required attributes`() {
+        whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+
+        helper.sendUsageNotification("Title", "Message", 0, UsageNotificationType.MINUTES)
+
+        val shadowNotificationManager = shadowOf(notificationManager)
+        val summaryNotification =
+            shadowNotificationManager.getNotification(
+                NotificationHelper.GROUP_SUMMARY_NOTIFICATION_ID,
+            )
+        assertNotNull(summaryNotification)
+        assertTrue(NotificationCompat.isGroupSummary(summaryNotification!!))
+        assertEquals("usage_monitor_group", summaryNotification.group)
+        assertEquals(NotificationCompat.GROUP_ALERT_CHILDREN, summaryNotification.groupAlertBehavior)
+    }
+
+    @Test
+    fun `notification IDs and slots are unique without collisions`() {
+        val minSlot0 =
+            NotificationHelper.BASE_NOTIFICATION_ID +
+                (0 * NotificationHelper.SLOT_OFFSET) +
+                UsageNotificationType.MINUTES.idOffset
+        val trafSlot0 =
+            NotificationHelper.BASE_NOTIFICATION_ID +
+                (0 * NotificationHelper.SLOT_OFFSET) +
+                UsageNotificationType.TRAFFIC.idOffset
+        val minSlot1 =
+            NotificationHelper.BASE_NOTIFICATION_ID +
+                (1 * NotificationHelper.SLOT_OFFSET) +
+                UsageNotificationType.MINUTES.idOffset
+        val trafSlot1 =
+            NotificationHelper.BASE_NOTIFICATION_ID +
+                (1 * NotificationHelper.SLOT_OFFSET) +
+                UsageNotificationType.TRAFFIC.idOffset
+
+        val ids =
+            setOf(
+                minSlot0,
+                trafSlot0,
+                minSlot1,
+                trafSlot1,
+                NotificationHelper.AOD_SUMMARY_NOTIFICATION_ID,
+                NotificationHelper.GROUP_SUMMARY_NOTIFICATION_ID,
+            )
+        assertEquals(6, ids.size)
     }
 
     @Test
@@ -86,9 +154,18 @@ class NotificationHelperTest {
         val shadowNotificationManager = shadowOf(notificationManager)
         assertEquals(1, shadowNotificationManager.allNotifications.size)
         val notification = shadowNotificationManager.allNotifications[0]
-        val title = notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE).toString()
-        val text = notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString()
-        val bigText = notification.extras.getCharSequence(android.app.Notification.EXTRA_BIG_TEXT).toString()
+        val title =
+            notification.extras
+                .getCharSequence(android.app.Notification.EXTRA_TITLE)
+                .toString()
+        val text =
+            notification.extras
+                .getCharSequence(android.app.Notification.EXTRA_TEXT)
+                .toString()
+        val bigText =
+            notification.extras
+                .getCharSequence(android.app.Notification.EXTRA_BIG_TEXT)
+                .toString()
         assertEquals("AOD Title", title)
         assertEquals("AOD Line", text)
         assertEquals("Expanded text", bigText)
@@ -111,7 +188,6 @@ class NotificationHelperTest {
     fun `sendAodSummaryNotification returns false when channel is blocked`() {
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
 
-        // Block the channel
         val blockedChannel =
             NotificationChannel(
                 Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
@@ -180,10 +256,11 @@ class NotificationHelperTest {
 
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
 
-        val nullServiceHelper = NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
+        val nullServiceHelper =
+            NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
 
-        nullServiceHelper.sendUsageNotification("Title", "Message", 0, 1)
-        nullServiceHelper.sendUsageNotification("Title", "Message", 0, 1)
+        nullServiceHelper.sendUsageNotification("Title", "Message", 0, UsageNotificationType.TRAFFIC)
+        nullServiceHelper.sendUsageNotification("Title", "Message", 0, UsageNotificationType.TRAFFIC)
 
         val shadowNotificationManager = shadowOf(notificationManager)
         assertEquals(0, shadowNotificationManager.allNotifications.size)
@@ -200,7 +277,8 @@ class NotificationHelperTest {
 
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
 
-        val nullServiceHelper = NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
+        val nullServiceHelper =
+            NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
 
         assertFalse(nullServiceHelper.sendAodSummaryNotification("Title", "Line", "Text"))
         nullServiceHelper.cancelAodSummaryNotification()
@@ -229,14 +307,17 @@ class NotificationHelperTest {
 
                 override fun getSystemServiceName(serviceClass: Class<*>): String? = null
             }
-        val nullServiceHelper = NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
+        val nullServiceHelper =
+            NotificationHelper(nullServiceContext, navigationProvider, permissionManager)
         assertFalse(nullServiceHelper.isAodSummaryNotificationActive())
     }
 
     @Test
     fun `createNotificationChannel handles runtime exceptions from notification manager gracefully`() {
         val mockManager: NotificationManager = mock()
-        doThrow(RuntimeException("Platform error")).whenever(mockManager).createNotificationChannel(any())
+        doThrow(RuntimeException("Platform error"))
+            .whenever(mockManager)
+            .createNotificationChannel(any())
         whenever(mockManager.getNotificationChannel(any())).thenReturn(null)
 
         val wrappedContext =
@@ -256,7 +337,8 @@ class NotificationHelperTest {
                 }
             }
 
-        val testHelper = NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+        val testHelper =
+            NotificationHelper(wrappedContext, navigationProvider, permissionManager)
 
         verify(mockManager, org.mockito.kotlin.times(2)).createNotificationChannel(any())
 

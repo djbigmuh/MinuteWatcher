@@ -49,14 +49,21 @@ class AodSummaryController
     ) {
         private val started = AtomicBoolean(false)
 
+    @Volatile
         @VisibleForTesting
         internal var observationJob: Job? = null
 
+    @Volatile
         private var isPosted = false
+
+    @Volatile
         private var lastPublishedText: String? = null
 
         /**
          * Starts observing usage snapshot, app settings, and notification permissions.
+         *
+         * Permission flow acts as a reactivity trigger when notification permission state changes,
+         * while availability decision uses [NotificationHelper.isAodSummaryAvailable].
          *
          * Thread-safe and idempotent. Consecutive calls are no-ops.
          */
@@ -69,11 +76,11 @@ class AodSummaryController
                         usageStateRepository.observeSnapshot(),
                         appSettingsRepository.observeAppSettings(),
                         permissionRepository.notificationPermissionGranted,
-                    ) { snapshot, settings, permissionGranted ->
-                        Triple(snapshot, settings, permissionGranted)
+                    ) { snapshot, settings, _ ->
+                        snapshot to settings
                     }.debounce(Constants.Flow.DEBOUNCE_MS)
-                        .collect { (snapshot, settings, permissionGranted) ->
-                            processUpdate(snapshot, settings, permissionGranted)
+                        .collect { (snapshot, settings) ->
+                            processUpdate(snapshot, settings)
                         }
                 }
         }
@@ -82,10 +89,9 @@ class AodSummaryController
         private fun processUpdate(
             snapshot: GlobalSnapshot,
             settings: AppSettings,
-            permissionGranted: Boolean,
         ) {
             try {
-                updateSummaryState(snapshot, settings, permissionGranted)
+                updateSummaryState(snapshot, settings)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -93,14 +99,10 @@ class AodSummaryController
             }
         }
 
-        @Suppress("UnusedParameter")
         private fun updateSummaryState(
             snapshot: GlobalSnapshot,
             settings: AppSettings,
-            permissionGranted: Boolean,
         ) {
-            // permissionGranted parameter from combine acts as a reactivity trigger when permission state changes;
-            // actual decision is made using live availability check from notificationHelper.
             val availability = notificationHelper.isAodSummaryAvailable()
             val isAvailable =
                 settings.aodSummaryEnabled &&

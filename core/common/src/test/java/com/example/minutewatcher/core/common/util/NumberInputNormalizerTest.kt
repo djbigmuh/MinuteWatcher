@@ -15,6 +15,13 @@ class NumberInputNormalizerTest {
     }
 
     @Test
+    fun `test normalize bn digits`() {
+        // Bengali digits: ১৫.৫ (15.5)
+        val bnLocale = Locale.forLanguageTag("bn")
+        assertEquals("15.5", NumberInputNormalizer.normalize("\u09E7\u09EB.\u09EB", bnLocale))
+    }
+
+    @Test
     fun `test normalize fa digits`() {
         // Persian digits with comma as decimal separator in France/Germany/Persian locale
         val frLocale = Locale.FRANCE

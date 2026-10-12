@@ -1,8 +1,10 @@
 package com.example.minutewatcher.di
 
 import com.example.minutewatcher.ActivityStarter
+import com.example.minutewatcher.AppInfoProviderImpl
 import com.example.minutewatcher.ContextActivityStarter
 import com.example.minutewatcher.NavigationProviderImpl
+import com.example.minutewatcher.core.domain.AppInfoProvider
 import com.example.minutewatcher.core.domain.NavigationProvider
 import dagger.Binds
 import dagger.Module
@@ -20,4 +22,8 @@ internal interface NavigationModule {
     @Binds
     @Singleton
     fun bindActivityStarter(impl: ContextActivityStarter): ActivityStarter
+
+    @Binds
+    @Singleton
+    fun bindAppInfoProvider(impl: AppInfoProviderImpl): AppInfoProvider
 }

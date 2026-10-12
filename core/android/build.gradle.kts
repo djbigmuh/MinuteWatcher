@@ -46,7 +46,7 @@ dependencies {
     testImplementation(testFixtures(project(":core:common")))
 
     testFixturesApi(libs.junit)
-    testFixturesImplementation(project(":core:common"))
+    testFixturesImplementation(testFixtures(project(":core:common")))
     testFixturesImplementation(platform(libs.androidxComposeBom))
     testFixturesImplementation(libs.androidxComposeRuntime)
 }

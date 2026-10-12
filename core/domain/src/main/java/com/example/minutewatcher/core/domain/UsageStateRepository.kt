@@ -29,6 +29,14 @@ sealed interface RefreshResult {
     data class Timeout(
         override val snapshot: GlobalSnapshot,
     ) : RefreshResult
+
+    /**
+     * Refresh failed due to an exception, returning the last known snapshot and the cause.
+     */
+    data class Failure(
+        override val snapshot: GlobalSnapshot,
+        val cause: Throwable,
+    ) : RefreshResult
 }
 
 /**
@@ -60,7 +68,7 @@ interface UsageStateRepository {
      *
      * This operation is bounded by [com.example.minutewatcher.core.model.Constants.Data.SNAPSHOT_TIMEOUT_MS].
      *
-     * @return [RefreshResult] indicating success or timeout.
+     * @return [RefreshResult] indicating success, timeout, or failure.
      * @throws IOException if storage or network access fails.
      * @throws CancellationException if the coroutine is cancelled.
      */

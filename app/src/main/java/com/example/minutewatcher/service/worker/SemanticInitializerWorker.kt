@@ -10,6 +10,8 @@ import com.example.minutewatcher.core.domain.AppFunctionAvailability
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import dagger.assisted.Assisted
@@ -23,6 +25,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * Worker responsible for initializing semantic services (AppSearch and Shortcuts).
  * Using WorkManager ensures that initialization is attempted reliably even if the
  * initial application process is short-lived.
+ *
+ * Contract: Upon unsuccessful initialization, work is queued for retry; upon lack of system support,
+ * it completes successfully without retries.
  */
 @HiltWorker
 class SemanticInitializerWorker
@@ -36,7 +41,17 @@ class SemanticInitializerWorker
         private val appSettingsRepository: AppSettingsRepository,
         private val appFunctionAvailability: AppFunctionAvailability,
     ) : CoroutineWorker(context, params) {
-        override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result =
+        try {
+            executeSemanticInit()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("SemanticInitializerWorker: unexpected error in doWork", e)
+            Result.failure()
+        }
+
+    private suspend fun executeSemanticInit(): Result {
             AppLogger.d("SemanticInitializerWorker: Starting initialization")
 
             try {
@@ -47,8 +62,6 @@ class SemanticInitializerWorker
                 if (settings != null) {
                     appFunctionAvailability.setAssistantAccessEnabled(settings.assistantAccessEnabled)
                 }
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 AppLogger.w("SemanticInitializerWorker: Failed to synchronize AppFunction availability", e)
             }
@@ -75,8 +88,11 @@ class SemanticInitializerWorker
             }
 
             // Perform initial indexing and shortcut update synchronously to catch immediate failures.
-            val searchResult = searchManager.indexInitialSnapshot(initialSnapshot)
-            val shortcutSuccess = shortcutManager.updateShortcutsSync(initialSnapshot)
+        val searchResult = indexInitialSnapshotSafely(initialSnapshot)
+        val shortcutSuccess = updateShortcutsSyncSafely(initialSnapshot)
+
+        val searchStatus = runCatching { searchManager.status.value }.getOrNull()
+        val shortcutsStatus = runCatching { shortcutManager.status.value }.getOrNull()
 
             if (searchResult !is SemanticSearchManager.IndexResult.Success) {
                 AppLogger.w("SemanticInitializerWorker: initial AppSearch indexing failed: $searchResult")
@@ -85,6 +101,76 @@ class SemanticInitializerWorker
                 AppLogger.w("SemanticInitializerWorker: initial shortcut update failed")
             }
 
-            return Result.success()
+        return evaluateResult(searchResult, shortcutSuccess, searchStatus, shortcutsStatus)
+    }
+
+    private suspend fun indexInitialSnapshotSafely(snapshot: GlobalSnapshot): SemanticSearchManager.IndexResult =
+        try {
+            searchManager.indexInitialSnapshot(snapshot)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("SemanticInitializerWorker: initial AppSearch indexing failed with exception", e)
+            SemanticSearchManager.IndexResult.ActualFailure()
+        }
+
+    private suspend fun updateShortcutsSyncSafely(snapshot: GlobalSnapshot): Boolean =
+        try {
+            shortcutManager.updateShortcutsSync(snapshot)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("SemanticInitializerWorker: initial shortcut update failed with exception", e)
+            false
+        }
+
+    private fun evaluateResult(
+        searchResult: SemanticSearchManager.IndexResult,
+        shortcutSuccess: Boolean,
+        searchStatus: TrackingStatus?,
+        shortcutsStatus: TrackingStatus?,
+    ): Result {
+        val appSearchNotSupported =
+            (searchStatus as? TrackingStatus.Error)?.type == TrackingStatus.ErrorType.NOT_SUPPORTED
+        val shortcutsNotSupported =
+            (shortcutsStatus as? TrackingStatus.Error)?.type == TrackingStatus.ErrorType.NOT_SUPPORTED
+
+        val isSearchSuccess =
+            searchResult is SemanticSearchManager.IndexResult.Success ||
+                (searchResult is SemanticSearchManager.IndexResult.ActualFailure && appSearchNotSupported) ||
+                (searchResult is SemanticSearchManager.IndexResult.MutexContention && appSearchNotSupported)
+
+        val isShortcutSuccess = shortcutSuccess || shortcutsNotSupported
+
+        return when {
+            isSearchSuccess && isShortcutSuccess -> Result.success()
+            else -> evaluateFailureResult(searchResult, shortcutSuccess, appSearchNotSupported)
+        }
+    }
+
+    private fun evaluateFailureResult(
+        searchResult: SemanticSearchManager.IndexResult,
+        shortcutSuccess: Boolean,
+        appSearchNotSupported: Boolean,
+    ): Result {
+        val isMutexContention =
+            searchResult is SemanticSearchManager.IndexResult.MutexContention && !appSearchNotSupported
+        val isShortcutSuccess = shortcutSuccess
+
+        return when {
+            isMutexContention && isShortcutSuccess ->
+                if (runAttemptCount < MAX_SEMANTIC_INIT_ATTEMPTS) Result.retry() else Result.success()
+
+            else ->
+                if (runAttemptCount < MAX_SEMANTIC_INIT_ATTEMPTS) Result.retry() else Result.failure()
+        }
+    }
+
+    companion object {
+        /**
+         * Maximum number of execution attempts for semantic initialization before entering terminal state.
+         * Retries are executed by WorkManager's standard mechanism with exponential backoff.
+         */
+        private const val MAX_SEMANTIC_INIT_ATTEMPTS = 3
         }
     }

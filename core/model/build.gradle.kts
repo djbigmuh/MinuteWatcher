@@ -2,6 +2,7 @@
 plugins {
     `java-library`
     kotlin("jvm")
+    id("minutewatcher.static-analysis")
 }
 
 java {

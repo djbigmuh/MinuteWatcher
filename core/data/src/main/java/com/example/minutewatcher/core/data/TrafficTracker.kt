@@ -42,6 +42,36 @@ internal class TrafficUpdateTimeoutException(
 }
 
 /**
+ * Represents the outcome of a traffic update operation.
+ */
+sealed interface TrafficUpdateOutcome {
+    /**
+     * Traffic update completed successfully.
+     */
+    data object Completed : TrafficUpdateOutcome
+
+    /**
+     * Traffic update was skipped.
+     */
+    data object Skipped : TrafficUpdateOutcome
+
+    /**
+     * Traffic update timed out.
+     */
+    data class TimedOut(
+        val startElapsed: Long,
+    ) : TrafficUpdateOutcome
+
+    /**
+     * Traffic update failed with an error.
+     */
+    data class Failed(
+        val type: TrackingStatus.ErrorType,
+        val code: TrackingStatus.ErrorCode?,
+    ) : TrafficUpdateOutcome
+}
+
+/**
  * Tracks mobile traffic usage for the device.
  * Attributes all mobile traffic to the CURRENT DEFAULT DATA SIM.
  *
@@ -198,9 +228,12 @@ class TrafficTracker
             synchronized(observerLock) {
                 val existing = permissionObserverJob.get()
                 if (existing == null || !existing.isActive) {
-                    existing?.cancel()
+                    val previous = permissionObserverJob.getAndSet(null)
+                    previous?.cancel()
                     val newJob = scope.launch { runPermissionObserver() }
-                    permissionObserverJob.set(newJob)
+                    if (!permissionObserverJob.compareAndSet(null, newJob)) {
+                        newJob.cancel()
+                    }
                 }
             }
         }
@@ -308,9 +341,12 @@ class TrafficTracker
             synchronized(observerLock) {
                 val existing = simObserverJob.get()
                 if (existing == null || !existing.isActive) {
-                    existing?.cancel()
+                    val previous = simObserverJob.getAndSet(null)
+                    previous?.cancel()
                     val newJob = scope.launch { runSimObserver() }
-                    simObserverJob.set(newJob)
+                    if (!simObserverJob.compareAndSet(null, newJob)) {
+                        newJob.cancel()
+                    }
                 }
             }
         }
@@ -514,7 +550,10 @@ class TrafficTracker
          * **Thread Safety:** Safe to call from any coroutine context. Holds internal mutex
          * during the entire update process to ensure data consistency.
          */
-        suspend fun updateTrafficUsage() {
+        private val lastUpdateSkipped = AtomicBoolean(false)
+
+    suspend fun updateTrafficUsage(): TrafficUpdateOutcome {
+        lastUpdateSkipped.set(false)
             val startElapsed = timeProvider.elapsedRealtime()
             val token = currentInitToken.get()
             if (token != null) {
@@ -530,14 +569,13 @@ class TrafficTracker
                     }
                 if (intercepted) {
                     currentInitToken.compareAndSet(token, null)
-                    runCatchingTrafficUpdate(startElapsed) {
+                    return runCatchingTrafficUpdate(startElapsed) {
                         performInitializeWithRetry()
                     }
-                    return
                 }
             }
 
-            runCatchingTrafficUpdate(startElapsed) {
+        return runCatchingTrafficUpdate(startElapsed) {
                 updateTrafficUsageLogic()
             }
         }
@@ -545,9 +583,21 @@ class TrafficTracker
         private suspend fun runCatchingTrafficUpdate(
             startElapsed: Long,
             block: suspend () -> Unit,
-        ) {
+        ): TrafficUpdateOutcome =
             try {
                 block()
+                val currentStatus = statusMachine.current
+                if (currentStatus is TrackingStatus.Error) {
+                    if (currentStatus.code == TrackingStatus.ErrorCode.TIMEOUT) {
+                        TrafficUpdateOutcome.TimedOut(startElapsed)
+                    } else {
+                        TrafficUpdateOutcome.Failed(currentStatus.type, currentStatus.code)
+                    }
+                } else if (lastUpdateSkipped.get()) {
+                    TrafficUpdateOutcome.Skipped
+                } else {
+                    TrafficUpdateOutcome.Completed
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SecurityException) {
@@ -556,16 +606,19 @@ class TrafficTracker
                     e.message ?: "Permission missing",
                     TrackingStatus.ErrorType.PERMISSION_MISSING,
                 )
+                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.PERMISSION_MISSING, null)
             } catch (e: TrafficUpdateTimeoutException) {
+                val elapsed = if (e.startElapsed != 0L) e.startElapsed else startElapsed
                 updateStatusOnError(
-                    if (e.startElapsed != 0L) e.startElapsed else startElapsed,
+                    elapsed,
                     TrafficUpdateTimeoutException.MESSAGE,
                     code = TrackingStatus.ErrorCode.TIMEOUT,
                 )
+                TrafficUpdateOutcome.TimedOut(elapsed)
             } catch (e: Exception) {
                 updateStatusOnError(startElapsed, e.message ?: "Unknown error")
+                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
             }
-        }
 
         @VisibleForTesting
         internal fun updateStatusOnError(

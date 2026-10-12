@@ -12,6 +12,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * Timeout bounding for repository operations is the responsibility of callers
  * (e.g. DataStoreRetryHelper, withTimeoutOrNull).
  */
+@Suppress("TooManyFunctions")
 interface SimNotificationFlagsRepository {
     /**
      * Returns a flow indicating if the user was notified about low minutes.
@@ -73,6 +74,38 @@ interface SimNotificationFlagsRepository {
      * @throws CancellationException if the coroutine is cancelled.
      */
     suspend fun setNotifiedExhaustedTraffic(
+        identity: String,
+        notified: Boolean,
+    )
+
+    /**
+     * Returns a flow indicating if the user was notified about critical minutes.
+     */
+    fun getNotifiedCriticalMinutes(identity: String): Flow<Boolean>
+
+    /**
+     * Sets the notified state for critical minutes.
+     *
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
+     */
+    suspend fun setNotifiedCriticalMinutes(
+        identity: String,
+        notified: Boolean,
+    )
+
+    /**
+     * Returns a flow indicating if the user was notified about critical traffic.
+     */
+    fun getNotifiedCriticalTraffic(identity: String): Flow<Boolean>
+
+    /**
+     * Sets the notified state for critical traffic.
+     *
+     * @throws IOException if storage access fails.
+     * @throws CancellationException if the coroutine is cancelled.
+     */
+    suspend fun setNotifiedCriticalTraffic(
         identity: String,
         notified: Boolean,
     )

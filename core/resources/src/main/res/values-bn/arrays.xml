@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>এক লাইনে</item>
+        <item>দুই লাইনে</item>
+        <item>তিন লাইনে</item>
+        <item>ছয় লাইনে</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>পাশাপাশি</item>
+        <item>উল্লম্বভাবে</item>
+    </string-array>
+</resources>

@@ -24,21 +24,13 @@
     <string name="settings_save_partial_failure_slots">تم حفظ الإعدادات العامة. تعذر حفظ إعدادات بطاقة SIM %1$s</string>
     <string name="settings_save_failed">فشل الحفظ</string>
     <string name="language_system">النظام</string>
-    <string name="language_en">الإنجليزية</string>
-    <string name="language_ru">الروسية</string>
-    <string name="language_de">الألمانية</string>
-    <string name="language_fr">الفرنسية</string>
-    <string name="language_ar">العربية</string>
-    <string name="language_es">الإسبانية</string>
-    <string name="language_ja">اليابانية</string>
-    <string name="language_zh">الصينية</string>
-    <string name="language_hi">الهندية</string>
     <string name="usage_access_dialog_title">تتبع استخدام البيانات</string>
     <string name="usage_access_dialog_description">لتتبع استخدام بيانات الهاتف المحمول، يحتاج MinuteWatcher إلى إذن \"الوصول إلى الاستخدام\".\n\nهذا إذن على مستوى النظام يسمح للتطبيق بمعرفة كمية البيانات التي تم إرسالها واستلامها عبر الشبكة الخلوية.\n\nنحن لا نتتبع التطبيقات التي تستخدمها أو سجل المتصفح الخاص بك.</string>
     <string name="phone_permission_permanent_denial">تم رفض إذن الهاتف بشكل دائم.</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">إعدادات القطعة</string>
+    <string name="widget_description">يعرض الدقائق المتبقية وبيانات الجوال لكل بطاقة SIM.</string>
     <string name="background_transparency">شفافية الخلفية</string>
     <string name="display_minutes">إظهار الدقائق</string>
     <string name="display_minutes_limit">إظهار حد الدقائق</string>
@@ -57,13 +49,15 @@
     <string name="traffic_tracking_limitation_body">يوفر أندرويد استخدام بيانات الهاتف المحمول كقيمة إجمالية للجهاز بالكامل. \n\nيعزو MinuteWatcher جميع حركة البيانات إلى بطاقة SIM المحددة حاليًا كـ \"بطاقة البيانات الافتراضية\" في إعدادات النظام.</string>
     <string name="tracking_banner_phone_permission">مطلوب إذن الهاتف.</string>
     <string name="tracking_banner_usage_access">مطلوب الوصول إلى الاستخدام.</string>
+    <string name="tracking_banner_sim_discovery_error">تعذر اكتشاف شرائح الاتصال. يرجى المحاولة مرة أخرى.</string>
     <string name="tracking_banner_traffic_error">خطأ في بيانات حركة المرور.</string>
     <string name="tracking_banner_calls_error">حدث خطأ أثناء تحديث بيانات تتبع المكالمات.</string>
     <string name="tracking_banner_appsearch_error">فشلت عملية فهرسة AppSearch. قد يكون البحث العالمي قديماً. لا يؤثر هذا على أداة التطبيق أو وظيفة التتبع.</string>
     <string name="tracking_banner_shortcuts_error">فشل تحديث الاختصارات الديناميكية.</string>
     <string name="tracking_banner_notification_permission">يوصى بإذن الإشعارات لتلقي تنبيهات الاستخدام.</string>
     <string name="tracking_banner_widget_error">لا يمكن تحديث الأداة بسبب قيود النظام.</string>
-    <string name="tracking_banner_inaccurate_calls">تم اكتشاف مكالمات نشطة متعددة. قد يتم تخصيص الدقائق بشكل غير دقيق.</string>
+    <string name="tracking_banner_inaccurate_calls">تعذر مطابقة بعض المكالمات مع شريحة SIM وتم نسبها إلى شريحة SIM النشطة الوحيدة. قد تكون القيم غير دقيقة.</string>
+    <string name="tracking_banner_calls_attribution_error">تم اكتشاف عدة مكالمات متزامنة. تعذر تحديد شريحة الاتصال؛ ولم يتم احتساب الدقائق لهذه المكالمات.</string>
     <string name="tracking_banner_observation_failed">توقفت خدمة تتبع البيانات بعد عدة أخطاء. يرجى المحاولة مرة أخرى أو إعادة تشغيل التطبيق.</string>
     <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
     <string name="settings_load_error">خطأ في تحميل الإعدادات</string>
@@ -201,4 +195,13 @@
     <string name="assistant_access_title">وصول المساعد</string>
     <string name="assistant_access_description">السماح للمساعد في الجهاز بطلب الدقائق والبيانات المتبقية (Android 16+). معطل افتراضياً. قد يقوم المساعد معالجة الإجابات التي يتلقاها.</string>
     <string name="app_functions_display_description">يشارك الدقائق المتبقية وبيانات الجوال مع المساعد الموجود على الجهاز</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">About</string>
+    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
+    <string name="about_author_name">Author: Pavel Mukhin</string>
+    <string name="about_email_label">Email:</string>
+    <string name="about_signoff">Best regards,</string>
+    <string name="about_version_format">Version %1$s (%2$d)</string>
+    <string name="about_content_desc">About info</string>
 </resources>

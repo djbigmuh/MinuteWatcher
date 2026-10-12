@@ -28,12 +28,14 @@ import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.Constants.IntentExtras
+import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.MainViewModel
 import com.example.minutewatcher.feature.main.SimCardScreen
 import com.example.minutewatcher.feature.main.SimCardScreenActions
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -68,13 +70,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         MainActivityThemeObserver.observe(lifecycleScope, lifecycle, viewModel) {
-            applicationScope.launch {
-                try {
-                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-                } catch (e: Exception) {
-                    AppLogger.e("MainActivity: Failed to notify data change on locale restore", e)
-                }
-            }
+            notifyWidgetDataChanged("locale restore")
         }
         setupLocusContext()
 
@@ -102,11 +98,12 @@ class MainActivity : AppCompatActivity() {
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
             ) {
+                val activity = this@MainActivity
                 val actions =
-                    remember(viewModel, navigator) {
+                    remember(viewModel, navigator, activity) {
                         SimCardScreenActions(
-                            onOpenSettings = { navigator.openWidgetSettings(this@MainActivity) },
-                            onAddWidget = { navigator.addWidgetToHomeScreen(this@MainActivity) },
+                            onOpenSettings = { navigator.openWidgetSettings(activity) },
+                            onAddWidget = { navigator.addWidgetToHomeScreen(activity) },
                             onThemeChange = { theme -> viewModel.setTheme(theme) },
                             onLanguageChange = { lang -> handleLanguageChange(lang) },
                             onGrantPhonePermission = {
@@ -117,13 +114,20 @@ class MainActivity : AppCompatActivity() {
                                 viewModel.setUsageAccessDialog(true)
                             },
                             onOpenUsageAccessSettings = {
-                                navigator.openUsageAccessSettings(this@MainActivity)
+                                navigator.openUsageAccessSettings(activity)
                             },
                             onOpenAppSettings = {
-                                navigator.openAppSettings(this@MainActivity)
+                                navigator.openAppSettings(activity)
                             },
                             onGrantNotificationPermission = {
                                 permissionHandler.requestNotificationPermission()
+                            },
+                            onShowAbout = {
+                                viewModel.setShowAboutDialog(true)
+                            },
+                            onEmailAuthor = {
+                                viewModel.setShowAboutDialog(false)
+                                navigator.openEmailComposer(activity, activity.getString(R.string.about_author_email))
                             },
                         )
                     }
@@ -144,11 +148,22 @@ class MainActivity : AppCompatActivity() {
             }
         AppCompatDelegate.setApplicationLocales(appLocale)
         viewModel.setLanguage(lang)
+        notifyWidgetDataChanged("language change")
+    }
+
+    /**
+     * Notifies widget data changed asynchronously within [applicationScope].
+     *
+     * @param reason The description of why the data change notification is triggered.
+     */
+    private fun notifyWidgetDataChanged(reason: String) {
         applicationScope.launch {
             try {
                 dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                AppLogger.e("MainActivity: Failed to notify data change on language change", e)
+                AppLogger.e("MainActivity: Failed to notify data change on $reason", e)
             }
         }
     }
@@ -207,7 +222,8 @@ class MainActivity : AppCompatActivity() {
         fun checkPermissionsAndInit() {
             permissionController.checkPermissionsAndInit(
                 scope = lifecycleScope,
-                viewModel = viewModel,
+                isInitialSetupCompleted = viewModel.isInitialSetupCompleted,
+                appSettingsLoaded = viewModel.appSettings,
                 lastPermissionState = lastPermissionState,
                 onShowUsageAccessDialog = { viewModel.setUsageAccessDialog(it) },
                 onRequestPhonePermission = {
@@ -221,7 +237,7 @@ class MainActivity : AppCompatActivity() {
         fun checkNotifications(autoRequest: Boolean) {
             permissionController.checkNotifications(
                 scope = lifecycleScope,
-                viewModel = viewModel,
+                appSettingsLoaded = viewModel.appSettings,
                 autoRequest = autoRequest,
                 onRequest = { requestNotificationPermission() },
             )

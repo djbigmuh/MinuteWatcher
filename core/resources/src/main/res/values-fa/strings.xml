@@ -1,0 +1,186 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">سیم‌کارت‌ها</string>
+    <string name="no_sim_found">سیم‌کارتی یافت نشد</string>
+    <string name="check_permissions_sim">مجوزها و حضور سیم‌کارت را بررسی کنید</string>
+    <string name="no_data">بدون داده</string>
+    <string name="error">خطا</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">بازنشانی</string>
+    <string name="theme_system">سیستم</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تاریک</string>
+    <string name="limit_button">محدودیت</string>
+    <string name="add_widget_button">افزودن ویجت</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">تنظیمات عمومی ذخیره شد. تنظیمات سیم‌کارت نادیده گرفته شد</string>
+    <string name="settings_save_partial_failure">تنظیمات عمومی ذخیره شد. تنظیمات مربوط به سیم‌کارت ذخیره نشد</string>
+    <string name="settings_save_partial_failure_slots">تنظیمات عمومی ذخیره شد. تنظیمات سیم‌کارت %1$s ذخیره نشد</string>
+    <string name="settings_save_failed">ذخیره‌سازی ناموفق بود</string>
+    <string name="language_system">سیستم</string>
+    <string name="usage_access_dialog_title">ردیابی مصرف داده</string>
+    <string name="usage_access_dialog_description">برای ردیابی مصرف داده همراه، MinuteWatcher به مجوز \"دسترسی به مصرف\" نیاز دارد.\n\nاین یک مجوز سطح سیستم است که به برنامه امکان می‌دهد میزان داده ارسال و دریافت شده را ببیند.</string>
+    <string name="phone_permission_permanent_denial">مجوز تلفن برای همیشه رد شده است.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">تنظیمات ویجت</string>
+    <string name="widget_description">دقایق و داده‌های همراه باقی‌مانده را برای هر سیم‌کارت نشان می‌دهد.</string>
+    <string name="background_transparency">شفافیت پس‌زمینه</string>
+    <string name="display_minutes">نمایش دقایق</string>
+    <string name="display_minutes_limit">نمایش حد دقایق</string>
+    <string name="display_traffic">نمایش داده</string>
+    <string name="display_traffic_limit">نمایش حد داده</string>
+    <string name="display_name">نمایش نام</string>
+    <string name="display_icon">نمایش نماد</string>
+    <string name="show_sim_checkbox">نمایش این سیم‌کارت</string>
+    <string name="preview">پیش‌نمایش</string>
+    <string name="layout_mode_title">حالت چیدمان</string>
+    <string name="sim_arrangement_prompt">چیدمان سیم‌کارت را انتخاب کنید</string>
+    <string name="color_background">رنگ پس‌زمینه:</string>
+    <string name="custom_color">سفارشی&#8230;</string>
+    <string name="font_size">اندازه قلم</string>
+    <string name="traffic_tracking_limitation_title">محدودیت ردیابی داده</string>
+    <string name="traffic_tracking_limitation_body">اندروید مصرف داده همراه را به صورت یک مقدار کلی ارائه می‌دهد.\n\nMinuteWatcher تمام داده‌ها را به سیم‌کارتی اختصاص می‌دهد که در تنظیمات سیستم به عنوان \"سیم‌کارت پیش‌فرض داده\" انتخاب شده است.</string>
+    <string name="tracking_banner_phone_permission">برای شناسایی سیم‌کارت‌ها مجوز تلفن لازم است.</string>
+    <string name="tracking_banner_usage_access">برای ردیابی دقیق داده‌ها دسترسی به مصرف لازم است.</string>
+    <string name="tracking_banner_sim_discovery_error">شناسایی سیم‌کارت‌ها ناموفق بود. لطفاً دوباره تلاش کنید.</string>
+    <string name="tracking_banner_traffic_error">خطایی در بروزرسانی اطلاعات داده رخ داد.</string>
+    <string name="tracking_banner_calls_error">خطایی در بروزرسانی اطلاعات تماس رخ داد.</string>
+    <string name="tracking_banner_appsearch_error">نمایه‌سازی AppSearch ناموفق بود.</string>
+    <string name="tracking_banner_shortcuts_error">بروزرسانی میانبرهای پویا ناموفق بود.</string>
+    <string name="tracking_banner_notification_permission">برای دریافت هشدارهای مصرف، مجوز اعلان توصیه می‌شود.</string>
+    <string name="tracking_banner_widget_error">ویجت به دلیل محدودیت‌های سیستم بروزرسانی نمی‌شود.</string>
+    <string name="tracking_banner_inaccurate_calls">برخی تماس‌ها با سیم‌کارت مطابقت داده نشدند.</string>
+    <string name="tracking_banner_calls_attribution_error">چندین تماس همزمان شناسایی شد. سیم‌کارت قابل تشخیص نیست.</string>
+    <string name="tracking_banner_observation_failed">سرویس ردیابی داده پس از چند خطا متوقف شد. لطفاً برنامه را راه‌اندازی مجدد کنید.</string>
+    <string name="tracking_banner_storage_degraded">کاهش فضای ذخیره‌سازی: ممکن است آمار پس از راه‌اندازی مجدد بازنشانی شود.</string>
+    <string name="settings_load_error">خطا در بارگیری تنظیمات</string>
+    <string name="sim_list_unavailable_error">لیست سیم‌کارت در دسترس نیست. تنظیمات پس از بارگیری مجدد در دسترس خواهد بود.</string>
+    <string name="refresh_error">خطا در بروزرسانی داده‌ها</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">داده‌ها ممکن است قدیمی باشند</string>
+    <string name="notification_permission_permanent_denial">اعلان‌ها غیرفعال هستند. لطفاً برای دریافت هشدارها آن‌ها را در تنظیمات برنامه فعال کنید.</string>
+    <string name="action_grant">اعطا</string>
+    <string name="action_settings">تنظیمات</string>
+    <string name="action_app_settings">تنظیمات برنامه</string>
+    <string name="action_retry">تلاش مجدد</string>
+    <string name="validation_error_invalid_range">لطفاً مقداری بین %1$s و %2$s وارد کنید</string>
+    <string name="validation_error_invalid_number">لطفاً یک عدد معتبر وارد کنید</string>
+    <string name="validation_error_field_required">این فیلد نمی‌تواند خالی باشد</string>
+    <string name="widget_pin_unsupported">لانچر شما از قرارگیری خودکار ویجت پشتیبانی نمی‌کند.</string>
+    <string name="widget_already_added">ویجت قبلاً به صفحه اصلی اضافه شده است</string>
+    <string name="widget_added_success">ویجت به صفحه اصلی اضافه شد</string>
+    <string name="onboarding_title">به MinuteWatcher خوش آمدید!</string>
+    <string name="onboarding_message">MinuteWatcher نمی‌تواند جزییات طرح شما را به طور خودکار از اپراتور دریافت کند.\n\nبرای شروع ردیابی، لطفاً حدود دقایق/داده و روز بازنشانی ماهانه را دستی تنظیم کنید.</string>
+    <string name="onboarding_button">متوجه شدم</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">شاخص اسلات سیم‌کارت نامعتبر: %1$d</string>
+    <string name="error_storage_unavailable">حافظه برای اسلات %1$d در دسترس نیست. بعداً تلاش کنید.</string>
+    <string name="error_sim_removed">سیم‌کارت از اسلات %1$d خارج شد</string>
+    <string name="error_operation_failed_retry">عملیات پس از تلاش مجدد ناموفق بود.</string>
+    <string name="error_unknown">خطای ناشناخته: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">لغو</string>
+    <string name="save_button">ذخیره</string>
+    <string name="set_button">تنظیم</string>
+    <string name="action_ok">تایید</string>
+    <string name="reset_limits_button">بازنشانی حدود</string>
+    <string name="reset_counters">بازنشانی شمارنده‌ها</string>
+    <string name="reset_confirmation_title">شمارنده‌ها بازنشانی شوند؟</string>
+    <string name="reset_confirmation_body">این کار تمام مصرف ردیابی شده برای این سیم‌کارت را پاک می‌کند.</string>
+    <string name="reset_limits_confirmation_title">حدود بازنشانی شوند؟</string>
+    <string name="reset_limits_confirmation_body">این کار حدود دقایق و داده‌ها را پاک می‌کند.</string>
+    <string name="choose_reset_day">روز ماه را برای بازنشانی خودکار انتخاب کنید:</string>
+    <string name="choose_reset_day_dialog_title">انتخاب روز بازنشانی</string>
+    <string name="rollover_label">ذخیره باقی‌مانده</string>
+    <string name="set_minutes_limit">تنظیم حد دقایق ماهانه:</string>
+    <string name="minutes_limit_hint">حد دقایق</string>
+    <string name="set_traffic_limit">تنظیم حد داده ماهانه (گیگابایت):</string>
+    <string name="traffic_limit_gb_hint_dialog">حد داده به گیگابایت</string>
+    <string name="limits_for_operator">حدود برای %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">اعلان‌ها</string>
+    <string name="notify_low_minutes_title">هشدار هنگام کاهش دقایق باقی‌مانده</string>
+    <string name="notify_low_traffic_title">هشدار هنگام کاهش داده باقی‌مانده</string>
+    <string name="aod_summary_title">خلاصه نمایشگر همیشه روشن</string>
+    <string name="aod_summary_description">یک اعلان بی‌صدا و دائمی با دقایق و داده‌های باقی‌مانده نشان می‌دهد.</string>
+    <string name="aod_summary_unavailable">برای استفاده از این ویژگی اعلان‌ها را فعال کنید</string>
+    <string name="notification_channel_name">نظارت بر مصرف</string>
+    <string name="notification_channel_desc">ردیابی مصرف دقایق و داده‌ها</string>
+    <string name="notification_channel_aod_summary_name">خلاصه نمایشگر همیشه روشن</string>
+    <string name="notification_channel_aod_summary_desc">خلاصه دائمی و بی‌صدا از دقایق و داده‌های باقی‌مانده</string>
+    <string name="notification_minutes_title">مصرف دقایق %1$s</string>
+    <string name="notification_minutes_body">%1$s مصرف دقایق! باقی‌مانده %2$s (%3$d%%). ماه در %4$s پایان می‌یابد.</string>
+    <string name="notification_traffic_title">مصرف داده %1$s</string>
+    <string name="notification_traffic_body">%1$s مصرف داده! باقی‌مانده %2$.1f گیگابایت (%3$d%%). ماه در %4$s پایان می‌یابد.</string>
+    <string name="notification_minutes_exhausted_body">بسته دقایق برای این دوره به پایان رسیده است.</string>
+    <string name="notification_traffic_exhausted_body">بسته داده برای این دوره به پایان رسیده است.</string>
+    <string name="notification_minutes_body_no_period">%1$s مصرف دقایق! باقی‌مانده %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s مصرف داده! باقی‌مانده %2$.1f گیگابایت (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">به حد دقایق رسیدید.</string>
+    <string name="notification_traffic_exhausted_body_no_period">به حد داده رسیدید.</string>
+    <string name="usage_level_low">کم</string>
+    <string name="usage_level_critical">بسیار کم</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">باقی‌مانده:</string>
+    <string name="used_text">مصرف شده</string>
+    <string name="limit_text">حد</string>
+    <string name="minutes_abbr">دقیقه</string>
+    <string name="unit_minutes">دقیقه</string>
+    <string name="unit_gigabytes">گیگابایت</string>
+    <string name="traffic_label">داده</string>
+    <string name="traffic_remaining_text">داده باقی‌مانده:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">روز ماه</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d دقیقه</item>
+        <item quantity="other">%1$d دقیقه</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d روز</item>
+        <item quantity="other">%1$d روز</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">نماد سیم‌کارت</string>
+    <string name="sim_card_details_content_desc">جزئیات سیم‌کارت %1$s</string>
+    <string name="adjust_minutes_content_desc">تنظیم دقایق باقی‌مانده</string>
+    <string name="adjust_traffic_content_desc">تنظیم داده باقی‌مانده</string>
+    <string name="traffic_info_content_desc">اطلاعات بیشتر در مورد ردیابی داده‌ها</string>
+    <string name="set_limits_content_desc">تنظیم حدود برای %1$s</string>
+    <string name="change_auto_reset_day_content_desc">تغییر روز بازنشانی خودکار</string>
+    <string name="toggle_auto_reset_content_desc">فعال یا غیرفعال کردن بازنشانی خودکار</string>
+    <string name="menu_language_content_desc">تغییر زبان</string>
+    <string name="menu_theme_content_desc">تغییر پوسته</string>
+    <string name="navigate_up_content_desc">پیمایش به بالا</string>
+    <string name="banner_dismiss_content_desc">بستن بنر</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">ردیابی</string>
+    <string name="call_tracking_title">ردیابی دقایق تماس</string>
+    <string name="call_tracking_description">دقایق تماس را برای هر سیم‌کارت شمارش کنید.</string>
+    <string name="assistant_access_title">دسترسی دستیار</string>
+    <string name="assistant_access_description">به دستیار روی دستگاه اجازه دهید دقایق و داده‌های باقی‌مانده شما را درخواست کند.</string>
+    <string name="app_functions_display_description">دقایق و داده‌های همراه باقی‌مانده را با دستیار روی دستگاه به اشتراک می‌گذارد</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">درباره</string>
+    <string name="about_message">MinuteWatcher برنامه‌ای برای ردیابی دقایق و مصرف داده‌های همراه باقی‌مانده است.</string>
+    <string name="about_author_name">نویسنده: Pavel Mukhin</string>
+    <string name="about_email_label">ایمیل:</string>
+    <string name="about_signoff">با احترام،</string>
+    <string name="about_version_format">نسخه %1$s (%2$d)</string>
+    <string name="about_content_desc">اطلاعات درباره برنامه</string>
+</resources>

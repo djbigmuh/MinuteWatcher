@@ -180,11 +180,16 @@ abstract class MainViewModelTestFixtures {
                 refreshController = refreshController,
             )
 
+        val appInfoProvider: com.example.minutewatcher.core.domain.AppInfoProvider = mock()
+        whenever(appInfoProvider.versionName).thenReturn("1.0.0")
+        whenever(appInfoProvider.code).thenReturn(1)
+
         return MainViewModel(
             controllers = controllers,
             dialogController = dialogController,
             initController = initController,
             timeProvider = timeProvider,
+            appInfoProvider = appInfoProvider,
             savedStateHandle = savedStateHandle,
         )
     }
@@ -216,6 +221,7 @@ abstract class MainViewModelTestFixtures {
                 simLimitsRepository = simLimitsRepository,
                 usageUseCase = usageUseCase,
                 dataChangeNotifier = dataChangeNotifier,
+                trackingStatusRepository = mock(),
                 ioDispatcher = testDispatcher,
                 scope = scope,
             )

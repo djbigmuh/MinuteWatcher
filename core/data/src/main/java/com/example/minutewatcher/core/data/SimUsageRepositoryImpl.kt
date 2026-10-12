@@ -147,7 +147,9 @@ class SimUsageRepositoryImpl
          * Manually resets SIM usage stats to zero without rollover, zeroing manual adjustments as well.
          * See [SimUsage.manualAdjustment].
          *
-         * Guaranteed to be atomic via [resetMutex].
+         * DataStore.edit provides atomicity within the transaction block. Note that [resetMutex]
+         * is acquired around the external block to serialize concurrent reset/initialization operations
+         * across threads/coroutines.
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if write fails.
          * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
@@ -174,10 +176,13 @@ class SimUsageRepositoryImpl
          * the current billing window is opened at [nowMillis] without clearing usage.
          * Subsequent checks will trigger reset only after the period boundary.
          *
+         * DataStore.edit provides atomicity within the transaction block. Note that [resetMutex]
+         * is acquired around the external block to serialize concurrent reset/initialization operations
+         * across threads/coroutines.
+         *
          * @param autoResetDay Day of month for reset.
          * @param nowMillis Current timestamp.
          * @return True if reset was actually performed (statistics cleared).
-         * Guaranteed to be atomic via [resetMutex].
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if write fails.
          * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
@@ -218,10 +223,7 @@ class SimUsageRepositoryImpl
             var applied = false
             dataStore.edit { prefs ->
                 val currentResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: Constants.Data.EMPTY_TIMESTAMP
-                if (currentResetDate == expectedLastResetDate ||
-                    expectedLastResetDate == Constants.Data.EMPTY_TIMESTAMP ||
-                    currentResetDate == Constants.Data.EMPTY_TIMESTAMP
-                ) {
+                if (isWindowCompatible(currentResetDate, expectedLastResetDate)) {
                     prefs[DataStoreKeys.lastTotalBytesKey(identity)] = bytes
                     applied = true
                 }
@@ -240,10 +242,7 @@ class SimUsageRepositoryImpl
                 val currentResetDate =
                     prefs[DataStoreKeys.lastResetDateKey(identity)]
                         ?: Constants.Data.EMPTY_TIMESTAMP
-                if (currentResetDate == expectedLastResetDate ||
-                    expectedLastResetDate == Constants.Data.EMPTY_TIMESTAMP ||
-                    currentResetDate == Constants.Data.EMPTY_TIMESTAMP
-                ) {
+                if (isWindowCompatible(currentResetDate, expectedLastResetDate)) {
                     // 1. Increment traffic
                     val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                     val newValue = currentUsage + deltaMb.toDouble()
@@ -263,6 +262,22 @@ class SimUsageRepositoryImpl
             return applied
         }
 
+    private fun isWindowCompatible(
+        currentResetDate: Long,
+        expectedLastResetDate: Long,
+    ): Boolean =
+        currentResetDate == expectedLastResetDate ||
+            expectedLastResetDate == Constants.Data.EMPTY_TIMESTAMP ||
+            currentResetDate == Constants.Data.EMPTY_TIMESTAMP
+
+    /**
+     * Ensures tracking window is initialized.
+     *
+     * DataStore.edit provides atomicity within the transaction block. Note that [resetMutex]
+     * is acquired around the external block to serialize concurrent reset/initialization operations
+     * across threads/coroutines.
+     * Safe to call from any coroutine context.
+     */
         override suspend fun ensureTrackingWindowInitialized(identity: String): Boolean =
             resetMutex.withLock {
                 var initialized = false

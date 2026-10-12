@@ -135,6 +135,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(testFixtures(project(":core:common")))
+    testImplementation(testFixtures(project(":core:resources")))
     testImplementation(libs.mockingCore)
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.kotlinxCoroutinesTesting)

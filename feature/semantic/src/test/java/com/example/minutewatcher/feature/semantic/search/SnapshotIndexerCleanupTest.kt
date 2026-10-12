@@ -79,11 +79,13 @@ class SnapshotIndexerCleanupTest : SemanticSearchManagerTestFixtures() {
         runTest(testDispatcher) {
             val appSearchWrapper = FakeAppSearchWrapper()
             val errorHandler = AppSearchErrorHandler()
+            var editAttempted = false
             val blockingEditDataStore =
                 object : DataStore<Preferences> {
                     override val data = flowOf(emptyPreferences())
 
                     override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+                        editAttempted = true
                         delay((Constants.Flow.SHORT_TIMEOUT_MS * 2).milliseconds)
                         return emptyPreferences()
                     }
@@ -95,6 +97,7 @@ class SnapshotIndexerCleanupTest : SemanticSearchManagerTestFixtures() {
             indexer.cleanupStalePackageTypes(sessionManager) { }
             testScheduler.advanceTimeBy(Constants.Flow.SHORT_TIMEOUT_MS * 2)
 
-            // Method completed without exception
+            assertTrue("DataStore edit should have been attempted", editAttempted)
+            assertNull("No session should be created", appSearchWrapper.lastSession)
         }
 }

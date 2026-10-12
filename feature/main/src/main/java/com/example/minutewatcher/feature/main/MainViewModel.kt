@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.TimeProvider
+import com.example.minutewatcher.core.domain.AppInfoProvider
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
@@ -52,6 +53,7 @@ class MainViewModel
         private val dialogController: MainDialogController,
         private val initController: MainInitializationController,
         private val timeProvider: TimeProvider,
+        private val appInfoProvider: AppInfoProvider,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         // Delegate UI States
@@ -60,6 +62,9 @@ class MainViewModel
         val showAdjustDialog = dialogController.showAdjustDialog
         val showTrafficLimitationDialog = dialogController.showTrafficLimitationDialog
         val showUsageAccessDialog = dialogController.showUsageAccessDialog
+    val showAboutDialog = dialogController.showAboutDialog
+    val versionName: String get() = appInfoProvider.versionName
+    val code: Int get() = appInfoProvider.code
         val showOnboardingDialog: StateFlow<Boolean> get() = dialogController.showOnboardingDialog
         val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
@@ -111,22 +116,15 @@ class MainViewModel
                     showUsageAccessDialog,
                     showOnboardingDialog,
                 ) { settings, usageDialog, onboardingDialog ->
-                    DataForPrompt(
-                        settings = settings,
-                        usageAccess = usageDialog,
+                    OnboardingPromptInput(
+                        isSettingsLoaded = settings.isLoaded,
+                        onboardingCompleted = settings.onboardingCompleted,
+                        usageAccessDialogShown = usageDialog,
                         onboardingDialogShowing = onboardingDialog,
                     )
-                }.distinctUntilChanged { old, new ->
-                    old.settings.onboardingCompleted == new.settings.onboardingCompleted &&
-                        old.settings.isLoaded == new.settings.isLoaded &&
-                        old.usageAccess == new.usageAccess &&
-                        old.onboardingDialogShowing == new.onboardingDialogShowing
-                }.collect { data ->
-                    val onboardingCompleted = data.settings.onboardingCompleted
-                    val isSettingsLoaded = data.settings.isLoaded
-
-                    val shouldShowOnboarding = isSettingsLoaded && !onboardingCompleted
-                    val isUiBlocked = data.onboardingDialogShowing || data.usageAccess
+                }.distinctUntilChanged().collect { data ->
+                    val shouldShowOnboarding = data.isSettingsLoaded && !data.onboardingCompleted
+                    val isUiBlocked = data.onboardingDialogShowing || data.usageAccessDialogShown
 
                     // Logic for showing Onboarding Dialog
                     if (shouldShowOnboarding && !isUiBlocked && dialogController.claimOnboardingPrompt()) {
@@ -137,9 +135,10 @@ class MainViewModel
             }
         }
 
-        private data class DataForPrompt(
-            val settings: AppSettings,
-            val usageAccess: Boolean,
+    private data class OnboardingPromptInput(
+        val isSettingsLoaded: Boolean,
+        val onboardingCompleted: Boolean,
+        val usageAccessDialogShown: Boolean,
             val onboardingDialogShowing: Boolean,
         )
 
@@ -153,6 +152,8 @@ class MainViewModel
         fun setTrafficLimitationDialog(show: Boolean) = dialogController.setTrafficLimitationDialog(show)
 
         fun setUsageAccessDialog(show: Boolean) = dialogController.setUsageAccessDialog(show)
+
+    fun setShowAboutDialog(show: Boolean) = dialogController.setShowAboutDialog(show)
 
         fun setNotificationPermissionRequested() = controllers.settings.setNotificationPermissionRequested()
 

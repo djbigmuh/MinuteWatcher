@@ -1,6 +1,7 @@
 package com.example.minutewatcher
 
 import android.icu.text.PluralRules
+import com.example.minutewatcher.core.resources.testing.LocaleResourceDirs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,7 +17,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 @RunWith(RobolectricTestRunner::class)
 @Config(application = MinuteWatcherTestApp::class)
 class PluralResourcesTest {
-    private val locales = listOf("en", "ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
+    private val locales = LocaleResourceDirs.supportedLanguageTags
 
     @Test
     fun `plural resources cover required cardinal categories for all locales`() {
@@ -28,7 +29,7 @@ class PluralResourcesTest {
             val pluralRules = PluralRules.forLocale(locale) ?: error("PluralRules for $tag must not be null")
             val requiredCategories = testValues.map { pluralRules.select(it) }.toSet()
 
-            val dirName = if (tag == "en") "values" else "values-$tag"
+            val dirName = LocaleResourceDirs.resourceDirForTag(tag)
             val file = File(resDir, "$dirName/strings.xml")
             assertTrue("strings.xml for locale $tag must exist", file.exists())
 
@@ -48,7 +49,7 @@ class PluralResourcesTest {
         val resDir = findResDir()
 
         locales.forEach { tag ->
-            val dirName = if (tag == "en") "values" else "values-$tag"
+            val dirName = LocaleResourceDirs.resourceDirForTag(tag)
             val file = File(resDir, "$dirName/strings.xml")
 
             val minutesItems = parsePluralItems(file, "minutes_plurals")
@@ -64,7 +65,7 @@ class PluralResourcesTest {
         val resDir = findResDir()
 
         locales.forEach { lang ->
-            val dirName = if (lang == "en") "values" else "values-$lang"
+            val dirName = LocaleResourceDirs.resourceDirForTag(lang)
             val file = File(resDir, "$dirName/strings.xml")
             if (file.exists()) {
                 val content = file.readText()
@@ -93,6 +94,24 @@ class PluralResourcesTest {
 
         assertEquals("%1\$d de minutes", frMinutesItems["many"])
         assertEquals("%1\$d de jours", frDaysItems["many"])
+    }
+
+    @Test
+    fun `urdu plurals have one and other categories containing format argument`() {
+        val resDir = findResDir()
+        val urFile = File(resDir, "values-ur/strings.xml")
+        val urMinutes = parsePluralItems(urFile, "minutes_plurals")
+        val urDays = parsePluralItems(urFile, "days_plurals")
+
+        assertTrue(urMinutes.containsKey("one"))
+        assertTrue(urMinutes.containsKey("other"))
+        assertTrue(urMinutes["one"]!!.contains("%1\$d"))
+        assertTrue(urMinutes["other"]!!.contains("%1\$d"))
+
+        assertTrue(urDays.containsKey("one"))
+        assertTrue(urDays.containsKey("other"))
+        assertTrue(urDays["one"]!!.contains("%1\$d"))
+        assertTrue(urDays["other"]!!.contains("%1\$d"))
     }
 
     private fun verifyFormatArguments(

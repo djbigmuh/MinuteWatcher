@@ -2,11 +2,22 @@ package com.example.minutewatcher.core.model
 
 import com.example.minutewatcher.core.model.util.ClampingUtils
 
+/**
+ * Traffic model representing data usage, limits, and adjustments.
+ *
+ * @property usedMb Traffic used in MB.
+ * @property limitMb Traffic limit in MB.
+ * @property manualAdjustmentGb Manual traffic adjustment in GB.
+ * @property remainingGb Remaining traffic in GB, or null if traffic limit is not set.
+ * @property limitGb Traffic limit in GB.
+ * @property effectiveLimitGb Effective traffic limit in GB.
+ * @property isLimitSet Whether traffic limit is set.
+ */
 data class TrafficModel(
     val usedMb: Float,
     val limitMb: Int,
     val manualAdjustmentGb: Float,
-    val remainingGb: Float,
+    val remainingGb: Float?,
     val limitGb: Float,
     val effectiveLimitGb: Float,
     val isLimitSet: Boolean,
@@ -31,7 +42,7 @@ data class TrafficModel(
                 )
 
             val isLimitSet = limitMb > 0 || manualAdjustmentGb != 0f
-            val remainingGbD = if (isLimitSet) maxOf(0.0, clampedEffectiveLimitGb.toDouble() - usedGbD) else -1.0
+            val remainingGbD = if (isLimitSet) maxOf(0.0, clampedEffectiveLimitGb.toDouble() - usedGbD) else 0.0
             val clampedRemainingGb =
                 if (isLimitSet) {
                     ClampingUtils.clamp(
@@ -40,7 +51,7 @@ data class TrafficModel(
                         Constants.MAX_TRAFFIC_LIMIT_GB,
                     )
                 } else {
-                    -1.0f
+                    null
                 }
 
             return TrafficModel(

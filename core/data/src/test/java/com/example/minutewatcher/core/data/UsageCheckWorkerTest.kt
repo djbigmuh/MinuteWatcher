@@ -80,6 +80,9 @@ class UsageCheckWorkerTest {
             )
         worker = UsageCheckWorker(context, workerParams, deps, testDispatcher)
         whenever(trafficTracker.status).thenReturn(MutableStateFlow(TrackingStatus.Active))
+        kotlinx.coroutines.runBlocking {
+            whenever(trafficTracker.updateTrafficUsage()).thenReturn(TrafficUpdateOutcome.Completed)
+        }
     }
 
     private suspend fun setupDefaultMocks() {
@@ -88,8 +91,10 @@ class UsageCheckWorkerTest {
             .thenReturn(flowOf(AppSettings(notifyLowMinutes = true, notifyLowTraffic = true, isLoaded = true)))
         whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(any())).thenReturn(flowOf(false))
         whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(any())).thenReturn(flowOf(false))
         whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(any())).thenReturn(flowOf(false))
         whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(any())).thenReturn(flowOf(false))
+        whenever(simNotificationFlagsRepository.getNotifiedCriticalTraffic(any())).thenReturn(flowOf(false))
     }
 
     private fun createUsageSnapshot(
@@ -187,6 +192,22 @@ class UsageCheckWorkerTest {
         }
 
     @Test
+    fun `doWork returns retry when refresh fails`() =
+        runTest(testDispatcher) {
+            val emptySnapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
+            val exception = RuntimeException("Refresh failed")
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Failure(emptySnapshot, exception))
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
     fun `doWork sends notification when minutes low`() =
         runTest(testDispatcher) {
             setupDefaultMocks()
@@ -196,7 +217,7 @@ class UsageCheckWorkerTest {
 
             worker.doWork()
 
-            verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(0))
+            verify(notificationHelper).sendUsageNotification(any(), any(), eq(0), eq(UsageNotificationType.MINUTES))
         }
 
     @Test
@@ -225,7 +246,7 @@ class UsageCheckWorkerTest {
                 title = any(),
                 message = argThat { contains(expectedDaysText) },
                 simSlot = eq(0),
-                type = eq(NOTIFICATION_TYPE_MINUTES),
+                type = eq(UsageNotificationType.MINUTES),
             )
         }
 
@@ -254,7 +275,7 @@ class UsageCheckWorkerTest {
                 title = any(),
                 message = argThat { !contains(expectedDaysText) },
                 simSlot = eq(0),
-                type = eq(NOTIFICATION_TYPE_MINUTES),
+                type = eq(UsageNotificationType.MINUTES),
             )
         }
 
@@ -278,7 +299,7 @@ class UsageCheckWorkerTest {
                 title = any(),
                 message = eq(expectedMessage),
                 simSlot = eq(0),
-                type = eq(NOTIFICATION_TYPE_MINUTES),
+                type = eq(UsageNotificationType.MINUTES),
             )
         }
 
@@ -310,7 +331,7 @@ class UsageCheckWorkerTest {
             title = any(),
             message = argThat { contains(criticalLabel) },
             simSlot = eq(0),
-            type = eq(NOTIFICATION_TYPE_TRAFFIC),
+            type = eq(UsageNotificationType.TRAFFIC),
         )
     }
 
@@ -333,14 +354,7 @@ class UsageCheckWorkerTest {
     fun `doWork returns retry when traffic update status is timeout`() =
         runTest(testDispatcher) {
             setupDefaultMocks()
-            whenever(trafficTracker.status).thenReturn(
-                MutableStateFlow(
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        code = TrackingStatus.ErrorCode.TIMEOUT,
-                    ),
-                ),
-            )
+            whenever(trafficTracker.updateTrafficUsage()).thenReturn(TrafficUpdateOutcome.TimedOut(0L))
 
             val result = worker.doWork()
 
@@ -369,9 +383,4 @@ class UsageCheckWorkerTest {
             assertEquals(ListenableWorker.Result.retry(), result)
             verify(trafficTracker).updateTrafficUsage()
         }
-
-    private companion object {
-        private const val NOTIFICATION_TYPE_MINUTES = 0
-        private const val NOTIFICATION_TYPE_TRAFFIC = 1
-    }
 }

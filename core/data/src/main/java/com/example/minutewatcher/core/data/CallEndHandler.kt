@@ -230,16 +230,21 @@ internal class CallEndHandler
             subId: Int,
             eventElapsedRealtime: Long,
         ): CallEndData {
-            val currentBootTime = if (eventElapsedRealtime > 0) eventElapsedRealtime else timeProvider.elapsedRealtime()
+            val currentElapsedRealtime =
+                if (eventElapsedRealtime > 0) {
+                    eventElapsedRealtime
+                } else {
+                    timeProvider.elapsedRealtime()
+                }
             return CallEndData(
                 startTimeResult =
                     retryHelper.readWithRetry(
                         label = "endCall:startTime",
                     ) { callSessionRepository.getCallStartTime(subId) },
-                savedBootTimeResult =
+                savedElapsedRealtimeResult =
                     retryHelper.readWithRetry(
-                        label = "endCall:bootTimeForDuration",
-                    ) { callSessionRepository.getBootTime(subId) },
+                        label = "endCall:elapsedRealtimeForDuration",
+                    ) { callSessionRepository.getElapsedRealtime(subId) },
                 savedIdentityResult =
                     retryHelper.readWithRetry(
                         label = "endCall:identity",
@@ -248,7 +253,7 @@ internal class CallEndHandler
                     retryHelper.readWithRetry(
                         label = "endCall:uptime",
                     ) { callSessionRepository.getUptime(subId) },
-                currentBootTime = currentBootTime,
+                currentElapsedRealtime = currentElapsedRealtime,
                 currentUptime = timeProvider.uptimeMillis(),
             )
         }
@@ -280,9 +285,9 @@ internal class CallEndHandler
                 return handleCallEndResult(subId, validationResult, context)
             }
 
-            val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
+            val savedElapsedRealtime = data.savedElapsedRealtimeResult.getOrElse { 0L }
             val durationSeconds =
-                ((data.currentBootTime - savedBootTime) / Constants.Time.MILLIS_IN_SECOND).toInt()
+                ((data.currentElapsedRealtime - savedElapsedRealtime) / Constants.Time.MILLIS_IN_SECOND).toInt()
 
             val durationResult =
                 processCallDurationLocked(
@@ -320,12 +325,13 @@ internal class CallEndHandler
         /**
          * Validates the call duration and determines if cleanup or refresh is needed.
          *
-         * Serves as the single source of truth for stale boot time and max call duration checks.
+         * Serves as the single source of truth for stale elapsed realtime and max call duration checks.
          * Subsequent processing in [processCallDurationLocked] relies on these checks having passed.
          *
          * @return [CallEndResult.CONTINUE] if validation passed.
-         *         [CallEndResult.CLEANUP_AND_REFRESH] if session was cleaned up (no bootTime) and refresh is needed.
-         *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up due to stale boot time
+         *         [CallEndResult.CLEANUP_AND_REFRESH] if session was cleaned up (no elapsedRealtime)
+         *         and refresh is needed.
+         *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up due to stale elapsed realtime
          *         or exceeded max duration.
          */
         private suspend fun validateCallDuration(
@@ -333,25 +339,25 @@ internal class CallEndHandler
             data: CallEndData,
             context: CallTrackingContext,
         ): CallEndResult {
-            val savedBootTime = data.savedBootTimeResult.getOrElse { 0L }
+            val savedElapsedRealtime = data.savedElapsedRealtimeResult.getOrElse { 0L }
             return when {
-                savedBootTime > data.currentBootTime -> {
+                savedElapsedRealtime > data.currentElapsedRealtime -> {
                     val message = "Stale call session from a previous boot for subId $subId"
                     AppLogger.w("CallTracker: $message, clearing session")
                     context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
                     CallEndResult.CLEANUP_ONLY
                 }
 
-                (savedBootTime > 0L) &&
-                    ((data.currentBootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS) -> {
+                (savedElapsedRealtime > 0L) &&
+                    ((data.currentElapsedRealtime - savedElapsedRealtime) > Constants.Calls.MAX_CALL_DURATION_MS) -> {
                     val message = "Call duration exceeded max limit for subId $subId"
                     AppLogger.w("CallTracker: $message, clearing session")
                     context.updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, message))
                     CallEndResult.CLEANUP_ONLY
                 }
 
-                savedBootTime == 0L -> {
-                    AppLogger.w("CallTracker: bootTime not recorded for subId $subId, clearing session")
+                savedElapsedRealtime == 0L -> {
+                    AppLogger.w("CallTracker: elapsedRealtime not recorded for subId $subId, clearing session")
                     CallEndResult.CLEANUP_AND_REFRESH
                 }
 
@@ -400,7 +406,11 @@ internal class CallEndHandler
                         CallEndResult.CLEANUP_AND_REFRESH
                     } else if (targetIdentity != null) {
                         val durationMinutes = calculateDurationMinutes(durationSeconds)
-                        val callSignature = buildCallSignature(startTime, data.savedBootTimeResult.getOrElse { 0L })
+                        val callSignature =
+                            buildCallSignature(
+                                startTime,
+                                data.savedElapsedRealtimeResult.getOrElse { 0L },
+                            )
                         settingsHandler.writeCallDuration(
                             identity = targetIdentity,
                             durationMinutes = durationMinutes,
@@ -437,10 +447,10 @@ internal class CallEndHandler
 
         internal data class CallEndData(
             val startTimeResult: Result<Long>,
-            val savedBootTimeResult: Result<Long>,
+            val savedElapsedRealtimeResult: Result<Long>,
             val savedIdentityResult: Result<String?>,
             val savedUptimeResult: Result<Long>,
-            val currentBootTime: Long,
+            val currentElapsedRealtime: Long,
             val currentUptime: Long,
         )
     }

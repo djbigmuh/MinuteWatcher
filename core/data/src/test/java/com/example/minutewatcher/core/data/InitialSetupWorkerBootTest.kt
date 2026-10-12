@@ -30,6 +30,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicBoolean
@@ -117,5 +118,7 @@ class InitialSetupWorkerBootTest {
 
             assertTrue("onBootAwaited should have completed", bootCompleted.get())
             assertEquals(ListenableWorker.Result.success(), result)
+            verify(workScheduler).schedulePeriodicUsageCheck()
+            verify(migrationFlagsRepository).setInitialSetupCompleted(true)
         }
 }

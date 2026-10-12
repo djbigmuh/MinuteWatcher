@@ -246,7 +246,13 @@ object Constants {
         const val BOOT_EPOCH_TOLERANCE_MS = 15 * 60_000L
 
         /**
-         * Threshold for showing inaccurate attribution banner.
+         * Maximum consecutive call attribution failures before clearing the session and resetting the failure counter.
+         */
+        const val ATTRIBUTION_FAILURE_LIMIT = 3
+
+        /**
+         * Threshold for showing inaccurate attribution banner (Situation A - fallback attribution).
+         * Refers to fallback attribution counter and is unrelated to [ATTRIBUTION_FAILURE_LIMIT].
          * Why 3: three consecutive unassigned events indicate a systemic issue
          * rather than a transient race condition.
          */

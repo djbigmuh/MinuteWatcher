@@ -25,6 +25,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -430,14 +431,18 @@ class IdentityMigrationServiceTest {
             assertNull(result)
         }
 
-    @Test(expected = CancellationException::class)
+    @Test
     fun `hasLegacyData rethrows CancellationException`() =
         testScope.runTest {
             val cancelledDataStore: DataStore<Preferences> = mock()
             whenever(cancelledDataStore.data).thenReturn(flow { throw CancellationException("Cancelled") })
 
             val service = IdentityMigrationService(cancelledDataStore, simDataStore)
-            service.hasLegacyData()
+            assertThrows(CancellationException::class.java) {
+                kotlinx.coroutines.runBlocking {
+                    service.hasLegacyData()
+                }
+            }
         }
 
     @Test
@@ -532,6 +537,8 @@ class IdentityMigrationServiceTest {
 
             assertEquals(0, outcome.migrated)
             assertEquals(0, outcome.failures)
+            assertFalse(outcome.hasChanges())
+            assertEquals(false, service.hasLegacyData())
         }
 
     @Test

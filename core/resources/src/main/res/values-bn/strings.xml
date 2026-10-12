@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">সিম কার্ড</string>
+    <string name="no_sim_found">কোনো সিম কার্ড পাওয়া যায়নি</string>
+    <string name="check_permissions_sim">অনুমতি এবং সিম উপস্থিতি পরীক্ষা করুন</string>
+    <string name="no_data">কোনো ডেটা নেই</string>
+    <string name="error">ত্রুটি</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">রিসেট</string>
+    <string name="theme_system">সিস্টেম</string>
+    <string name="theme_light">হালকা</string>
+    <string name="theme_dark">অন্ধকার</string>
+    <string name="limit_button">সীমা</string>
+    <string name="add_widget_button">উইজেট যোগ করুন</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">সাধারণ সেটিংস সংরক্ষিত হয়েছে। সিম সেটিংস বাদ দেওয়া হয়েছে (সিম তালিকা অনুপলব্ধ)</string>
+    <string name="settings_save_partial_failure">সাধারণ সেটিংস সংরক্ষিত হয়েছে। সিম সেটিংস সংরক্ষণ করা যায়নি</string>
+    <string name="settings_save_partial_failure_slots">সাধারণ সেটিংস সংরক্ষিত হয়েছে। সিম %1$s-এর সেটিংস সংরক্ষণ করা যায়নি</string>
+    <string name="settings_save_failed">সংরক্ষণ ব্যর্থ হয়েছে</string>
+    <string name="language_system">সিস্টেম</string>
+    <string name="usage_access_dialog_title">ডেটা ব্যবহার ট্র্যাকিং</string>
+    <string name="usage_access_dialog_description">আপনার মোবাইল ডেটা ব্যবহার ট্র্যাক করতে, MinuteWatcher-এর \"ব্যবহারের অ্যাক্সেস\" অনুমতি প্রয়োজন।\n\nএটি একটি সিস্টেম-স্তরের অনুমতি যা অ্যাপটিকে সেলুলার নেটওয়ার্কে কত ডেটা পাঠানো এবং গ্রহণ করা হয়েছে তা দেখতে দেয়।\n\nআমরা আপনি কোন অ্যাপগুলি ব্যবহার করেন বা আপনার ব্রাউজিং ইতিহাস ট্র্যাক করি না।</string>
+    <string name="phone_permission_permanent_denial">ফোনের অনুমতি স্থায়ীভাবে অস্বীকৃত। আপনি অ্যাপ সেটিংসে এটি সক্ষম না করা পর্যন্ত কিছু বৈশিষ্ট্য কাজ করবে না।</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">উইজেট সেটিংস</string>
+    <string name="widget_description">প্রতিটি সিম কার্ডের জন্য অবশিষ্ট মিনিট এবং মোবাইল ট্রাফিক প্রদর্শন করে।</string>
+    <string name="background_transparency">পটভূমির স্বচ্ছতা</string>
+    <string name="display_minutes">মিনিট দেখান</string>
+    <string name="display_minutes_limit">মিনিটের সীমা দেখান</string>
+    <string name="display_traffic">ট্রাফিক দেখান</string>
+    <string name="display_traffic_limit">ট্রাফিকের সীমা দেখান</string>
+    <string name="display_name">নাম দেখান</string>
+    <string name="display_icon">আইকন দেখান</string>
+    <string name="show_sim_checkbox">এই সিম কার্ডটি দেখান</string>
+    <string name="preview">পূর্বরূপ</string>
+    <string name="layout_mode_title">লেআউট মোড</string>
+    <string name="sim_arrangement_prompt">সিম বিন্যাস চয়ন করুন</string>
+    <string name="color_background">পটভূমির রঙ:</string>
+    <string name="custom_color">কাস্টম&#8230;</string>
+    <string name="font_size">ফন্টের আকার</string>
+    <string name="traffic_tracking_limitation_title">ট্রাফিক ট্র্যাকিং সীমাবদ্ধতা</string>
+    <string name="traffic_tracking_limitation_body">অ্যান্ড্রয়েড পুরো ডিভাইসের জন্য একটি সামগ্রিক মান হিসাবে মোবাইল ডেটা ব্যবহার প্রদান করে।\n\nMinuteWatcher আপনার সিস্টেম সেটিংসে বর্তমানে \"ডিফল্ট ডেটা সিম\" হিসাবে নির্বাচিত সিম কার্ডের সমস্ত মোবাইল ট্রাফিককে দায়ী করে।</string>
+    <string name="tracking_banner_phone_permission">সিম কার্ড সনাক্ত করতে ফোনের অনুমতি প্রয়োজন।</string>
+    <string name="tracking_banner_usage_access">ব্যবহারের অ্যাক্সেস প্রয়োজন।</string>
+    <string name="tracking_banner_sim_discovery_error">সিম কার্ড সনাক্ত করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।</string>
+    <string name="tracking_banner_traffic_error">ট্রাফিক ডেটা আপডেট করার সময় একটি ত্রুটি ঘটেছে।</string>
+    <string name="tracking_banner_calls_error">কল ট্র্যাকিং ডেটা আপডেট করার সময় একটি ত্রুটি ঘটেছে।</string>
+    <string name="tracking_banner_appsearch_error">AppSearch ইন্ডেক্সিং ব্যর্থ হয়েছে। বিশ্বব্যাপী অনুসন্ধান পুরানো হতে পারে। এটি উইজেট বা ট্র্যাকিং কার্যকারিতাকে প্রভাবিত করে না।</string>
+    <string name="tracking_banner_shortcuts_error">গতিশীল শর্টকাট আপডেট ব্যর্থ হয়েছে।</string>
+    <string name="tracking_banner_notification_permission">ব্যবহার সতর্কতা পেতে বিজ্ঞপ্তি অনুমতি সুপারিশ করা হয়।</string>
+    <string name="tracking_banner_widget_error">সিস্টেম সীমাবদ্ধতার কারণে উইজেট আপডেট করা যাবে না।</string>
+    <string name="tracking_banner_inaccurate_calls">কিছু কল সিম কার্ডের সাথে মেলানো যায়নি এবং একমাত্র সক্রিয় সিমের জন্য দায়ী করা হয়েছে। মান অসঠিক হতে পারে।</string>
+    <string name="tracking_banner_calls_attribution_error">একাধিক সমসাময়িক কল সনাক্ত করা হয়েছে। সিম কার্ড নির্ধারণ করতে অক্ষম; এই ধরনের কলের জন্য মিনিট জমা করা হয়নি।</string>
+    <string name="tracking_banner_observation_failed">একাধিক ত্রুটির পরে ডেটা ট্র্যাকিং পরিষেবা বন্ধ হয়ে গেছে। পুনরায় চেষ্টা করুন বা অ্যাপ রিস্টার্ট করুন।</string>
+    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
+    <string name="settings_load_error">সেটিংস লোড ত্রুটি</string>
+    <string name="sim_list_unavailable_error">সিম তালিকা উপলব্ধ নয়। পুনরায় লোড করার পরে সিম সেটিংস উপলব্ধ হবে।</string>
+    <string name="refresh_error">ডেটা রিফ্রেশ ত্রুটি</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">ডেটা পুরানো হতে পারে</string>
+    <string name="notification_permission_permanent_denial">বিজ্ঞপ্তি নিষ্ক্রিয় করা হয়। সতর্কতা পেতে অনুগ্রহ করে অ্যাপ সেটিংসে সেগুলি সক্ষম করুন।</string>
+    <string name="action_grant">মঞ্জুর করুন</string>
+    <string name="action_settings">সেটিংস</string>
+    <string name="action_app_settings">অ্যাপ সেটিংস</string>
+    <string name="action_retry">আবার চেষ্টা করুন</string>
+    <string name="validation_error_invalid_range">অনুগ্রহ করে %1$s এবং %2$s এর মধ্যে একটি মান লিখুন</string>
+    <string name="validation_error_invalid_number">অনুগ্রহ করে একটি বৈধ নম্বর লিখুন</string>
+    <string name="validation_error_field_required">ক্ষেত্র খালি হতে পারে না</string>
+    <string name="widget_pin_unsupported">আপনার লঞ্চার স্বয়ংক্রিয় উইজেট প্লেসমেন্ট সমর্থন করে না। ম্যানুয়ালি উইজেট যোগ করুন।</string>
+    <string name="widget_already_added">উইজেট ইতিমধ্যেই হোম স্ক্রিনে যোগ করা হয়েছে</string>
+    <string name="widget_added_success">হোম স্ক্রিনে উইজেট যোগ করা হয়েছে</string>
+    <string name="onboarding_title">MinuteWatcher-এ স্বাগতম!</string>
+    <string name="onboarding_message">MinuteWatcher আপনার মোবাইল ক্যারিয়ার থেকে স্বয়ংক্রিয়ভাবে আপনার পরিকল্পনার বিবরণ পুনরুদ্ধার করতে পারে না।\n\nট্র্যাকিং শুরু করতে, অনুগ্রহ করে প্রতিটি সিম কার্ডের জন্য ম্যানুয়ালি আপনার মিনিট/ডেটা সীমা এবং মাসিক রিসেট দিন সেট করুন। অ্যাপটি সেই বিন্দু থেকে সমস্ত পর্যবেক্ষণ পরিচালনা করবে।</string>
+    <string name="onboarding_button">বুঝেছি</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">অবৈধ সিম স্লট সূচক: %1$d</string>
+    <string name="error_storage_unavailable">স্লট %1$d-এর জন্য স্টোরেজ অনুপলব্ধ। পরে আবার চেষ্টা করুন।</string>
+    <string name="error_sim_removed">স্লট %1$d থেকে সিম সরানো হয়েছে</string>
+    <string name="error_operation_failed_retry">পুনরায় চেষ্টা করার পরে অপারেশন ব্যর্থ হয়েছে।</string>
+    <string name="error_unknown">অজানা ত্রুটি: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">বাতিল করুন</string>
+    <string name="save_button">সংরক্ষণ করুন</string>
+    <string name="set_button">সেট করুন</string>
+    <string name="action_ok">ঠিক আছে</string>
+    <string name="reset_limits_button">সীমা রিসেট করুন</string>
+    <string name="reset_counters">কাউন্টার রিসেট করুন</string>
+    <string name="reset_confirmation_title">কাউন্টার রিসেট করবেন?</string>
+    <string name="reset_confirmation_body">এটি এই সিম কার্ডের জন্য সমস্ত ট্র্যাক করা ব্যবহার এবং সমন্বয় সাফ করবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।</string>
+    <string name="reset_limits_confirmation_title">সীমা রিসেট করবেন?</string>
+    <string name="reset_limits_confirmation_body">এটি মিনিট এবং ট্রাফিক সীমা সাফ করবে এবং এই সিম কার্ডের জন্য রোলওভার নিষ্ক্রিয় করবে। ট্র্যাক করা ব্যবহার পরিবর্তন করা হবে না।</string>
+    <string name="choose_reset_day">স্বয়ংক্রিয় রিসেটের জন্য মাসের দিন চয়ন করুন:</string>
+    <string name="choose_reset_day_dialog_title">রিসেট দিন চয়ন করুন</string>
+    <string name="rollover_label">অবশিষ্ট জমা করুন</string>
+    <string name="set_minutes_limit">মাসিক মিনিট সীমা সেট করুন:</string>
+    <string name="minutes_limit_hint">মিনিটের সীমা</string>
+    <string name="set_traffic_limit">মাসিক ট্রাফিক সীমা (GB) সেট করুন:</string>
+    <string name="traffic_limit_gb_hint_dialog">GB-তে ট্রাফিক সীমা</string>
+    <string name="limits_for_operator">%1$s-এর জন্য সীমা</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">বিজ্ঞপ্তি</string>
+    <string name="notify_low_minutes_title">বাকি কম মিনিট সম্পর্কে অবহিত করুন</string>
+    <string name="notify_low_traffic_title">বাকি কম ট্রাফিক সম্পর্কে অবহিত করুন</string>
+    <string name="aod_summary_title">Always-on Display সারাংশ</string>
+    <string name="aod_summary_description">অবশিষ্ট মিনিট এবং ট্রাফিক সহ একটি ক্রমাগত নীরব বিজ্ঞপ্তি দেখান। লক স্ক্রিনে এবং বিজ্ঞপ্তি প্রদর্শনকারী ডিভাইসগুলিতে, Always-on Display-এ দৃশ্যমান।</string>
+    <string name="aod_summary_unavailable">এই বৈশিষ্ট্যটি ব্যবহার করতে বিজ্ঞপ্তিগুলি সক্ষম করুন</string>
+    <string name="notification_channel_name">ব্যবহার পর্যবেক্ষণ</string>
+    <string name="notification_channel_desc">মিনিট এবং ট্রাফিক ব্যবহার ট্র্যাক করা হচ্ছে</string>
+    <string name="notification_channel_aod_summary_name">Always-on Display সারাংশ</string>
+    <string name="notification_channel_aod_summary_desc">অবশিষ্ট মিনিট এবং ট্রাফিকের ক্রমাগত নীরব সারাংশ</string>
+    <string name="notification_minutes_title">মিনিট ব্যবহার %1$s</string>
+    <string name="notification_minutes_body">%1$s মিনিট ব্যবহার! বাকি %2$s (%3$d%%)। মাস শেষ হতে বাকি %4$s।</string>
+    <string name="notification_traffic_title">ট্রাফিক ব্যবহার %1$s</string>
+    <string name="notification_traffic_body">%1$s ট্রাফিক ব্যবহার! বাকি %2$.1f GB (%3$d%%)। মাস শেষ হতে বাকি %4$s।</string>
+    <string name="notification_minutes_exhausted_body">মেয়াদের জন্য মিনিটের প্যাকেজ শেষ হয়ে গেছে।</string>
+    <string name="notification_traffic_exhausted_body">মেয়াদের জন্য ট্রাফিক প্যাকেজ শেষ হয়ে গেছে।</string>
+    <string name="notification_minutes_body_no_period">%1$s মিনিট ব্যবহার! বাকি %2$s (%3$d%%)।</string>
+    <string name="notification_traffic_body_no_period">%1$s ট্রাফিক ব্যবহার! বাকি %2$.1f GB (%3$d%%)।</string>
+    <string name="notification_minutes_exhausted_body_no_period">মিনিটের সীমা পৌঁছে গেছে। আপনি এটি রিসেট না করা পর্যন্ত ট্র্যাক করা ব্যবহার জমা হতে থাকে।</string>
+    <string name="notification_traffic_exhausted_body_no_period">ট্রাফিকের সীমা পৌঁছে গেছে। আপনি এটি রিসেট না করা পর্যন্ত ট্র্যাক করা ব্যবহার জমা হতে থাকে।</string>
+    <string name="usage_level_low">কম</string>
+    <string name="usage_level_critical">অত্যন্ত কম</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">অবশিষ্ট:</string>
+    <string name="used_text">ব্যবহৃত</string>
+    <string name="limit_text">সীমা</string>
+    <string name="minutes_abbr">মিনিট</string>
+    <string name="unit_minutes">মিনিট</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">ট্রাফিক</string>
+    <string name="traffic_remaining_text">অবশিষ্ট ট্রাফিক:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">মাসের দিন</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <!--
+      Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
+      Bengali requires: one (0, 1), other (everything else).
+      Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
+    -->
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d মিনিট</item>
+        <item quantity="other">%1$d মিনিট</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d দিন</item>
+        <item quantity="other">%1$d দিন</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">সিম কার্ড আইকন</string>
+    <string name="sim_card_details_content_desc">%1$s সিম কার্ডের বিবরণ</string>
+    <string name="adjust_minutes_content_desc">অবশিষ্ট মিনিট সামঞ্জস্য করুন</string>
+    <string name="adjust_traffic_content_desc">অবশিষ্ট ট্রাফিক সামঞ্জস্য করুন</string>
+    <string name="traffic_info_content_desc">ট্রাফিক ট্র্যাকিং সম্পর্কে আরও তথ্য</string>
+    <string name="set_limits_content_desc">%1$s-এর জন্য সীমা সেট করুন</string>
+    <string name="change_auto_reset_day_content_desc">স্বয়ংক্রিয় রিসেট দিন পরিবর্তন করুন</string>
+    <string name="toggle_auto_reset_content_desc">স্বয়ংক্রিয় রিসেট সক্ষম বা নিষ্ক্রিয় করুন</string>
+    <string name="menu_language_content_desc">ভাষা পরিবর্তন করুন</string>
+    <string name="menu_theme_content_desc">থিম পরিবর্তন করুন</string>
+    <string name="navigate_up_content_desc">উপরে নেভিগেট করুন</string>
+    <string name="banner_dismiss_content_desc">ব্যানার বন্ধ করুন</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">ট্র্যাকিং</string>
+    <string name="call_tracking_title">কল মিনিট ট্র্যাক করুন</string>
+    <string name="call_tracking_description">প্রতিটি সিম কার্ডের জন্য কল মিনিট গণনা করুন। শুধুমাত্র মোবাইল ডেটা ব্যবহার ট্র্যাক করতে বন্ধ করুন।</string>
+    <string name="assistant_access_title">সহকারী অ্যাক্সেস</string>
+    <string name="assistant_access_description">অন-ডিভাইস সহকারীকে আপনার অবশিষ্ট মিনিট এবং মোবাইল ডেটার অনুরোধ করার অনুমতি দিন (Android 16+)। ডিফল্টভাবে নিষ্ক্রিয়। সহকারী প্রাপ্ত উত্তর প্রক্রিয়া করতে পারে।</string>
+    <string name="app_functions_display_description">অন-ডিভাইস সহকারীর সাথে অবশিষ্ট মিনিট এবং মোবাইল ডেটা শেয়ার করে</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">About</string>
+    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
+    <string name="about_author_name">Author: Pavel Mukhin</string>
+    <string name="about_email_label">Email:</string>
+    <string name="about_signoff">Best regards,</string>
+    <string name="about_version_format">Version %1$s (%2$d)</string>
+    <string name="about_content_desc">About info</string>
+</resources>

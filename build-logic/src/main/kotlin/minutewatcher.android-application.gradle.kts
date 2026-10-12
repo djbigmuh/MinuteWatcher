@@ -4,6 +4,7 @@ import com.example.minutewatcher.buildlogic.SdkVersions
 plugins {
     id("com.android.application")
     id("minutewatcher.android.lint")
+    id("minutewatcher.static-analysis")
 }
 
 extensions.configure<ApplicationExtension> {

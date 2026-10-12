@@ -123,6 +123,7 @@ class SimCardItemTest {
         effectiveTrafficLimitGb: Float = 0f,
         isTrafficLimitSet: Boolean = false,
         manualAdjustment: Int = 0,
+        trafficRemainingGb: Float? = if (isTrafficLimitSet) 1f else null,
     ) = SimCardUiModel(
         slot = 0,
         identity = "sim1",
@@ -136,7 +137,7 @@ class SimCardItemTest {
         isMinutesLimitSet = false,
         trafficUsedMb = 0f,
         trafficLimitMb = trafficLimitMb,
-        trafficRemainingGb = 0f,
+        trafficRemainingGb = trafficRemainingGb,
         effectiveTrafficLimitGb = effectiveTrafficLimitGb,
         trafficAdjustmentGb = trafficAdjustmentGb,
         isTrafficLimitSet = isTrafficLimitSet,

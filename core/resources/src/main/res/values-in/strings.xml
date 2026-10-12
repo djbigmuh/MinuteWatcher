@@ -1,0 +1,189 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">Kartu SIM</string>
+    <string name="no_sim_found">Kartu SIM tidak ditemukan</string>
+    <string name="check_permissions_sim">Periksa izin dan keberadaan SIM</string>
+    <string name="no_data">Tidak ada data</string>
+    <string name="error">Kesalahan</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">Reset</string>
+    <string name="theme_system">Sistem</string>
+    <string name="theme_light">Terang</string>
+    <string name="theme_dark">Gelap</string>
+    <string name="limit_button">Batas</string>
+    <string name="add_widget_button">Tambah Widget</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">Pengaturan umum disimpan. Pengaturan SIM dilewati (daftar SIM tidak tersedia)</string>
+    <string name="settings_save_partial_failure">Pengaturan umum disimpan. Pengaturan khusus SIM tidak dapat disimpan</string>
+    <string name="settings_save_partial_failure_slots">Pengaturan umum disimpan. Pengaturan khusus SIM tidak dapat disimpan untuk SIM %1$s</string>
+    <string name="settings_save_failed">Gagal menyimpan</string>
+    <string name="language_system">Sistem</string>
+    <string name="usage_access_dialog_title">Pelacakan Penggunaan Data</string>
+    <string name="usage_access_dialog_description">Untuk melacak penggunaan data seluler Anda, MinuteWatcher memerlukan izin "Akses Penggunaan".\n\nIni adalah izin tingkat sistem yang memungkinkan aplikasi melihat seberapa banyak data yang dikirim dan diterima melalui jaringan seluler.\n\nKami tidak melacak aplikasi yang Anda gunakan atau riwayat browsing Anda.</string>
+    <string name="phone_permission_permanent_denial">Izin telepon ditolak secara permanen. Beberapa fitur tidak akan berfungsi hingga Anda mengaktifkannya di Pengaturan Aplikasi.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">Pengaturan Widget</string>
+    <string name="widget_description">Menampilkan sisa menit dan lalu lintas seluler per kartu SIM.</string>
+    <string name="background_transparency">Transparansi Latar Belakang</string>
+    <string name="display_minutes">Tampilkan menit</string>
+    <string name="display_minutes_limit">Tampilkan batas menit</string>
+    <string name="display_traffic">Tampilkan lalu lintas</string>
+    <string name="display_traffic_limit">Tampilkan batas lalu lintas</string>
+    <string name="display_name">Tampilkan nama</string>
+    <string name="display_icon">Tampilkan ikon</string>
+    <string name="show_sim_checkbox">Tampilkan kartu SIM ini</string>
+    <string name="preview">Pratinjau</string>
+    <string name="layout_mode_title">Mode tata letak</string>
+    <string name="sim_arrangement_prompt">Pilih susunan SIM</string>
+    <string name="color_background">Warna latar belakang:</string>
+    <string name="custom_color">Kustom&#8230;</string>
+    <string name="font_size">Ukuran Huruf</string>
+    <string name="traffic_tracking_limitation_title">Batasan Pelacakan Lalu Lintas</string>
+    <string name="traffic_tracking_limitation_body">Android menyediakan penggunaan data seluler sebagai nilai agregat untuk seluruh perangkat.\n\nMinuteWatcher mengatribusikan semua lalu lintas seluler ke kartu SIM yang saat ini dipilih sebagai "SIM Data Default" di pengaturan sistem Anda.\n\nJika Anda beralih SIM data default, aplikasi akan mendeteksi perubahan dan mulai mengatribusikan lalu lintas ke SIM baru sejak saat itu.</string>
+    <string name="tracking_banner_phone_permission">Izin telepon diperlukan untuk mengidentifikasi kartu SIM. Beberapa fitur mungkin tidak berfungsi.</string>
+    <string name="tracking_banner_usage_access">Akses Penggunaan diperlukan untuk melacak penggunaan data seluler secara akurat.</string>
+    <string name="tracking_banner_sim_discovery_error">Gagal menemukan kartu SIM. Silakan coba lagi.</string>
+    <string name="tracking_banner_traffic_error">Terjadi kesalahan saat memperbarui data lalu lintas.</string>
+    <string name="tracking_banner_calls_error">Terjadi kesalahan saat memperbarui data pelacakan panggilan.</string>
+    <string name="tracking_banner_appsearch_error">Pengindeksan AppSearch gagal. Pencarian global mungkin sudah kedaluwarsa. Ini tidak memengaruhi widget atau fungsionalitas pelacakan.</string>
+    <string name="tracking_banner_shortcuts_error">Pembaruan pintasan dinamis gagal.</string>
+    <string name="tracking_banner_notification_permission">Izin pemberitahuan disarankan untuk menerima peringatan penggunaan.</string>
+    <string name="tracking_banner_widget_error">Widget tidak dapat diperbarui karena keterbatasan sistem.</string>
+    <string name="tracking_banner_inaccurate_calls">Beberapa panggilan tidak dapat dicocokkan dengan kartu SIM dan diatribusikan ke satu SIM aktif. Nilai mungkin tidak akurat.</string>
+    <string name="tracking_banner_calls_attribution_error">Terdeteksi beberapa panggilan simultan. Tidak dapat menentukan kartu SIM; menit untuk panggilan tersebut tidak dikreditkan.</string>
+    <string name="tracking_banner_observation_failed">Layanan pelacakan data telah berhenti setelah beberapa kesalahan. Silakan coba lagi atau mulai ulang aplikasi.</string>
+    <string name="tracking_banner_storage_degraded">Penyimpanan terdegradasi: statistik mungkin disetel ulang setelah mulai ulang aplikasi. Periksa pengaturan sistem.</string>
+    <string name="settings_load_error">Kesalahan memuat pengaturan</string>
+    <string name="sim_list_unavailable_error">Daftar SIM tidak tersedia. Pengaturan SIM akan tersedia setelah dimuat ulang.</string>
+    <string name="refresh_error">Kesalahan penyegaran data</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">Data mungkin sudah kedaluwarsa</string>
+    <string name="notification_permission_permanent_denial">Pemberitahuan dinonaktifkan. Aktifkan di Pengaturan Aplikasi untuk menerima peringatan.</string>
+    <string name="action_grant">Berikan</string>
+    <string name="action_settings">Pengaturan</string>
+    <string name="action_app_settings">Pengaturan Aplikasi</string>
+    <string name="action_retry">Coba lagi</string>
+    <string name="validation_error_invalid_range">Masukkan nilai antara %1$s dan %2$s</string>
+    <string name="validation_error_invalid_number">Masukkan nomor yang valid</string>
+    <string name="validation_error_field_required">Kolom tidak boleh kosong</string>
+    <string name="widget_pin_unsupported">Peluncur Anda tidak mendukung penempatan widget otomatis. Tambahkan widget secara manual.</string>
+    <string name="widget_already_added">Widget sudah ditambahkan ke layar beranda</string>
+    <string name="widget_added_success">Widget ditambahkan ke layar beranda</string>
+    <string name="onboarding_title">Selamat datang di MinuteWatcher!</string>
+    <string name="onboarding_message">MinuteWatcher tidak dapat secara otomatis mengambil detail paket Anda dari operator seluler Anda.\n\nUntuk mulai melacak, harap tetapkan batas menit/data dan hari reset bulanan secara manual untuk setiap kartu SIM. Aplikasi akan menangani semua pemantauan sejak saat itu.</string>
+    <string name="onboarding_button">Mengerti</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">Indeks slot SIM tidak valid: %1$d</string>
+    <string name="error_storage_unavailable">Penyimpanan tidak tersedia untuk slot %1$d. Coba lagi nanti.</string>
+    <string name="error_sim_removed">SIM dilepas dari slot %1$d</string>
+    <string name="error_operation_failed_retry">Operasi gagal setelah percobaan ulang.</string>
+    <string name="error_unknown">Kesalahan tidak dikenal: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">Batal</string>
+    <string name="save_button">Simpan</string>
+    <string name="set_button">Atur</string>
+    <string name="action_ok">OK</string>
+    <string name="reset_limits_button">Reset batas</string>
+    <string name="reset_counters">Reset penghitung</string>
+    <string name="reset_confirmation_title">Reset Penghitung?</string>
+    <string name="reset_confirmation_body">Ini akan menghapus semua penggunaan yang dilacak dan penyesuaian untuk kartu SIM ini. Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="reset_limits_confirmation_title">Reset batas?</string>
+    <string name="reset_limits_confirmation_body">Ini akan menghapus batas menit dan lalu lintas serta menonaktifkan rollover untuk kartu SIM ini. Penggunaan yang dilacak tidak akan diubah.</string>
+    <string name="choose_reset_day">Pilih hari dalam bulan untuk reset otomatis:</string>
+    <string name="choose_reset_day_dialog_title">Pilih hari reset</string>
+    <string name="rollover_label">Akumulasikan sisa</string>
+    <string name="set_minutes_limit">Atur batas menit bulanan:</string>
+    <string name="minutes_limit_hint">Batas menit</string>
+    <string name="set_traffic_limit">Atur batas lalu lintas bulanan (GB):</string>
+    <string name="traffic_limit_gb_hint_dialog">Batas lalu lintas dalam GB</string>
+    <string name="limits_for_operator">Batas untuk %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Pemberitahuan</string>
+    <string name="notify_low_minutes_title">Beritahu tentang sisa menit yang sedikit</string>
+    <string name="notify_low_traffic_title">Beritahu tentang sisa lalu lintas yang sedikit</string>
+    <string name="aod_summary_title">Ringkasan Always-on Display</string>
+    <string name="aod_summary_description">Tampilkan pemberitahuan senyap berkelanjutan dengan sisa menit dan lalu lintas. Terlihat di layar kunci dan, pada perangkat yang menampilkan pemberitahuan di sana, di Always-on Display.</string>
+    <string name="aod_summary_unavailable">Aktifkan pemberitahuan untuk menggunakan fitur ini</string>
+    <string name="notification_channel_name">Pemantauan Penggunaan</string>
+    <string name="notification_channel_desc">Melacak penggunaan menit dan lalu lintas</string>
+    <string name="notification_channel_aod_summary_name">Ringkasan Always-on Display</string>
+    <string name="notification_channel_aod_summary_desc">Ringkasan senyap berkelanjutan dari sisa menit dan lalu lintas</string>
+    <string name="notification_minutes_title">Penggunaan menit %1$s</string>
+    <string name="notification_minutes_body">Penggunaan %1$s menit! Sisa %2$s (%3$d%%). Bulan berakhir dalam %4$s.</string>
+    <string name="notification_traffic_title">Penggunaan lalu lintas %1$s</string>
+    <string name="notification_traffic_body">Penggunaan lalu lintas %1$s! Sisa %2$.1f GB (%3$d%%). Bulan berakhir dalam %4$s.</string>
+    <string name="notification_minutes_exhausted_body">Paket menit untuk periode tersebut telah habis.</string>
+    <string name="notification_traffic_exhausted_body">Paket lalu lintas untuk periode tersebut telah habis.</string>
+    <string name="notification_minutes_body_no_period">Penggunaan %1$s menit! Sisa %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">Penggunaan lalu lintas %1$s! Sisa %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Batas menit tercapai. Penggunaan yang dilacak terus terakumulasi hingga Anda menyetel ulangnya.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Batas lalu lintas tercapai. Penggunaan yang dilacak terus terakumulasi hingga Anda menyetel ulangnya.</string>
+    <string name="usage_level_low">RENDAH</string>
+    <string name="usage_level_critical">KRITIS RENDAH</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">Tersisa:</string>
+    <string name="used_text">Digunakan</string>
+    <string name="limit_text">Batas</string>
+    <string name="minutes_abbr">mnt.</string>
+    <string name="unit_minutes">mnt</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">Lalu lintas</string>
+    <string name="traffic_remaining_text">Sisa lalu lintas:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">hari dalam bulan</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <!--
+      Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
+      Indonesian requires: other (everything else).
+      Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
+    -->
+    <plurals name="minutes_plurals">
+        <item quantity="other">%1$d menit</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="other">%1$d hari</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">Ikon kartu SIM</string>
+    <string name="sim_card_details_content_desc">Detail kartu SIM %1$s</string>
+    <string name="adjust_minutes_content_desc">Sesuaikan sisa menit</string>
+    <string name="adjust_traffic_content_desc">Sesuaikan sisa lalu lintas</string>
+    <string name="traffic_info_content_desc">Informasi lebih lanjut tentang pelacakan lalu lintas</string>
+    <string name="set_limits_content_desc">Atur batas untuk %1$s</string>
+    <string name="change_auto_reset_day_content_desc">Ubah hari reset otomatis</string>
+    <string name="toggle_auto_reset_content_desc">Aktifkan atau nonaktifkan reset otomatis</string>
+    <string name="menu_language_content_desc">Ubah bahasa</string>
+    <string name="menu_theme_content_desc">Ubah tema</string>
+    <string name="navigate_up_content_desc">Navigasi ke atas</string>
+    <string name="banner_dismiss_content_desc">Tutup banner</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Pelacakan</string>
+    <string name="call_tracking_title">Lacak menit panggilan</string>
+    <string name="call_tracking_description">Hitung menit panggilan untuk setiap kartu SIM. Matikan untuk melacak penggunaan data seluler saja.</string>
+    <string name="assistant_access_title">Akses Asisten</string>
+    <string name="assistant_access_description">Izinkan asisten di perangkat meminta sisa menit dan data seluler Anda (Android 16+). Dinonaktifkan secara default. Asisten dapat memproses jawaban yang diterimanya.</string>
+    <string name="app_functions_display_description">Membagikan sisa menit dan data seluler dengan asisten di perangkat</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">About</string>
+    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
+    <string name="about_author_name">Author: Pavel Mukhin</string>
+    <string name="about_email_label">Email:</string>
+    <string name="about_signoff">Best regards,</string>
+    <string name="about_version_format">Version %1$s (%2$d)</string>
+    <string name="about_content_desc">About info</string>
+</resources>

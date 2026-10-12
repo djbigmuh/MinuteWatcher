@@ -285,4 +285,21 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
             // 6. Verify recovery to Ready
             assertTrue(manager.status.value is TrackingStatus.Ready)
         }
+
+    @Test
+    fun `initialize with same flow instance does not restart observation`() =
+        runTest(testDispatcher) {
+            val manager = createManager(appScope)
+            val flow = MutableStateFlow(createSnapshotWithOneSim())
+
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
+            val job1 = manager.job
+
+            manager.initialize(flow)
+            testScheduler.advanceUntilIdle()
+            val job2 = manager.job
+
+            assertEquals("Job should not be restarted for same flow instance", job1, job2)
+        }
 }

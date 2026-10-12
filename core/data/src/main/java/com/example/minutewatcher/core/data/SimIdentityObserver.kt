@@ -113,9 +113,16 @@ internal class SimIdentityObserver
         }
 
         @VisibleForTesting
-        internal fun emitManualTriggerForTest(): Boolean = manualTrigger.tryEmit(Unit)
+        internal fun emitManualTrigger(): Boolean = manualTrigger.tryEmit(Unit)
+
+    @VisibleForTesting
+    internal fun resetGeneralAttempt() {
+        generalAttempt.set(0)
+    }
 
         private fun scheduleDiscoveryRecovery(reason: String) {
+            val previous = recoveryJob.getAndSet(null)
+            previous?.cancel()
             val newJob =
                 scope.launch {
                     delay(DISCOVERY_RECOVERY_COOLDOWN_MS.milliseconds)
@@ -123,7 +130,9 @@ internal class SimIdentityObserver
                     AppLogger.d("SimIdentityObserver: auto-recovery after stop ($reason)")
                     manualTrigger.emit(Unit)
                 }
-            recoveryJob.getAndSet(newJob)?.cancel()
+            if (!recoveryJob.compareAndSet(null, newJob)) {
+                newJob.cancel()
+            }
         }
 
         private fun cancelRecovery() {
@@ -190,6 +199,11 @@ internal class SimIdentityObserver
                     replay = 1,
                 )
 
+    /**
+     * Flow of physical active SIMs derived from discovery.
+     *
+     * Invariant: An empty list emitted on failure is always accompanied by a non-Active status.
+     */
         @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
@@ -248,15 +262,10 @@ internal class SimIdentityObserver
                                 }
 
                                 if (loopAttempts >= MAX_DISCOVERY_LOOP_ATTEMPTS) {
-                                    AppLogger.e(
-                                        "SimIdentityObserver: discovery loop safety limit reached " +
-                                            "($MAX_DISCOVERY_LOOP_ATTEMPTS)",
-                                    )
-                                    transitionStatus(
-                                        TrackingStatus.Error(
-                                            TrackingStatus.ErrorType.UNKNOWN,
-                                            "SIM discovery loop safety limit reached",
-                                        ),
+                                    enterTerminalDiscoveryFailure(
+                                        message = "SIM discovery loop safety limit reached",
+                                        reasonForRecovery = "LOOP_LIMIT",
+                                        emitEmpty = false,
                                     )
                                 }
                             }.retryWhen { cause, _ ->
@@ -265,18 +274,11 @@ internal class SimIdentityObserver
 
                                 val currentAttempt = generalAttempt.incrementAndGet()
                                 if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
-                                    AppLogger.e(
-                                        "SimIdentityObserver: physicalActiveSims recovery stopped " +
-                                            "after $currentAttempt consecutive IO failures",
-                                        cause,
+                                    enterTerminalDiscoveryFailure(
+                                        message = "SIM recovery stopped after $currentAttempt consecutive IO failures",
+                                        reasonForRecovery = "IO_FAILURE",
+                                        emitEmpty = false,
                                     )
-                                    transitionStatus(
-                                        TrackingStatus.Error(
-                                            TrackingStatus.ErrorType.UNKNOWN,
-                                            "SIM recovery stopped after $currentAttempt consecutive IO failures",
-                                        ),
-                                    )
-                                    scheduleDiscoveryRecovery("IO_FAILURE")
                                     return@retryWhen false
                                 }
 
@@ -316,6 +318,24 @@ internal class SimIdentityObserver
                             }
                         }
                 }.distinctUntilChanged()
+
+    private suspend fun FlowCollector<List<ActiveSimInfo>>.enterTerminalDiscoveryFailure(
+        message: String,
+        reasonForRecovery: String,
+        emitEmpty: Boolean,
+    ) {
+        AppLogger.e(message)
+        transitionStatus(
+            TrackingStatus.Error(
+                TrackingStatus.ErrorType.UNKNOWN,
+                message,
+            ),
+        )
+        scheduleDiscoveryRecovery(reasonForRecovery)
+        if (emitEmpty) {
+            emit(emptyList())
+        }
+    }
 
         private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
             result: SimDiscoveryResult,
@@ -370,18 +390,11 @@ internal class SimIdentityObserver
         ): Boolean {
             val currentAttempt = generalAttempt.incrementAndGet()
             return if (currentAttempt > MAX_GENERAL_ATTEMPTS) {
-                AppLogger.e(
-                    "SimIdentityObserver: physicalActiveSims discovery stopped " +
-                        "after $currentAttempt consecutive logical failures: $reason",
+                enterTerminalDiscoveryFailure(
+                    message = "SIM discovery stopped after $currentAttempt failures: $reason",
+                    reasonForRecovery = "LOGICAL_FAILURE: $reason",
+                    emitEmpty = true,
                 )
-                transitionStatus(
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "SIM discovery stopped after $currentAttempt failures: $reason",
-                    ),
-                )
-                scheduleDiscoveryRecovery("LOGICAL_FAILURE: $reason")
-                emit(emptyList())
                 false
             } else {
                 val backoff =

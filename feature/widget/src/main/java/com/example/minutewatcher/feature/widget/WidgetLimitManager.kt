@@ -3,11 +3,13 @@ package com.example.minutewatcher.feature.widget
 import android.content.Context
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.observeWithRetry
 import com.example.minutewatcher.core.domain.AppSettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,14 +27,37 @@ class WidgetLimitManager
         @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val exceededUpdateCounter = AtomicLong(0L)
+    private val started = AtomicBoolean(false)
 
         @Volatile
         private var cachedLimitExceeded: Boolean? = null
 
-        init {
+    /**
+     * Starts observation explicitly from Application.onCreate.
+     * The constructor has no side effects, and repeated calls are ignored.
+     * Idempotent and thread-safe.
+     */
+    fun start() {
+        if (started.compareAndSet(false, true)) {
             scope.launch {
-                appSettingsRepository.observeAppSettings().collectLatest { settings ->
-                    cachedLimitExceeded = settings.widgetLimitExceeded
+                appSettingsRepository
+                    .observeAppSettings()
+                    .observeWithRetry(
+                        label = "WidgetLimitManager: appSettings",
+                        logThreshold = 3,
+                        onPersistentFailure = { e ->
+                            cachedLimitExceeded = null
+                            AppLogger.e("WidgetLimitManager: persistent failure observing app settings", e)
+                        },
+                        onRecovered = {
+                            AppLogger.d("WidgetLimitManager: recovered observing app settings")
+                        },
+                        onSourceCompleted = {
+                            AppLogger.w("WidgetLimitManager: source completed observing app settings")
+                        },
+                    ).collectLatest { settings ->
+                        cachedLimitExceeded = settings.widgetLimitExceeded
+                    }
                 }
             }
         }

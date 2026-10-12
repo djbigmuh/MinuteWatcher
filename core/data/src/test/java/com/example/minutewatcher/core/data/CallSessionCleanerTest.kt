@@ -39,7 +39,7 @@ class CallSessionCleanerTest {
             val subId = 1
             whenever(sessionRepository.getActiveCallSubIds()).thenReturn(listOf(subId))
             whenever(sessionRepository.getCallStartTime(subId)).thenReturn(flowOf(60_000_000L))
-            whenever(sessionRepository.getBootTime(subId)).thenReturn(flowOf(10_000_000L))
+            whenever(sessionRepository.getElapsedRealtime(subId)).thenReturn(flowOf(10_000_000L))
 
             val cleared = cleaner.clearStaleSessions(context)
 
@@ -53,7 +53,7 @@ class CallSessionCleanerTest {
             val subId = 1
             whenever(sessionRepository.getActiveCallSubIds()).thenReturn(listOf(subId))
             whenever(sessionRepository.getCallStartTime(subId)).thenReturn(flowOf(110_000_000L))
-            whenever(sessionRepository.getBootTime(subId)).thenReturn(flowOf(60_000_000L))
+            whenever(sessionRepository.getElapsedRealtime(subId)).thenReturn(flowOf(60_000_000L))
 
             val cleared = cleaner.clearStaleSessions(context)
 
@@ -68,7 +68,7 @@ class CallSessionCleanerTest {
             val subId = 1
             whenever(sessionRepository.getActiveCallSubIds()).thenReturn(listOf(subId))
             whenever(sessionRepository.getCallStartTime(subId)).thenReturn(flowOf(10_000_000L))
-            whenever(sessionRepository.getBootTime(subId)).thenReturn(flowOf(10_000_000L))
+            whenever(sessionRepository.getElapsedRealtime(subId)).thenReturn(flowOf(10_000_000L))
 
             val cleared = cleaner.clearStaleSessions(context)
 
@@ -82,7 +82,7 @@ class CallSessionCleanerTest {
             val subId = 1
             whenever(sessionRepository.getActiveCallSubIds()).thenReturn(listOf(subId))
             whenever(sessionRepository.getCallStartTime(subId)).thenReturn(flowOf(60_005_000L))
-            whenever(sessionRepository.getBootTime(subId)).thenReturn(flowOf(10_000_000L))
+            whenever(sessionRepository.getElapsedRealtime(subId)).thenReturn(flowOf(10_000_000L))
 
             val cleared = cleaner.clearStaleSessions(context)
 
@@ -96,7 +96,7 @@ class CallSessionCleanerTest {
             val subId = 1
             whenever(sessionRepository.getActiveCallSubIds()).thenReturn(listOf(subId))
             whenever(sessionRepository.getCallStartTime(subId)).thenReturn(flowOf(0L))
-            whenever(sessionRepository.getBootTime(subId)).thenReturn(flowOf(10_000_000L))
+            whenever(sessionRepository.getElapsedRealtime(subId)).thenReturn(flowOf(10_000_000L))
 
             val cleared = cleaner.clearStaleSessions(context)
 
@@ -112,7 +112,7 @@ class CallSessionCleanerTest {
             whenever(sessionRepository.getActiveCallSubIds()).thenReturn(listOf(subId1, subId2))
             whenever(sessionRepository.getCallStartTime(subId1)).thenAnswer { throw IOException("Read error") }
             whenever(sessionRepository.getCallStartTime(subId2)).thenReturn(flowOf(60_000_000L))
-            whenever(sessionRepository.getBootTime(subId2)).thenReturn(flowOf(10_000_000L))
+            whenever(sessionRepository.getElapsedRealtime(subId2)).thenReturn(flowOf(10_000_000L))
 
             val cleared = cleaner.clearStaleSessions(context)
 
@@ -144,9 +144,9 @@ class CallSessionCleanerTest {
             val subId2 = 2
             whenever(sessionRepository.getActiveCallSubIds()).thenReturn(listOf(subId1, subId2))
             whenever(sessionRepository.getCallStartTime(subId1)).thenReturn(flowOf(110_000_000L))
-            whenever(sessionRepository.getBootTime(subId1)).thenReturn(flowOf(60_000_000L))
+            whenever(sessionRepository.getElapsedRealtime(subId1)).thenReturn(flowOf(60_000_000L))
             whenever(sessionRepository.getCallStartTime(subId2)).thenReturn(flowOf(110_000_000L))
-            whenever(sessionRepository.getBootTime(subId2)).thenReturn(flowOf(60_000_000L))
+            whenever(sessionRepository.getElapsedRealtime(subId2)).thenReturn(flowOf(60_000_000L))
 
             whenever(sessionRepository.clearCallSession(subId1)).thenAnswer { throw IOException("DB error") }
 

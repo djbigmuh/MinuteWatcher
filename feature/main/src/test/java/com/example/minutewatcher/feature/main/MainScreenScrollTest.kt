@@ -58,6 +58,8 @@ class MainScreenScrollTest {
                 onOpenUsageAccessSettings = {},
                 onOpenAppSettings = {},
                 onGrantNotificationPermission = {},
+                onShowAbout = {},
+                onEmailAuthor = {},
             )
 
         var listState: LazyListState? = null
@@ -123,6 +125,8 @@ class MainScreenScrollTest {
                 onOpenUsageAccessSettings = {},
                 onOpenAppSettings = {},
                 onGrantNotificationPermission = {},
+                onShowAbout = {},
+                onEmailAuthor = {},
             )
 
         var listState: LazyListState? = null
@@ -168,6 +172,8 @@ class MainScreenScrollTest {
                 onOpenUsageAccessSettings = {},
                 onOpenAppSettings = {},
                 onGrantNotificationPermission = {},
+                onShowAbout = {},
+                onEmailAuthor = {},
             )
 
         composeTestRule.setContent {

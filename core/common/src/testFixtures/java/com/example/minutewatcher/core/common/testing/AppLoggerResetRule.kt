@@ -1,6 +1,6 @@
 package com.example.minutewatcher.core.common.testing
 
-import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.resetAppLoggerForTest
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
@@ -9,10 +9,10 @@ import org.junit.runner.Description
  */
 class AppLoggerResetRule : TestWatcher() {
     override fun starting(description: Description) {
-        AppLogger.resetForTest()
+        resetAppLoggerForTest()
     }
 
     override fun finished(description: Description) {
-        AppLogger.resetForTest()
+        resetAppLoggerForTest()
     }
 }

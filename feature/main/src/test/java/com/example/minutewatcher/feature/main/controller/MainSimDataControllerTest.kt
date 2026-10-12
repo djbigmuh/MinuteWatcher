@@ -54,6 +54,7 @@ class MainSimDataControllerTest {
     private val simLimitsRepository: SimLimitsRepository = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
+    private val trackingStatusRepository: TrackingStatusRepository = mock()
 
     private lateinit var controller: MainSimDataController
 
@@ -62,6 +63,7 @@ class MainSimDataControllerTest {
         initTestLogger()
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(flowOf(emptyList()))
         whenever(usageStateRepository.isDataLoaded()).thenReturn(true)
+        whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(flowOf(emptyMap()))
     }
 
     @Test
@@ -135,6 +137,7 @@ class MainSimDataControllerTest {
             simLimitsRepository,
             usageUseCase,
             dataChangeNotifier,
+            trackingStatusRepository,
             mainDispatcherRule.testDispatcher,
             backgroundScope,
         )
@@ -294,6 +297,7 @@ class MainSimDataControllerTest {
                     hangingLimitsRepository,
                     usageUseCase,
                     dataChangeNotifier,
+                    trackingStatusRepository,
                     mainDispatcherRule.testDispatcher,
                     backgroundScope,
                 )
@@ -317,47 +321,162 @@ class MainSimDataControllerTest {
     @Test
     fun `retryAppSearch does not crash on exception`() =
         runTest {
-            whenever(trackingRecoveryController.retryAppSearch()).thenThrow(IllegalStateException("Recovery failed"))
-            controller = createController()
+            var invokedKey: TrackingKey? = null
+            val fakeStatusRepository =
+                object : TrackingStatusRepository {
+                    override suspend fun recoverTracking(key: TrackingKey) {
+                        invokedKey = key
+                        throw IllegalStateException("Recovery failed")
+                    }
+
+                    override fun observeTrackingStatus() = flowOf(emptyMap<TrackingKey, TrackingStatus>())
+                }
+            val recoveryController = TrackingRecoveryController(fakeStatusRepository)
+            controller =
+                MainSimDataController(
+                    usageStateRepository,
+                    recoveryController,
+                    simIdentityRepository,
+                    simLimitsRepository,
+                    usageUseCase,
+                    dataChangeNotifier,
+                    trackingStatusRepository,
+                    mainDispatcherRule.testDispatcher,
+                    backgroundScope,
+                )
             controller.retryAppSearch()
+            testScheduler.runCurrent()
             testScheduler.advanceUntilIdle()
+            assertEquals(TrackingKey.APPSEARCH, invokedKey)
         }
 
     @Test
     fun `retryCalls does not crash on exception`() =
         runTest {
-            whenever(trackingRecoveryController.retryCalls()).thenThrow(IllegalStateException("Recovery failed"))
-            controller = createController()
+            var invokedKey: TrackingKey? = null
+            val fakeStatusRepository =
+                object : TrackingStatusRepository {
+                    override suspend fun recoverTracking(key: TrackingKey) {
+                        invokedKey = key
+                        throw IllegalStateException("Recovery failed")
+                    }
+
+                    override fun observeTrackingStatus() = flowOf(emptyMap<TrackingKey, TrackingStatus>())
+                }
+            val recoveryController = TrackingRecoveryController(fakeStatusRepository)
+            controller =
+                MainSimDataController(
+                    usageStateRepository,
+                    recoveryController,
+                    simIdentityRepository,
+                    simLimitsRepository,
+                    usageUseCase,
+                    dataChangeNotifier,
+                    trackingStatusRepository,
+                    mainDispatcherRule.testDispatcher,
+                    backgroundScope,
+                )
             controller.retryCalls()
+            testScheduler.runCurrent()
             testScheduler.advanceUntilIdle()
+            assertEquals(TrackingKey.CALLS, invokedKey)
         }
 
     @Test
     fun `retryShortcuts does not crash on exception`() =
         runTest {
-            whenever(trackingRecoveryController.retryShortcuts()).thenThrow(IllegalStateException("Recovery failed"))
-            controller = createController()
+            var invokedKey: TrackingKey? = null
+            val fakeStatusRepository =
+                object : TrackingStatusRepository {
+                    override suspend fun recoverTracking(key: TrackingKey) {
+                        invokedKey = key
+                        throw IllegalStateException("Recovery failed")
+                    }
+
+                    override fun observeTrackingStatus() = flowOf(emptyMap<TrackingKey, TrackingStatus>())
+                }
+            val recoveryController = TrackingRecoveryController(fakeStatusRepository)
+            controller =
+                MainSimDataController(
+                    usageStateRepository,
+                    recoveryController,
+                    simIdentityRepository,
+                    simLimitsRepository,
+                    usageUseCase,
+                    dataChangeNotifier,
+                    trackingStatusRepository,
+                    mainDispatcherRule.testDispatcher,
+                    backgroundScope,
+                )
             controller.retryShortcuts()
+            testScheduler.runCurrent()
             testScheduler.advanceUntilIdle()
+            assertEquals(TrackingKey.SHORTCUTS, invokedKey)
         }
 
     @Test
     fun `retryTraffic does not crash on exception and does not notify`() =
         runTest {
-            whenever(trackingRecoveryController.retryTraffic()).thenThrow(IllegalStateException("Recovery failed"))
-            controller = createController()
+            var invokedKey: TrackingKey? = null
+            val fakeStatusRepository =
+                object : TrackingStatusRepository {
+                    override suspend fun recoverTracking(key: TrackingKey) {
+                        invokedKey = key
+                        throw IllegalStateException("Recovery failed")
+                    }
+
+                    override fun observeTrackingStatus() = flowOf(emptyMap<TrackingKey, TrackingStatus>())
+                }
+            val recoveryController = TrackingRecoveryController(fakeStatusRepository)
+            controller =
+                MainSimDataController(
+                    usageStateRepository,
+                    recoveryController,
+                    simIdentityRepository,
+                    simLimitsRepository,
+                    usageUseCase,
+                    dataChangeNotifier,
+                    trackingStatusRepository,
+                    mainDispatcherRule.testDispatcher,
+                    backgroundScope,
+                )
             controller.retryTraffic()
+            testScheduler.runCurrent()
             testScheduler.advanceUntilIdle()
+            assertEquals(TrackingKey.TRAFFIC, invokedKey)
             verify(dataChangeNotifier, never()).notifyDataChanged(any(), any())
         }
 
     @Test
     fun `retrySimDiscovery does not crash on exception`() =
         runTest {
-            whenever(trackingRecoveryController.retrySimDiscovery()).thenThrow(IllegalStateException("Recovery failed"))
-            controller = createController()
+            var invokedKey: TrackingKey? = null
+            val fakeStatusRepository =
+                object : TrackingStatusRepository {
+                    override suspend fun recoverTracking(key: TrackingKey) {
+                        invokedKey = key
+                        throw IllegalStateException("Recovery failed")
+                    }
+
+                    override fun observeTrackingStatus() = flowOf(emptyMap<TrackingKey, TrackingStatus>())
+                }
+            val recoveryController = TrackingRecoveryController(fakeStatusRepository)
+            controller =
+                MainSimDataController(
+                    usageStateRepository,
+                    recoveryController,
+                    simIdentityRepository,
+                    simLimitsRepository,
+                    usageUseCase,
+                    dataChangeNotifier,
+                    trackingStatusRepository,
+                    mainDispatcherRule.testDispatcher,
+                    backgroundScope,
+                )
             controller.retrySimDiscovery()
+            testScheduler.runCurrent()
             testScheduler.advanceUntilIdle()
+            assertEquals(TrackingKey.SIM_DISCOVERY, invokedKey)
         }
 
     @Test
@@ -390,6 +509,7 @@ class MainSimDataControllerTest {
                     simLimitsRepository,
                     usageUseCase,
                     dataChangeNotifier,
+                    trackingStatusRepository,
                     mainDispatcherRule.testDispatcher,
                     appScope,
                 )
@@ -487,6 +607,55 @@ class MainSimDataControllerTest {
 
             job.cancel()
         }
+
+    @Test
+    fun `uiState transitions from Empty to Error when SIM_DISCOVERY error occurs`() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val modelsFlow = MutableStateFlow(emptyList<SimCardUiModel>())
+            val statusFlow = MutableStateFlow<Map<TrackingKey, TrackingStatus>>(emptyMap())
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(modelsFlow)
+            whenever(usageStateRepository.isDataLoaded()).thenReturn(true)
+            whenever(trackingStatusRepository.observeTrackingStatus()).thenReturn(statusFlow)
+
+            controller = createController()
+            val uiState = controller.observeUiState(backgroundScope)
+
+            val emittedStates = mutableListOf<SimCardListState>()
+            val job = launch { uiState.collect { emittedStates.add(it) } }
+            testScheduler.runCurrent()
+
+            assertEquals(SimCardListState.Empty, emittedStates.last())
+
+            statusFlow.value =
+                mapOf(TrackingKey.SIM_DISCOVERY to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN))
+            testScheduler.runCurrent()
+
+            val lastState = emittedStates.last()
+            assertTrue(lastState is SimCardListState.Error)
+            assertEquals(R.string.tracking_banner_sim_discovery_error, (lastState as SimCardListState.Error).messageRes)
+            assertEquals(SimCardListState.ErrorKind.SIM_DISCOVERY, lastState.kind)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `computeSimCardListState handles all outcomes correctly`() {
+        val model = createTestSimModel()
+        assertEquals(SimCardListState.Success(listOf(model)), computeSimCardListState(listOf(model), true, emptyMap()))
+        assertEquals(SimCardListState.Loading, computeSimCardListState(emptyList(), false, emptyMap()))
+
+        val errorState =
+            computeSimCardListState(
+                emptyList(),
+                true,
+                mapOf(TrackingKey.SIM_DISCOVERY to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN)),
+            )
+        assertTrue(errorState is SimCardListState.Error)
+        assertEquals(R.string.tracking_banner_sim_discovery_error, (errorState as SimCardListState.Error).messageRes)
+        assertEquals(SimCardListState.ErrorKind.SIM_DISCOVERY, errorState.kind)
+
+        assertEquals(SimCardListState.Empty, computeSimCardListState(emptyList(), true, emptyMap()))
+    }
 
     private fun createTestSimModel(slot: Int = 0) =
         SimCardUiModel(

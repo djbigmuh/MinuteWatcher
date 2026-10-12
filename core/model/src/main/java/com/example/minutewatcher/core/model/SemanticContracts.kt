@@ -26,6 +26,19 @@ enum class DataSourceType {
 
 /**
  * Semantic entity of a service package.
+ *
+ * @property id Unique identifier of the entity.
+ * @property simSlot SIM slot index.
+ * @property operatorName Operator name string.
+ * @property packageType Service package type.
+ * @property limit Service limit value.
+ * @property used Used service amount.
+ * @property remaining Remaining service amount.
+ * @property unit Measurement unit for the service.
+ * @property periodStart Start timestamp of the billing period.
+ * @property periodEnd End timestamp of the billing period.
+ * @property lastUpdateTime Timestamp of the last update.
+ * @property sourceType Data source type.
  */
 data class SemanticEntity(
     val id: String,
@@ -44,7 +57,10 @@ data class SemanticEntity(
 
 /**
  * Description of application capabilities.
- * Reserved for future extensibility and interaction with external data consumers (e.g., AI agents).
+ *
+ * @property type Capability type identifier.
+ * @property isSupported Whether the capability is supported on device.
+ * @property description Human-readable description of the capability.
  */
 data class AppCapability(
     val type: String,
@@ -54,7 +70,10 @@ data class AppCapability(
 
 /**
  * Version of the semantic schema.
- * Used to ensure backward compatibility when updating data exchange protocols.
+ *
+ * @property major Major version number.
+ * @property minor Minor version number.
+ * @property patch Patch version number.
  */
 data class SchemaVersion(
     val major: Int,
@@ -66,6 +85,13 @@ data class SchemaVersion(
 
 /**
  * Full snapshot of a SIM card's state.
+ *
+ * @property slot SIM slot index.
+ * @property identity Stable SIM identity.
+ * @property operatorName Operator name string.
+ * @property entities Map of package types to semantic entities.
+ * @property autoResetDay Auto-reset day of month.
+ * @property autoReset Whether automatic statistics reset is enabled for this SIM.
  */
 data class SimSnapshot(
     val slot: Int,
@@ -79,6 +105,14 @@ data class SimSnapshot(
 
 /**
  * Global snapshot of the application state.
+ *
+ * @property version Semantic schema version.
+ * @property timestamp Snapshot creation timestamp.
+ * @property simSnapshots List of SIM card snapshots.
+ * @property capabilities List of application capabilities.
+ * @property isManualUpdate Whether this is a manual update snapshot.
+ * @property suppressWidgetUpdate Whether widget updates are suppressed.
+ * @property revision Monotonic assembly counter.
  */
 data class GlobalSnapshot(
     val version: SchemaVersion,

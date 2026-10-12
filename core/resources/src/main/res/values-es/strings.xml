@@ -20,21 +20,13 @@
     <string name="settings_save_partial_failure_slots">Ajustes generales guardados. No se pudieron guardar los ajustes de la SIM %1$s</string>
     <string name="settings_save_failed">Error al guardar</string>
     <string name="language_system">Sistema</string>
-    <string name="language_en">Inglés</string>
-    <string name="language_ru">Ruso</string>
-    <string name="language_de">Alemán</string>
-    <string name="language_fr">Francés</string>
-    <string name="language_ar">Árabe</string>
-    <string name="language_es">Español</string>
-    <string name="language_ja">Japonés</string>
-    <string name="language_zh">Chino</string>
-    <string name="language_hi">Hindi</string>
     <string name="usage_access_dialog_title">Seguimiento del uso de datos</string>
     <string name="usage_access_dialog_description">Para rastrear su consumo de datos móviles, MinuteWatcher necesita el permiso de \"Acceso de uso\".\n\nEste es un permiso a nivel de sistema que permite que la aplicación vea cuántos datos se han enviado y recibido a través de la red celular.\n\nNo rastreamos qué aplicaciones usa ni su historial de navegación.</string>
     <string name="phone_permission_permanent_denial">Permiso de teléfono denegado permanentemente.</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Ajustes del widget</string>
+    <string name="widget_description">Muestra los minutos y datos móviles restantes por tarjeta SIM.</string>
     <string name="background_transparency">Transparencia de fondo</string>
     <string name="display_minutes">Mostrar minutos</string>
     <string name="display_minutes_limit">Mostrar límite de minutos</string>
@@ -53,13 +45,15 @@
     <string name="traffic_tracking_limitation_body">Android proporciona el uso de datos móviles como un valor agregado para todo el dispositivo. \n\nMinuteWatcher atribuye todo el tráfico móvil a la tarjeta SIM seleccionada actualmente como la \"SIM de datos predeterminada\" en los ajustes de su sistema.</string>
     <string name="tracking_banner_phone_permission">Se requiere permiso de teléfono.</string>
     <string name="tracking_banner_usage_access">Se requiere acceso de uso.</string>
+    <string name="tracking_banner_sim_discovery_error">No se pudieron detectar las tarjetas SIM. Vuelva a intentarlo.</string>
     <string name="tracking_banner_traffic_error">Error en los datos de tráfico.</string>
     <string name="tracking_banner_calls_error">Error al actualizar los datos de seguimiento de llamadas.</string>
     <string name="tracking_banner_appsearch_error">Error de indexación de AppSearch. La búsqueda global puede estar desactualizada. Esto no afecta la funcionalidad del widget o del seguimiento.</string>
     <string name="tracking_banner_shortcuts_error">Error al actualizar los accesos directos dinámicos.</string>
     <string name="tracking_banner_notification_permission">Se recomienda el permiso de notificación para recibir alertas de uso.</string>
     <string name="tracking_banner_widget_error">El widget no se puede actualizar debido a limitaciones del sistema.</string>
-    <string name="tracking_banner_inaccurate_calls">Se detectaron varias llamadas activas. Es posible que los minutos se atribuyan de forma inexacta.</string>
+    <string name="tracking_banner_inaccurate_calls">Algunas llamadas no se pudieron asociar con una tarjeta SIM y se atribuyeron a la única SIM activa. Los valores pueden ser inexactos.</string>
+    <string name="tracking_banner_calls_attribution_error">Se detectaron varias llamadas simultáneas. No se pudo determinar la tarjeta SIM; los minutos no se acreditaron.</string>
     <string name="tracking_banner_observation_failed">El servicio de seguimiento de datos se ha detenido tras varios errores. Inténtelo de nuevo o reinicie la aplicación.</string>
     <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
     <string name="settings_load_error">Error al cargar la configuración</string>
@@ -191,4 +185,13 @@
     <string name="assistant_access_title">Acceso del asistente</string>
     <string name="assistant_access_description">Permitir que el asistente del dispositivo solicite los minutos y datos restantes (Android 16+). Desactivado por defecto. El asistente puede procesar las respuestas que recibe.</string>
     <string name="app_functions_display_description">Comparte los minutos y los datos móviles restantes con el asistente del dispositivo</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">About</string>
+    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
+    <string name="about_author_name">Author: Pavel Mukhin</string>
+    <string name="about_email_label">Email:</string>
+    <string name="about_signoff">Best regards,</string>
+    <string name="about_version_format">Version %1$s (%2$d)</string>
+    <string name="about_content_desc">About info</string>
 </resources>

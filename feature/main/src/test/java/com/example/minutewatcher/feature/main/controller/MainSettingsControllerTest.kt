@@ -24,6 +24,7 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
@@ -60,6 +61,7 @@ class MainSettingsControllerTest {
                 val controller = createController(backgroundScope)
                 controller.setTheme(AppTheme.DARK)
                 advanceUntilIdle()
+                verify(appSettingsRepository).updateAppSettings(any())
             }
         }
     }
@@ -72,6 +74,7 @@ class MainSettingsControllerTest {
                 val controller = createController(backgroundScope)
                 controller.setLanguage("en")
                 advanceUntilIdle()
+                verify(appSettingsRepository).updateAppSettings(any())
             }
         }
     }
@@ -84,6 +87,7 @@ class MainSettingsControllerTest {
                 val controller = createController(backgroundScope)
                 controller.completeOnboarding()
                 advanceUntilIdle()
+                verify(appSettingsRepository).updateAppSettings(any())
             }
         }
     }
@@ -96,6 +100,7 @@ class MainSettingsControllerTest {
                 val controller = createController(backgroundScope)
                 controller.dismissWidgetError()
                 advanceUntilIdle()
+                verify(appSettingsRepository).updateAppSettings(any())
             }
         }
     }
@@ -108,6 +113,7 @@ class MainSettingsControllerTest {
                 val controller = createController(backgroundScope)
                 controller.dismissInaccurateCalls()
                 advanceUntilIdle()
+                verify(appSettingsRepository).updateAppSettings(any())
             }
         }
     }
@@ -120,6 +126,7 @@ class MainSettingsControllerTest {
                 val controller = createController(backgroundScope)
                 controller.setNotificationPermissionRequested()
                 advanceUntilIdle()
+                verify(appSettingsRepository).updateAppSettings(any())
             }
         }
     }
@@ -132,6 +139,7 @@ class MainSettingsControllerTest {
                 val controller = createController(backgroundScope)
                 controller.setPhonePermissionRequested()
                 advanceUntilIdle()
+                verify(appSettingsRepository).updateAppSettings(any())
             }
         }
     }

@@ -1,0 +1,186 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">சிம் கார்டுகள்</string>
+    <string name="no_sim_found">சிம் கார்டுகள் எதுவும் கிடைக்கவில்லை</string>
+    <string name="check_permissions_sim">அனுமதிகள் மற்றும் சிம் இருப்பதைச் சரிபார்க்கவும்</string>
+    <string name="no_data">தரவு இல்லை</string>
+    <string name="error">பிழை</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">மீட்டமை</string>
+    <string name="theme_system">சிஸ்டம்</string>
+    <string name="theme_light">லைட்</string>
+    <string name="theme_dark">டார்க்</string>
+    <string name="limit_button">வரம்பு</string>
+    <string name="add_widget_button">விட்ஜெட்டைச் சேர்</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">பொது அமைப்புகள் சேமிக்கப்பட்டன. சிம் அமைப்புகள் தவிர்க்கப்பட்டன (சிம் பட்டியல் கிடைக்கவில்லை)</string>
+    <string name="settings_save_partial_failure">பொது அமைப்புகள் சேமிக்கப்பட்டன. சிம் அமைப்புகளைச் சேமிக்க முடியவில்லை</string>
+    <string name="settings_save_partial_failure_slots">பொது அமைப்புகள் சேமிக்கப்பட்டன. சிம் %1$s க்கான அமைப்புகளைச் சேமிக்க முடியவில்லை</string>
+    <string name="settings_save_failed">சேமிப்பது தோல்வியடைந்தது</string>
+    <string name="language_system">சிஸ்டம்</string>
+    <string name="usage_access_dialog_title">தரவு பயன்பாட்டைக் கண்காணித்தல்</string>
+    <string name="usage_access_dialog_description">மொபைல் தரவு பயன்பாட்டைக் கண்காணிக்க MinuteWatcher பயன்பாட்டிற்கு \"பயன்பாட்டு அணுகல்\" அனுமதி தேவை.\n\nஇது நெட்வொர்க்கில் எவ்வளவு தரவு அனுப்பப்பட்டது மற்றும் பெறப்பட்டது என்பதைப் பார்க்க பயன்பாட்டை அனுமதிக்கும் கணினி நிலை அனுமதி.\n\nநீங்கள் எந்த பயன்பாடுகளைப் பயன்படுத்துகிறீர்கள் அல்லது உங்கள் உலாவல் வரலாற்றை நாங்கள் கண்காணிக்க மாட்டோம்.</string>
+    <string name="phone_permission_permanent_denial">தொலைபேசி அனுமதி நிரந்தரமாக மறுக்கப்பட்டது. பயன்பாட்டு அமைப்புகளில் அதை இயக்கும் வரை சில அம்சங்கள் செயல்படாது.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">விட்ஜெட் அமைப்புகள்</string>
+    <string name="widget_description">ஒவ்வொரு சிம் கார்டுக்கும் மீதமுள்ள நிமிடங்கள் மற்றும் மொபைல் டேட்டாவைக் காட்டுகிறது.</string>
+    <string name="background_transparency">பின்னணி வெளிப்படைத்தன்மை</string>
+    <string name="display_minutes">நிமிடங்களைக் காட்டு</string>
+    <string name="display_minutes_limit">நிமிட வரம்பைக் காட்டு</string>
+    <string name="display_traffic">டேட்டாவைக் காட்டு</string>
+    <string name="display_traffic_limit">டேட்டா வரம்பைக் காட்டு</string>
+    <string name="display_name">பெயரைக் காட்டு</string>
+    <string name="display_icon">ஐகானைக் காட்டு</string>
+    <string name="show_sim_checkbox">இந்த சிம் கார்டைக் காட்டு</string>
+    <string name="preview">முன்னோட்டம்</string>
+    <string name="layout_mode_title">அமைப்பியல் பயன்முறை</string>
+    <string name="sim_arrangement_prompt">சிம் அமைப்பைத் தேர்ந்தெடுக்கவும்</string>
+    <string name="color_background">பின்னணி வண்ணம்:</string>
+    <string name="custom_color">தனிப்பயன்&#8230;</string>
+    <string name="font_size">எழுத்துரு அளவு</string>
+    <string name="traffic_tracking_limitation_title">டேட்டா கண்காணிப்பு வரம்பு</string>
+    <string name="traffic_tracking_limitation_body">ஆண்ட்ராய்டு முழு சாதனத்திற்குமான மொத்த மதிப்பாக மொபைல் தரவு பயன்பாட்டை வழங்குகிறது.\n\nMinuteWatcher அனைத்து மொபைல் டேட்டாவையும் உங்கள் கணினி அமைப்புகளில் \"இயல்புநிலை டேட்டா சிம்\" ஆகத் தேர்ந்தெடுக்கப்பட்ட சிம் கார்டுக்கு ஒதுக்குகிறது.</string>
+    <string name="tracking_banner_phone_permission">சிம் கார்டுகளை அடையாளம் காண தொலைபேசி அனுமதி தேவை.</string>
+    <string name="tracking_banner_usage_access">மொபைல் தரவு பயன்பாட்டைக் துல்லியமாகக் கண்காணிக்க பயன்பாட்டு அணுகல் தேவை.</string>
+    <string name="tracking_banner_sim_discovery_error">சிம் கார்டுகளைக் கண்டறிய முடியவில்லை. மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="tracking_banner_traffic_error">டேட்டா அமைப்புகளை புதுப்பிப்பதில் பிழை ஏற்பட்டது.</string>
+    <string name="tracking_banner_calls_error">அழைப்புக் கண்காணிப்புத் தரவைப் புதுப்பிப்பதில் பிழை ஏற்பட்டது.</string>
+    <string name="tracking_banner_appsearch_error">AppSearch இன்டெக்சிங் தோல்வியடைந்தது.</string>
+    <string name="tracking_banner_shortcuts_error">டைனமிக் குறுக்குவழிகள் புதுப்பிப்பு தோல்வியடைந்தது.</string>
+    <string name="tracking_banner_notification_permission">பயன்பாட்டு எச்சரிக்கைகளைப் பெற அறிவிப்பு அனுமதி பரிந்துரைக்கப்படுகிறது.</string>
+    <string name="tracking_banner_widget_error">கணினி வரம்புகள் காரணமாக விட்ஜெட்டைப் புதுப்பிக்க முடியாது.</string>
+    <string name="tracking_banner_inaccurate_calls">சில அழைப்புகளை சிம் கார்டுடன் பொருத்த முடியவில்லை.</string>
+    <string name="tracking_banner_calls_attribution_error">ஒரே நேரத்தில் பல அழைப்புகள் கண்டறியப்பட்டன. சிம் கார்டை தீர்மானிக்க முடியவில்லை.</string>
+    <string name="tracking_banner_observation_failed">பல பிழைகளுக்குப் பிறகு தரவு கண்காணிப்பு சேவை நிறுத்தப்பட்டது. பயன்பாட்டை மீண்டும் தொடங்கவும்.</string>
+    <string name="tracking_banner_storage_degraded">சேமிப்பகம் குறைக்கப்பட்டது: பயன்பாடு மீண்டும் தொடங்கப்பட்ட பிறகு புள்ளிவிவரங்கள் மீட்டமைக்கப்படலாம்.</string>
+    <string name="settings_load_error">அமைப்புகளை ஏற்றுவதில் பிழை</string>
+    <string name="sim_list_unavailable_error">சிம் பட்டியல் கிடைக்கவில்லை. மீண்டும் ஏற்றிய பிறகு சிம் அமைப்புகள் கிடைக்கும்.</string>
+    <string name="refresh_error">தரவைப் புதுப்பிப்பதில் பிழை</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">தரவு பழையதாக இருக்கலாம்</string>
+    <string name="notification_permission_permanent_denial">அறிவிப்புகள் முடக்கப்பட்டுள்ளன. விழிப்பூட்டல்களைப் பெற பயன்பாட்டு அமைப்புகளில் அவற்றை இயக்கவும்.</string>
+    <string name="action_grant">அனுமதி</string>
+    <string name="action_settings">அமைப்புகள்</string>
+    <string name="action_app_settings">பயன்பாட்டு அமைப்புகள்</string>
+    <string name="action_retry">மீண்டும் முயற்சி செய்</string>
+    <string name="validation_error_invalid_range">%1$s மற்றும் %2$s இடையே ஒரு மதிப்பை உள்ளிடவும்</string>
+    <string name="validation_error_invalid_number">செல்லுபடியாகும் எண்ணை உள்ளிடவும்</string>
+    <string name="validation_error_field_required">புலம் காலியாக இருக்கக்கூடாது</string>
+    <string name="widget_pin_unsupported">உங்கள் லாஞ்சர் தானியங்கி விட்ஜெட் இடத்தை ஆதரிக்காது. விட்ஜெட்டை கைமுறையாக சேர்க்கவும்.</string>
+    <string name="widget_already_added">விட்ஜெட் ஏற்கனவே முகப்புத் திரையில் சேர்க்கப்பட்டுள்ளது</string>
+    <string name="widget_added_success">முகப்புத் திரையில் விட்ஜெட் சேர்க்கப்பட்டது</string>
+    <string name="onboarding_title">MinuteWatcher இன் புதிய வரவுக்கு நல்வரவு!</string>
+    <string name="onboarding_message">MinuteWatcher உங்கள் மொபைல் கேரியரிடமிருந்து உங்கள் பிளான் விவரங்களைத் தானாகப் பெற முடியாது.\n\nகண்காணிப்பைத் தொடங்க, ஒவ்வொரு சிம் கார்டுக்கும் உங்கள் நிமிடங்கள்/டேட்டா வரம்புகள் மற்றும் மாதாந்திர மீட்டமைப்பு நாளைக் கைமுறையாக அமைக்கவும்.</string>
+    <string name="onboarding_button">புரிந்தது</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">செல்லுபடியாகாத சிம் ஸ்லாட் குறியீடு: %1$d</string>
+    <string name="error_storage_unavailable">ஸ்லாட் %1$d க்கு சேமிப்பகம் கிடைக்கவில்லை. பின்னர் மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="error_sim_removed">ஸ்லாட் %1$d இலிருந்து சிம் அகற்றப்பட்டது</string>
+    <string name="error_operation_failed_retry">மீண்டும் முயன்ற பிறகும் செயல்பாடு தோல்வியடைந்தது.</string>
+    <string name="error_unknown">தெரியாத பிழை: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">ரத்துசெய்</string>
+    <string name="save_button">சேமி</string>
+    <string name="set_button">அமை</string>
+    <string name="action_ok">சரி</string>
+    <string name="reset_limits_button">வரம்புகளை மீட்டமை</string>
+    <string name="reset_counters">எண்ணிக்கைகளை மீட்டமை</string>
+    <string name="reset_confirmation_title">எண்ணிக்கைகளை மீட்டமைக்கவா?</string>
+    <string name="reset_confirmation_body">இது இந்த சிம் கார்டுக்கான அனைத்து கண்காணிக்கப்பட்ட பயன்பாட்டையும் அழிக்கிறது. இந்தச் செயலைத் திரும்பப் பெற முடியாது.</string>
+    <string name="reset_limits_confirmation_title">வரம்புகளை மீட்டமைக்கவா?</string>
+    <string name="reset_limits_confirmation_body">இது நிமிடங்கள் மற்றும் டேட்டா வரம்புகளை அழிக்கும். கண்காணிக்கப்பட்ட பயன்பாடு மாற்றப்படாது.</string>
+    <string name="choose_reset_day">தானியங்கி மீட்டமைப்பிற்கு மாதத்தின் நாளைத் தேர்ந்தெடுக்கவும்:</string>
+    <string name="choose_reset_day_dialog_title">மீட்டமைப்பு நாளைத் தேர்ந்தெடுக்கவும்</string>
+    <string name="rollover_label">மீதியைச் சேகரிக்கவும்</string>
+    <string name="set_minutes_limit">மாதாந்திர நிமிட வரம்பை அமைக்கவும்:</string>
+    <string name="minutes_limit_hint">நிமிட வரம்பு</string>
+    <string name="set_traffic_limit">மாதாந்திர டேட்டா வரம்பை (GB) அமைக்கவும்:</string>
+    <string name="traffic_limit_gb_hint_dialog">GB இல் டேட்டா வரம்பு</string>
+    <string name="limits_for_operator">%1$s க்கான வரம்புகள்</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">அறிவிப்புகள்</string>
+    <string name="notify_low_minutes_title">குறைந்த நிமிடங்கள் இருக்கும்போது அறிவிக்கவும்</string>
+    <string name="notify_low_traffic_title">குறைந்த டேட்டா இருக்கும்போது அறிவிக்கவும்</string>
+    <string name="aod_summary_title">ஆல்வேஸ்-ஆன் டிஸ்ப்ளே சுருக்கம்</string>
+    <string name="aod_summary_description">மீதமுள்ள நிமிடங்கள் மற்றும் டேட்டாவைக் காட்டும் நிலையான அறிவிப்பைக் காண்பிக்கும்.</string>
+    <string name="aod_summary_unavailable">இந்த அம்சத்தைப் பயன்படுத்த அறிவிப்புகளை இயக்கவும்</string>
+    <string name="notification_channel_name">பயன்பாட்டுக் கண்காணிப்பு</string>
+    <string name="notification_channel_desc">நிமிடங்கள் மற்றும் டேட்டா பயன்பாட்டைக் கண்காணித்தல்</string>
+    <string name="notification_channel_aod_summary_name">ஆல்வேஸ்-ஆன் டிஸ்ப்ளே சுருக்கம்</string>
+    <string name="notification_channel_aod_summary_desc">மீதமுள்ள நிமிடங்கள் மற்றும் டேட்டாவின் நிலையான சுருக்கம்</string>
+    <string name="notification_minutes_title">நிமிடப் பயன்பாடு %1$s</string>
+    <string name="notification_minutes_body">%1$s நிமிடப் பயன்பாடு! மீதம் %2$s (%3$d%%). மாதம் %4$s இல் முடிகிறது.</string>
+    <string name="notification_traffic_title">டேட்டா பயன்பாடு %1$s</string>
+    <string name="notification_traffic_body">%1$s டேட்டா பயன்பாடு! மீதம் %2$.1f GB (%3$d%%). மாதம் %4$s இல் முடிகிறது.</string>
+    <string name="notification_minutes_exhausted_body">காலத்திற்கான நிமிடத் தொகுப்பு முடிந்தது.</string>
+    <string name="notification_traffic_exhausted_body">காலத்திற்கான டேட்டாத் தொகுப்பு முடிந்தது.</string>
+    <string name="notification_minutes_body_no_period">%1$s நிமிடப் பயன்பாடு! மீதம் %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s டேட்டா பயன்பாடு! மீதம் %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">நிமிட வரம்பை அடைந்துவிட்டது.</string>
+    <string name="notification_traffic_exhausted_body_no_period">டேட்டா வரம்பை அடைந்துவிட்டது.</string>
+    <string name="usage_level_low">குறைந்த</string>
+    <string name="usage_level_critical">மிகக் குறைந்த</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">மீதம்:</string>
+    <string name="used_text">பயன்படுத்தப்பட்டது</string>
+    <string name="limit_text">வரம்பு</string>
+    <string name="minutes_abbr">நிமிடங்கள்</string>
+    <string name="unit_minutes">நிமிடம்</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">டேட்டா</string>
+    <string name="traffic_remaining_text">மீதமுள்ள டேட்டா:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">மாதத்தின் நாள்</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d நிமிடம்</item>
+        <item quantity="other">%1$d நிமிடங்கள்</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d நாள்</item>
+        <item quantity="other">%1$d நாட்கள்</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">சிம் கார்டு ஐகான்</string>
+    <string name="sim_card_details_content_desc">%1$s சிம் கார்டு விவரங்கள்</string>
+    <string name="adjust_minutes_content_desc">மீதமுள்ள நிமிடங்களைச் சரிசெய்க</string>
+    <string name="adjust_traffic_content_desc">மீதமுள்ள டேட்டாவைச் சரிசெய்க</string>
+    <string name="traffic_info_content_desc">டேட்டா கண்காணிப்பு பற்றிய கூடுதல் தகவல்கள்</string>
+    <string name="set_limits_content_desc">%1$s க்கான வரம்புகளை அமைக்கவும்</string>
+    <string name="change_auto_reset_day_content_desc">தானியங்கி மீட்டமைப்பு நாளை மாற்றவும்</string>
+    <string name="toggle_auto_reset_content_desc">தானியங்கி மீட்டமைப்பை இயக்கும் அல்லது முடக்கும்</string>
+    <string name="menu_language_content_desc">மொழியை மாற்று</string>
+    <string name="menu_theme_content_desc">தீமை மாற்று</string>
+    <string name="navigate_up_content_desc">மேலே செல்</string>
+    <string name="banner_dismiss_content_desc">பானரை மூடு</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">கண்காணிப்பு</string>
+    <string name="call_tracking_title">அழைப்பு நிமிடங்களைக் கண்காணிக்கவும்</string>
+    <string name="call_tracking_description">ஒவ்வொரு சிம் கார்டுக்கும் அழைப்பு நிமிடங்களை எண்ணுங்கள்.</string>
+    <string name="assistant_access_title">உதவியாளர் அணுகல்</string>
+    <string name="assistant_access_description">சாதன உதவியாளரை உங்கள் மீதமுள்ள நிமிடங்கள் மற்றும் மொபைல் டேட்டாவைக் கோர அனுமதிக்கவும்.</string>
+    <string name="app_functions_display_description">சாதன உதவியாளருடன் மீதமுள்ள நிமிடங்கள் மற்றும் மொபைல் டேட்டாவைப் பகிர்கிறது</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">பற்றி</string>
+    <string name="about_message">MinuteWatcher என்பது மீதமுள்ள நிமிடங்கள் மற்றும் மொபைல் தரவு பயன்பாட்டைக் கண்காணிப்பதற்கான ஒரு பயன்பாடாகும்.</string>
+    <string name="about_author_name">ஆசிரியர்: Pavel Mukhin</string>
+    <string name="about_email_label">மின்னஞ்சல்:</string>
+    <string name="about_signoff">வாழ்த்துக்கள்,</string>
+    <string name="about_version_format">பதிப்பு %1$s (%2$d)</string>
+    <string name="about_content_desc">பற்றிய தகவல்</string>
+</resources>

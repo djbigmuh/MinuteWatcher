@@ -60,7 +60,7 @@ class CallEndHandlerTest {
             // Arrange
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(5000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(3000L))
 
@@ -81,7 +81,7 @@ class CallEndHandlerTest {
     fun `two sessions with same elapsedRealtime but different startTimeMillis produce different signatures`() =
         runTest {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(5000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(3000L))
             whenever(timeProvider.elapsedRealtime()).thenReturn(65000L)
@@ -105,7 +105,7 @@ class CallEndHandlerTest {
         runTest {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(5000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(3000L))
             whenever(timeProvider.elapsedRealtime()).thenReturn(65000L)
@@ -124,7 +124,7 @@ class CallEndHandlerTest {
         runTest {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(100000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(100000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(3000L))
 
@@ -142,7 +142,7 @@ class CallEndHandlerTest {
         runTest {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(1000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(1000L))
 
@@ -160,7 +160,7 @@ class CallEndHandlerTest {
         runTest {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(5000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(3000L))
 
@@ -179,7 +179,7 @@ class CallEndHandlerTest {
         runTest {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(5000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(10000L))
 
@@ -197,7 +197,7 @@ class CallEndHandlerTest {
         runTest {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(0L))
 
@@ -256,7 +256,7 @@ class CallEndHandlerTest {
         runTest {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(5000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(
                 flow { throw IOException("Read identity error") },
             )
@@ -272,5 +272,27 @@ class CallEndHandlerTest {
             verify(settingsHandler).writeCallDuration(eq("id_1"), eq(1), eq(true), eq(true), eq("1000|5000"))
             verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
             assertTrue(result)
+        }
+
+    @Test
+    fun `endCall fallback fails attribution when single active SIM identity is unstable`() =
+        runTest {
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(5000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(3000L))
+
+            whenever(timeProvider.elapsedRealtime()).thenReturn(65000L)
+            whenever(timeProvider.uptimeMillis()).thenReturn(63000L)
+
+            whenever(attributionResolver.resolveTargetIdentity(eq(1), eq(null))).thenReturn(null to false)
+            whenever(attributionResolver.handleAttributionFailure(eq(1), any(), any())).thenReturn(false)
+
+            val result = handler.endCall(1, eventElapsedRealtime = -1L, notify = true, context = context)
+
+            verify(attributionResolver).handleAttributionFailure(eq(1), any(), any())
+            verify(settingsHandler, never()).writeCallDuration(any(), any(), any(), any(), any())
+            assertTrue(!result)
         }
 }

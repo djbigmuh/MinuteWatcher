@@ -58,6 +58,9 @@ data class WidgetUiState(
  * @property noSimFoundText "No SIM found" text.
  * @property staleDataWarningText "Stale data warning" text.
  * @property simStatusSummaryFormat Format string for SIM status accessibility summary.
+ * @property valuePlaceholder Placeholder string for absent values ("—").
+ * @property labelValueFormat Format string for label-value colon pairs ("%1$s: %2$s").
+ * @property limitSuffixFormat Format string for limit suffix ("/%1$s").
  * @property locale Effective locale for formatting.
  */
 @Immutable
@@ -72,6 +75,9 @@ data class WidgetStrings(
     val noSimFoundText: String = "",
     val staleDataWarningText: String = "",
     val simStatusSummaryFormat: String = "",
+    val valuePlaceholder: String = "—",
+    val labelValueFormat: String = "%1\$s: %2\$s",
+    val limitSuffixFormat: String = "/%1\$s",
     val locale: Locale = Locale.US,
 )
 

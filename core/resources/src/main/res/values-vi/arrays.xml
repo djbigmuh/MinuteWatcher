@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>Tất cả trên một dòng</item>
+        <item>Hai dòng</item>
+        <item>Ba dòng</item>
+        <item>Sáu dòng</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>Cạnh nhau</item>
+        <item>Thành một cột</item>
+    </string-array>
+</resources>

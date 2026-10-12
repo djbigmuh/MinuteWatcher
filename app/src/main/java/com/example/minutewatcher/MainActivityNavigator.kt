@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
+import androidx.core.net.toUri
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver
@@ -103,4 +104,21 @@ class MainActivityNavigator
                 Toast.makeText(context, context.getString(R.string.widget_pin_unsupported), Toast.LENGTH_SHORT).show()
             }
         }
+
+    fun openEmailComposer(
+        context: Context,
+        address: String,
+    ) {
+        val intent =
+            Intent(Intent.ACTION_SENDTO).apply {
+                data = "mailto:$address".toUri()
+            }
+        try {
+            activityStarter.startActivity(context, intent)
+        } catch (e: ActivityNotFoundException) {
+            AppLogger.w("Email application not found", e)
+        } catch (e: SecurityException) {
+            AppLogger.w("Email application security exception", e)
+        }
+    }
     }

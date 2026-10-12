@@ -66,24 +66,41 @@ data class AdjustDialogData(
  *
  * @property code Language code (null for system default).
  * @property nameRes String resource ID for language name.
- * @property flag Language flag/emoji.
  */
 data class LanguageOption(
     val code: String?,
     @StringRes val nameRes: Int,
-    val flag: String,
 )
 
 val supportedLanguageOptions: List<LanguageOption> =
     listOf(
-        LanguageOption(null, R.string.language_system, "🌐"),
-        LanguageOption("en", R.string.language_en, "🇺🇸"),
-        LanguageOption("ru", R.string.language_ru, "🇷🇺"),
-        LanguageOption("de", R.string.language_de, "🇩🇪"),
-        LanguageOption("fr", R.string.language_fr, "🇫🇷"),
-        LanguageOption("es", R.string.language_es, "🇪🇸"),
-        LanguageOption("ar", R.string.language_ar, "🇸🇦"),
-        LanguageOption("hi", R.string.language_hi, "🇮🇳"),
-        LanguageOption("ja", R.string.language_ja, "🇯🇵"),
-        LanguageOption("zh", R.string.language_zh, "🇨🇳"),
+        LanguageOption(null, R.string.language_system),
+        LanguageOption("en", R.string.language_en),
+        LanguageOption("ru", R.string.language_ru),
+        LanguageOption("de", R.string.language_de),
+        LanguageOption("fr", R.string.language_fr),
+        LanguageOption("es", R.string.language_es),
+        LanguageOption("ar", R.string.language_ar),
+        LanguageOption("ur", R.string.language_ur),
+        LanguageOption("hi", R.string.language_hi),
+        LanguageOption("bn", R.string.language_bn),
+        LanguageOption("id", R.string.language_id),
+        LanguageOption("ja", R.string.language_ja),
+        LanguageOption("zh", R.string.language_zh),
+        LanguageOption("pt-BR", R.string.language_pt_br),
+        LanguageOption("pt-PT", R.string.language_pt_pt),
+        LanguageOption("ta", R.string.language_ta),
+        LanguageOption("te", R.string.language_te),
+        LanguageOption("mr", R.string.language_mr),
+        LanguageOption("gu", R.string.language_gu),
+        LanguageOption("pa", R.string.language_pa),
+        LanguageOption("vi", R.string.language_vi),
+        LanguageOption("tr", R.string.language_tr),
+        LanguageOption("ko", R.string.language_ko),
+        LanguageOption("it", R.string.language_it),
+        LanguageOption("fa", R.string.language_fa),
+        LanguageOption("ha", R.string.language_ha),
+        LanguageOption("yo", R.string.language_yo),
+        LanguageOption("jv", R.string.language_jv),
+        LanguageOption("bho", R.string.language_bho),
     )

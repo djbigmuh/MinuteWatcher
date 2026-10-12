@@ -19,7 +19,36 @@ import java.util.Locale
 class OperationErrorStringsLocalizationTest {
     private lateinit var defaultContext: Context
 
-    private val supportedLocales = listOf("ar", "de", "es", "fr", "hi", "ja", "ru", "zh")
+    private val supportedLocales =
+        listOf(
+            "ar",
+            "bho",
+            "bn",
+            "de",
+            "es",
+            "fa",
+            "fr",
+            "gu",
+            "ha",
+            "hi",
+            "id",
+            "it",
+            "ja",
+            "jv",
+            "ko",
+            "mr",
+            "pa",
+            "pt-BR",
+            "pt-PT",
+            "ru",
+            "ta",
+            "te",
+            "tr",
+            "ur",
+            "vi",
+            "yo",
+            "zh",
+        )
 
     @Before
     fun setUp() {

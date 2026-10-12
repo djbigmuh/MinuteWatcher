@@ -2,6 +2,16 @@ package com.example.minutewatcher.core.model
 
 import com.example.minutewatcher.core.model.util.ClampingUtils
 
+/**
+ * Model representing minutes usage, limits, and adjustments.
+ *
+ * @property used Minutes used in current period.
+ * @property limit Base minutes limit for current billing period.
+ * @property manualAdjustment Manual adjustment of minutes for current period.
+ * @property remaining Remaining minutes in current period.
+ * @property effectiveLimit Effective minutes limit including manual adjustments.
+ * @property isLimitSet Whether a minutes limit is configured.
+ */
 data class MinutesModel(
     val used: Int,
     val limit: Int,

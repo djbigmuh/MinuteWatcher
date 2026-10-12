@@ -18,35 +18,30 @@ class WidgetErrorClassifier
             e: Exception,
             isFullAttempt: Boolean,
         ): UpdateResult =
-            when (e) {
-                is IllegalArgumentException -> {
-                    if (isRemoteViewsLimitException(e)) {
-                        logLimitExceeded(e, isFullAttempt)
-                        UpdateResult.LimitExceeded(wasFull = isFullAttempt)
-                    } else {
-                        AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
-                        UpdateResult.GenericFailure(isRetryable = true)
-                    }
+            when {
+                isRemoteViewsLimitException(e) -> {
+                    logLimitExceeded(e, isFullAttempt)
+                    UpdateResult.LimitExceeded(wasFull = isFullAttempt)
                 }
 
-                is IllegalStateException -> {
-                    AppLogger.e("Widget update failed with IllegalStateException: ${e.message}", e)
-                    UpdateResult.GenericFailure(isRetryable = false)
-                }
-
-                is SecurityException -> {
+                e is SecurityException -> {
                     AppLogger.e("Security error updating widgets", e)
                     UpdateResult.GenericFailure(isRetryable = false)
                 }
 
-                is RuntimeException -> {
-                    if (isRemoteViewsLimitException(e)) {
-                        logLimitExceeded(e, isFullAttempt)
-                        UpdateResult.LimitExceeded(wasFull = isFullAttempt)
-                    } else {
-                        AppLogger.e("Widget update failed with RuntimeException: ${e.message}", e)
-                        UpdateResult.GenericFailure(isRetryable = true)
-                    }
+                e is IllegalStateException -> {
+                    AppLogger.e("Widget update failed with IllegalStateException: ${e.message}", e)
+                    UpdateResult.GenericFailure(isRetryable = false)
+                }
+
+                e is IllegalArgumentException -> {
+                    AppLogger.e("Widget update failed with IllegalArgumentException (not a size limit)", e)
+                    UpdateResult.GenericFailure(isRetryable = true)
+                }
+
+                e is RuntimeException -> {
+                    AppLogger.e("Widget update failed with RuntimeException: ${e.message}", e)
+                    UpdateResult.GenericFailure(isRetryable = true)
                 }
 
                 else -> {
@@ -64,7 +59,8 @@ class WidgetErrorClassifier
         ): Boolean {
             var current: Throwable? = e
             var depth = 0
-            while (current != null && depth < MAX_CAUSE_DEPTH) {
+            val visited = mutableSetOf<Throwable>()
+            while (current != null && depth < MAX_CAUSE_DEPTH && visited.add(current)) {
                 if (type.isInstance(current)) return true
                 current = current.cause
                 depth++

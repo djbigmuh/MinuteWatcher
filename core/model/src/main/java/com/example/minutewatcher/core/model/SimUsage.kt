@@ -1,5 +1,23 @@
 package com.example.minutewatcher.core.model
 
+/**
+ * SIM usage statistics and configuration.
+ *
+ * @property identity Stable SIM identity.
+ * @property slotIndex SIM slot index.
+ * @property subscriptionId Subscription ID, or null if unavailable.
+ * @property operator Operator name string.
+ * @property minutesUsed Minutes used in current period.
+ * @property minutesLimit Minutes limit for current period.
+ * @property trafficUsedMb Traffic used in MB.
+ * @property trafficLimitMb Traffic limit in MB.
+ * @property manualAdjustment One-time manual adjustment of minutes.
+ * @property trafficAdjustmentGb One-time manual adjustment of traffic in GB.
+ * @property autoReset Whether automatic reset is enabled.
+ * @property autoResetDay Day of month for automatic reset.
+ * @property lastResetDate Timestamp of the last reset event.
+ * @property rolloverEnabled Whether rollover of unused limits is enabled.
+ */
 data class SimUsage(
     val identity: String,
     val slotIndex: Int,

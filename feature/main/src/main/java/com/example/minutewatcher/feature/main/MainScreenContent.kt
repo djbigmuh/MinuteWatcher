@@ -127,8 +127,13 @@ private fun SimCardListContent(
             ErrorState(
                 messageRes = uiState.messageRes,
                 onRetry = {
-                    viewModel.retrySimList()
-                    viewModel.refreshSimCardsNow()
+                    when (uiState.kind) {
+                        SimCardListState.ErrorKind.SIM_DISCOVERY -> viewModel.retrySimDiscovery()
+                        SimCardListState.ErrorKind.REFRESH -> {
+                            viewModel.retrySimList()
+                            viewModel.refreshSimCardsNow()
+                        }
+                    }
                 },
             )
         }

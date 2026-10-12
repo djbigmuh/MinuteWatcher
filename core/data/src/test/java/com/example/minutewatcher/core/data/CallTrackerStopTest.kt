@@ -86,11 +86,17 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
                             override suspend fun saveCallSession(
                                 subId: Int,
                                 startTime: Long,
-                                bootTime: Long,
+                                elapsedRealtime: Long,
                                 uptime: Long,
                                 identity: String?,
                             ) {
-                                callSessionRepository.saveCallSession(subId, startTime, bootTime, uptime, identity)
+                                callSessionRepository.saveCallSession(
+                                    subId = subId,
+                                    startTime = startTime,
+                                    elapsedRealtime = elapsedRealtime,
+                                    uptime = uptime,
+                                    identity = identity,
+                                )
                             }
 
                             override suspend fun clearCallSession(subId: Int) {
@@ -142,11 +148,17 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
                             override suspend fun saveCallSession(
                                 subId: Int,
                                 startTime: Long,
-                                bootTime: Long,
+                                elapsedRealtime: Long,
                                 uptime: Long,
                                 identity: String?,
                             ) {
-                                callSessionRepository.saveCallSession(subId, startTime, bootTime, uptime, identity)
+                                callSessionRepository.saveCallSession(
+                                    subId = subId,
+                                    startTime = startTime,
+                                    elapsedRealtime = elapsedRealtime,
+                                    uptime = uptime,
+                                    identity = identity,
+                                )
                             }
 
                             override suspend fun clearCallSession(subId: Int) {

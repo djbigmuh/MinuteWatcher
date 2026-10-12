@@ -11,9 +11,13 @@ import com.example.minutewatcher.core.domain.SeedUnavailableException
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimLimitsRepository
 import com.example.minutewatcher.core.domain.SimNotFoundException
+import com.example.minutewatcher.core.domain.TrackingStatusRepository
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.UsageUseCase
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimCardUiModel
+import com.example.minutewatcher.core.model.TrackingKey
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.SimCardListState
 import kotlinx.coroutines.CancellationException
@@ -28,8 +32,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
@@ -63,6 +67,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * @property simLimitsRepository Repository for SIM limits.
  * @property usageUseCase Use case for usage-related operations.
  * @property dataChangeNotifier Notifies about data changes (e.g., for widgets).
+ * @property trackingStatusRepository Repository for tracking status.
  * @property ioDispatcher Dispatcher for I/O bound operations.
  * @property scope Application-wide coroutine scope for async operations.
  */
@@ -76,6 +81,7 @@ class MainSimDataController
         private val simLimitsRepository: SimLimitsRepository,
         private val usageUseCase: UsageUseCase,
         private val dataChangeNotifier: DataChangeNotifier,
+        private val trackingStatusRepository: TrackingStatusRepository,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
@@ -84,31 +90,28 @@ class MainSimDataController
         @OptIn(ExperimentalCoroutinesApi::class)
         private val uiStateSource: Flow<SimCardListState> =
             retryTrigger.flatMapLatest {
-                usageStateRepository
-                    .observeSimCardUiModels()
-                    .map { models ->
-                        if (models.isEmpty()) {
-                            if (usageStateRepository.isDataLoaded()) {
-                                SimCardListState.Empty
-                            } else {
-                                SimCardListState.Loading
-                            }
-                        } else {
-                            SimCardListState.Success(models)
-                        }
-                    }.retryWhen { cause, attempt ->
-                        (cause as? CancellationException)?.let { throw it }
-                        if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
-                            val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
-                            delay(delayMs.milliseconds)
-                            true
-                        } else {
-                            false
-                        }
-                    }.onStart { emit(SimCardListState.Loading) }
+                combine(
+                    usageStateRepository.observeSimCardUiModels(),
+                    trackingStatusRepository.observeTrackingStatus(),
+                ) { models, statusMap ->
+                    computeSimCardListState(
+                        models = models,
+                        isDataLoaded = usageStateRepository.isDataLoaded(),
+                        statusMap = statusMap,
+                    )
+                }.retryWhen { cause, attempt ->
+                    (cause as? CancellationException)?.let { throw it }
+                    if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
+                        val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
+                        delay(delayMs.milliseconds)
+                        true
+                    } else {
+                        false
+                    }
+                }.onStart { emit(SimCardListState.Loading) }
                     .catch { e ->
                         AppLogger.e("MainSimDataController: observeSimCardUiModels failed", e)
-                        emit(SimCardListState.Error(R.string.refresh_error))
+                        emit(SimCardListState.Error(R.string.refresh_error, SimCardListState.ErrorKind.REFRESH))
                     }
             }
 
@@ -504,3 +507,32 @@ class MainSimDataController
             private const val MAX_RETRY_EXPONENT = 2
         }
     }
+
+/**
+ * Computes SIM card list state based on models, data load status, and tracking status map.
+ */
+fun computeSimCardListState(
+    models: List<SimCardUiModel>,
+    isDataLoaded: Boolean,
+    statusMap: Map<TrackingKey, TrackingStatus>,
+): SimCardListState {
+    if (models.isNotEmpty()) {
+        return SimCardListState.Success(models)
+    }
+    val simDiscoveryStatus = statusMap[TrackingKey.SIM_DISCOVERY]
+    val isSimDiscoveryError =
+        simDiscoveryStatus is TrackingStatus.Error &&
+            simDiscoveryStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING &&
+            simDiscoveryStatus.type != TrackingStatus.ErrorType.NOT_SUPPORTED
+
+    return when {
+        isSimDiscoveryError ->
+            SimCardListState.Error(
+                R.string.tracking_banner_sim_discovery_error,
+                SimCardListState.ErrorKind.SIM_DISCOVERY,
+            )
+
+        !isDataLoaded -> SimCardListState.Loading
+        else -> SimCardListState.Empty
+    }
+}

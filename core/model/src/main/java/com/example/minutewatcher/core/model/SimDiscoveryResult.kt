@@ -1,6 +1,11 @@
 package com.example.minutewatcher.core.model
 
 sealed interface SimDiscoveryResult {
+    /**
+     * SIM discovery successful with active SIMs found.
+     *
+     * @property sims List of active SIM information objects.
+     */
     data class Available(
         val sims: List<ActiveSimInfo>,
     ) : SimDiscoveryResult
@@ -9,6 +14,11 @@ sealed interface SimDiscoveryResult {
 
     data object Unsupported : SimDiscoveryResult
 
+    /**
+     * SIM discovery failed with an error reason.
+     *
+     * @property reason Failure reason enum value.
+     */
     data class Failed(
         val reason: SimDiscoveryFailureReason,
     ) : SimDiscoveryResult

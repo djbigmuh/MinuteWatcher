@@ -92,12 +92,10 @@ class WidgetSettingsViewModel
         val aodSummaryAvailable: StateFlow<Boolean> = _aodSummaryAvailable.asStateFlow()
 
         @Volatile
-        @VisibleForTesting
-        internal var lastSavedSettings: WidgetSettingsState? = null
+        private var lastSavedSettings: WidgetSettingsState? = null
 
         @Volatile
-        @VisibleForTesting
-        internal var lastLoadedSettings: WidgetSettingsState? = null
+        private var lastLoadedSettings: WidgetSettingsState? = null
 
         private val pendingUpdates = mutableListOf<(WidgetSettingsState) -> WidgetSettingsState>()
         private val pendingUpdatesLock = Any()
@@ -413,11 +411,6 @@ class WidgetSettingsViewModel
                     }
                 }
             }
-        }
-
-        @VisibleForTesting
-        internal fun onClearedForTest() {
-            onCleared()
         }
 
         companion object {

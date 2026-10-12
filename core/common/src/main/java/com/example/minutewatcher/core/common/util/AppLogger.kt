@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * - Worker lifecycle changes ([init], [initForTest], [resetForTest], [shutdown]) synchronously stop
  *   previous worker with a time-limited join ([WORKER_JOIN_TIMEOUT_MS]) performed outside state lock.
  * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
- * - In-flight entries counter ([hasPendingLogsForTest], [awaitQuiescentForTest]) tracks logs currently
+ * - In-flight entries counter ([hasPendingLogs]) tracks logs currently
  *   being processed by worker.
  * - Entries are enqueued only if file logging is enabled, not shutdown, and log directory is set.
  * - Failed file writes and drained entries on write failure threshold are routed to [logger] with `[DRAIN]` prefix
@@ -362,7 +362,7 @@ object AppLogger {
      * Production code should not call this as the logger should live for the app lifetime.
      */
     @VisibleForTesting
-    fun shutdown() {
+    internal fun shutdown() {
         synchronized(this) {
             isShutdown = true
             isFileLoggingEnabled = false
@@ -372,7 +372,7 @@ object AppLogger {
     }
 
     @VisibleForTesting
-    fun resetForTest() {
+    internal fun resetForTest() {
         synchronized(this) {
             isShutdown = false
             isFileLoggingEnabled = BuildConfig.DEBUG
@@ -389,28 +389,7 @@ object AppLogger {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @VisibleForTesting
-    fun hasPendingLogsForTest(): Boolean = !logChannel.isEmpty || inFlightCount.get() > 0
-
-    /**
-     * Waits for all pending logs in channel and in-flight processing to complete.
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @VisibleForTesting
-    fun awaitQuiescentForTest(timeoutMs: Long = 10_000L): Boolean {
-        val startTime = System.currentTimeMillis()
-        val pollIntervalMs = 10L
-        var quiescent = logChannel.isEmpty && inFlightCount.get() == 0
-        while (!quiescent && System.currentTimeMillis() - startTime <= timeoutMs) {
-            try {
-                Thread.sleep(pollIntervalMs)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
-                break
-            }
-            quiescent = logChannel.isEmpty && inFlightCount.get() == 0
-        }
-        return quiescent
-    }
+    internal fun hasPendingLogs(): Boolean = !logChannel.isEmpty || inFlightCount.get() > 0
 
     /**
      * Initializes the logger for testing with full state reset.
@@ -419,7 +398,7 @@ object AppLogger {
      * and restarts the file logging worker if file logging is [enabled].
      */
     @VisibleForTesting
-    fun initForTest(
+    internal fun initForTest(
         dir: File,
         enabled: Boolean = true,
     ) {

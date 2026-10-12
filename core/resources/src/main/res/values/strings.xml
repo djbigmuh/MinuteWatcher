@@ -20,21 +20,41 @@
     <string name="settings_save_partial_failure_slots">General settings saved. SIM-specific settings could not be saved for SIM %1$s</string>
     <string name="settings_save_failed">Save failed</string>
     <string name="language_system">System</string>
-    <string name="language_en">English</string>
-    <string name="language_ru">Russian</string>
-    <string name="language_de">German</string>
-    <string name="language_fr">French</string>
-    <string name="language_ar">Arabic</string>
-    <string name="language_es">Spanish</string>
-    <string name="language_ja">Japanese</string>
-    <string name="language_zh">Chinese</string>
-    <string name="language_hi">Hindi</string>
+    <string name="language_en" translatable="false">English</string>
+    <string name="language_ru" translatable="false">Русский</string>
+    <string name="language_de" translatable="false">Deutsch</string>
+    <string name="language_fr" translatable="false">Français</string>
+    <string name="language_es" translatable="false">Español</string>
+    <string name="language_ar" translatable="false">العربية</string>
+    <string name="language_ur" translatable="false">اردو</string>
+    <string name="language_hi" translatable="false">हिन्दी</string>
+    <string name="language_bn" translatable="false">বাংলা</string>
+    <string name="language_id" translatable="false">Indonesia</string>
+    <string name="language_ja" translatable="false">日本語</string>
+    <string name="language_zh" translatable="false">中文</string>
+    <string name="language_pt_br" translatable="false">Português (Brasil)</string>
+    <string name="language_pt_pt" translatable="false">Português (Portugal)</string>
+    <string name="language_ta" translatable="false">தமிழ்</string>
+    <string name="language_te" translatable="false">తెలుగు</string>
+    <string name="language_mr" translatable="false">मराठी</string>
+    <string name="language_gu" translatable="false">ગુજરાતી</string>
+    <string name="language_pa" translatable="false">ਪੰਜਾਬੀ</string>
+    <string name="language_vi" translatable="false">Tiếng Việt</string>
+    <string name="language_tr" translatable="false">Türkçe</string>
+    <string name="language_ko" translatable="false">한국어</string>
+    <string name="language_it" translatable="false">Italiano</string>
+    <string name="language_fa" translatable="false">فارسی</string>
+    <string name="language_ha" translatable="false">Hausa</string>
+    <string name="language_yo" translatable="false">Yorùbá</string>
+    <string name="language_jv" translatable="false">Basa Jawa</string>
+    <string name="language_bho" translatable="false">भोजपुरी</string>
     <string name="usage_access_dialog_title">Data Usage Tracking</string>
     <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission. \n\nThis is a system-level permission that allows the app to see how much data has been sent and received over the cellular network. \n\nWe do not track which apps you use or your browsing history.</string>
     <string name="phone_permission_permanent_denial">Phone permission is permanently denied. Some features will not work until you enable it in App Settings.</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Widget Settings</string>
+    <string name="widget_description">Displays remaining minutes and mobile traffic per SIM card.</string>
     <string name="background_transparency">Background Transparency</string>
     <string name="display_minutes">Show minutes</string>
     <string name="display_minutes_limit">Show minutes limit</string>
@@ -53,13 +73,15 @@
     <string name="traffic_tracking_limitation_body">Android provides mobile data usage as an aggregate value for the entire device. \n\nMinuteWatcher attributes all mobile traffic to the SIM card currently selected as the \"Default Data SIM\" in your system settings.\n\nIf you switch your default data SIM, the app will detect the change and begin attributing traffic to the new SIM from that moment.</string>
     <string name="tracking_banner_phone_permission">Phone permission is required to identify SIM cards. Some features may not work.</string>
     <string name="tracking_banner_usage_access">Usage Access is required to track mobile data usage accurately.</string>
+    <string name="tracking_banner_sim_discovery_error">Failed to discover SIM cards. Please try again.</string>
     <string name="tracking_banner_traffic_error">There was an error updating traffic data.</string>
     <string name="tracking_banner_calls_error">There was an error updating call tracking data.</string>
     <string name="tracking_banner_appsearch_error">AppSearch indexing failed. Global search might be outdated. This does not affect widget or tracking functionality.</string>
     <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
     <string name="tracking_banner_notification_permission">Notification permission is recommended to receive usage alerts.</string>
     <string name="tracking_banner_widget_error">Widget cannot be updated due to system limitations.</string>
-    <string name="tracking_banner_inaccurate_calls">Multiple active calls detected. Minutes might be attributed inaccurately.</string>
+    <string name="tracking_banner_inaccurate_calls">Some calls could not be matched with a SIM card and were attributed to the single active SIM. Values might be inaccurate.</string>
+    <string name="tracking_banner_calls_attribution_error">Multiple simultaneous calls detected. Unable to determine SIM card; minutes for such calls were not credited.</string>
     <string name="tracking_banner_observation_failed">Data tracking service has stopped after multiple errors. Please retry or restart the app.</string>
     <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
     <string name="settings_load_error">Settings load error</string>
@@ -192,4 +214,13 @@
     <string name="assistant_access_title">Assistant access</string>
     <string name="assistant_access_description">Allow the on-device assistant to request your remaining minutes and mobile data (Android 16+). Disabled by default. The assistant may process the answers it receives.</string>
     <string name="app_functions_display_description">Shares remaining minutes and mobile data with the on-device assistant</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">About</string>
+    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
+    <string name="about_author_name">Author: Pavel Mukhin</string>
+    <string name="about_email_label">Email:</string>
+    <string name="about_signoff">Best regards,</string>
+    <string name="about_version_format">Version %1$s (%2$d)</string>
+    <string name="about_content_desc">About info</string>
 </resources>

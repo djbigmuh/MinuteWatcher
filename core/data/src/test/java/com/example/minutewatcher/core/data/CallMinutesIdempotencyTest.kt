@@ -25,12 +25,12 @@ class CallMinutesIdempotencyTest : CallTrackerTestFixtures() {
             val subId = 1
             val identity = "id_1"
             val startTime = 1000L
-            val bootTime = 5000L
+            val elapsedRealtime = 5000L
             val signature = "1000|5000"
             val durationMinutes = 5
 
             whenever(callSessionRepository.getCallStartTime(subId)).thenReturn(flowOf(startTime))
-            whenever(callSessionRepository.getBootTime(subId)).thenReturn(flowOf(bootTime))
+            whenever(callSessionRepository.getElapsedRealtime(subId)).thenReturn(flowOf(elapsedRealtime))
             whenever(callSessionRepository.getUptime(subId)).thenReturn(flowOf(2000L))
             whenever(callSessionRepository.getCallIdentity(subId)).thenReturn(flowOf(identity))
 
@@ -40,7 +40,7 @@ class CallMinutesIdempotencyTest : CallTrackerTestFixtures() {
             whenever(callSessionRepository.clearCallSession(eq(subId)))
                 .thenAnswer { throw IOException("Cleanup failed") }
 
-            timeProvider.setRealtime(bootTime + (durationMinutes * 60000L))
+            timeProvider.setRealtime(elapsedRealtime + (durationMinutes * 60000L))
             try {
                 callTracker.onCallEnded(subId)
             } catch (e: IOException) {

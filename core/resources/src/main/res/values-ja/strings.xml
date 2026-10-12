@@ -20,21 +20,13 @@
     <string name="settings_save_partial_failure_slots">一般設定を保存しました。SIM %1$s の固有設定を保存できませんでした</string>
     <string name="settings_save_failed">保存に失敗しました</string>
     <string name="language_system">システム</string>
-    <string name="language_en">英語</string>
-    <string name="language_ru">ロシア語</string>
-    <string name="language_de">ドイツ語</string>
-    <string name="language_fr">フランス語</string>
-    <string name="language_ar">アラビア語</string>
-    <string name="language_es">スペイン語</string>
-    <string name="language_ja">日本語</string>
-    <string name="language_zh">中国語</string>
-    <string name="language_hi">ヒンディー語</string>
     <string name="usage_access_dialog_title">データ使用量の追跡</string>
     <string name="usage_access_dialog_description">モバイルデータ使用量を追跡するために、MinuteWatcherは「使用状況へのアクセス」権限を必要とします。\n\nこれは、モバイルネットワーク経由で送信および受信されたデータ量をアプリが確認できるようにするシステムレベルの権限です。\n\n弊社がお客様の使用しているアプリやブラウザの履歴を追跡することはありません。</string>
     <string name="phone_permission_permanent_denial">電話の権限が永続的に拒否されました。</string>
 
     <!-- Settings: Widget -->
     <string name="settings_widget_title">ウィジェット設定</string>
+    <string name="widget_description">SIMカードごとの残りの通話時間とモバイルデータ通信量を表示します。</string>
     <string name="background_transparency">背景の透明度</string>
     <string name="display_minutes">分を表示</string>
     <string name="display_minutes_limit">分の制限を表示</string>
@@ -53,13 +45,15 @@
     <string name="traffic_tracking_limitation_body">Androidは、デバイス全体の合計値としてモバイルデータ使用量を提供します。 \n\nMinuteWatcherは、すべてのモバイルトラフィックを、システム設定で現在「デフォルトのデータSIM」として選択されているSIMカードに割り当てます。</string>
     <string name="tracking_banner_phone_permission">電話の権限が必要です。</string>
     <string name="tracking_banner_usage_access">使用状況へのアクセス権限が必要です。</string>
+    <string name="tracking_banner_sim_discovery_error">SIMカードを検出できませんでした。もう一度お試しください。</string>
     <string name="tracking_banner_traffic_error">トラフィックデータの更新中にエラーが発生しました。</string>
     <string name="tracking_banner_calls_error">通話トラッキングデータの更新中にエラーが発生しました。</string>
     <string name="tracking_banner_appsearch_error">AppSearchのインデックス作成に失敗しました。グローバル検索が古くなっている可能性があります。これはウィジェットや追跡機能には影響しません。</string>
     <string name="tracking_banner_shortcuts_error">動的ショートカットの更新に失敗しました。</string>
     <string name="tracking_banner_notification_permission">使用状況アラートを受け取るために、通知権限を推奨します。</string>
     <string name="tracking_banner_widget_error">システムの制限により、ウィジェットを更新できません。</string>
-    <string name="tracking_banner_inaccurate_calls">複数のアクティブな通話が検出されました。分数が不正確に割り当てられる可能性があります。</string>
+    <string name="tracking_banner_inaccurate_calls">一部の通話がSIMカードと一致せず、唯一のアクティブなSIMに割り当てられました。値が不正確な場合があります。</string>
+    <string name="tracking_banner_calls_attribution_error">複数の同時通話が検出されました。SIMカードを特定できませんでした。通話時間は加算されていません。</string>
     <string name="tracking_banner_observation_failed">複数のエラーが発生したため、データトラッキングサービスが停止しました。再試行するか、アプリを再起動してください。</string>
     <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
     <string name="settings_load_error">設定読み込みエラー</string>
@@ -187,4 +181,13 @@
     <string name="assistant_access_title">アシスタントアクセス</string>
     <string name="assistant_access_description">デバイス上のアシスタントに残りの通話時間とデータ通信量の確認を許可します (Android 16+)。デフォルトでは無効です。アシスタントは受信した回答を処理する場合があります。</string>
     <string name="app_functions_display_description">残りの通話時間とモバイルデータ通信量を端末上のアシスタントに提供します</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">About</string>
+    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
+    <string name="about_author_name">Author: Pavel Mukhin</string>
+    <string name="about_email_label">Email:</string>
+    <string name="about_signoff">Best regards,</string>
+    <string name="about_version_format">Version %1$s (%2$d)</string>
+    <string name="about_content_desc">About info</string>
 </resources>

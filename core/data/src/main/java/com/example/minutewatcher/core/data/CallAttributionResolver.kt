@@ -14,6 +14,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Resolves SIM identities and handles attribution for call tracking.
+ *
+ * Enforces the rule that both call duration (minutes) and data traffic attribution
+ * require a stable SIM identity ([com.example.minutewatcher.core.model.SimIdentity.isStable] == true).
+ * Unstable SIM identities (e.g., generated solely from subscription ID without ICCID) are rejected
+ * for attribution to prevent misattributing usage across SIM replacements.
+ */
 @Singleton
 internal class CallAttributionResolver
     @Inject
@@ -39,14 +47,20 @@ internal class CallAttributionResolver
                 val activeSims = simIdentityRepository.observeActiveSims().firstOrNull().orEmpty()
                 val matched = activeSims.find { it.subscriptionId == subId }
                 if (matched != null) {
-                    targetIdentity = matched.identity.stableId
+                    AppLogger.w("CallTracker: SIM matched subId=$subId but identity is unstable, attribution refused")
                 } else if (activeSims.size == 1) {
                     val fallbackSim = activeSims.first()
-                    targetIdentity = fallbackSim.identity.stableId
-                    isFallbackUsed = true
-                    AppLogger.w(
-                        "CallTracker: no SIM matched subId=$subId, single active SIM fallback used $targetIdentity",
-                    )
+                    if (fallbackSim.identity.isStable) {
+                        targetIdentity = fallbackSim.identity.stableId
+                        isFallbackUsed = true
+                        AppLogger.w(
+                            "CallTracker: no SIM matched subId=$subId, single active SIM fallback used $targetIdentity",
+                        )
+                    } else {
+                        AppLogger.w(
+                            "CallTracker: no SIM matched subId=$subId, single active SIM is unstable, fallback refused",
+                        )
+                    }
                 } else if (activeSims.size > 1) {
                     AppLogger.w(
                         "CallTracker: no SIM matched subId=$subId and " +
@@ -63,7 +77,7 @@ internal class CallAttributionResolver
             cleanupAction: suspend (Int) -> Unit,
         ): Boolean {
             val failures: Int = checkNotNull(attributionFailures.merge(subId, 1) { current, _ -> current + 1 })
-            if (failures >= MAX_ATTRIBUTION_FAILURES) {
+            if (failures >= Constants.Calls.ATTRIBUTION_FAILURE_LIMIT) {
                 AppLogger.e("CallTracker: max attribution failures reached for subId $subId, clearing session")
                 cleanupAction(subId)
                 return true
@@ -92,16 +106,12 @@ internal class CallAttributionResolver
                 subId
             }
 
-        suspend fun resolveSessionIdentity(subId: Int): String? =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                simIdentityRepository
-                    .observeActiveSims()
-                    .firstOrNull()
-                    ?.find { it.subscriptionId == subId }
-                    ?.identity
-                    ?.stableId
-            }
-
+    /**
+     * Resolves the stable SIM identity for the given subscription ID.
+     *
+     * Consistent with traffic attribution, returns a non-null stable ID only if the active SIM's
+     * identity is stable ([com.example.minutewatcher.core.model.SimIdentity.isStable] == true).
+     */
         suspend fun resolveIdentity(subId: Int): String? =
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                 simIdentityRepository
@@ -121,17 +131,13 @@ internal class CallAttributionResolver
         }
 
         @VisibleForTesting
-        fun getFailureCount(subId: Int): Int = attributionFailures[subId] ?: 0
+        internal fun getFailureCount(subId: Int): Int = attributionFailures[subId] ?: 0
 
         @VisibleForTesting
-        fun setFailureCountForTest(
+        internal fun setFailureCount(
             subId: Int,
             count: Int,
         ) {
             attributionFailures[subId] = count
-        }
-
-        companion object {
-            private const val MAX_ATTRIBUTION_FAILURES = 3
         }
     }

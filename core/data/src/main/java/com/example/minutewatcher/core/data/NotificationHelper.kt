@@ -19,7 +19,28 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * Type of usage notification (Minutes or Traffic) with its unique ID offset.
+ */
+enum class UsageNotificationType(
+    val idOffset: Int,
+) {
+    MINUTES(0),
+    TRAFFIC(1),
+}
+
+/**
  * Helper class for managing and sending application usage notifications.
+ *
+ * ## ID Non-Collision Invariants
+ * To prevent notification ID collisions across different notification categories and SIM slots:
+ * - **Usage Notifications**: Calculated as [BASE_NOTIFICATION_ID] (1000) + (`simSlot` * [SLOT_OFFSET] (10)) + [UsageNotificationType.idOffset].
+ *   - Slot 0 Minutes: 1000, Traffic: 1001
+ *   - Slot 1 Minutes: 1010, Traffic: 1011
+ *   - Slot N Minutes/Traffic: 1000 + N * 10 + {0, 1}
+ * - **Always-on Display (AOD) Summary Notification**: [AOD_SUMMARY_NOTIFICATION_ID] (900).
+ * - **Usage Group Summary Notification**: [GROUP_SUMMARY_NOTIFICATION_ID] (950).
+ *
+ * These ID ranges are strictly disjoint (900, 950, and 1000+), ensuring zero collisions.
  *
  * Defensive contract: Notification delivery and helper initialization must never
  * cause the application to crash. All platform calls to [NotificationManager] are
@@ -33,6 +54,29 @@ class NotificationHelper
         private val navigationProvider: NavigationProvider,
         private val permissionManager: PermissionManager,
     ) {
+    companion object {
+        internal const val BASE_REQUEST_CODE = 100
+        internal const val BASE_NOTIFICATION_ID = 1000
+        internal const val SLOT_OFFSET = 10
+
+        /**
+         * ID for Always-on Display summary notification.
+         * Invariant: Must be outside the range of usage notifications and group summary notifications
+         * to prevent ID collisions.
+         */
+        const val AOD_SUMMARY_NOTIFICATION_ID = 900
+        const val AOD_SUMMARY_REQUEST_CODE = 90
+
+        /**
+         * ID for usage group summary notification.
+         * Invariant: Must be in a unique range distinct from individual usage notifications and AOD summary.
+         */
+        const val GROUP_SUMMARY_NOTIFICATION_ID = 950
+        internal const val GROUP_SUMMARY_REQUEST_CODE = 95
+
+        internal const val GROUP_KEY = "usage_monitor_group"
+    }
+
         private val notificationManager: NotificationManager? =
             try {
                 context.getSystemService(NotificationManager::class.java)
@@ -94,7 +138,7 @@ class NotificationHelper
             title: String,
             message: String,
             simSlot: Int,
-            type: Int,
+            type: UsageNotificationType,
         ) {
             val manager = notificationManager
             if (manager == null) {
@@ -120,35 +164,12 @@ class NotificationHelper
                     return
                 }
 
-                val intent =
-                    Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        putExtra(IntentExtras.SIM_SLOT, simSlot)
-                    }
-
-                val pendingIntent =
-                    PendingIntent.getActivity(
-                        context,
-                        BASE_REQUEST_CODE + (simSlot * SLOT_OFFSET) + type,
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                    )
-
-                val notification =
-                    NotificationCompat
-                        .Builder(context, Constants.Notifications.CHANNEL_ID)
-                        .setContentTitle(title)
-                        .setContentText(message)
-                        .setSmallIcon(R.drawable.ic_notification)
-                        .setColor(ContextCompat.getColor(context, R.color.primary))
-                        .setAutoCancel(true)
-                        .setContentIntent(pendingIntent)
-                        .setGroup("usage_monitor_group")
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                        .build()
-
-                val notificationId = BASE_NOTIFICATION_ID + (simSlot * SLOT_OFFSET) + type
+                val notificationId = BASE_NOTIFICATION_ID + (simSlot * SLOT_OFFSET) + type.idOffset
+                val notification = buildUsageNotification(title, message, simSlot, type)
                 manager.notify(notificationId, notification)
+
+                val summaryNotification = buildGroupSummaryNotification(title)
+                manager.notify(GROUP_SUMMARY_NOTIFICATION_ID, summaryNotification)
             } catch (e: SecurityException) {
                 AppLogger.w("Notification permission denied: ${e.message}")
             } catch (e: RuntimeException) {
@@ -156,21 +177,65 @@ class NotificationHelper
             }
         }
 
-        private fun isAodPostingAllowed(manager: NotificationManager): Boolean {
-            val hasPermission = permissionManager.hasNotificationPermission()
-            val aodChannel = manager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
-            val channelBlocked = aodChannel != null && aodChannel.importance == NotificationManager.IMPORTANCE_NONE
-
-            return if (!hasPermission || !areNotificationsEnabledSafe()) {
-                val reason = if (!hasPermission) "permission not granted" else "disabled for app"
-                AppLogger.d("AOD summary notification skipped: $reason")
-                false
-            } else if (channelBlocked) {
-                AppLogger.d("AOD summary notification skipped: channel blocked")
-                false
-            } else {
-                true
+    private fun buildUsageNotification(
+        title: String,
+        message: String,
+        simSlot: Int,
+        type: UsageNotificationType,
+    ): android.app.Notification {
+        val intent =
+            Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(IntentExtras.SIM_SLOT, simSlot)
             }
+
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                BASE_REQUEST_CODE + (simSlot * SLOT_OFFSET) + type.idOffset,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+
+        return NotificationCompat
+            .Builder(context, Constants.Notifications.CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ContextCompat.getColor(context, R.color.primary))
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setGroup(GROUP_KEY)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+    }
+
+    private fun buildGroupSummaryNotification(title: String): android.app.Notification {
+        val summaryIntent =
+            Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+
+        val summaryPendingIntent =
+            PendingIntent.getActivity(
+                context,
+                GROUP_SUMMARY_REQUEST_CODE,
+                summaryIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+
+        return NotificationCompat
+            .Builder(context, Constants.Notifications.CHANNEL_ID)
+            .setContentTitle(context.getString(R.string.notification_channel_name))
+            .setContentText(title)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ContextCompat.getColor(context, R.color.primary))
+            .setContentIntent(summaryPendingIntent)
+            .setGroup(GROUP_KEY)
+            .setGroupSummary(true)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .build()
         }
 
         /**
@@ -196,7 +261,7 @@ class NotificationHelper
                 }
 
             return try {
-                if (isAodPostingAllowed(manager)) {
+                if (isAodSummaryAvailable()) {
                     val intent =
                         Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -312,18 +377,4 @@ class NotificationHelper
                 AppLogger.w("Error checking notification status: RuntimeException: ${e.message}")
                 false
             }
-
-        companion object {
-            private const val BASE_REQUEST_CODE = 100
-            private const val BASE_NOTIFICATION_ID = 1000
-            private const val SLOT_OFFSET = 10
-
-            /**
-             * Outside the range of existing usage notifications
-             * (BASE_NOTIFICATION_ID/BASE_REQUEST_CODE and slot offsets)
-             * to avoid collision.
-             */
-            const val AOD_SUMMARY_NOTIFICATION_ID = 900
-            const val AOD_SUMMARY_REQUEST_CODE = 90
-        }
     }

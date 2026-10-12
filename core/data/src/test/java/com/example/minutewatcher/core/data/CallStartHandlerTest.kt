@@ -48,15 +48,15 @@ class CallStartHandlerTest {
     }
 
     @Test
-    fun `executeCallStart records call start when tracking enabled`() =
+    fun `executeCallStart with stable SIM identity saves session with stableId`() =
         runTest {
             whenever(context.checkPermissions()).thenReturn(true)
             whenever(attributionResolver.resolveTargetSubId(1)).thenReturn(1)
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
-            whenever(attributionResolver.resolveSessionIdentity(1)).thenReturn("id_1")
+            whenever(attributionResolver.resolveIdentity(1)).thenReturn("id_1")
             whenever(timeProvider.now()).thenReturn(1000L)
             whenever(timeProvider.elapsedRealtime()).thenReturn(5000L)
             whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
@@ -66,9 +66,34 @@ class CallStartHandlerTest {
             verify(callSessionRepository).saveCallSession(
                 subId = eq(1),
                 startTime = eq(1000L),
-                bootTime = eq(5000L),
+                elapsedRealtime = eq(5000L),
                 uptime = eq(3000L),
                 identity = eq("id_1"),
+            )
+        }
+
+    @Test
+    fun `executeCallStart with unstable SIM identity saves session with null identity`() =
+        runTest {
+            whenever(context.checkPermissions()).thenReturn(true)
+            whenever(attributionResolver.resolveTargetSubId(1)).thenReturn(1)
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf(null))
+            whenever(attributionResolver.resolveIdentity(1)).thenReturn(null)
+            whenever(timeProvider.now()).thenReturn(1000L)
+            whenever(timeProvider.elapsedRealtime()).thenReturn(5000L)
+            whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
+
+            handler.executeCallStart(1, -1L, context)
+
+            verify(callSessionRepository).saveCallSession(
+                subId = eq(1),
+                startTime = eq(1000L),
+                elapsedRealtime = eq(5000L),
+                uptime = eq(3000L),
+                identity = eq(null),
             )
         }
 
@@ -147,9 +172,9 @@ class CallStartHandlerTest {
             whenever(attributionResolver.resolveTargetSubId(1)).thenReturn(1)
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(0L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(0L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(0L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
-            whenever(attributionResolver.resolveSessionIdentity(1)).thenReturn("id_1")
+            whenever(attributionResolver.resolveIdentity(1)).thenReturn("id_1")
             whenever(timeProvider.now()).thenReturn(1000L)
             whenever(timeProvider.elapsedRealtime()).thenReturn(5000L)
             whenever(timeProvider.uptimeMillis()).thenReturn(3000L)
@@ -159,7 +184,7 @@ class CallStartHandlerTest {
                 callSessionRepository.saveCallSession(
                     subId = eq(1),
                     startTime = eq(1000L),
-                    bootTime = eq(5000L),
+                    elapsedRealtime = eq(5000L),
                     uptime = eq(3000L),
                     identity = eq("id_1"),
                 ),

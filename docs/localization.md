@@ -10,17 +10,36 @@ Different languages have different rules for pluralizing nouns based on quantity
 
 The required cardinal plural categories for all supported app languages according to Unicode CLDR are listed below:
 
-| Language Tag | Language | Required Cardinal Plural Categories          | Notes                                                                             |
-|:-------------|:---------|:---------------------------------------------|:----------------------------------------------------------------------------------|
-| `en`         | English  | `one`, `other`                               |                                                                                   |
-| `ar`         | Arabic   | `zero`, `one`, `two`, `few`, `many`, `other` |                                                                                   |
-| `de`         | German   | `one`, `other`                               |                                                                                   |
-| `es`         | Spanish  | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
-| `fr`         | French   | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
-| `hi`         | Hindi    | `one`, `other`                               |                                                                                   |
-| `ja`         | Japanese | `other`                                      |                                                                                   |
-| `ru`         | Russian  | `one`, `few`, `many`, `other`                |                                                                                   |
-| `zh`         | Chinese  | `other`                                      |                                                                                   |
+| Language Tag | Language              | Required Cardinal Plural Categories          | Notes                                                                             |
+|:-------------|:----------------------|:---------------------------------------------|:----------------------------------------------------------------------------------|
+| `en`         | English               | `one`, `other`                               |                                                                                   |
+| `ar`         | Arabic                | `zero`, `one`, `two`, `few`, `many`, `other` | RTL direction                                                                     |
+| `ur`         | Urdu                  | `one`, `other`                               | RTL direction                                                                     |
+| `bn`         | Bengali               | `one`, `other`                               |                                                                                   |
+| `de`         | German                | `one`, `other`                               |                                                                                   |
+| `es`         | Spanish               | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
+| `fr`         | French                | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
+| `hi`         | Hindi                 | `one`, `other`                               |                                                                                   |
+| `id`         | Indonesian            | `other`                                      |                                                                                   |
+| `ja`         | Japanese              | `other`                                      |                                                                                   |
+| `pt-BR`      | Portuguese (Brazil)   | `one`, `other`                               |                                                                                   |
+| `pt-PT`      | Portuguese (Portugal) | `one`, `other`                               |                                                                                   |
+| `ru`         | Russian               | `one`, `few`, `many`, `other`                |                                                                                   |
+| `zh`         | Chinese               | `other`                                      |                                                                                   |
+| `ta`         | Tamil                 | `one`, `other`                               |                                                                                   |
+| `te`         | Telugu                | `one`, `other`                               |                                                                                   |
+| `mr`         | Marathi               | `one`, `other`                               |                                                                                   |
+| `gu`         | Gujarati              | `one`, `other`                               |                                                                                   |
+| `pa`         | Punjabi               | `one`, `other`                               |                                                                                   |
+| `vi`         | Vietnamese            | `other`                                      |                                                                                   |
+| `tr`         | Turkish               | `one`, `other`                               |                                                                                   |
+| `ko`         | Korean                | `other`                                      |                                                                                   |
+| `it`         | Italian               | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
+| `fa`         | Persian               | `one`, `other`                               | RTL direction                                                                     |
+| `ha`         | Hausa                 | `one`, `other`                               |                                                                                   |
+| `yo`         | Yoruba                | `other`                                      |                                                                                   |
+| `jv`         | Javanese              | `other`                                      |                                                                                   |
+| `bho`        | Bhojpuri              | `one`, `other`                               |                                                                                   |
 
 > [!IMPORTANT]
 > Always use the full set of quantities according to CLDR/Lint requirements. Missing any quantity can cause Lint fatal

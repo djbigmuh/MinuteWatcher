@@ -7,6 +7,7 @@ import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.di.IoDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.FlowObservationScope
+import com.example.minutewatcher.core.common.util.ObservationMode
 import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.TrackingStatusProvider
 import com.example.minutewatcher.core.model.Constants
@@ -83,6 +84,8 @@ class SemanticSearchManager
         sealed interface IndexResult {
             data object Success : IndexResult
 
+            data object PartialSuccess : IndexResult
+
             data class ActualFailure(
                 val message: String? = null,
             ) : IndexResult
@@ -90,12 +93,14 @@ class SemanticSearchManager
             data object MutexContention : IndexResult
         }
 
-        private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "SemanticSearchManager")
+    private val observationScope =
+        FlowObservationScope<GlobalSnapshot>(scope, "SemanticSearchManager", ObservationMode.COMPLETE)
 
         /** Current observation job, if any. */
         @VisibleForTesting
         internal val job: Job? get() = observationScope.currentJob
 
+    @Volatile
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
         private val initMutex = Mutex()
@@ -131,6 +136,7 @@ class SemanticSearchManager
                         if (flow == null) {
                             AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
                         } else {
+                            lastSnapshotFlow = null
                             setupObservation(flow)
                         }
                     }
@@ -281,6 +287,11 @@ class SemanticSearchManager
                         transitionStatus(TrackingStatus.Ready(timeProvider.now()), force = true)
                     }
 
+                    IndexResult.PartialSuccess -> {
+                        // Document writing succeeded, but deletion failed.
+                        // Status is already Error from updateStatus during deletion failure.
+                    }
+
                     IndexResult.MutexContention -> {
                         // Should not happen in performIndexSnapshotLocked
                     }
@@ -371,10 +382,17 @@ class SemanticSearchManager
                     }
 
                 try {
-                    indexer.performIndexUpdate(currentSession, snapshot)
+                    val removeFailed =
+                        indexer.performIndexUpdate(currentSession, snapshot) { status ->
+                            transitionStatus(status)
+                        }
                     lastSnapshotHash = currentHash
                     lastSnapshotVersion = snapshot.version
-                    IndexResult.Success
+                    if (removeFailed) {
+                        IndexResult.PartialSuccess
+                    } else {
+                        IndexResult.Success
+                    }
                 } catch (e: CancellationException) {
                     resetLastSnapshotState()
                     throw e

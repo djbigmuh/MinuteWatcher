@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.model.Constants
@@ -119,7 +120,7 @@ private fun SimCardContent(
             model = model,
             statusColor =
                 getStatusColor(
-                    ColorProvider.getUsageStatus(model.trafficRemainingGb, model.effectiveTrafficLimitGb),
+                    ColorProvider.getUsageStatus(model.trafficRemainingGb ?: 0f, model.effectiveTrafficLimitGb),
                 ),
             onAdjustTraffic = onAdjustTraffic,
             onShowTrafficInfo = onShowTrafficInfo,
@@ -160,6 +161,8 @@ private fun SimCardHeader(
             text = model.operatorName,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier =
                 Modifier
                     .weight(1f)

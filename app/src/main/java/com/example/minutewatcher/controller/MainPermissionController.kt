@@ -7,15 +7,18 @@ import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.example.minutewatcher.core.model.AppSettings
 import com.example.minutewatcher.core.model.Constants
-import com.example.minutewatcher.feature.main.MainViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -31,14 +34,15 @@ class MainPermissionController
         @IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
     ) {
-        private var checkJob: Job? = null
-        private var notificationJob: Job? = null
+    private val checkJob = AtomicReference<Job?>(null)
+    private val notificationJob = AtomicReference<Job?>(null)
 
         /**
          * Checks permissions and schedules background work if needed.
          *
          * @param scope Coroutine scope to run the check.
-         * @param viewModel ViewModel to interact with app settings and state.
+         * @param isInitialSetupCompleted Flow of initial setup completion status.
+         * @param appSettingsLoaded Flow of loaded app settings.
          * @param lastPermissionState Bitmask of last known permission states.
          * @param onShowUsageAccessDialog Callback to show usage access dialog.
          * @param onRequestPhonePermission Callback to request phone state permission.
@@ -46,49 +50,68 @@ class MainPermissionController
          */
         fun checkPermissionsAndInit(
             scope: CoroutineScope,
-            viewModel: MainViewModel,
+            isInitialSetupCompleted: Flow<Boolean>,
+            appSettingsLoaded: Flow<AppSettings>,
             lastPermissionState: Int,
             onShowUsageAccessDialog: (Boolean) -> Unit,
             onRequestPhonePermission: () -> Unit,
             onCheckNotifications: (Boolean) -> Unit,
         ) {
-            checkJob?.cancel()
-            checkJob =
+            val previous = checkJob.getAndSet(null)
+            previous?.cancel()
+            val newJob =
                 scope.launch {
-                    if (permissionManager.hasPhoneStatePermission()) {
-                        launch(ioDispatcher) {
-                            try {
-                                val initialSetupCompleted =
-                                    viewModel.isInitialSetupCompleted.firstWithTimeout(
-                                        Constants.Flow.LONG_TIMEOUT_MS,
-                                    )
-                                if (initialSetupCompleted != true ||
-                                    lastPermissionState == -1
-                                ) {
-                                    workScheduler.scheduleInitialSetup(force = false)
+                    try {
+                        if (permissionManager.hasPhoneStatePermission()) {
+                            launch(ioDispatcher) {
+                                try {
+                                    val setupCompleted =
+                                        isInitialSetupCompleted.firstWithTimeout(
+                                            Constants.Flow.LONG_TIMEOUT_MS,
+                                        )
+                                    if (setupCompleted != true ||
+                                        lastPermissionState == -1
+                                    ) {
+                                        workScheduler.scheduleInitialSetup(force = false)
+                                    }
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    AppLogger.e("MainPermissionController: Failed to schedule work during init", e)
                                 }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("MainPermissionController: Failed to schedule work during init", e)
                             }
-                        }
 
-                        if (!permissionManager.hasUsageStatsPermission()) {
-                            onShowUsageAccessDialog(true)
-                        } else {
-                            onCheckNotifications(true)
-                        }
-                    } else {
-                        val settings: AppSettings? =
-                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                viewModel.appSettings.filter { it.isLoaded }.firstOrNull()
+                            if (!permissionManager.hasUsageStatsPermission()) {
+                                onShowUsageAccessDialog(true)
+                            } else {
+                                onCheckNotifications(true)
                             }
-                        if (settings != null && !settings.wasPhonePermissionRequestedBefore) {
-                            onRequestPhonePermission()
+                        } else {
+                            val settings =
+                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                    appSettingsLoaded.filter { it.isLoaded }.firstOrNull()
+                                } ?: run {
+                                    AppLogger.w(
+                                        "MainPermissionController: AppSettings read timed " +
+                                            "out during init",
+                                    )
+                                    null
+                                }
+                            if (settings != null && !settings.wasPhonePermissionRequestedBefore) {
+                                onRequestPhonePermission()
+                            }
                         }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("MainPermissionController: Failed during checkPermissionsAndInit", e)
+                    } finally {
+                        checkJob.compareAndSet(currentCoroutineContext().job, null)
                     }
                 }
+            if (!checkJob.compareAndSet(null, newJob)) {
+                newJob.cancel()
+            }
         }
 
         /**
@@ -96,22 +119,40 @@ class MainPermissionController
          */
         fun checkNotifications(
             scope: CoroutineScope,
-            viewModel: MainViewModel,
+            appSettingsLoaded: Flow<AppSettings>,
             autoRequest: Boolean,
             onRequest: () -> Unit,
         ) {
-            notificationJob?.cancel()
-            notificationJob =
+            val previous = notificationJob.getAndSet(null)
+            previous?.cancel()
+            val newJob =
                 scope.launch {
-                    if (!permissionManager.hasNotificationPermission()) {
-                        val settings =
-                            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                viewModel.appSettings.filter { it.isLoaded }.firstOrNull()
+                    try {
+                        if (!permissionManager.hasNotificationPermission()) {
+                            val settings =
+                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                                    appSettingsLoaded.filter { it.isLoaded }.firstOrNull()
+                                } ?: run {
+                                    AppLogger.w(
+                                        "MainPermissionController: AppSettings read timed " +
+                                            "out during checkNotifications",
+                                    )
+                                    null
+                                }
+                            if (autoRequest && settings != null && !settings.notificationPermissionRequested) {
+                                onRequest()
                             }
-                        if (autoRequest && settings != null && !settings.notificationPermissionRequested) {
-                            onRequest()
                         }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("MainPermissionController: Failed during checkNotifications", e)
+                    } finally {
+                        notificationJob.compareAndSet(currentCoroutineContext().job, null)
                     }
                 }
+            if (!notificationJob.compareAndSet(null, newJob)) {
+                newJob.cancel()
+            }
         }
     }

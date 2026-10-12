@@ -9,6 +9,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,32 +59,37 @@ class SemanticInitializerWorkerTest {
         runBlocking {
             whenever(searchManager.indexInitialSnapshot(any())).thenReturn(SemanticSearchManager.IndexResult.Success)
             whenever(shortcutManager.updateShortcutsSync(any())).thenReturn(true)
+            whenever(searchManager.status).thenReturn(MutableStateFlow(TrackingStatus.Active))
+            whenever(shortcutManager.status).thenReturn(MutableStateFlow(TrackingStatus.Active))
         }
     }
+
+    private fun createWorker(attemptCount: Int = 1): SemanticInitializerWorker =
+        TestListenableWorkerBuilder<SemanticInitializerWorker>(context)
+            .setRunAttemptCount(attemptCount)
+            .setWorkerFactory(
+                object : WorkerFactory() {
+                    override fun createWorker(
+                        appContext: Context,
+                        workerClassName: String,
+                        workerParameters: WorkerParameters,
+                    ): ListenableWorker =
+                        SemanticInitializerWorker(
+                            appContext,
+                            workerParameters,
+                            searchManager,
+                            shortcutManager,
+                            usageStateRepository,
+                            appSettingsRepository,
+                            appFunctionAvailability,
+                        )
+                },
+            ).build()
 
     @Test
     fun `worker waits for non-empty snapshot and triggers indexing`() =
         runTest {
-            val worker =
-                TestListenableWorkerBuilder<SemanticInitializerWorker>(context)
-                    .setWorkerFactory(
-                        object : WorkerFactory() {
-                            override fun createWorker(
-                                appContext: Context,
-                                workerClassName: String,
-                                workerParameters: WorkerParameters,
-                            ): ListenableWorker =
-                                SemanticInitializerWorker(
-                                    appContext,
-                                    workerParameters,
-                                    searchManager,
-                                    shortcutManager,
-                                    usageStateRepository,
-                                    appSettingsRepository,
-                                    appFunctionAvailability,
-                                )
-                        },
-                    ).build()
+            val worker = createWorker(1)
 
             val job =
                 launch {
@@ -111,6 +117,110 @@ class SemanticInitializerWorkerTest {
 
             verify(searchManager).indexInitialSnapshot(realSnapshot)
             verify(shortcutManager).updateShortcutsSync(realSnapshot)
+        }
+
+    @Test
+    fun `actual failure on first attempt retries`() =
+        runTest {
+            whenever(
+                searchManager.indexInitialSnapshot(any()),
+            ).thenReturn(SemanticSearchManager.IndexResult.ActualFailure())
+            val worker = createWorker(1)
+            snapshotFlow.value = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `actual failure on max attempts fails`() =
+        runTest {
+            whenever(
+                searchManager.indexInitialSnapshot(any()),
+            ).thenReturn(SemanticSearchManager.IndexResult.ActualFailure())
+            val worker = createWorker(3)
+            snapshotFlow.value = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.failure(), result)
+        }
+
+    @Test
+    fun `actual failure with not supported status succeeds`() =
+        runTest {
+            whenever(
+                searchManager.indexInitialSnapshot(any()),
+            ).thenReturn(SemanticSearchManager.IndexResult.ActualFailure())
+            whenever(
+                searchManager.status,
+            ).thenReturn(MutableStateFlow(TrackingStatus.Error(TrackingStatus.ErrorType.NOT_SUPPORTED)))
+            val worker = createWorker(3)
+            snapshotFlow.value = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.success(), result)
+        }
+
+    @Test
+    fun `mutex contention on first attempt retries`() =
+        runTest {
+            whenever(
+                searchManager.indexInitialSnapshot(any()),
+            ).thenReturn(SemanticSearchManager.IndexResult.MutexContention)
+            val worker = createWorker(1)
+            snapshotFlow.value = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `mutex contention when attempts exhausted succeeds`() =
+        runTest {
+            whenever(
+                searchManager.indexInitialSnapshot(any()),
+            ).thenReturn(SemanticSearchManager.IndexResult.MutexContention)
+            val worker = createWorker(3)
+            snapshotFlow.value = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.success(), result)
+        }
+
+    @Test
+    fun `shortcut failure on first attempt retries`() =
+        runTest {
+            whenever(shortcutManager.updateShortcutsSync(any())).thenReturn(false)
+            val worker = createWorker(1)
+            snapshotFlow.value = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `shortcut failure with not supported status succeeds`() =
+        runTest {
+            whenever(shortcutManager.updateShortcutsSync(any())).thenReturn(false)
+            whenever(
+                shortcutManager.status,
+            ).thenReturn(MutableStateFlow(TrackingStatus.Error(TrackingStatus.ErrorType.NOT_SUPPORTED)))
+            val worker = createWorker(1)
+            snapshotFlow.value = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.success(), result)
+        }
+
+    @Test
+    fun `exception in indexInitialSnapshot does not escape and retries`() =
+        runTest {
+            whenever(searchManager.indexInitialSnapshot(any())).thenThrow(RuntimeException("Crash"))
+            val worker = createWorker(1)
+            snapshotFlow.value = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.retry(), result)
         }
 
     private fun createEmptySnapshot() =

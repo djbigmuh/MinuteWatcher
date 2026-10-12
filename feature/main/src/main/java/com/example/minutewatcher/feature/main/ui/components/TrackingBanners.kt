@@ -53,11 +53,19 @@ private fun ErrorBanners(
     state: TrackingBannerState,
     callbacks: TrackingBannerCallbacks,
 ) {
+    SimDiscoveryErrorBanner(
+        state = state,
+        onRetrySimDiscovery = callbacks.onRetrySimDiscovery,
+    )
     TrafficErrorBanner(
         state = state,
         onRetryTraffic = callbacks.onRetryTraffic,
     )
     CallsErrorBanner(
+        state = state,
+        onRetryCalls = callbacks.onRetryCalls,
+    )
+    CallsAttributionErrorBanner(
         state = state,
         onRetryCalls = callbacks.onRetryCalls,
     )

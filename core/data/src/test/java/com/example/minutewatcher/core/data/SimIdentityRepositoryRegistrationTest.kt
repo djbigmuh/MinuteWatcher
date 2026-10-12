@@ -91,7 +91,7 @@ class SimIdentityRepositoryRegistrationTest {
     @Config(sdk = [30]) // behavior-specific SDK
     // @Suppress("DEPRECATION") is required because test checks legacy subscription listener registration on API 29/30.
     @Suppress("DEPRECATION")
-    fun `test addOnSubscriptionsChangedListener uses executor on API 30`() =
+    fun `addOnSubscriptionsChangedListener uses executor on API 30`() =
         runTest {
             val repository = createRepository(backgroundScope)
 
@@ -114,7 +114,7 @@ class SimIdentityRepositoryRegistrationTest {
     @Config(sdk = [29]) // behavior-specific SDK
     // @Suppress("DEPRECATION") is required because test checks legacy subscription listener registration on API 29.
     @Suppress("DEPRECATION")
-    fun `test addOnSubscriptionsChangedListener uses legacy on API 29`() =
+    fun `addOnSubscriptionsChangedListener uses legacy on API 29`() =
         runTest {
             val repository = createRepository(backgroundScope)
 
@@ -123,12 +123,18 @@ class SimIdentityRepositoryRegistrationTest {
                     repository.observeActiveSims().collect {}
                 }
             advanceUntilIdle()
+            runCurrent()
+            advanceUntilIdle()
+
+            verify(
+                subscriptionManager,
+            ).addOnSubscriptionsChangedListener(any<SubscriptionManager.OnSubscriptionsChangedListener>())
 
             job.cancel()
         }
 
     @Test
-    fun `test observeActiveSims recovers after permission regrant`() =
+    fun `observeActiveSims recovers after permission regrant`() =
         runTest {
             val permissionChanges = MutableSharedFlow<Unit>(replay = 1)
             whenever(permissionStateNotifier.changes).thenReturn(permissionChanges)

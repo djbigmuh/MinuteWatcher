@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>Duka a layi guda</item>
+        <item>Layi biyu</item>
+        <item>Layi uku</item>
+        <item>Layi shida</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>A gefen juna</item>
+        <item>A shafi guda</item>
+    </string-array>
+</resources>

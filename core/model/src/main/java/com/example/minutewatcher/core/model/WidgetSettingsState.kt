@@ -14,6 +14,7 @@ package com.example.minutewatcher.core.model
  * @property notifyLowTraffic Low traffic notification.
  * @property aodSummaryEnabled Always-on Display summary notification enabled flag.
  * @property callTrackingEnabled Call minutes tracking enabled flag.
+ * @property assistantAccessEnabled User consent for on-device assistant access via AppFunctions.
  * @property simStates SIM-specific settings (key: slot index).
  * @property widgetLimitExceeded Widget limit exceeded flag.
  * @property settingsLoadFailed General settings load failure flag.
@@ -94,6 +95,7 @@ data class WidgetSettingsState(
  * @property showMinutesLimit Show minutes limit.
  * @property showTraffic Show traffic.
  * @property showTrafficLimit Show traffic limit.
+ * @property lastKnownIdentity Last known stable SIM identity, or null.
  */
 data class SimSettingsState(
     val showSim: Boolean = true,

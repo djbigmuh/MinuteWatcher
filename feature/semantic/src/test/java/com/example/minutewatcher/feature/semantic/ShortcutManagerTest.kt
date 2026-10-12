@@ -412,6 +412,159 @@ class ShortcutManagerTest {
             assertEquals(TrackingStatus.Active, shortcutManager.status.value)
         }
 
+    @Test
+    fun `identical consecutive snapshots apply shortcuts only once`() =
+        runTest {
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot)
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+
+            flow.value = snapshot
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+        }
+
+    @Test
+    fun `changed snapshot applies shortcuts again`() =
+        runTest {
+            val snapshot1 =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot1)
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+
+            val snapshot2 =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 20)),
+                            1,
+                        ),
+                    ),
+                )
+            flow.value = snapshot2
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(2))
+                .apply(any(), any())
+        }
+
+    @Test
+    fun `recover resets projection cache and applies identical snapshot again`() =
+        runTest {
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot)
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+
+            shortcutManager.recover()
+            advanceUntilIdle()
+
+            flow.value = snapshot
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(2))
+                .apply(any(), any())
+        }
+
+    @Test
+    fun `failed application does not cache projection and retries on identical snapshot`() =
+        runTest {
+            org.mockito.kotlin
+                .whenever(shortcutApplier.apply(any(), any()))
+                .thenThrow(RuntimeException("Apply failed"))
+                .thenAnswer { invocation ->
+                    val ctx = invocation.getArgument<Context>(0)
+                    val shortcuts = invocation.getArgument<List<ShortcutInfoCompat>>(1)
+                    ShortcutManagerCompat.setDynamicShortcuts(ctx, shortcuts)
+                    Unit
+                }
+
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot)
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+
+            flow.value = snapshot.copy(timestamp = 2000L)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(2))
+                .apply(any(), any())
+        }
+
     private fun createEntity(
         slot: Int = 0,
         op: String = "MTS",
@@ -440,4 +593,20 @@ class ShortcutManagerTest {
             simSnapshots = sims,
             capabilities = emptyList(),
         )
+
+    @Test
+    fun `initialize with same flow instance does not restart observation`() =
+        runTest {
+            val flow = MutableStateFlow(createSnapshot(emptyList()))
+
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+            val job1 = shortcutManager.job
+
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+            val job2 = shortcutManager.job
+
+            assertEquals("Job should not be restarted for same flow instance", job1, job2)
+        }
 }

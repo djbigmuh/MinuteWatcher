@@ -1,7 +1,3 @@
-import dev.detekt.gradle.extensions.DetektExtension
-import org.jlleitschuh.gradle.ktlint.KtlintExtension
-import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
-
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.androidApplication) apply false
@@ -17,34 +13,11 @@ plugins {
 }
 
 subprojects {
-    apply(plugin = "dev.detekt")
-
-    extensions.configure<DetektExtension>("detekt") {
-        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-        buildUponDefaultConfig.set(true)
-        allRules.set(false)
-    }
-
-    apply(plugin = "org.jlleitschuh.gradle.ktlint")
-
-    configure<KtlintExtension> {
-        android.set(true)
-        ignoreFailures.set(false)
-        reporters {
-            reporter(ReporterType.PLAIN)
-            reporter(ReporterType.CHECKSTYLE)
-        }
-    }
-
-    apply(plugin = "jacoco")
-
-    tasks.withType<JacocoReport>().configureEach {
-        reports {
-            xml.required.set(true)
-            html.required.set(true)
-        }
-    }
-
+    /**
+     * Centralized test task execution configuration (Robolectric, Mockito, JaCoCo integration, JVM args)
+     * kept in root build.gradle.kts subprojects block to ensure shared test runner properties
+     * across all subprojects before task graph evaluation.
+     */
     tasks.withType<Test>().configureEach {
         // Allow Mockito to self-attach on JDK 17+
         jvmArgs("-Dnet.bytebuddy.experimental=true")

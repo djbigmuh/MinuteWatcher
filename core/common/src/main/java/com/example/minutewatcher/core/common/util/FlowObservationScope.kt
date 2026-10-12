@@ -15,34 +15,49 @@ import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
+ * Observation mode for [FlowObservationScope].
+ */
+enum class ObservationMode {
+    /**
+     * Processes only the latest value emitted by the flow, cancelling previous processing
+     * when a new value arrives (equivalent to `collectLatest`).
+     */
+    LATEST,
+
+    /**
+     * Processes every emitted value completely in sequence (equivalent to `collect`).
+     */
+    COMPLETE,
+}
+
+/**
  * Generalized class for managing a data stream observation cycle.
  * Implements a job management pattern: cancel old, start new,
  * and support for controlled shutdown.
  *
  * **Thread Safety:** Safe to call from any context. All state modifications are protected by a [Mutex].
- * **Semantics:** Uses `collectLatest` which ensures only the latest value is processed,
- * cancelling previous value processing if a new one arrives.
+ * **Semantics:** Controlled by [ObservationMode] (`LATEST` uses `collectLatest`, `COMPLETE` uses `collect`).
  * **Handover Invariant:** Handover between observers is performed sequentially.
  * Waiting for the completion of the previous observer is bounded by [Constants.Flow.SHORT_TIMEOUT_MS].
  * If the previous observer fails to complete within this timeout, the new observer launches
  * without further waiting, logging the event.
+ * **Reference Cleanup:** No references to [Flow], [CoroutineContext], or collector lambda are stored as fields.
+ * Arguments are passed directly to execution and cleared upon job completion, avoiding memory leaks.
  *
  * @param T The type of data being observed.
  * @param scope The [CoroutineScope] in which to launch observation jobs.
  * @param tag A tag used for logging.
+ * @param mode The [ObservationMode] determining collection semantics.
  */
 class FlowObservationScope<T>(
     private val scope: CoroutineScope,
     private val tag: String,
+    private val mode: ObservationMode = ObservationMode.LATEST,
 ) {
     private val mutex = Mutex()
 
     @Volatile
     private var _currentJob: Job? = null
-
-    private var lastFlow: Flow<T>? = null
-    private var lastContext: CoroutineContext? = null
-    private var lastCollector: (suspend (T) -> Unit)? = null
 
     /**
      * The currently active observation job, if any.
@@ -63,17 +78,14 @@ class FlowObservationScope<T>(
         collector: suspend (T) -> Unit,
     ): Job =
         mutex.withLock {
-            lastFlow = flow
-            lastContext = context
-            lastCollector = collector
-            startObservationLocked()
+            startObservationLocked(flow, context, collector)
         }
 
-    private suspend fun startObservationLocked(): Job {
-        val flow = requireNotNull(lastFlow) { "FlowObservationScope($tag): no flow registered for observation" }
-        val collector = requireNotNull(lastCollector) { "FlowObservationScope($tag): no collector registered" }
-        val context = lastContext ?: EmptyCoroutineContext
-
+    private suspend fun startObservationLocked(
+        flow: Flow<T>,
+        context: CoroutineContext,
+        collector: suspend (T) -> Unit,
+    ): Job {
         val previous = _currentJob
         _currentJob = null
         if (previous != null) {
@@ -91,7 +103,10 @@ class FlowObservationScope<T>(
 
         val newJob =
             scope.launch(context) {
-                flow.collectLatest { collector(it) }
+                when (mode) {
+                    ObservationMode.LATEST -> flow.collectLatest { collector(it) }
+                    ObservationMode.COMPLETE -> flow.collect { collector(it) }
+                }
             }
         _currentJob = newJob
         return newJob

@@ -16,6 +16,16 @@ object SimUtils {
             else -> R.drawable.ic_unknown
         }
 
+    /**
+     * Resolves the operator name for display.
+     * Returns the full resolved operator name or generic SIM name if operator name is empty.
+     * Visual truncation should be handled by UI display attributes (such as maxLines = 1 and TextOverflow.Ellipsis).
+     *
+     * @param context Context for resource resolution.
+     * @param operatorName Raw operator name or code.
+     * @param slot SIM slot index.
+     * @return Full resolved operator name or generic fallback.
+     */
     fun getShortOperatorName(
         context: Context,
         operatorName: String,
@@ -25,13 +35,13 @@ object SimUtils {
         return try {
             val resId = OperatorResolver.getOperatorResourceId(operatorName)
             when {
-                resId != null -> getStringSafe(localizedContext, resId, truncateName(operatorName))
-                operatorName.isNotEmpty() -> truncateName(operatorName)
+                resId != null -> getStringSafe(localizedContext, resId, operatorName)
+                operatorName.isNotEmpty() -> operatorName
                 else -> genericOperatorName(localizedContext, slot)
             }
         } catch (e: Exception) {
             AppLogger.e("Error resolving short operator name for: $operatorName", e)
-            if (operatorName.isNotEmpty()) truncateName(operatorName) else genericOperatorName(localizedContext, slot)
+            if (operatorName.isNotEmpty()) operatorName else genericOperatorName(localizedContext, slot)
         }
     }
 
@@ -39,16 +49,6 @@ object SimUtils {
         context: Context,
         slot: Int,
     ): String = context.getString(R.string.operator_generic, slot + 1)
-
-    private fun truncateName(name: String): String =
-        if (name.length > MAX_OPERATOR_NAME_LENGTH) {
-            name.take(TRUNCATED_OPERATOR_NAME_LENGTH) + "..."
-        } else {
-            name
-        }
-
-    private const val MAX_OPERATOR_NAME_LENGTH = 20
-    private const val TRUNCATED_OPERATOR_NAME_LENGTH = 17
 
     private fun getStringSafe(
         context: Context,

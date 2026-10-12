@@ -65,7 +65,7 @@ abstract class CallTrackerTestFixtures {
         whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
         whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf(null))
         whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
-        whenever(callSessionRepository.getBootTime(any())).thenReturn(flowOf(0L))
+        whenever(callSessionRepository.getElapsedRealtime(any())).thenReturn(flowOf(0L))
         whenever(callSessionRepository.getUptime(any())).thenReturn(flowOf(0L))
         runBlocking {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())

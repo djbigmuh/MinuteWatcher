@@ -18,7 +18,7 @@ import androidx.compose.runtime.Immutable
  * @property isMinutesLimitSet Whether minutes limit is set.
  * @property trafficUsedMb Traffic used (MB).
  * @property trafficLimitMb Traffic limit (MB).
- * @property trafficRemainingGb Traffic remaining (GB).
+ * @property trafficRemainingGb Traffic remaining (GB), or null if limit is not set.
  * @property effectiveTrafficLimitGb Effective traffic limit (GB).
  * @property trafficAdjustmentGb Traffic adjustment (GB).
  * @property isTrafficLimitSet Whether traffic limit is set.
@@ -40,7 +40,7 @@ data class SimCardUiModel(
     val isMinutesLimitSet: Boolean,
     val trafficUsedMb: Float,
     val trafficLimitMb: Int,
-    val trafficRemainingGb: Float,
+    val trafficRemainingGb: Float?,
     val effectiveTrafficLimitGb: Float,
     val trafficAdjustmentGb: Float,
     val isTrafficLimitSet: Boolean,

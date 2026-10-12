@@ -8,6 +8,7 @@ import androidx.work.Operation
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.Logger
+import com.example.minutewatcher.core.common.util.resetAppLoggerForTest
 import com.example.minutewatcher.core.data.WorkScheduler
 import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -84,7 +85,7 @@ class BootReceiverAwaitTest {
 
     @After
     fun tearDown() {
-        AppLogger.resetForTest()
+        resetAppLoggerForTest()
     }
 
     @Test

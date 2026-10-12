@@ -1,7 +1,11 @@
 [versions]
 agp = "9.4.1"
 kotlin = "2.4.10"
+ktlint = "14.2.0"
+detekt = "2.0.0-alpha.6"
 
 [libraries]
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+ktlint-gradlePlugin = { group = "org.jlleitschuh.gradle", name = "ktlint-gradle", version.ref = "ktlint" }
+detekt-gradlePlugin = { group = "dev.detekt", name = "dev.detekt.gradle.plugin", version.ref = "detekt" }

@@ -35,4 +35,12 @@ class WidgetStringsFactoryTest {
         val strings = WidgetStringsFactory.create(context)
         assertEquals(Locale.FRENCH.language, strings.locale.language)
     }
+
+    @Test
+    fun `create initializes formatting resources correctly`() {
+        val strings = WidgetStringsFactory.create(context)
+        assertEquals("—", strings.valuePlaceholder)
+        assertEquals("%1\$s: %2\$s", strings.labelValueFormat)
+        assertEquals("/%1\$s", strings.limitSuffixFormat)
+    }
 }

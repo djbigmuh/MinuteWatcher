@@ -87,11 +87,7 @@ private fun TrafficUsageRow(
     context: Context,
     model: SimCardUiModel,
 ) {
-    val locale =
-        context.resources
-            .configuration
-            .locales
-            .get(0)
+    val locale = FormatUtils.getLocale(context)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -139,7 +135,7 @@ private fun TrafficRemainingRow(
         )
         Spacer(modifier = Modifier.width(8.dp))
 
-        if (model.trafficRemainingGb < 0) {
+        if (model.trafficRemainingGb == null) {
             Text(text = "-", style = MaterialTheme.typography.bodyLarge)
         } else {
             EditableValueBox(

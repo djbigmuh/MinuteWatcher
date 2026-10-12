@@ -1,6 +1,6 @@
 package com.example.minutewatcher.core.data
 
-import com.example.minutewatcher.core.common.util.AppLogger
+import com.example.minutewatcher.core.common.util.resetAppLoggerForTest
 import com.example.minutewatcher.core.domain.DataRefreshNotifier
 import com.example.minutewatcher.core.domain.UsageStateRepository
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -41,7 +42,7 @@ class UpdateCoordinatorTakeoverTest {
 
     @Before
     fun setup() {
-        AppLogger.resetForTest()
+        resetAppLoggerForTest()
         whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(
             MutableStateFlow(listOf(mock())),
         )
@@ -159,6 +160,46 @@ class UpdateCoordinatorTakeoverTest {
                 "Observation cycle should still be alive and handle snapshot change",
                 callCountAfterForced + 1,
                 widgetUpdater.callCount,
+            )
+        }
+
+    @Test
+    fun `forced update clears takeoverUpdateJob after cancelled job completion`() =
+        runTest {
+            val snapshotFlow = MutableStateFlow(createSnapshot(500L, "Initial", used = 0))
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+
+            runCurrent()
+            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            runCurrent()
+
+            widgetUpdater.shouldHang = true
+            val hangStarted = CompletableDeferred<Unit>()
+            widgetUpdater.onUpdateStarted = { if (widgetUpdater.shouldHang) hangStarted.complete(Unit) }
+
+            snapshotFlow.value = createSnapshot(1000L, "A", used = 10)
+            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            runCurrent()
+
+            withTimeout(5.seconds) { hangStarted.await() }
+
+            widgetUpdater.shouldHang = false
+            widgetUpdater.onUpdateStarted = null
+
+            val forcedJob = launch { coordinator.notifyDataChanged(updateWidget = true, force = true) }
+            runCurrent()
+
+            widgetUpdater.releaseHangingUpdate()
+            runCurrent()
+
+            withTimeout(5.seconds) { forcedJob.join() }
+
+            assertNull(
+                "takeoverUpdateJob should be cleared after forced update completes",
+                coordinator.takeoverUpdateJob.get(),
             )
         }
 

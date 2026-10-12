@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.res.AssetManager
 import com.example.minutewatcher.core.android.testing.SingletonResetRule
 import com.example.minutewatcher.core.resources.R
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -17,6 +19,9 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.ByteArrayInputStream
+import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class OperatorResolverTest {
     @get:Rule
@@ -39,7 +44,7 @@ class OperatorResolverTest {
 
     @Before
     fun setup() {
-        OperatorResolver.resetForTest()
+        OperatorResolver.reset()
         whenever(context.assets).thenReturn(assets)
 
         doAnswer {
@@ -201,4 +206,105 @@ class OperatorResolverTest {
     fun `getOperatorResourceId does not match Timor with tim`() {
         assertNull(OperatorResolver.getOperatorResourceId("Timor"))
     }
+
+    @Test
+    fun `getOperatorResourceId returns correct resource for cyrillic brand names and prevents false positives`() {
+        assertEquals(R.string.operator_mts, OperatorResolver.getOperatorResourceId("МТС"))
+        assertEquals(R.string.operator_mgts, OperatorResolver.getOperatorResourceId("МГТС"))
+    }
+
+    @Test
+    fun `first load fails then second succeeds`() {
+        var openCount = 0
+        whenever(assets.open(any())).thenAnswer {
+            openCount++
+            if (openCount == 1) {
+                throw IOException("Simulated asset error")
+            } else {
+                ByteArrayInputStream(json.toByteArray(Charsets.UTF_8))
+            }
+        }
+
+        val result1 = OperatorResolver.resolve(context, "", listOf("25001"), 0)
+        assertEquals("Operator with mcc MCC:250 MNC:01", result1)
+
+        val result2 = OperatorResolver.resolve(context, "", listOf("25001"), 0)
+        assertEquals("MTS", result2)
+    }
+
+    @Test
+    fun `asset always unavailable stops opening after max attempts`() {
+        var openCount = 0
+        whenever(assets.open(any())).thenAnswer {
+            openCount++
+            throw IOException("Always down")
+        }
+
+        repeat(3) {
+            OperatorResolver.resolve(context, "", listOf("25001"), 0)
+        }
+        val countAfter3 = openCount
+        assertEquals(3, countAfter3)
+
+        repeat(2) {
+            OperatorResolver.resolve(context, "", listOf("25001"), 0)
+        }
+        assertEquals(3, openCount)
+    }
+
+    @Test
+    fun `successful load is cached and asset opened once`() {
+        var openCount = 0
+        whenever(assets.open(any())).thenAnswer {
+            openCount++
+            ByteArrayInputStream(json.toByteArray(Charsets.UTF_8))
+        }
+
+        assertEquals("MTS", OperatorResolver.resolve(context, "", listOf("25001"), 0))
+        assertEquals("Beeline", OperatorResolver.resolve(context, "", listOf("25099"), 0))
+        assertEquals(1, openCount)
+    }
+
+    @Test
+    fun `resetForTest restores load capability`() {
+        var openCount = 0
+        whenever(assets.open(any())).thenAnswer {
+            openCount++
+            ByteArrayInputStream(json.toByteArray(Charsets.UTF_8))
+        }
+
+        assertEquals("MTS", OperatorResolver.resolve(context, "", listOf("25001"), 0))
+        assertEquals(1, openCount)
+
+        OperatorResolver.reset()
+        assertEquals("MTS", OperatorResolver.resolve(context, "", listOf("25001"), 0))
+        assertEquals(2, openCount)
+    }
+
+    @Test
+    fun `concurrent load from multiple threads is thread safe`() =
+        runBlocking {
+            var openCount = 0
+            whenever(assets.open(any())).thenAnswer {
+                openCount++
+                Thread.sleep(5)
+                ByteArrayInputStream(json.toByteArray(Charsets.UTF_8))
+            }
+
+            val threads =
+                List(10) {
+                    Thread {
+                        OperatorResolver.resolve(context, "", listOf("25001"), 0)
+                    }
+                }
+            threads.forEach { it.start() }
+            withTimeout(5.seconds) {
+                threads.forEach {
+                    while (it.isAlive) {
+                        kotlinx.coroutines.delay(10.milliseconds)
+                    }
+                }
+            }
+            assertTrue("Open count should be at most 3, was $openCount", openCount <= 3)
+        }
 }

@@ -1,10 +1,12 @@
 package com.example.minutewatcher.feature.widget
 
 import android.os.TransactionTooLargeException
+import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import com.example.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,6 +15,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
@@ -118,17 +121,24 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
         }
 
     @Test
-    fun `updateAll returns terminal failure and does not retry when renderer throws Error`() =
+    fun `renderer throwing IllegalStateException with TransactionTooLargeException triggers limit exceeded`() =
         runTest {
-            val updater = createUpdater(backgroundScope)
+            whenever(renderer.renderAll(any(), any()))
+                .thenThrow(IllegalStateException("Binder", TransactionTooLargeException()))
+                .thenReturn(Unit)
+            val updater = createUpdater(backgroundScope, renderer)
             appSettingsRepository.settingsFlow.value = AppSettings(widgetLimitExceeded = false)
 
-            whenever(renderer.renderAll(any(), any())).thenThrow(OutOfMemoryError("Out of memory"))
+            val result =
+                withTimeout(5.seconds) {
+                    updater.updateAll()
+                }
 
-            val result = updater.updateAll()
-            advanceUntilIdle()
-
-            assertFalse("updateAll should return failure when renderer throws Error", result.isSuccess)
-            verify(renderer, times(1)).renderAll(any(), any())
+            assertTrue("Update should succeed on retry in simplified mode", result is WidgetUpdateResult.Success)
+            assertTrue(
+                "Widget limit exceeded flag should be set",
+                appSettingsRepository.settingsFlow.value.widgetLimitExceeded,
+            )
+            verify(renderer, times(2)).renderAll(any(), any())
         }
 }

@@ -19,6 +19,8 @@ import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
  *
  * onColorSelected is called before onDismiss, guaranteeing save of
  * selected color before closing dialog.
+ * onDismiss is called exactly once via setOnDismissListener for all dismissal paths
+ * (positive button, negative button, system dismissal, onDispose on configuration change).
  */
 @Composable
 fun ColorPickerWrapper(
@@ -37,11 +39,9 @@ fun ColorPickerWrapper(
                         if (envelope != null) {
                             onColorSelected(envelope.color)
                         }
-                        onDismiss()
                     },
                 ).setNegativeButton(R.string.cancel_button) { dialogInterface, _ ->
                     dialogInterface.dismiss()
-                    onDismiss()
                 }.attachAlphaSlideBar(false)
                 .attachBrightnessSlideBar(true)
                 .setOnDismissListener {

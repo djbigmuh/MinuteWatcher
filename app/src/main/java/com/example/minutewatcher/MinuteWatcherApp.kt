@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.AodSummaryController
 import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.TrafficTracker
+import com.example.minutewatcher.feature.widget.WidgetLimitManager
 import com.example.minutewatcher.service.worker.SemanticInitScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -38,6 +39,13 @@ class MinuteWatcherApp :
     @Inject
     lateinit var aodSummaryController: AodSummaryController
 
+    /**
+     * Injected to explicitly start widget limit flag observation in [onCreate].
+     * Constructor has no side effects.
+     */
+    @Inject
+    lateinit var widgetLimitManager: WidgetLimitManager
+
     override fun onCreate() {
         super.onCreate()
         AppLogger.init(this)
@@ -50,6 +58,7 @@ class MinuteWatcherApp :
 
         SemanticInitScheduler.schedule(WorkManager.getInstance(this))
         aodSummaryController.start()
+        widgetLimitManager.start()
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(

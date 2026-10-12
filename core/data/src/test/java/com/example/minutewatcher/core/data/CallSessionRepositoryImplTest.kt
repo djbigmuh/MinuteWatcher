@@ -82,16 +82,16 @@ class CallSessionRepositoryImplTest {
             val repository = CallSessionRepositoryImpl(dataStore)
             val subId = 1
             val startTime = 1000L
-            val bootTime = 2000L
+            val elapsedRealtime = 2000L
             val uptime = 3000L
             val identity = "test_identity"
 
-            repository.saveCallSession(subId, startTime, bootTime, uptime, identity)
+            repository.saveCallSession(subId, startTime, elapsedRealtime, uptime, identity)
             advanceUntilIdle()
 
             val prefs = dataStore.data.first()
             assertEquals(startTime, prefs[DataStoreKeys.callStartTimeKey(subId)])
-            assertEquals(bootTime, prefs[DataStoreKeys.bootTimeKey(subId)])
+            assertEquals(elapsedRealtime, prefs[DataStoreKeys.bootTimeKey(subId)])
             assertEquals(uptime, prefs[DataStoreKeys.uptimeKey(subId)])
             assertEquals(identity, prefs[DataStoreKeys.callIdentityKey(subId)])
         }

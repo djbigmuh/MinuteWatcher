@@ -35,12 +35,12 @@ class CallTrackerMultiSessionEndTest : CallTrackerTestFixtures() {
 
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 60000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 60000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime - 60000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime - 60000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 
             whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 120000L))
-            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 120000L))
+            whenever(callSessionRepository.getElapsedRealtime(2)).thenReturn(flowOf(realtime - 120000L))
             whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(uptime - 120000L))
             whenever(callSessionRepository.getCallIdentity(2)).thenReturn(flowOf("id_2"))
 
@@ -88,12 +88,12 @@ class CallTrackerMultiSessionEndTest : CallTrackerTestFixtures() {
 
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
             whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(now - 60000L))
-            whenever(callSessionRepository.getBootTime(1)).thenReturn(flowOf(realtime - 60000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(realtime - 60000L))
             whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(uptime - 60000L))
             whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
 
             whenever(callSessionRepository.getCallStartTime(2)).thenReturn(flowOf(now - 120000L))
-            whenever(callSessionRepository.getBootTime(2)).thenReturn(flowOf(realtime - 120000L))
+            whenever(callSessionRepository.getElapsedRealtime(2)).thenReturn(flowOf(realtime - 120000L))
             whenever(callSessionRepository.getUptime(2)).thenReturn(flowOf(uptime - 120000L))
             whenever(callSessionRepository.getCallIdentity(2)).thenReturn(flowOf("id_2"))
 

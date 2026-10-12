@@ -22,6 +22,7 @@ object TrackingBannerMapper {
         val appsearch = statusMap.getOrDefault(TrackingKey.APPSEARCH, TrackingStatus.Idle)
         val shortcuts = statusMap.getOrDefault(TrackingKey.SHORTCUTS, TrackingStatus.Idle)
         val calls = statusMap.getOrDefault(TrackingKey.CALLS, TrackingStatus.Idle)
+        val simDiscovery = statusMap.getOrDefault(TrackingKey.SIM_DISCOVERY, TrackingStatus.Idle)
 
         val observationFailed = isObservationFailed(statusMap, isStorageDegraded)
 
@@ -46,6 +47,8 @@ object TrackingBannerMapper {
                 showCallsErrorBanner = isCallsError(calls),
                 observationFailed = observationFailed,
                 isStorageDegraded = isStorageDegraded,
+                showSimDiscoveryErrorBanner = isSimDiscoveryError(simDiscovery),
+                showCallsAttributionErrorBanner = isCallsAttributionError(calls),
             )
         }
 
@@ -71,6 +74,8 @@ object TrackingBannerMapper {
             notificationsGrantedActual = notificationsGranted,
             observationFailed = observationFailed,
             isStorageDegraded = isStorageDegraded,
+            showSimDiscoveryErrorBanner = isSimDiscoveryError(simDiscovery),
+            showCallsAttributionErrorBanner = isCallsAttributionError(calls),
         )
     }
 
@@ -127,7 +132,12 @@ object TrackingBannerMapper {
 
     private fun isCallsError(status: TrackingStatus?): Boolean =
         (status is TrackingStatus.Error) &&
-            (status.type != TrackingStatus.ErrorType.PERMISSION_MISSING)
+            (status.type != TrackingStatus.ErrorType.PERMISSION_MISSING) &&
+            (status.type != TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
+
+    private fun isCallsAttributionError(status: TrackingStatus?): Boolean =
+        (status is TrackingStatus.Error) &&
+            (status.type == TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION)
 
     private fun isAppSearchErrorToShow(
         status: TrackingStatus?,
@@ -154,5 +164,10 @@ object TrackingBannerMapper {
 
     private fun isShortcutsError(status: TrackingStatus?): Boolean =
         (status is TrackingStatus.Error) &&
+            (status.type != TrackingStatus.ErrorType.NOT_SUPPORTED)
+
+    private fun isSimDiscoveryError(status: TrackingStatus?): Boolean =
+        (status is TrackingStatus.Error) &&
+            (status.type != TrackingStatus.ErrorType.PERMISSION_MISSING) &&
             (status.type != TrackingStatus.ErrorType.NOT_SUPPORTED)
 }

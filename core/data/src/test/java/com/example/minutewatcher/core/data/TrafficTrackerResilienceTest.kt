@@ -6,6 +6,7 @@ import com.example.minutewatcher.core.common.util.Logger
 import com.example.minutewatcher.core.common.util.NoOpLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.common.util.resetAppLoggerForTest
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -75,7 +76,7 @@ class TrafficTrackerResilienceTest {
 
     @After
     fun tearDown() {
-        AppLogger.resetForTest()
+        resetAppLoggerForTest()
         reset(simIdentityRepository)
     }
 
@@ -276,7 +277,7 @@ class TrafficTrackerResilienceTest {
                 mock {
                     on { filesDir } doReturn null
                 }
-            AppLogger.resetForTest()
+            resetAppLoggerForTest()
             AppLogger.init(mockContext, capturingLogger)
 
             val exception1 = IOException("Attempt 1 failure")
@@ -313,7 +314,7 @@ class TrafficTrackerResilienceTest {
             assertEquals(exception3.message, terminalLog?.second?.message)
             assertEquals(exception3::class, terminalLog?.second?.let { it::class })
 
-            AppLogger.resetForTest()
+            resetAppLoggerForTest()
         }
 
     @Test
@@ -342,7 +343,7 @@ class TrafficTrackerResilienceTest {
                 mock {
                     on { filesDir } doReturn null
                 }
-            AppLogger.resetForTest()
+            resetAppLoggerForTest()
             AppLogger.init(mockContext, capturingLogger)
 
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableSharedFlow())
@@ -367,6 +368,6 @@ class TrafficTrackerResilienceTest {
                 }
             assertTrue("Should not contain utility timeout log", utilityTimeoutLog == null)
 
-            AppLogger.resetForTest()
+            resetAppLoggerForTest()
         }
 }

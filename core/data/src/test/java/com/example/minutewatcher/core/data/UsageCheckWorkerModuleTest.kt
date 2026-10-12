@@ -87,6 +87,7 @@ class UsageCheckWorkerModuleTest {
             )
 
         runTest {
+            whenever(trafficTracker.updateTrafficUsage()).thenReturn(TrafficUpdateOutcome.Completed)
             whenever(usageStateRepository.refresh()).thenReturn(
                 RefreshResult
                     .Success(emptySnapshot),

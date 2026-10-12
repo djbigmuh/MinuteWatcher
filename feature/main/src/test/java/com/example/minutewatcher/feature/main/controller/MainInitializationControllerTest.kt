@@ -62,6 +62,33 @@ class MainInitializationControllerTest {
         }
 
     @Test
+    fun `initializeApp retries when refresh returns Failure`() =
+        testScope.runTest {
+            val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
+            whenever(refreshController.refreshSimCardsInternal())
+                .thenReturn(
+                    MainSimRefreshController.RefreshOutcome.Completed(
+                        RefreshResult.Failure(snapshot, RuntimeException("Failure")),
+                    ),
+                ).thenReturn(
+                    MainSimRefreshController.RefreshOutcome.Completed(
+                        RefreshResult.Success(snapshot),
+                    ),
+                )
+
+            controller.initializeApp(
+                scope = this,
+                lastRefreshAt = 0L,
+                onUpdateLastRefreshAt = {},
+            )
+
+            advanceUntilIdle()
+
+            verify(refreshController, times(2)).refreshSimCardsInternal()
+            assertEquals(InitializationState.Completed, controller.initializationState.value)
+        }
+
+    @Test
     fun `initializeApp fails if refresh always returns SkippedAlreadyInProgress`() =
         testScope.runTest {
             whenever(refreshController.refreshSimCardsInternal())

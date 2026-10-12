@@ -5,10 +5,12 @@ import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.seconds
 
 class SimIdentityDiscoveryNoTelephonyTest {
     @Test
@@ -46,7 +48,10 @@ class SimIdentityDiscoveryNoTelephonyTest {
                 )
 
             val discovery = SimIdentityDiscovery(deps)
-            val emissions = discovery.observeSubscriptionChanges().toList()
+            val emissions =
+                withTimeout(5.seconds) {
+                    discovery.observeSubscriptionChanges().toList()
+                }
 
             assertEquals(listOf(Unit), emissions)
         }

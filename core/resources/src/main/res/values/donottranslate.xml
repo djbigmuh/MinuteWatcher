@@ -75,4 +75,10 @@
 
     <string name="adjustment_mark" translatable="false">*adj</string>
     <string name="tile_operator_value_format" translatable="false">%1$s: %2$s</string>
+    <string name="traffic_remaining_with_limit_format" translatable="false">%1$s / %2$s %3$s</string>
+    <string name="traffic_value_with_unit_format" translatable="false">%1$s %2$s</string>
+    <string name="label_value_colon_format" translatable="false">%1$s: %2$s</string>
+    <string name="limit_suffix_format" translatable="false">/%1$s</string>
+    <string name="value_placeholder" translatable="false">—</string>
+    <string name="about_author_email" translatable="false">dj.bigmuh@gmail.com</string>
 </resources>

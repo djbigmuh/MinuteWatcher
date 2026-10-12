@@ -6,6 +6,7 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.minutewatcher.core.resources.R
+import com.example.minutewatcher.feature.main.ui.components.AboutDialog
 import com.example.minutewatcher.feature.main.ui.components.AdjustmentComposeDialog
 import com.example.minutewatcher.feature.main.ui.components.DayPickerComposeDialog
 import com.example.minutewatcher.feature.main.ui.components.OnboardingDialog
@@ -27,18 +28,23 @@ import com.example.minutewatcher.feature.main.ui.components.UsageAccessDialog
  * - [SimpleMessageDialog]: Informational messages (e.g., about traffic limitations).
  * - [UsageAccessDialog]: Requesting system access to usage statistics.
  * - [OnboardingDialog]: Onboarding screen for new users.
+ * - [AboutDialog]: About application dialog.
  *
  * @param viewModel ViewModel for managing dialog state and executing confirmation business logic.
  * @param showUsageAccessDialog Flag for showing usage access dialog (controlled by external permission logic).
  * @param showOnboardingDialog Flag for showing onboarding dialog.
+ * @param showAboutDialog Flag for showing about dialog.
  * @param onOpenUsageAccessSettings Callback to open system access settings.
+ * @param onEmailAuthor Callback to compose email to author.
  */
 @Composable
 fun DialogRenderer(
     viewModel: MainViewModel,
     showUsageAccessDialog: Boolean,
     showOnboardingDialog: Boolean,
+    showAboutDialog: Boolean,
     onOpenUsageAccessSettings: () -> Unit,
+    onEmailAuthor: () -> Unit,
 ) {
     val showLimitDialog by viewModel.showLimitDialog.collectAsStateWithLifecycle()
     val showDayDialog by viewModel.showDayDialog.collectAsStateWithLifecycle()
@@ -69,6 +75,18 @@ fun DialogRenderer(
 
     if (showOnboardingDialog) {
         OnboardingDialog(onDismiss = { viewModel.completeOnboarding() })
+    }
+
+    if (showAboutDialog) {
+        AboutDialog(
+            versionName = viewModel.versionName,
+            versionCode = viewModel.code,
+            onDismiss = { viewModel.setShowAboutDialog(false) },
+            onEmailAuthor = {
+                viewModel.setShowAboutDialog(false)
+                onEmailAuthor()
+            },
+        )
     }
 }
 

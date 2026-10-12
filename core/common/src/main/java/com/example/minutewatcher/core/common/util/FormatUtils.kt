@@ -38,14 +38,25 @@ object FormatUtils {
 
     fun formatTrafficDisplay(
         context: Context,
-        remainingGb: Float,
+        remainingGb: Float?,
         limitGb: Float,
         showLimit: Boolean,
     ): String {
-        if (remainingGb < 0) return "-"
+        if (remainingGb == null) return context.getString(R.string.value_placeholder)
         val gbUnit = context.getString(R.string.gb_abbr)
         val locale = getLocale(context)
-        val logic = formatTrafficDisplayLogic(locale, remainingGb, limitGb, showLimit, gbUnit)
+        val remainingWithLimitFormat = context.getString(R.string.traffic_remaining_with_limit_format)
+        val valueWithUnitFormat = context.getString(R.string.traffic_value_with_unit_format)
+        val logic =
+            formatTrafficDisplayLogic(
+                locale = locale,
+                remainingGb = remainingGb,
+                limitGb = limitGb,
+                showLimit = showLimit,
+                unit = gbUnit,
+                remainingWithLimitFormat = remainingWithLimitFormat,
+                valueWithUnitFormat = valueWithUnitFormat,
+            )
         return if (showLimit && limitGb > 0) {
             "${context.getString(R.string.remaining_text)} $logic"
         } else {
@@ -55,15 +66,30 @@ object FormatUtils {
 
     fun formatTrafficDisplayLogic(
         locale: Locale,
-        remainingGb: Float,
+        remainingGb: Float?,
         limitGb: Float,
         showLimit: Boolean,
         unit: String,
+        remainingWithLimitFormat: String = "%1\$s / %2\$s %3\$s",
+        valueWithUnitFormat: String = "%1\$s %2\$s",
     ): String =
-        if (showLimit && limitGb > 0) {
-            "${formatTrafficGb(locale, remainingGb)} / ${formatTrafficGb(locale, limitGb)} $unit"
+        if (remainingGb == null) {
+            ""
+        } else if (showLimit && limitGb > 0) {
+            String.format(
+                locale,
+                remainingWithLimitFormat,
+                formatTrafficGb(locale, remainingGb),
+                formatTrafficGb(locale, limitGb),
+                unit,
+            )
         } else {
-            "${formatTrafficGb(locale, remainingGb)} $unit"
+            String.format(
+                locale,
+                valueWithUnitFormat,
+                formatTrafficGb(locale, remainingGb),
+                unit,
+            )
         }
 
     fun formatMinutesDisplay(
@@ -73,9 +99,21 @@ object FormatUtils {
         manualAdjustment: Int,
         showLimit: Boolean,
     ): String {
-        if (limit == 0 && manualAdjustment == 0) return "-"
+        if (limit == 0 && manualAdjustment == 0) return context.getString(R.string.value_placeholder)
         val minUnit = context.getString(R.string.minutes_abbr)
-        val logic = formatMinutesDisplayLogic(remaining, limit, showLimit, minUnit)
+        val remainingWithLimitFormat = context.getString(R.string.traffic_remaining_with_limit_format)
+        val valueWithUnitFormat = context.getString(R.string.traffic_value_with_unit_format)
+        val locale = getLocale(context)
+        val logic =
+            formatMinutesDisplayLogic(
+                locale = locale,
+                remaining = remaining,
+                limit = limit,
+                showLimit = showLimit,
+                unit = minUnit,
+                remainingWithLimitFormat = remainingWithLimitFormat,
+                valueWithUnitFormat = valueWithUnitFormat,
+            )
         return if (showLimit && limit > 0) {
             "${context.getString(R.string.remaining_text)} $logic"
         } else {
@@ -88,11 +126,32 @@ object FormatUtils {
         limit: Int,
         showLimit: Boolean,
         unit: String,
+        remainingWithLimitFormat: String = "%1\$s / %2\$s %3\$s",
+        valueWithUnitFormat: String = "%1\$s %2\$s",
+    ): String =
+        formatMinutesDisplayLogic(
+            locale = Locale.getDefault(),
+            remaining = remaining,
+            limit = limit,
+            showLimit = showLimit,
+            unit = unit,
+            remainingWithLimitFormat = remainingWithLimitFormat,
+            valueWithUnitFormat = valueWithUnitFormat,
+        )
+
+    fun formatMinutesDisplayLogic(
+        locale: Locale,
+        remaining: Int,
+        limit: Int,
+        showLimit: Boolean,
+        unit: String,
+        remainingWithLimitFormat: String = "%1\$s / %2\$s %3\$s",
+        valueWithUnitFormat: String = "%1\$s %2\$s",
     ): String =
         if (showLimit && limit > 0) {
-            "$remaining / $limit $unit"
+            String.format(locale, remainingWithLimitFormat, remaining, limit, unit)
         } else {
-            "$remaining $unit"
+            String.format(locale, valueWithUnitFormat, remaining, unit)
         }
 
     fun formatMinutesPlural(

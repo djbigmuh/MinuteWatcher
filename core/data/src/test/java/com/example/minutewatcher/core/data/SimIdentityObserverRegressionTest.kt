@@ -128,7 +128,7 @@ class SimIdentityObserverRegressionTest {
             whenever(fetcher.fetchActiveSimsWithRetry(any()))
                 .thenReturn(SimDiscoveryResult.Available(emptyList()))
 
-            observer.emitManualTriggerForTest()
+            observer.emitManualTrigger()
             testScheduler.advanceTimeBy(1000.milliseconds)
 
             assertEquals(TrackingStatus.Active, observer.status.value)

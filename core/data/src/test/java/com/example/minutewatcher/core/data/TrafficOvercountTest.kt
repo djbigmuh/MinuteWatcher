@@ -265,4 +265,51 @@ class TrafficOvercountTest {
             val retryCount = simUsageResetRepository.getBaselineRetryCount(identity).first()
             assertEquals(null, retryCount)
         }
+
+    @Test
+    fun `traffic tracker ignores update when clock is rewound and continues when clock advances`() =
+        runTest(testDispatcher) {
+            val tracker = startTracker()
+            val identity = sim1Identity
+
+            // 1. Initialize tracking window, set baseline B and accumulated usage U
+            simUsageResetRepository.ensureTrackingWindowInitialized(identity)
+            val initialUsage = simUsageRepository.getSimUsage(identity).first()
+            val baselineB = 1000L * Constants.BYTES_PER_MB
+            val usageU = 0f
+            simUsageResetRepository.setLastTotalBytes(identity, baselineB, initialUsage.lastResetDate)
+
+            // 2. Move wall-clock backward (now < lastResetDate)
+            timeProvider.setTime(initialUsage.lastResetDate - 1000L)
+
+            // Even if provider mock returns Success(0)
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(
+                StatsResult.Success(0L),
+            )
+
+            tracker.updateTrafficUsage()
+            advanceUntilIdle()
+
+            // 3. Verify lastTotalBytes remains B, trafficUsedMb remains U
+            val usageAfterRewind = simUsageRepository.getSimUsage(identity).first()
+            val baselineAfterRewind = simUsageResetRepository.getLastTotalBytes(identity).first()
+            assertEquals(baselineB, baselineAfterRewind)
+            assertEquals(usageU, usageAfterRewind.trafficUsedMb, 0.01f)
+
+            // 4. Return and advance wall-clock forward past original point
+            timeProvider.setTime(initialUsage.lastResetDate + 100000L)
+            val additionalBytes = 50L * Constants.BYTES_PER_MB
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(
+                StatsResult.Success(baselineB + additionalBytes),
+            )
+
+            tracker.updateTrafficUsage()
+            advanceUntilIdle()
+
+            // 5. Verify trafficUsedMb == U + 50 MB, lastTotalBytes == B + 50 MB
+            val usageAfterAdvance = simUsageRepository.getSimUsage(identity).first()
+            val baselineAfterAdvance = simUsageResetRepository.getLastTotalBytes(identity).first()
+            assertEquals(baselineB + additionalBytes, baselineAfterAdvance)
+            assertEquals(50f, usageAfterAdvance.trafficUsedMb, 0.01f)
+        }
 }

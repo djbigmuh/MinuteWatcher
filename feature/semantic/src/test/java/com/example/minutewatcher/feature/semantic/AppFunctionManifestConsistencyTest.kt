@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.semantic
 
+import com.example.minutewatcher.core.resources.testing.LocaleResourceDirs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -55,9 +56,9 @@ class AppFunctionManifestConsistencyTest {
         val builder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
 
         configuredLocales.forEach { lang ->
-            val dirName = if (lang == "en") "values" else "values-$lang"
+            val dirName = LocaleResourceDirs.resourceDirForTag(lang)
             val stringsFile = File(resDir, "$dirName/strings.xml")
-            assertTrue(stringsFile.exists())
+            assertTrue("Strings file must exist for $lang ($dirName/strings.xml)", stringsFile.exists())
 
             val doc = builder.parse(stringsFile)
             val stringNodes = doc.getElementsByTagName("string")

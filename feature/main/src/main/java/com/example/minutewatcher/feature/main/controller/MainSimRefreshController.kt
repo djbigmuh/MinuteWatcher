@@ -105,15 +105,34 @@ class MainSimRefreshController
             force: Boolean = false,
         ): Boolean {
             val outcome = refreshSimCardsInternal()
-            if (outcome is RefreshOutcome.SkippedAlreadyInProgress) {
-                // Refresh is already in progress by another call — do not duplicate
-                return false
-            }
-            return if ((outcome is RefreshOutcome.Completed) && (outcome.result is RefreshResult.Success)) {
-                onNotifyChanged(force)
-                true
-            } else {
-                false
+            return when (outcome) {
+                is RefreshOutcome.SkippedAlreadyInProgress -> false
+                is RefreshOutcome.Failed -> false
+                is RefreshOutcome.Completed -> {
+                    when (outcome.result) {
+                        is RefreshResult.Success -> {
+                            onNotifyChanged(force)
+                            true
+                        }
+
+                        is RefreshResult.Timeout -> {
+                            AppLogger.w(
+                                "MainSimRefreshController: refresh timed out, " +
+                                    "timestamp=${outcome.result.snapshot.timestamp}",
+                            )
+                            false
+                        }
+
+                        is RefreshResult.Failure -> {
+                            AppLogger.e(
+                                "MainSimRefreshController: refresh failed, " +
+                                    "timestamp=${outcome.result.snapshot.timestamp}",
+                                outcome.result.cause,
+                            )
+                            false
+                        }
+                    }
+                }
             }
         }
 

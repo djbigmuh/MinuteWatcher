@@ -10,8 +10,14 @@ sealed interface SimCardListState {
         val simCards: List<SimCardUiModel>,
     ) : SimCardListState
 
+    enum class ErrorKind {
+        REFRESH,
+        SIM_DISCOVERY,
+    }
+
     data class Error(
         @StringRes val messageRes: Int,
+        val kind: ErrorKind = ErrorKind.REFRESH,
     ) : SimCardListState
 
     data object Empty : SimCardListState

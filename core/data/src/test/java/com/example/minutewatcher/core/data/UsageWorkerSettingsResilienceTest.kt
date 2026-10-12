@@ -100,6 +100,7 @@ class UsageWorkerSettingsResilienceTest {
                 capabilities = emptyList(),
             )
         runTest {
+            whenever(trafficTracker.updateTrafficUsage()).thenReturn(TrafficUpdateOutcome.Completed)
             whenever(usageStateRepository.refresh()).thenReturn(
                 RefreshResult.Success(snapshot),
             )

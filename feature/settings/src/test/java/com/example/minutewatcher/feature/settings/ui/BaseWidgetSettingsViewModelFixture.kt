@@ -32,6 +32,11 @@ abstract class BaseWidgetSettingsViewModelFixture {
     protected val aodSummaryAvailability: AodSummaryAvailability = mock()
 
     protected lateinit var viewModel: WidgetSettingsViewModel
+    private val viewModelStore = androidx.lifecycle.ViewModelStore()
+
+    protected fun clearViewModel() {
+        viewModelStore.clear()
+    }
 
     @Before
     open fun setup() {
@@ -48,15 +53,23 @@ abstract class BaseWidgetSettingsViewModelFixture {
     }
 
     protected fun TestScope.initViewModel() {
+        val factory =
+            object : androidx.lifecycle.ViewModelProvider.Factory {
+                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T =
+                    WidgetSettingsViewModel(
+                        loader = loader,
+                        saver = saver,
+                        appSettingsRepository = appSettingsRepository,
+                        appScope = backgroundScope,
+                        usageStateRepository = usageStateRepository,
+                        aodSummaryAvailability = aodSummaryAvailability,
+                    ) as T
+            }
         viewModel =
-            WidgetSettingsViewModel(
-                loader = loader,
-                saver = saver,
-                appSettingsRepository = appSettingsRepository,
-                appScope = backgroundScope,
-                usageStateRepository = usageStateRepository,
-                aodSummaryAvailability = aodSummaryAvailability,
-            )
+            androidx.lifecycle.ViewModelProvider(
+                viewModelStore,
+                factory,
+            )[WidgetSettingsViewModel::class.java]
         advanceUntilIdle()
     }
 }

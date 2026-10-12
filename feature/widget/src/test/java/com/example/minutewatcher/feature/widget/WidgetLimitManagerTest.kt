@@ -42,9 +42,45 @@ class WidgetLimitManagerTest {
     @Test
     fun `isLimitExceeded returns null initially`() {
         assertEquals(null, manager.isLimitExceeded())
+        manager.start()
         testDispatcher.scheduler.runCurrent()
         assertEquals(false, manager.isLimitExceeded())
     }
+
+    @Test
+    fun `constructor does not start observation automatically`() =
+        runTest(testDispatcher) {
+            assertEquals(null, manager.isLimitExceeded())
+            testDispatcher.scheduler.advanceTimeBy(5000L)
+            testDispatcher.scheduler.runCurrent()
+            assertEquals(null, manager.isLimitExceeded())
+            verify(appSettingsRepository, never()).observeAppSettings()
+        }
+
+    @Test
+    fun `start is idempotent`() =
+        runTest(testDispatcher) {
+            manager.start()
+            manager.start()
+            testDispatcher.scheduler.runCurrent()
+            verify(appSettingsRepository, org.mockito.kotlin.times(1)).observeAppSettings()
+        }
+
+    @Test
+    fun `updateCache updates isLimitExceeded without repository access`() {
+        manager.updateCache(true)
+        assertEquals(true, manager.isLimitExceeded())
+        manager.updateCache(false)
+        assertEquals(false, manager.isLimitExceeded())
+    }
+
+    @Test
+    fun `setWidgetLimitExceeded handles repository exception without throwing`() =
+        runTest(testDispatcher) {
+            whenever(appSettingsRepository.updateAppSettings(any())).thenThrow(RuntimeException("DB error"))
+            manager.setWidgetLimitExceeded(true)
+            assertEquals(true, manager.isLimitExceeded())
+        }
 
     @Test
     fun `isLimitExceeded returns value set by setWidgetLimitExceeded synchronously`() =

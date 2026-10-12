@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>Gbogbo rẹ̀ lórí ìlà kan</item>
+        <item>Ìlà méjì</item>
+        <item>Ìlà mẹ́ta</item>
+        <item>Ìlà mẹ́fà</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>Lẹ́gbẹ̀ẹ́ ara wọn</item>
+        <item>Nínú òpó kan</item>
+    </string-array>
+</resources>

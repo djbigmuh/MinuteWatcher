@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.main.util
 
 import com.example.minutewatcher.core.model.AppSettings
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PermissionUiState
 import com.example.minutewatcher.core.model.TrackingKey
 import com.example.minutewatcher.core.model.TrackingStatus
@@ -328,6 +329,197 @@ class TrackingBannerMapperTest {
         assertEquals(PermissionUiState.GRANTED, state.phonePermissionState)
         assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
         assertFalse(state.observationFailed)
+    }
+
+    @Test
+    fun `mapToBannerState shows sim discovery error for unknown and database errors`() {
+        val state1 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = mapOf(TrackingKey.SIM_DISCOVERY to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN)),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertTrue(state1.showSimDiscoveryErrorBanner)
+
+        val state2 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.SIM_DISCOVERY to TrackingStatus.Error(TrackingStatus.ErrorType.DATABASE_ERROR),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertTrue(state2.showSimDiscoveryErrorBanner)
+    }
+
+    @Test
+    fun `mapToBannerState suppresses sim discovery error for permission missing and not supported`() {
+        val state1 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.SIM_DISCOVERY to TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state1.showSimDiscoveryErrorBanner)
+
+        val state2 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.SIM_DISCOVERY to TrackingStatus.Error(TrackingStatus.ErrorType.NOT_SUPPORTED),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state2.showSimDiscoveryErrorBanner)
+    }
+
+    @Test
+    fun `mapToBannerState suppresses sim discovery error for active idle or absent status`() {
+        val state1 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = mapOf(TrackingKey.SIM_DISCOVERY to TrackingStatus.Active),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state1.showSimDiscoveryErrorBanner)
+
+        val state2 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = mapOf(TrackingKey.SIM_DISCOVERY to TrackingStatus.Idle),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state2.showSimDiscoveryErrorBanner)
+
+        val state3 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state3.showSimDiscoveryErrorBanner)
+    }
+
+    @Test
+    fun `mapToBannerState shows sim discovery error with incomplete onboarding`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = mapOf(TrackingKey.SIM_DISCOVERY to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN)),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = false),
+            )
+        assertTrue(state.showSimDiscoveryErrorBanner)
+    }
+
+    @Test
+    fun `mapToBannerState handles CALLS attribution and regular error banners`() {
+        // INACCURATE_ATTRIBUTION -> attribution error true, calls error false
+        val state1 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.CALLS to TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertTrue(state1.showCallsAttributionErrorBanner)
+        assertFalse(state1.showCallsErrorBanner)
+
+        // UNKNOWN -> calls error true, attribution error false
+        val state2 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = mapOf(TrackingKey.CALLS to TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN)),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state2.showCallsAttributionErrorBanner)
+        assertTrue(state2.showCallsErrorBanner)
+
+        // PERMISSION_MISSING -> both false
+        val state3 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.CALLS to TrackingStatus.Error(TrackingStatus.ErrorType.PERMISSION_MISSING),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state3.showCallsAttributionErrorBanner)
+        assertFalse(state3.showCallsErrorBanner)
+
+        // Active / Idle / absent -> both false
+        val state4 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = mapOf(TrackingKey.CALLS to TrackingStatus.Active),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+        assertFalse(state4.showCallsAttributionErrorBanner)
+        assertFalse(state4.showCallsErrorBanner)
+    }
+
+    @Test
+    fun `mapToBannerState handles CALLS threshold and incomplete onboarding banners`() {
+        // inaccurateCallAttributionsCount at threshold -> showInaccurateCallsBanner == true
+        val state5 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap = emptyMap(),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings =
+                    AppSettings(
+                        onboardingCompleted = true,
+                        inaccurateCallAttributionsCount = Constants.Calls.INACCURATE_ATTRIBUTION_BANNER_THRESHOLD,
+                    ),
+            )
+        assertTrue(state5.showInaccurateCallsBanner)
+        assertFalse(state5.showCallsAttributionErrorBanner)
+
+        // Incomplete onboarding populates flags correctly
+        val state6 =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.CALLS to TrackingStatus.Error(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = false),
+            )
+        assertTrue(state6.showCallsAttributionErrorBanner)
     }
 
     @Test

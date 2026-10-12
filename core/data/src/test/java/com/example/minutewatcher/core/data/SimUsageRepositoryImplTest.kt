@@ -364,4 +364,46 @@ class SimUsageRepositoryImplTest {
             val baseline = repository.getLastTotalBytes(identity).first()
             assertEquals(5000L, baseline)
         }
+
+    @Test
+    fun `isWindowCompatible behavior with matching dates, EMPTY_TIMESTAMP and mismatches`() =
+        runTest {
+            val identity = "test_sim"
+            val expectedDate = 1000L
+            repository.ensureTrackingWindowInitialized(identity)
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.lastResetDateKey(identity)] = expectedDate
+            }
+
+            // 1. Matching dates -> should apply
+            val appliedMatching = repository.setLastTotalBytes(identity, 500L, expectedDate)
+            assertTrue(appliedMatching)
+
+            // 2. expectedLastResetDate is EMPTY_TIMESTAMP -> should apply
+            val appliedEmptyExpected = repository.setLastTotalBytes(identity, 600L, Constants.Data.EMPTY_TIMESTAMP)
+            assertTrue(appliedEmptyExpected)
+
+            // 3. currentResetDate is EMPTY_TIMESTAMP -> should apply
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.lastResetDateKey(identity)] = Constants.Data.EMPTY_TIMESTAMP
+            }
+            val appliedEmptyCurrent = repository.setLastTotalBytes(identity, 700L, expectedDate + 500L)
+            assertTrue(appliedEmptyCurrent)
+
+            // 4. Mismatched dates -> should NOT apply
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.lastResetDateKey(identity)] = expectedDate
+            }
+            val appliedMismatch = repository.setLastTotalBytes(identity, 800L, expectedDate + 100L)
+            assertFalse(appliedMismatch)
+        }
+
+    @Test
+    fun `DataStore key string names remain unchanged`() {
+        assertEquals("last_total_bytes_sim1", DataStoreKeys.lastTotalBytesKey("sim1").name)
+        assertEquals("notified_low_minutes_sim1", DataStoreKeys.notifiedLowMinutesKey("sim1").name)
+        assertEquals("monthly_limit_sim1", DataStoreKeys.monthlyLimitKey("sim1").name)
+        assertEquals("boot_time_1", DataStoreKeys.bootTimeKey(1).name)
+        assertEquals("call_start_time_1", DataStoreKeys.callStartTimeKey(1).name)
+    }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>ஒரே வரியில்</item>
+        <item>இரண்டு வரிகள்</item>
+        <item>மூன்று வரிகள்</item>
+        <item>ஆறு வரிகள்</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>பக்கவாட்டில்</item>
+        <item>ஒரு பத்தியில்</item>
+    </string-array>
+</resources>

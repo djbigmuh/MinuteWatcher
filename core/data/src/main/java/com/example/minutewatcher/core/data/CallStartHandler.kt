@@ -109,23 +109,28 @@ internal class CallStartHandler
                 retryHelper.readWithRetry(
                     label = "getCallStartTime",
                 ) { callSessionRepository.getCallStartTime(targetSubId) }
-            val bootTimeResult =
+            val elapsedRealtimeResult =
                 retryHelper.readWithRetry(
-                    label = "getBootTime",
-                ) { callSessionRepository.getBootTime(targetSubId) }
+                    label = "getElapsedRealtime",
+                ) { callSessionRepository.getElapsedRealtime(targetSubId) }
             val savedIdentityResult =
                 retryHelper.readWithRetry(
                     label = "getCallIdentity",
                 ) { callSessionRepository.getCallIdentity(targetSubId) }
 
-            val currentIdentity = attributionResolver.resolveSessionIdentity(targetSubId)
+            val currentIdentity = attributionResolver.resolveIdentity(targetSubId)
             return CallStartData(
                 startTimeResult = startTimeResult,
-                bootTimeResult = bootTimeResult,
+                elapsedRealtimeResult = elapsedRealtimeResult,
                 identity = savedIdentityResult.getOrNull(),
                 currentIdentity = currentIdentity,
                 now = timeProvider.now(),
-                bootTime = if (eventElapsedRealtime > 0) eventElapsedRealtime else timeProvider.elapsedRealtime(),
+                elapsedRealtime =
+                    if (eventElapsedRealtime > 0) {
+                        eventElapsedRealtime
+                    } else {
+                        timeProvider.elapsedRealtime()
+                    },
                 uptime = timeProvider.uptimeMillis(),
             )
         }
@@ -150,8 +155,8 @@ internal class CallStartHandler
             }
             val startTime = data.startTimeResult.getOrThrow()
             if (startTime != 0L) {
-                val savedBootTime = data.bootTimeResult.getOrElse { 0L }
-                val isStale = validateSessionStaleness(targetSubId, savedBootTime, data.bootTime, context)
+                val savedElapsedRealtime = data.elapsedRealtimeResult.getOrElse { 0L }
+                val isStale = validateSessionStaleness(targetSubId, savedElapsedRealtime, data.elapsedRealtime, context)
                 if (!isStale) {
                     handleActiveSession(targetSubId, data)
                     return true
@@ -180,10 +185,16 @@ internal class CallStartHandler
             targetSubId: Int,
             data: CallStartData,
         ) {
+            if (data.currentIdentity == null) {
+                AppLogger.w(
+                    "CallTracker: stable SIM identity unavailable for subId $targetSubId, " +
+                        "saving session with null identity",
+                )
+            }
             callSessionRepository.saveCallSession(
                 subId = targetSubId,
                 startTime = data.now,
-                bootTime = data.bootTime,
+                elapsedRealtime = data.elapsedRealtime,
                 uptime = data.uptime,
                 identity = data.currentIdentity,
             )
@@ -192,15 +203,15 @@ internal class CallStartHandler
 
         private suspend fun validateSessionStaleness(
             targetSubId: Int,
-            savedBootTime: Long,
-            currentBootTime: Long,
+            savedElapsedRealtime: Long,
+            currentElapsedRealtime: Long,
             context: CallTrackingContext,
         ): Boolean {
             val isStale =
-                (savedBootTime > currentBootTime) ||
+                (savedElapsedRealtime > currentElapsedRealtime) ||
                     (
-                        (savedBootTime > 0) &&
-                            ((currentBootTime - savedBootTime) > Constants.Calls.MAX_CALL_DURATION_MS)
+                        (savedElapsedRealtime > 0) &&
+                            ((currentElapsedRealtime - savedElapsedRealtime) > Constants.Calls.MAX_CALL_DURATION_MS)
                     )
 
             if (isStale) {

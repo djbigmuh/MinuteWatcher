@@ -118,18 +118,6 @@ class WidgetUpdaterImpl
                     )
                 deferred.complete(failure)
                 failure
-            } catch (
-                @Suppress("TooGenericExceptionCaught") e: Throwable,
-            ) {
-                AppLogger.e("WidgetUpdater: unexpected throwable during update", e)
-                val failure =
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = false,
-                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                    )
-                deferred.complete(failure)
-                failure
             } finally {
                 activeUpdate.compareAndSet(deferred, null)
             }

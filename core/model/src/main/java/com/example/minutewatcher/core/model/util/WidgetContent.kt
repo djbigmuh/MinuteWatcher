@@ -16,6 +16,11 @@ sealed interface WidgetContent {
 
     data object NoSimFound : WidgetContent
 
+    /**
+     * Widget content with visible SIM UI states.
+     *
+     * @property visible List of visible SIM UI states.
+     */
     data class Sims(
         val visible: List<SimUiState>,
     ) : WidgetContent

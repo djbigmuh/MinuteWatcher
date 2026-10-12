@@ -1,0 +1,184 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">Awọn kaadi SIM</string>
+    <string name="no_sim_found">Kò sí kaadi SIM ti a rí</string>
+    <string name="check_permissions_sim">Yẹ àwọn àṣẹ àti wíwà SIM wò</string>
+    <string name="no_data">Kò sí ìsọfúnni</string>
+    <string name="error">Àṣìṣe</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">Tún tẹ́</string>
+    <string name="theme_system">Sistemu</string>
+    <string name="theme_light">Mọ́lẹ̀</string>
+    <string name="theme_dark">Dúdú</string>
+    <string name="limit_button">Àlà</string>
+    <string name="add_widget_button">Fi Widget kún un</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">A ti gba àwọn àṣàyàn gbogbogbò pamọ́. A fò àwọn àṣàyàn SIM ru</string>
+    <string name="settings_save_partial_failure">A ti gba àwọn àṣàyàn gbogbogbò pamọ́. Kò ṣe é ṣe lati gba àwọn àṣàyàn SIM pamọ́</string>
+    <string name="settings_save_partial_failure_slots">A ti gba àwọn àṣàyàn gbogbogbò pamọ́. Kò ṣe é ṣe lati gba àwọn àṣàyàn SIM %1$s pamọ́</string>
+    <string name="settings_save_failed">Gbigba pamọ́ kùnà</string>
+    <string name="language_system">Sistemu</string>
+    <string name="usage_access_dialog_title">Itele Ìlo Ìsọfúnni</string>
+    <string name="usage_access_dialog_description">Láti tọpa ìlo data alágbèéká rẹ, MinuteWatcher ní ilò fun àṣẹ \"Ìwọlé Ìlo\".\n\nÀṣẹ yi jẹ́ ti atẹ́gun sistemu ti o gba àti-ṣe àyẹ̀wò iye data ti a rán ti a si gba lórí àwọ̀n ibánisọ̀rọ̀.</string>
+    <string name="phone_permission_permanent_denial">A ti kọ àṣẹ fóònù pátápátá.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">Àwọn àṣàyàn Widget</string>
+    <string name="widget_description">A ṣàfihàn àwọn ìṣẹ́jú ti o ku àti data alágbèéká fun kaadi SIM kọ̀ọkan.</string>
+    <string name="background_transparency">Ìfihàn Bẹ́ẹ̀ ti Ìbẹ̀rẹ̀</string>
+    <string name="display_minutes">Fi àwọn ìṣẹ́jú hàn</string>
+    <string name="display_minutes_limit">Fi àlà ìṣẹ́jú hàn</string>
+    <string name="display_traffic">Fi data hàn</string>
+    <string name="display_traffic_limit">Fi àlà data hàn</string>
+    <string name="display_name">Fi orukọ hàn</string>
+    <string name="display_icon">Fi àmì hàn</string>
+    <string name="show_sim_checkbox">Fi kaadi SIM yi hàn</string>
+    <string name="preview">Àyẹ̀wò</string>
+    <string name="layout_mode_title">Ipò Àpẹẹrẹ</string>
+    <string name="sim_arrangement_prompt">Sọ̀rọ̀ nipa àto pọ̀ SIM</string>
+    <string name="color_background">Àwọ̀ ìbẹ̀rẹ̀:</string>
+    <string name="custom_color">Nífẹ́ sí&#8230;</string>
+    <string name="font_size">Iye Ìgbéga Bọ́tìnì</string>
+    <string name="traffic_tracking_limitation_title">Ààlà Ìtọpa Data</string>
+    <string name="traffic_tracking_limitation_body">Android n pese iye data alágbèéká lapapọ fun gbogbo ẹrọ.\n\nMinuteWatcher sọ gbogbo data pọ mọ́ kaadi SIM ti a mu gẹ́gẹ́ bí \"SIM Data Àkọ́kọ́\" nínú àwọn àṣàyàn sistemu rẹ.</string>
+    <string name="tracking_banner_phone_permission">Àṣẹ fóònù ṣe pataki lati mọ àwọn kaadi SIM.</string>
+    <string name="tracking_banner_usage_access">Àṣẹ Ìwọlé Ìlo ṣe pataki lati tọpa data pẹlu ọ̀nà tó tọ́.</string>
+    <string name="tracking_banner_sim_discovery_error">Kò le rí àwọn kaadi SIM. Jọ̀wọ́ gbiyanju lẹ́ẹ̀kan sí i.</string>
+    <string name="tracking_banner_traffic_error">Àṣìṣe kan wa ni àsìkò ti a n sọ ìsọfúnni data di ọ̀tun.</string>
+    <string name="tracking_banner_calls_error">Àṣìṣe wa ni àsìkò ti a n sọ data ìpè di ọ̀tun.</string>
+    <string name="tracking_banner_appsearch_error">Ipese AppSearch kùnà.</string>
+    <string name="tracking_banner_shortcuts_error">Isọsọ di ọ̀tun àwọn àyè kékèèké kùnà.</string>
+    <string name="tracking_banner_notification_permission">A gbà ó nínú láti fi àṣẹ ìfitónilétí sí i lati gba àwọn ìfẹnukò.</string>
+    <string name="tracking_banner_widget_error">Kò le sọ widget di ọ̀tun nitori àwọn ààlà sistemu.</string>
+    <string name="tracking_banner_inaccurate_calls">Àwọn ìpè kan kò ṣe é ba kaadi SIM mu.</string>
+    <string name="tracking_banner_calls_attribution_error">A rí àwọn ìpè púpọ̀ ni àsìkò kan náà. Kò ṣe é ṣe lati mu kaadi SIM gangan.</string>
+    <string name="tracking_banner_observation_failed">Iṣẹ́ ìtọpa data ti kásẹ̀ nílẹ̀ lẹ́yìn àwọn àṣìṣe púpọ̀. Jọ̀wọ́ tún ẹrọ ṣí.</string>
+    <string name="tracking_banner_storage_degraded">Ààyè ibi-itọju dinkù: àwọn àyẹ̀wò le tún tẹ́ lẹ́yìn tí a tún ẹrọ ṣí.</string>
+    <string name="settings_load_error">Àṣìṣe lati mu àwọn àṣàyàn wá</string>
+    <string name="sim_list_unavailable_error">Àtòjọ SIM kò sí. Àwọn àṣàyàn SIM muná dọ́ka lẹ́yìn tí a tún mu wá.</string>
+    <string name="refresh_error">Àṣìṣe lati sọ ìsọfúnni di ọ̀tun</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">Ìsọfúnni le jẹ́ ti atijọ́</string>
+    <string name="notification_permission_permanent_denial">A ti pa ìfitónilétí. Jọ̀wọ́ sọ ọ́ dọ̀tun nínú àwọn Àṣàyàn App láti gba ìfitónilétí.</string>
+    <string name="action_grant">Gba á láàyè</string>
+    <string name="action_settings">Àwọn àṣàyàn</string>
+    <string name="action_app_settings">Àwọn àṣàyàn App</string>
+    <string name="action_retry">Tún gbiyanju</string>
+    <string name="validation_error_invalid_range">Jọ̀wọ́ tẹ iye kọja laarin %1$s àti %2$s</string>
+    <string name="validation_error_invalid_number">Jọ̀wọ́ tẹ ànọ́mbà tí o tọ́</string>
+    <string name="validation_error_field_required">Ààyè yi kò le wà ní ofifo</string>
+    <string name="widget_pin_unsupported">Eto ikọlu rẹ kò gbà á láàyè lati fi widget sí ipò pẹlu ara rẹ̀.</string>
+    <string name="widget_already_added">A ti fi widget kún ilé pátákó pẹ̀lú</string>
+    <string name="widget_added_success">A fi widget kún ilé pátákó</string>
+    <string name="onboarding_title">Ẹ kú àbọ̀ sí MinuteWatcher!</string>
+    <string name="onboarding_message">MinuteWatcher kò le gba ìsọfúnni idile rẹ laifọwọyi lati ọdọ ile-iṣẹ alagbeka rẹ.\n\nLáti bẹ̀rẹ̀ ìtọpa, jọ̀wọ́ tún àwọn àlà ìṣẹ́jú/data ṣe pẹlu ọwọ́ rẹ àti ọjọ́ atúnṣe oṣooṣù fun kaadi SIM kọ̀ọkan.</string>
+    <string name="onboarding_button">Ó ye mi</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">Àpẹẹrẹ áyè SIM ti kò tọ́: %1$d</string>
+    <string name="error_storage_unavailable">Ààyè itọju kò sí fun áyè %1$d. Tún gbiyanju ni ẹyìn gbaa.</string>
+    <string name="error_sim_removed">A ti yọ SIM kúrò nínú áyè %1$d</string>
+    <string name="error_operation_failed_retry">Iṣẹ́ kùnà lẹ́yìn atúngbiyanju.</string>
+    <string name="error_unknown">Àṣìṣe tí a kò mọ̀: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">Fagilee</string>
+    <string name="save_button">Gba pamọ́</string>
+    <string name="set_button">Pèsè</string>
+    <string name="action_ok">TÓ TỌ́</string>
+    <string name="reset_limits_button">Tún àwọn àlà tẹ́</string>
+    <string name="reset_counters">Tún àwọn ònka tẹ́</string>
+    <string name="reset_confirmation_title">Tún àwọn ònka tẹ́?</string>
+    <string name="reset_confirmation_body">Èyí yíò nù gbogbo ìlo ti a tọpa fun kaadi SIM yi kúrò.</string>
+    <string name="reset_limits_confirmation_title">Tún àwọn àlà tẹ́?</string>
+    <string name="reset_limits_confirmation_body">Èyí yíò nù àwọn àlà ìṣẹ́jú àti data kúrò.</string>
+    <string name="choose_reset_day">Mu ọjọ́ oṣù fun atúnṣe fúnra rẹ̀:</string>
+    <string name="choose_reset_day_dialog_title">Mu ọjọ́ atúnṣe</string>
+    <string name="rollover_label">Sọ iyokù pọ̀</string>
+    <string name="set_minutes_limit">Pèsè àlà ìṣẹ́jú oṣooṣù:</string>
+    <string name="minutes_limit_hint">Àlà ìṣẹ́jú</string>
+    <string name="set_traffic_limit">Pèsè àlà data oṣooṣù (GB):</string>
+    <string name="traffic_limit_gb_hint_dialog">Àlà data ni GB</string>
+    <string name="limits_for_operator">Àwọn àlà fun %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Àwọn ìfitónilétí</string>
+    <string name="notify_low_minutes_title">Ṣe ìfitónilétí nígbà tí ìṣẹ́jú ba dinkù</string>
+    <string name="notify_low_traffic_title">Ṣe ìfitónilétí nígbà tí data ba dinkù</string>
+    <string name="aod_summary_title">Àkópọ̀ Always-on Display</string>
+    <string name="aod_summary_description">Ṣàfihàn ìfitónilétí jẹ́jẹ́ gbúnkan pẹ̀lú àwọn ìṣẹ́jú àti data tí ó kù.</string>
+    <string name="aod_summary_unavailable">Sọ ìfitónilétí di gbígbé láti lo àṣàyàn yi</string>
+    <string name="notification_channel_name">Ìṣọ́ Ìlo</string>
+    <string name="notification_channel_desc">Ìtọpa ìṣẹ́jú àti ìlo data</string>
+    <string name="notification_channel_aod_summary_name">Àkópọ̀ Always-on Display</string>
+    <string name="notification_channel_aod_summary_desc">Àkópọ̀ ti kò ní ariwo ti ìṣẹ́jú àti data ti o ku</string>
+    <string name="notification_minutes_title">Ìlo ìṣẹ́jú %1$s</string>
+    <string name="notification_minutes_body">%1$s ìlo ìṣẹ́jú! Ó kù %2$s (%3$d%%). Oṣù yíò parí ní %4$s.</string>
+    <string name="notification_traffic_title">Ìlo data %1$s</string>
+    <string name="notification_traffic_body">%1$s ìlo data! Ó kù %2$.1f GB (%3$d%%). Oṣù yíò parí ní %4$s.</string>
+    <string name="notification_minutes_exhausted_body">Agbára ìṣẹ́jú fun akókò yìí ti tán.</string>
+    <string name="notification_traffic_exhausted_body">Agbára data fun akókò yìí ti tán.</string>
+    <string name="notification_minutes_body_no_period">%1$s ìlo ìṣẹ́jú! Ó kù %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s ìlo data! Ó kù %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">A ti de àlà ìṣẹ́jú.</string>
+    <string name="notification_traffic_exhausted_body_no_period">A ti de àlà data.</string>
+    <string name="usage_level_low">KÉKERÉ</string>
+    <string name="usage_level_critical">KÉKERÉ PÚPỌ̀</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">Tí ó kù:</string>
+    <string name="used_text">Tí a lò</string>
+    <string name="limit_text">Àlà</string>
+    <string name="minutes_abbr">ìṣẹ́jú</string>
+    <string name="unit_minutes">ìṣẹ́jú</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">Data</string>
+    <string name="traffic_remaining_text">Data tí ó kù:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">ọjọ́ oṣù</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="other">%1$d ìṣẹ́jú</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="other">%1$d ọjọ́</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">Àmì kaadi SIM</string>
+    <string name="sim_card_details_content_desc">Àwọn ìsọfúnni kaadi SIM %1$s</string>
+    <string name="adjust_minutes_content_desc">Tún àwọn ìṣẹ́jú tí ó kù ṣe</string>
+    <string name="adjust_traffic_content_desc">Tún data tí ó kù ṣe</string>
+    <string name="traffic_info_content_desc">Ìsọfúnni sí i nípa ìtọpa data</string>
+    <string name="set_limits_content_desc">Pèsè àwọn àlà fun %1$s</string>
+    <string name="change_auto_reset_day_content_desc">Bọ́ ọjọ́ atúnṣe fúnra rẹ̀</string>
+    <string name="toggle_auto_reset_content_desc">Sọ atúnṣe fúnra rẹ̀ dọ̀tun tabi pa á</string>
+    <string name="menu_language_content_desc">Bọ́ èdè</string>
+    <string name="menu_theme_content_desc">Bọ́ àwọ̀</string>
+    <string name="navigate_up_content_desc">Lọ sí òkè</string>
+    <string name="banner_dismiss_content_desc">Pa àmì títẹ̀ sílẹ̀</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Ìtọpa</string>
+    <string name="call_tracking_title">Tọpa àwọn ìṣẹ́jú ìpè</string>
+    <string name="call_tracking_description">Onka àwọn ìṣẹ́jú ìpè fun kaadi SIM kọ̀ọkan.</string>
+    <string name="assistant_access_title">Ìwọlé olùrànlọ́wọ́</string>
+    <string name="assistant_access_description">Gba olùrànlọ́wọ́ lórí ẹrọ láàyè láti beere fun àwọn ìṣẹ́jú àti data ti o ku.</string>
+    <string name="app_functions_display_description">Pín àwọn ìṣẹ́jú àti data pẹlu olùrànlọ́wọ́ lórí ẹrọ</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">Nípa</string>
+    <string name="about_message">MinuteWatcher jẹ́ app kan fun ìtọpa àwọn ìṣẹ́jú àti data ti ó kù.</string>
+    <string name="about_author_name">Onkọwe: Pavel Mukhin</string>
+    <string name="about_email_label">Imeeli:</string>
+    <string name="about_signoff">Pẹlu ọ̀wọ̀,</string>
+    <string name="about_version_format">Agbára %1$s (%2$d)</string>
+    <string name="about_content_desc">Ìsọfúnni nípa app</string>
+</resources>

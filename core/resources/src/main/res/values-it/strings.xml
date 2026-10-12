@@ -1,0 +1,188 @@
+<resources>
+    <!-- General UI -->
+    <string name="sim_cards_title">Schede SIM</string>
+    <string name="no_sim_found">Nessuna scheda SIM trovata</string>
+    <string name="check_permissions_sim">Verifica i permessi e la presenza della SIM</string>
+    <string name="no_data">Nessun dato</string>
+    <string name="error">Errore</string>
+
+    <!-- Main Screen Actions -->
+    <string name="reset_label">Reimposta</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Chiaro</string>
+    <string name="theme_dark">Scuro</string>
+    <string name="limit_button">Limite</string>
+    <string name="add_widget_button">Aggiungi Widget</string>
+
+    <!-- Settings: General -->
+    <string name="settings_save_partial_success">Impostazioni generali salvate. Impostazioni SIM ignorate (elenco SIM non disponibile)</string>
+    <string name="settings_save_partial_failure">Impostazioni generali salvate. Le impostazioni specifiche della SIM non sono state salvate</string>
+    <string name="settings_save_partial_failure_slots">Impostazioni generali salvate. Le impostazioni specifiche per la SIM %1$s non sono state salvate</string>
+    <string name="settings_save_failed">Salvataggio non riuscito</string>
+    <string name="language_system">Sistema</string>
+    <string name="usage_access_dialog_title">Monitoraggio traffico dati</string>
+    <string name="usage_access_dialog_description">Per monitorare il traffico dati mobili, MinuteWatcher richiede l\'autorizzazione \"Accesso dati uso\".\n\nSi tratta di un permesso a livello di sistema che consente all\'app di vedere quanti dati sono stati inviati e ricevuti sulla rete cellulare.</string>
+    <string name="phone_permission_permanent_denial">Autorizzazione telefono negata permanentemente.</string>
+
+    <!-- Settings: Widget -->
+    <string name="settings_widget_title">Impostazioni Widget</string>
+    <string name="widget_description">Mostra i minuti e il traffico dati rimanenti per ciascuna scheda SIM.</string>
+    <string name="background_transparency">Trasparenza dello sfondo</string>
+    <string name="display_minutes">Mostra minuti</string>
+    <string name="display_minutes_limit">Mostra limite minuti</string>
+    <string name="display_traffic">Mostra traffico</string>
+    <string name="display_traffic_limit">Mostra limite traffico</string>
+    <string name="display_name">Mostra nome</string>
+    <string name="display_icon">Mostra icona</string>
+    <string name="show_sim_checkbox">Mostra questa scheda SIM</string>
+    <string name="preview">Anteprima</string>
+    <string name="layout_mode_title">Modalità di layout</string>
+    <string name="sim_arrangement_prompt">Scegli la disposizione delle SIM</string>
+    <string name="color_background">Colore dello sfondo:</string>
+    <string name="custom_color">Personalizzato&#8230;</string>
+    <string name="font_size">Dimensione carattere</string>
+    <string name="traffic_tracking_limitation_title">Limitazione del monitoraggio traffico</string>
+    <string name="traffic_tracking_limitation_body">Android fornisce il consumo di dati mobili come valore aggregato per l\'intero dispositivo.\n\nMinuteWatcher attribuisce tutto il traffico alla scheda SIM attualmente selezionata come \"SIM dati predefinita\" nelle impostazioni.</string>
+    <string name="tracking_banner_phone_permission">È necessaria l\'autorizzazione telefono per identificare le schede SIM.</string>
+    <string name="tracking_banner_usage_access">È necessario l\'Accesso dati uso per monitorare accuratamente il traffico dati.</string>
+    <string name="tracking_banner_sim_discovery_error">Impossibile rilevare le schede SIM. Riprova.</string>
+    <string name="tracking_banner_traffic_error">Errore durante l\'aggiornamento dei dati di traffico.</string>
+    <string name="tracking_banner_calls_error">Errore durante l\'aggiornamento dei dati delle chiamate.</string>
+    <string name="tracking_banner_appsearch_error">Indicizzazione AppSearch non riuscita.</string>
+    <string name="tracking_banner_shortcuts_error">Aggiornamento scorciatoie dinamiche non riuscito.</string>
+    <string name="tracking_banner_notification_permission">Si consiglia di abilitare le notifiche per ricevere gli avvisi di consumo.</string>
+    <string name="tracking_banner_widget_error">Impossibile aggiornare il widget a causa di limitazioni di sistema.</string>
+    <string name="tracking_banner_inaccurate_calls">Alcune chiamate non sono state associate a una scheda SIM.</string>
+    <string name="tracking_banner_calls_attribution_error">Rilevate più chiamate simultanee. Impossibile determinare la scheda SIM.</string>
+    <string name="tracking_banner_observation_failed">Il servizio di monitoraggio si è interrotto dopo diversi errori. Riavvia l\'app.</string>
+    <string name="tracking_banner_storage_degraded">Archiviazione ridotta: le statistiche potrebbero essere azzerate dopo il riavvio.</string>
+    <string name="settings_load_error">Errore di caricamento impostazioni</string>
+    <string name="sim_list_unavailable_error">Elenco SIM non disponibile. Le impostazioni saranno disponibili dopo il ricaricamento.</string>
+    <string name="refresh_error">Errore di aggiornamento dati</string>
+    <string name="check_mark">✓</string>
+    <string name="stale_data_warning">I dati potrebbero non essere aggiornati</string>
+    <string name="notification_permission_permanent_denial">Le notifiche sono disattivate. Abilitale nelle impostazioni per ricevere gli avvisi.</string>
+    <string name="action_grant">Concedi</string>
+    <string name="action_settings">Impostazioni</string>
+    <string name="action_app_settings">Impostazioni app</string>
+    <string name="action_retry">Riprova</string>
+    <string name="validation_error_invalid_range">Inserisci un valore compreso tra %1$s e %2$s</string>
+    <string name="validation_error_invalid_number">Inserisci un numero valido</string>
+    <string name="validation_error_field_required">Il campo non può essere vuoto</string>
+    <string name="widget_pin_unsupported">Il tuo launcher non supporta il posizionamento automatico dei widget.</string>
+    <string name="widget_already_added">Widget già aggiunto alla schermata principale</string>
+    <string name="widget_added_success">Widget aggiunto alla schermata principale</string>
+    <string name="onboarding_title">Benvenuto in MinuteWatcher!</string>
+    <string name="onboarding_message">MinuteWatcher non può recuperare automaticamente i dettagli del piano dal tuo operatore.\n\nPer iniziare il monitoraggio, imposta manualmente i limiti di minuti/dati e il giorno di rinnovo mensile per ciascuna SIM.</string>
+    <string name="onboarding_button">Ho capito</string>
+
+    <!-- Operation Errors -->
+    <string name="error_invalid_sim_slot">Indice dello slot SIM non valido: %1$d</string>
+    <string name="error_storage_unavailable">Memoria non disponibile per lo slot %1$d. Riprova più tardi.</string>
+    <string name="error_sim_removed">La SIM è stata rimossa dallo slot %1$d</string>
+    <string name="error_operation_failed_retry">Operazione non riuscita anche dopo aver riprovato.</string>
+    <string name="error_unknown">Errore sconosciuto: %1$s</string>
+
+    <!-- Dialogs -->
+    <string name="cancel_button">Annulla</string>
+    <string name="save_button">Salva</string>
+    <string name="set_button">Imposta</string>
+    <string name="action_ok">OK</string>
+    <string name="reset_limits_button">Reimposta limiti</string>
+    <string name="reset_counters">Reimposta contatori</string>
+    <string name="reset_confirmation_title">Reimpostare i contatori?</string>
+    <string name="reset_confirmation_body">Questo cancellerà tutto il consumo tracciato per questa scheda SIM.</string>
+    <string name="reset_limits_confirmation_title">Reimpostare i limiti?</string>
+    <string name="reset_limits_confirmation_body">Questo cancellerà i limiti di minuti e traffico dati.</string>
+    <string name="choose_reset_day">Scegli il giorno del mese per il rinnovo automatico:</string>
+    <string name="choose_reset_day_dialog_title">Scegli il giorno di rinnovo</string>
+    <string name="rollover_label">Accumula rimanenza</string>
+    <string name="set_minutes_limit">Imposta il limite mensile di minuti:</string>
+    <string name="minutes_limit_hint">Limite minuti</string>
+    <string name="set_traffic_limit">Imposta il limite mensile di traffico (GB):</string>
+    <string name="traffic_limit_gb_hint_dialog">Limite traffico in GB</string>
+    <string name="limits_for_operator">Limiti per %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notifiche</string>
+    <string name="notify_low_minutes_title">Notifica quando i minuti sono in esaurimento</string>
+    <string name="notify_low_traffic_title">Notifica quando il traffico dati è in esaurimento</string>
+    <string name="aod_summary_title">Riepilogo Always-on Display</string>
+    <string name="aod_summary_description">Mostra una notifica silenziosa e permanente con i minuti e il traffico dati rimanenti.</string>
+    <string name="aod_summary_unavailable">Abilita le notifiche per usare questa funzione</string>
+    <string name="notification_channel_name">Monitoraggio consumi</string>
+    <string name="notification_channel_desc">Monitoraggio del consumo di minuti e traffico dati</string>
+    <string name="notification_channel_aod_summary_name">Riepilogo Always-on Display</string>
+    <string name="notification_channel_aod_summary_desc">Riepilogo permanente e silenzioso di minuti e traffico dati rimanenti</string>
+    <string name="notification_minutes_title">Consumo minuti %1$s</string>
+    <string name="notification_minutes_body">%1$s consumo minuti! Rimanenti %2$s (%3$d%%). Il mese termina tra %4$s.</string>
+    <string name="notification_traffic_title">Consumo dati %1$s</string>
+    <string name="notification_traffic_body">%1$s consumo dati! Rimanenti %2$.1f GB (%3$d%%). Il mese termina tra %4$s.</string>
+    <string name="notification_minutes_exhausted_body">Il pacchetto di minuti per il periodo è terminato.</string>
+    <string name="notification_traffic_exhausted_body">Il pacchetto dati per il periodo è terminato.</string>
+    <string name="notification_minutes_body_no_period">%1$s consumo minuti! Rimanenti %2$s (%3$d%%).</string>
+    <string name="notification_traffic_body_no_period">%1$s consumo dati! Rimanenti %2$.1f GB (%3$d%%).</string>
+    <string name="notification_minutes_exhausted_body_no_period">Limite di minuti raggiunto.</string>
+    <string name="notification_traffic_exhausted_body_no_period">Limite di traffico dati raggiunto.</string>
+    <string name="usage_level_low">BASSO</string>
+    <string name="usage_level_critical">MOLTO BASSO</string>
+
+    <!-- Data & Units -->
+    <string name="remaining_text">Rimanenti:</string>
+    <string name="used_text">Usato</string>
+    <string name="limit_text">Limite</string>
+    <string name="minutes_abbr">min.</string>
+    <string name="unit_minutes">min</string>
+    <string name="unit_gigabytes">GB</string>
+    <string name="traffic_label">Traffico</string>
+    <string name="traffic_remaining_text">Traffico rimanente:</string>
+    <string name="gb_abbr">GB</string>
+    <string name="auto_reset_day_suffix">giorno del mese</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_minutes_short">%1$d %2$s</string>
+    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
+    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
+
+    <plurals name="minutes_plurals">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d di minuti</item>
+        <item quantity="other">%1$d minuti</item>
+    </plurals>
+    <plurals name="days_plurals">
+        <item quantity="one">%1$d giorno</item>
+        <item quantity="many">%1$d di giorni</item>
+        <item quantity="other">%1$d giorni</item>
+    </plurals>
+
+    <!-- Accessibility -->
+    <string name="sim_icon_content_desc">Icona scheda SIM</string>
+    <string name="sim_card_details_content_desc">Dettagli scheda SIM %1$s</string>
+    <string name="adjust_minutes_content_desc">Regola minuti rimanenti</string>
+    <string name="adjust_traffic_content_desc">Regola traffico dati rimanente</string>
+    <string name="traffic_info_content_desc">Maggiori informazioni sul monitoraggio dei dati</string>
+    <string name="set_limits_content_desc">Imposta limiti per %1$s</string>
+    <string name="change_auto_reset_day_content_desc">Modifica giorno di rinnovo automatico</string>
+    <string name="toggle_auto_reset_content_desc">Attiva o disattiva rinnovo automatico</string>
+    <string name="menu_language_content_desc">Cambia lingua</string>
+    <string name="menu_theme_content_desc">Cambia tema</string>
+    <string name="navigate_up_content_desc">Torna su</string>
+    <string name="banner_dismiss_content_desc">Chiudi banner</string>
+
+    <!-- Tracking Settings -->
+    <string name="tracking_title">Monitoraggio</string>
+    <string name="call_tracking_title">Traccia minuti di chiamata</string>
+    <string name="call_tracking_description">Conta i minuti di chiamata per ciascuna scheda SIM.</string>
+    <string name="assistant_access_title">Accesso assistente</string>
+    <string name="assistant_access_description">Consenti all\'assistente sul dispositivo di richiedere i minuti e i dati rimanenti.</string>
+    <string name="app_functions_display_description">Condivide i minuti e i dati rimanenti con l\'assistente sul dispositivo</string>
+
+    <!-- About Dialog -->
+    <string name="about_title">Info</string>
+    <string name="about_message">MinuteWatcher è un\'applicazione per monitorare i minuti e il traffico dati rimanenti.</string>
+    <string name="about_author_name">Autore: Pavel Mukhin</string>
+    <string name="about_email_label">Email:</string>
+    <string name="about_signoff">Cordiali saluti,</string>
+    <string name="about_version_format">Versione %1$s (%2$d)</string>
+    <string name="about_content_desc">Informazioni su MinuteWatcher</string>
+</resources>

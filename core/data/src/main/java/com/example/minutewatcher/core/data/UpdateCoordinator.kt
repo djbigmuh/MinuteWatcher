@@ -53,7 +53,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * one coordination loop.
  */
 @Singleton
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 class UpdateCoordinator
     @Inject
     constructor(
@@ -110,7 +110,9 @@ class UpdateCoordinator
         @VisibleForTesting
         internal val currentObservationJob = AtomicReference<Job?>(null)
         private val currentUpdateJob = AtomicReference<Job?>(null)
-        private val takeoverUpdateJob = AtomicReference<Job?>(null)
+
+    @VisibleForTesting
+    internal val takeoverUpdateJob = AtomicReference<Job?>(null)
 
         init {
             ensureObservationStarted()
@@ -131,7 +133,12 @@ class UpdateCoordinator
                 currentObservationJob.set(currentJob)
                 observationGeneration++
                 val currentGen = observationGeneration
-                monitoringJob.getAndSet(launchMonitoringJob(currentJob, currentGen))?.cancel()
+                val previousMonitoring = monitoringJob.getAndSet(null)
+                previousMonitoring?.cancel()
+                val newMonitoringJob = launchMonitoringJob(currentJob, currentGen)
+                if (!monitoringJob.compareAndSet(null, newMonitoringJob)) {
+                    newMonitoringJob.cancel()
+                }
                 transitionStatus(TrackingStatus.Active)
             }
         }
@@ -217,6 +224,9 @@ class UpdateCoordinator
                 val activeSetup = setupJob.get()
                 if ((activeSetup != null) && activeSetup.isActive) return@synchronized
 
+                val previousSetup = setupJob.getAndSet(null)
+                previousSetup?.cancel()
+
                 val newSetupJob =
                     scope.launch {
                         try {
@@ -248,7 +258,9 @@ class UpdateCoordinator
                         }
                     }
 
-                setupJob.getAndSet(newSetupJob)?.cancel()
+                if (!setupJob.compareAndSet(null, newSetupJob)) {
+                    newSetupJob.cancel()
+                }
             }
         }
 
@@ -291,7 +303,12 @@ class UpdateCoordinator
                         currentObservationJob.set(job)
                         observationGeneration++
                         val currentGen = observationGeneration
-                        monitoringJob.getAndSet(launchMonitoringJob(job, currentGen))?.cancel()
+                        val previousMonitoring = monitoringJob.getAndSet(null)
+                        previousMonitoring?.cancel()
+                        val newMonitoringJob = launchMonitoringJob(job, currentGen)
+                        if (!monitoringJob.compareAndSet(null, newMonitoringJob)) {
+                            newMonitoringJob.cancel()
+                        }
                         transitionStatus(TrackingStatus.Active)
                     }
                 } catch (e: CancellationException) {
@@ -456,12 +473,6 @@ class UpdateCoordinator
                 }
             }
         }
-
-        @VisibleForTesting
-        internal fun launchMonitoringJobTest(
-            newJob: Job,
-            generation: Long,
-        ): Job = launchMonitoringJob(newJob, generation)
 
         private suspend fun handleDegradedMode(
             restartCount: Int,
@@ -729,6 +740,7 @@ class UpdateCoordinator
                         oldJob.join()
                     }
                 }
+                takeoverUpdateJob.compareAndSet(oldJob, null)
             }
 
             // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)

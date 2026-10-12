@@ -204,4 +204,47 @@ class MainViewModelDialogTest : MainViewModelTestFixtures() {
                 )
             assertEquals(true, viewModel.showOnboardingDialog.value)
         }
+
+    @Test
+    fun `settings change in unrelated field does not retrigger onboarding prompt`() =
+        testScope.runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = false, isLoaded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val viewModel = createViewModel(backgroundScope)
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+
+            settingsFlow.value =
+                AppSettings(
+                    onboardingCompleted = false,
+                    isLoaded = true,
+                    inaccurateCallAttributionsCount = 99,
+                )
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+        }
+
+    @Test
+    fun `duplicate inputs do not retrigger onboarding prompt`() =
+        testScope.runTest {
+            val settingsFlow = MutableStateFlow(AppSettings(onboardingCompleted = false, isLoaded = true))
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+
+            val viewModel = createViewModel(backgroundScope)
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+
+            settingsFlow.value = AppSettings(onboardingCompleted = false, isLoaded = true)
+            assertEquals(true, viewModel.showOnboardingDialog.value)
+        }
+
+    @Test
+    fun `setShowAboutDialog updates showAboutDialog state`() =
+        testScope.runTest {
+            val viewModel = createViewModel(backgroundScope)
+
+            viewModel.setShowAboutDialog(true)
+            assertEquals(true, viewModel.showAboutDialog.value)
+
+            viewModel.setShowAboutDialog(false)
+            assertEquals(false, viewModel.showAboutDialog.value)
+        }
 }

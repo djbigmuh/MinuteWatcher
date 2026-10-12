@@ -47,7 +47,6 @@ class InitialSetupWorker
         private suspend fun executeWork(): Result =
             try {
                 performSetupSteps()
-                Result.success()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
@@ -64,7 +63,7 @@ class InitialSetupWorker
             FAIL,
         }
 
-        private suspend fun performSetupSteps() {
+    private suspend fun performSetupSteps(): Result {
             withTimeoutOrNull(REFRESH_OPERATOR_TIMEOUT_MS.milliseconds) {
                 deps.usageUseCase.refreshOperatorInfo()
             } ?: AppLogger.w("InitialSetupWorker: refreshOperatorInfo timed out after ${REFRESH_OPERATOR_TIMEOUT_MS}ms")
@@ -75,13 +74,13 @@ class InitialSetupWorker
                 } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
             }
 
+        val migrationResult =
             when (checkAndPerformMigrations()) {
-                MigrationDecision.RETRY -> throw IOException("Migration retry")
-                MigrationDecision.FAIL -> throw IllegalStateException("Migration failed")
-                MigrationDecision.PROCEED -> {
-                    // Continue setup steps
+                MigrationDecision.RETRY -> Result.retry()
+                MigrationDecision.FAIL -> Result.failure()
+                MigrationDecision.PROCEED -> null
                 }
-            }
+        if (migrationResult != null) return migrationResult
 
             performCleanupSafe {
                 if (!deps.autoResetUseCase.performAutoReset(shouldNotify = false)) {
@@ -93,10 +92,20 @@ class InitialSetupWorker
             deps.usageStateRepository.refresh()
             deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
 
-            if (deps.permissionManager.hasPhoneStatePermission()) {
+        try {
                 deps.workScheduler.schedulePeriodicUsageCheck()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw IOException("Periodic check scheduling failed", e)
             }
+
+        /**
+         * UsageCheckWorker handles its own permissions dynamically during execution.
+         */
             deps.migrationFlagsRepository.setInitialSetupCompleted(true)
+
+        return Result.success()
         }
 
         private suspend fun performCleanupSafe(block: suspend () -> Unit) {

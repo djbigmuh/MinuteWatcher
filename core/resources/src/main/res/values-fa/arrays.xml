@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>همه در یک خط</item>
+        <item>دو خط</item>
+        <item>سه خط</item>
+        <item>شش خط</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>کنار هم</item>
+        <item>در یک ستون</item>
+    </string-array>
+</resources>

@@ -164,6 +164,14 @@ class MinutesGlanceWidget(
                     AppLogger.w("Widget: using stale snapshot, timestamp=${refreshResult.snapshot.timestamp}")
                     true
                 }
+                is RefreshResult.Failure -> {
+                    AppLogger.e(
+                        "Widget: refresh failed, using stale snapshot, " +
+                            "timestamp=${refreshResult.snapshot.timestamp}",
+                        refreshResult.cause,
+                    )
+                    true
+                }
             }
 
         val settingsState =
@@ -189,7 +197,7 @@ class MinutesGlanceWidget(
     /**
      * Gets snapshot for widget.
      */
-    private suspend fun getSnapshot(
+    internal suspend fun getSnapshot(
         usageRepository: UsageStateRepository,
         timeProvider: TimeProvider,
     ): RefreshResult {
@@ -208,8 +216,7 @@ class MinutesGlanceWidget(
             throw e
         } catch (e: Exception) {
             AppLogger.e("Widget refresh failed", e)
-            RefreshResult
-                .Timeout(initialSnapshot)
+            RefreshResult.Failure(initialSnapshot, e)
         }
     }
 }

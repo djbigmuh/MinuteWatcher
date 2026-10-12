@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_modes">
+        <item>एकाच ओळीत</item>
+        <item>दोन ओळी</item>
+        <item>तीन ओळी</item>
+        <item>सहा ओळी</item>
+    </string-array>
+
+    <string-array name="sim_arrangements">
+        <item>शेजारी शेजारी</item>
+        <item>एका स्तंभात</item>
+    </string-array>
+</resources>

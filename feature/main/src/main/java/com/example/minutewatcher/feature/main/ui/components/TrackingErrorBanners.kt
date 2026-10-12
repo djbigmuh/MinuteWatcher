@@ -7,6 +7,22 @@ import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.main.TrackingBannerState
 
 @Composable
+internal fun SimDiscoveryErrorBanner(
+    state: TrackingBannerState,
+    onRetrySimDiscovery: () -> Unit,
+) {
+    if (state.showSimDiscoveryErrorBanner) {
+        TrackingBanner(
+            text = stringResource(id = R.string.tracking_banner_sim_discovery_error),
+            actionText = stringResource(id = R.string.action_retry),
+            onAction = onRetrySimDiscovery,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
 internal fun TrafficErrorBanner(
     state: TrackingBannerState,
     onRetryTraffic: () -> Unit,
@@ -30,6 +46,22 @@ internal fun CallsErrorBanner(
     if (state.showCallsErrorBanner) {
         TrackingBanner(
             text = stringResource(id = R.string.tracking_banner_calls_error),
+            actionText = stringResource(id = R.string.action_retry),
+            onAction = onRetryCalls,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
+internal fun CallsAttributionErrorBanner(
+    state: TrackingBannerState,
+    onRetryCalls: () -> Unit,
+) {
+    if (state.showCallsAttributionErrorBanner) {
+        TrackingBanner(
+            text = stringResource(id = R.string.tracking_banner_calls_attribution_error),
             actionText = stringResource(id = R.string.action_retry),
             onAction = onRetryCalls,
             containerColor = MaterialTheme.colorScheme.errorContainer,

@@ -18,6 +18,7 @@ import javax.inject.Singleton
  * Safe to call from any coroutine context.
  */
 @Singleton
+@Suppress("TooManyFunctions")
 class SimNotificationFlagsRepositoryImpl
     @Inject
     constructor(
@@ -110,4 +111,24 @@ class SimNotificationFlagsRepositoryImpl
         ) {
             dataStore.edit { it[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = notified }
         }
+
+    override fun getNotifiedCriticalMinutes(identity: String): Flow<Boolean> =
+        getData(DataStoreKeys.notifiedCriticalMinutesKey(identity), defaultValue = false)
+
+    override suspend fun setNotifiedCriticalMinutes(
+        identity: String,
+        notified: Boolean,
+    ) {
+        dataStore.edit { it[DataStoreKeys.notifiedCriticalMinutesKey(identity)] = notified }
+    }
+
+    override fun getNotifiedCriticalTraffic(identity: String): Flow<Boolean> =
+        getData(DataStoreKeys.notifiedCriticalTrafficKey(identity), defaultValue = false)
+
+    override suspend fun setNotifiedCriticalTraffic(
+        identity: String,
+        notified: Boolean,
+    ) {
+        dataStore.edit { it[DataStoreKeys.notifiedCriticalTrafficKey(identity)] = notified }
+    }
     }

@@ -8,6 +8,13 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
 object BillingPeriodCalculator {
+    /**
+     * Information about a billing period.
+     *
+     * @property startDate Start timestamp of the billing period in epoch milliseconds.
+     * @property endDate End timestamp of the billing period in epoch milliseconds.
+     * @property daysRemaining Number of days remaining in the billing period.
+     */
     data class PeriodInfo(
         val startDate: Long,
         val endDate: Long,
