@@ -26,8 +26,7 @@ class FormatUtilsTest {
 
     @Test
     fun `format minutes display logic`() {
-        assertEquals("100 min.", FormatUtils.formatMinutesDisplayLogic(100, 500, false, "min."))
-        assertEquals("100 / 500 min.", FormatUtils.formatMinutesDisplayLogic(100, 500, true, "min."))
+        assertEquals("100 min.", FormatUtils.formatMinutesDisplayLogic(Locale.US, 100, 500, false, "min."))
         assertEquals("100 / 500 min.", FormatUtils.formatMinutesDisplayLogic(Locale.US, 100, 500, true, "min."))
     }
 

@@ -122,24 +122,6 @@ object FormatUtils {
     }
 
     fun formatMinutesDisplayLogic(
-        remaining: Int,
-        limit: Int,
-        showLimit: Boolean,
-        unit: String,
-        remainingWithLimitFormat: String = "%1\$s / %2\$s %3\$s",
-        valueWithUnitFormat: String = "%1\$s %2\$s",
-    ): String =
-        formatMinutesDisplayLogic(
-            locale = Locale.getDefault(),
-            remaining = remaining,
-            limit = limit,
-            showLimit = showLimit,
-            unit = unit,
-            remainingWithLimitFormat = remainingWithLimitFormat,
-            valueWithUnitFormat = valueWithUnitFormat,
-        )
-
-    fun formatMinutesDisplayLogic(
         locale: Locale,
         remaining: Int,
         limit: Int,
