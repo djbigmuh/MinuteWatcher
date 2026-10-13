@@ -9,7 +9,9 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltWorker
 class CallEventWorker
@@ -20,6 +22,11 @@ class CallEventWorker
         private val callTracker: CallTracker,
     ) : CoroutineWorker(appContext, workerParams) {
         override suspend fun doWork(): Result =
+            withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {
+                processCallEvent()
+            } ?: handleTotalTimeout()
+
+        private suspend fun processCallEvent(): Result =
             try {
                 val state = inputData.getString(EXTRA_STATE)
                 val subId = inputData.getInt(EXTRA_SUB_ID, -1)
@@ -73,10 +80,27 @@ class CallEventWorker
                 }
             }
 
+        private fun handleTotalTimeout(): Result {
+            AppLogger.e("CallEventWorker: timed out after ${WORKER_TIMEOUT_MS}ms")
+            return if (runAttemptCount < MAX_EVENT_RUN_ATTEMPTS) {
+                Result.retry()
+            } else {
+                Result.failure()
+            }
+        }
+
         companion object {
             const val EXTRA_STATE = "state"
             const val EXTRA_SUB_ID = "subId"
             const val EXTRA_EVENT_ELAPSED_REALTIME = "eventElapsedRealtime"
+
+            /**
+             * Overall worker timeout. On AOSP a single call event is processed within
+             * a few seconds; exceeding the budget indicates storage or telephony
+             * degradation and is treated as a retryable error within
+             * [MAX_EVENT_RUN_ATTEMPTS].
+             */
+            private const val WORKER_TIMEOUT_MS = 120_000L
 
             /**
              * Maximum number of retry attempts for recoverable errors (SecurityException, IOException,
