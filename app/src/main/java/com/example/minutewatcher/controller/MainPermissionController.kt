@@ -34,8 +34,8 @@ class MainPermissionController
         @IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
     ) {
-    private val checkJob = AtomicReference<Job?>(null)
-    private val notificationJob = AtomicReference<Job?>(null)
+        private val checkJob = AtomicReference<Job?>(null)
+        private val notificationJob = AtomicReference<Job?>(null)
 
         /**
          * Checks permissions and schedules background work if needed.

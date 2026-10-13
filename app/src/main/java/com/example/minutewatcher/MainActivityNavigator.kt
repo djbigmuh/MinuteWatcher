@@ -105,20 +105,20 @@ class MainActivityNavigator
             }
         }
 
-    fun openEmailComposer(
-        context: Context,
-        address: String,
-    ) {
-        val intent =
-            Intent(Intent.ACTION_SENDTO).apply {
-                data = "mailto:$address".toUri()
+        fun openEmailComposer(
+            context: Context,
+            address: String,
+        ) {
+            val intent =
+                Intent(Intent.ACTION_SENDTO).apply {
+                    data = "mailto:$address".toUri()
+                }
+            try {
+                activityStarter.startActivity(context, intent)
+            } catch (e: ActivityNotFoundException) {
+                AppLogger.w("Email application not found", e)
+            } catch (e: SecurityException) {
+                AppLogger.w("Email application security exception", e)
             }
-        try {
-            activityStarter.startActivity(context, intent)
-        } catch (e: ActivityNotFoundException) {
-            AppLogger.w("Email application not found", e)
-        } catch (e: SecurityException) {
-            AppLogger.w("Email application security exception", e)
         }
-    }
     }
