@@ -106,19 +106,19 @@ class WidgetSettingsViewModel
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
 
-    val aodSummaryHasContent: StateFlow<Boolean> =
-        snapshot
-            .map { s ->
-                s.timestamp != Constants.Data.EMPTY_TIMESTAMP &&
-                    s.simSnapshots.any { sim ->
-                        (sim.entities[PackageType.MINUTES]?.limit ?: 0L) > 0L ||
-                            (sim.entities[PackageType.DATA]?.limit ?: 0L) > 0L
-                    }
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
-                initialValue = false,
-            )
+        val aodSummaryHasContent: StateFlow<Boolean> =
+            snapshot
+                .map { s ->
+                    s.timestamp != Constants.Data.EMPTY_TIMESTAMP &&
+                        s.simSnapshots.any { sim ->
+                            (sim.entities[PackageType.MINUTES]?.limit ?: 0L) > 0L ||
+                                (sim.entities[PackageType.DATA]?.limit ?: 0L) > 0L
+                        }
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                    initialValue = false,
+                )
 
         /**
          * State flow for the current application theme.

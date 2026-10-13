@@ -32,7 +32,7 @@ class MainDialogController
         val showAdjustDialog = savedStateHandle.getStateFlow<AdjustDialogData?>(KEY_ADJUST_DIALOG, null)
         val showTrafficLimitationDialog = savedStateHandle.getStateFlow(KEY_TRAFFIC_LIMITATION_DIALOG, false)
         val showUsageAccessDialog = savedStateHandle.getStateFlow(KEY_USAGE_ACCESS_DIALOG, false)
-    val showAboutDialog = savedStateHandle.getStateFlow(KEY_ABOUT_DIALOG, false)
+        val showAboutDialog = savedStateHandle.getStateFlow(KEY_ABOUT_DIALOG, false)
 
         private val onboardingPromptClaimed = AtomicBoolean(false)
 
@@ -103,17 +103,17 @@ class MainDialogController
             savedStateHandle[KEY_USAGE_ACCESS_DIALOG] = show
         }
 
-    /**
-     * Shows or hides the about application dialog.
-     *
-     * @param show True to show, false to hide.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     * **SavedStateHandle:** Persists state via [SavedStateHandle].
-     */
-    fun setShowAboutDialog(show: Boolean) {
-        savedStateHandle[KEY_ABOUT_DIALOG] = show
-    }
+        /**
+         * Shows or hides the about application dialog.
+         *
+         * @param show True to show, false to hide.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **SavedStateHandle:** Persists state via [SavedStateHandle].
+         */
+        fun setShowAboutDialog(show: Boolean) {
+            savedStateHandle[KEY_ABOUT_DIALOG] = show
+        }
 
         private val _showOnboardingDialog = MutableStateFlow(false)
         val showOnboardingDialog: StateFlow<Boolean> = _showOnboardingDialog.asStateFlow()

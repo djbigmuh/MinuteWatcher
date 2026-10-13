@@ -62,9 +62,9 @@ class MainViewModel
         val showAdjustDialog = dialogController.showAdjustDialog
         val showTrafficLimitationDialog = dialogController.showTrafficLimitationDialog
         val showUsageAccessDialog = dialogController.showUsageAccessDialog
-    val showAboutDialog = dialogController.showAboutDialog
-    val versionName: String get() = appInfoProvider.versionName
-    val code: Int get() = appInfoProvider.code
+        val showAboutDialog = dialogController.showAboutDialog
+        val versionName: String get() = appInfoProvider.versionName
+        val code: Int get() = appInfoProvider.code
         val showOnboardingDialog: StateFlow<Boolean> get() = dialogController.showOnboardingDialog
         val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
@@ -135,10 +135,10 @@ class MainViewModel
             }
         }
 
-    private data class OnboardingPromptInput(
-        val isSettingsLoaded: Boolean,
-        val onboardingCompleted: Boolean,
-        val usageAccessDialogShown: Boolean,
+        private data class OnboardingPromptInput(
+            val isSettingsLoaded: Boolean,
+            val onboardingCompleted: Boolean,
+            val usageAccessDialogShown: Boolean,
             val onboardingDialogShowing: Boolean,
         )
 
@@ -153,7 +153,7 @@ class MainViewModel
 
         fun setUsageAccessDialog(show: Boolean) = dialogController.setUsageAccessDialog(show)
 
-    fun setShowAboutDialog(show: Boolean) = dialogController.setShowAboutDialog(show)
+        fun setShowAboutDialog(show: Boolean) = dialogController.setShowAboutDialog(show)
 
         fun setNotificationPermissionRequested() = controllers.settings.setNotificationPermissionRequested()
 

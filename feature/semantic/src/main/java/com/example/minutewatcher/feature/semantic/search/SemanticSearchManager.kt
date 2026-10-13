@@ -76,13 +76,13 @@ class SemanticSearchManager
             statusMachine.transition(newStatus, force)
         }
 
-    /**
-     * Cached content hash corresponding only to data that has been fully indexed,
-     * including successful cleanup of stale documents.
-     *
-     * On partial success (when stale document removal fails), this hash is NOT updated
-     * so that subsequent index attempts with the same snapshot content will retry indexing.
-     */
+        /**
+         * Cached content hash corresponding only to data that has been fully indexed,
+         * including successful cleanup of stale documents.
+         *
+         * On partial success (when stale document removal fails), this hash is NOT updated
+         * so that subsequent index attempts with the same snapshot content will retry indexing.
+         */
         @VisibleForTesting
         internal var lastSnapshotHash: Int? = null
         private var lastSnapshotVersion: SchemaVersion? = null
@@ -100,14 +100,14 @@ class SemanticSearchManager
             data object MutexContention : IndexResult
         }
 
-    private val observationScope =
-        FlowObservationScope<GlobalSnapshot>(scope, "SemanticSearchManager", ObservationMode.COMPLETE)
+        private val observationScope =
+            FlowObservationScope<GlobalSnapshot>(scope, "SemanticSearchManager", ObservationMode.COMPLETE)
 
         /** Current observation job, if any. */
         @VisibleForTesting
         internal val job: Job? get() = observationScope.currentJob
 
-    @Volatile
+        @Volatile
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
 
         private val initMutex = Mutex()

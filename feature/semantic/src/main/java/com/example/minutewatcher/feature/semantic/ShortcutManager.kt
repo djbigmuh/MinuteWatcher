@@ -75,13 +75,13 @@ class ShortcutManager
         override val status: StateFlow<TrackingStatus> = statusMachine.status
 
         private val initMutex = Mutex()
-    private val applyMutex = Mutex()
-    private var lastAppliedProjections: List<ShortcutProjection>? = null
+        private val applyMutex = Mutex()
+        private var lastAppliedProjections: List<ShortcutProjection>? = null
 
-    @Volatile
+        @Volatile
         private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
-    private val observationScope =
-        FlowObservationScope<GlobalSnapshot>(scope, "ShortcutManager", ObservationMode.COMPLETE)
+        private val observationScope =
+            FlowObservationScope<GlobalSnapshot>(scope, "ShortcutManager", ObservationMode.COMPLETE)
 
         /** Current observation job, if any. */
         @VisibleForTesting
@@ -137,8 +137,8 @@ class ShortcutManager
             }
         }
 
-    private fun isCurrentObservationActive(snapshotFlow: StateFlow<GlobalSnapshot>): Boolean =
-        job?.isActive == true && (lastSnapshotFlow === snapshotFlow)
+        private fun isCurrentObservationActive(snapshotFlow: StateFlow<GlobalSnapshot>): Boolean =
+            job?.isActive == true && (lastSnapshotFlow === snapshotFlow)
 
         /**
          * Recovers the shortcut manager state by re-initializing with the last known flow.
@@ -213,13 +213,13 @@ class ShortcutManager
                 }
             }
 
-    private suspend fun updateShortcuts(snapshot: GlobalSnapshot) {
+        private suspend fun updateShortcuts(snapshot: GlobalSnapshot) {
             if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
                 AppLogger.d("ShortcutManager: snapshot not loaded, skipping shortcut update (no removal)")
                 return
             }
             val shortcuts = createShortcuts(snapshot)
-        applyShortcutsGuarded(shortcuts)
+            applyShortcutsGuarded(shortcuts)
         }
 
         private fun createShortcuts(snapshot: GlobalSnapshot): List<ShortcutInfoCompat> {
@@ -311,17 +311,17 @@ class ShortcutManager
                     putExtra(IntentExtras.SIM_SLOT, slot)
                 }
 
-    private suspend fun applyShortcutsGuarded(shortcuts: List<ShortcutInfoCompat>) {
-        val projections = shortcuts.map { ShortcutProjection.from(it) }
-        applyMutex.withLock {
-            if (projections == lastAppliedProjections) {
-                AppLogger.d("ShortcutManager: shortcut projections unchanged, skipping application")
-                return
+        private suspend fun applyShortcutsGuarded(shortcuts: List<ShortcutInfoCompat>) {
+            val projections = shortcuts.map { ShortcutProjection.from(it) }
+            applyMutex.withLock {
+                if (projections == lastAppliedProjections) {
+                    AppLogger.d("ShortcutManager: shortcut projections unchanged, skipping application")
+                    return
+                }
+                applyShortcuts(shortcuts)
+                lastAppliedProjections = projections
             }
-            applyShortcuts(shortcuts)
-            lastAppliedProjections = projections
         }
-    }
 
         private fun applyShortcuts(shortcuts: List<ShortcutInfoCompat>) {
             shortcutApplier.apply(context, shortcuts)
