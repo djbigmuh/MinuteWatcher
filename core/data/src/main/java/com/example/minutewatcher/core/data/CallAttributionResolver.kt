@@ -36,6 +36,15 @@ internal class CallAttributionResolver
             attributionFailures.entries.removeIf { it.key !in activeSubIds }
         }
 
+        /**
+         * Resolves the target identity for a call event.
+         *
+         * The active SIMs snapshot is read with a bounded wait
+         * ([Constants.Flow.SHORT_TIMEOUT_MS]); on timeout the identity remains
+         * unresolved and the caller applies the standard attribution failure
+         * handling. Fallback attribution is used only when exactly one active
+         * SIM with a stable identity is present.
+         */
         suspend fun resolveTargetIdentity(
             subId: Int,
             savedIdentity: String?,
@@ -44,7 +53,13 @@ internal class CallAttributionResolver
             var isFallbackUsed = false
 
             if (targetIdentity == null) {
-                val activeSims = simIdentityRepository.observeActiveSims().firstOrNull().orEmpty()
+                val activeSims =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        simIdentityRepository.observeActiveSims().firstOrNull()
+                    } ?: run {
+                        AppLogger.w("CallTracker: timeout reading active SIMs for attribution of subId=$subId")
+                        emptyList()
+                    }
                 val matched = activeSims.find { it.subscriptionId == subId }
                 if (matched != null) {
                     AppLogger.w("CallTracker: SIM matched subId=$subId but identity is unstable, attribution refused")

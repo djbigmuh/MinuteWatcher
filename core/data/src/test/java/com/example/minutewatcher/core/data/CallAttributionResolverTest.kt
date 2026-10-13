@@ -8,10 +8,13 @@ import com.example.minutewatcher.core.model.IdentitySource
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -184,5 +187,15 @@ class CallAttributionResolverTest {
 
             assertEquals(null, resolvedUnstable)
             assertEquals("icc_2", resolvedStable)
+        }
+
+    @Test
+    fun `resolveTargetIdentity completes with unresolved identity when active sims source stalls`() =
+        runTest {
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flow { awaitCancellation() })
+            val (identity, isFallback) =
+                resolver.resolveTargetIdentity(subId = 999, savedIdentity = null)
+            assertEquals(null, identity)
+            assertTrue(!isFallback)
         }
 }
