@@ -136,7 +136,7 @@ private fun TrafficRemainingRow(
         Spacer(modifier = Modifier.width(8.dp))
 
         if (model.trafficRemainingGb == null) {
-            Text(text = "-", style = MaterialTheme.typography.bodyLarge)
+            Text(text = stringResource(id = R.string.value_placeholder), style = MaterialTheme.typography.bodyLarge)
         } else {
             EditableValueBox(
                 value =

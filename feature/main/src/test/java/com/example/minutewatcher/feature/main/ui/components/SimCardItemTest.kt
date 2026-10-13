@@ -1,9 +1,11 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.model.SimCardUiModel
 import org.junit.Rule
 import org.junit.Test
@@ -117,6 +119,31 @@ class SimCardItemTest {
         composeTestRule.onNodeWithText("MTS").assertIsDisplayed()
     }
 
+    @Test
+    fun `traffic remaining placeholder uses value placeholder resource when remaining is null`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val model =
+            createMockSimCard(
+                trafficLimitMb = 1024,
+                effectiveTrafficLimitGb = 1.0f,
+                isTrafficLimitSet = true,
+                trafficRemainingGb = null,
+                minutesLimit = 100,
+                effectiveMinutesLimit = 100,
+                isMinutesLimitSet = true,
+                minutesRemaining = 100,
+                manualAdjustment = 0,
+            )
+
+        composeTestRule.setContent {
+            SimCardItem(model = model)
+        }
+
+        val placeholder = context.getString(coreR.string.value_placeholder)
+        composeTestRule.onNodeWithText(placeholder).assertIsDisplayed()
+        composeTestRule.onNodeWithText("-").assertDoesNotExist()
+    }
+
     private fun createMockSimCard(
         trafficLimitMb: Int = 0,
         trafficAdjustmentGb: Float = 0f,
@@ -124,17 +151,21 @@ class SimCardItemTest {
         isTrafficLimitSet: Boolean = false,
         manualAdjustment: Int = 0,
         trafficRemainingGb: Float? = if (isTrafficLimitSet) 1f else null,
+        minutesLimit: Int = 0,
+        effectiveMinutesLimit: Int = 0,
+        isMinutesLimitSet: Boolean = false,
+        minutesRemaining: Int = 0,
     ) = SimCardUiModel(
         slot = 0,
         identity = "sim1",
         operatorName = "MTS",
         iconRes = coreR.drawable.ic_unknown,
         minutesUsed = 0,
-        minutesLimit = 0,
+        minutesLimit = minutesLimit,
         manualAdjustment = manualAdjustment,
-        minutesRemaining = 0,
-        effectiveMinutesLimit = 0,
-        isMinutesLimitSet = false,
+        minutesRemaining = minutesRemaining,
+        effectiveMinutesLimit = effectiveMinutesLimit,
+        isMinutesLimitSet = isMinutesLimitSet,
         trafficUsedMb = 0f,
         trafficLimitMb = trafficLimitMb,
         trafficRemainingGb = trafficRemainingGb,
