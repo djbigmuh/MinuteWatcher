@@ -173,6 +173,7 @@
     <string name="about_author_name">Tác giả: Pavel Mukhin</string>
     <string name="about_translation_feedback">Bản dịch máy được sử dụng cho các ngôn ngữ không phải tiếng Nga. Nếu bạn tìm thấy lỗi hoặc cách diễn đạt chưa tự nhiên, vui lòng gửi email cho nhà phát triển để giúp cải thiện.</string>
     <string name="about_email_label">Email:</string>
+    <string name="email_app_not_found">Không tìm thấy ứng dụng email</string>
     <string name="about_signoff">Trân trọng,</string>
     <string name="about_version_format">Phiên bản %1$s (%2$d)</string>
     <string name="about_content_desc">Thông tin giới thiệu</string>

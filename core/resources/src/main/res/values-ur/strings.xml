@@ -176,6 +176,7 @@
     <string name="about_author_name">مصنف: Pavel Mukhin</string>
     <string name="about_translation_feedback">روسی کے علاوہ دوسری زبانوں کے لیے مشینی ترجمے استعمال کیے جاتے ہیں۔ اگر آپ کو کوئی غلطی یا غیر فطری فقرہ ملے تو براہ کرم اسے بہتر بنانے میں مدد کے لیے ڈویلपर کو ای میل کریں۔</string>
     <string name="about_email_label">ای میل:</string>
+    <string name="email_app_not_found">کوئی ای میل ایپ نہیں ملی</string>
     <string name="about_signoff">نیک تمناؤں کے ساتھ،</string>
     <string name="about_version_format">ورژن %1$s (%2$d)</string>
     <string name="about_content_desc">ایپ کی معلومات</string>

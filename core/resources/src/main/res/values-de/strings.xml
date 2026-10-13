@@ -183,6 +183,7 @@
     <string name="about_author_name">Autor: Pavel Mukhin</string>
     <string name="about_translation_feedback">Für Nicht-Russisch werden maschinelle Übersetzungen verwendet. Wenn Sie einen Fehler oder eine unnatürliche Formulierung finden, senden Sie bitte eine E-Mail an den Entwickler, um zur Verbesserung beizutragen.</string>
     <string name="about_email_label">E-Mail:</string>
+    <string name="email_app_not_found">Keine E-Mail-App gefunden</string>
     <string name="about_signoff">Mit freundlichen Grüßen</string>
     <string name="about_version_format">Version %1$s (%2$d)</string>
     <string name="about_content_desc">Über-Informationen</string>

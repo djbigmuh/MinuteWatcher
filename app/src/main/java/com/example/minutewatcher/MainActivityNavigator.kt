@@ -117,8 +117,10 @@ class MainActivityNavigator
                 activityStarter.startActivity(context, intent)
             } catch (e: ActivityNotFoundException) {
                 AppLogger.w("Email application not found", e)
+                Toast.makeText(context, context.getString(R.string.email_app_not_found), Toast.LENGTH_SHORT).show()
             } catch (e: SecurityException) {
                 AppLogger.w("Email application security exception", e)
+                Toast.makeText(context, context.getString(R.string.email_app_not_found), Toast.LENGTH_SHORT).show()
             }
         }
     }

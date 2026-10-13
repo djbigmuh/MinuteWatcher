@@ -175,6 +175,7 @@
     <string name="about_author_name">Mawallafi: Pavel Mukhin</string>
     <string name="about_translation_feedback">Ana amfani da fassarar na waje don harsunan da ba Rashanci ba. Idan kun sami kuskure ko furci mara kyau, da fatan za a aika wa mai rubutu sakon imel don taimakawa wajen inganta shi.</string>
     <string name="about_email_label">Akwatin Imel:</string>
+    <string name="email_app_not_found">Ba a sami app din imel ba</string>
     <string name="about_signoff">Mafi alheri,</string>
     <string name="about_version_format">Sigar %1$s (%2$d)</string>
     <string name="about_content_desc">Bayanai game da aikace-aikacen</string>

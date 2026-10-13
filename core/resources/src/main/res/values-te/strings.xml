@@ -176,6 +176,7 @@
     <string name="about_author_name">రచయిత: Pavel Mukhin</string>
     <string name="about_translation_feedback">రష్యన్ కాకుండా ఇతర భాషల కోసం మెషిన్ అనువాదాలు ఉపయోగించబడతాయి. మీరు ఏదైనా లోపం లేదా అసంభావిత పదబంధాన్ని కనుగొంటే, దాన్ని మెరుగుపరచడంలో సహాయం చేయడానికి దయచేసి డెవలపర్‌కు ఇమెయిల్ చేయండి.</string>
     <string name="about_email_label">ఈమెయిల్:</string>
+    <string name="email_app_not_found">ఎలాంటి ఈమెయిల్ యాప్ కనుగొనబడలేదు</string>
     <string name="about_signoff">భవదీయుడు,</string>
     <string name="about_version_format">వెర్షన్ %1$s (%2$d)</string>
     <string name="about_content_desc">గురించి సమాచారం</string>

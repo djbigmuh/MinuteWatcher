@@ -181,6 +181,7 @@
     <string name="about_author_name">作者: Pavel Mukhin</string>
     <string name="about_translation_feedback">除俄语外的其他语言均使用机器翻译。如果您发现任何错误或不自然的措辞，请给开发者发电子邮件以帮助改进。</string>
     <string name="about_email_label">电子邮箱:</string>
+    <string name="email_app_not_found">未找到电子邮箱应用</string>
     <string name="about_signoff">此致，</string>
     <string name="about_version_format">版本 %1$s (%2$d)</string>
     <string name="about_content_desc">关于信息</string>

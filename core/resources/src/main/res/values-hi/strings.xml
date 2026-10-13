@@ -183,6 +183,7 @@
     <string name="about_author_name">लेखक: Pavel Mukhin</string>
     <string name="about_translation_feedback">रूसी के अलावा अन्य भाषाओं के लिए मशीन अनुवाद का उपयोग किया जाता है। यदि आपको कोई त्रुटि या अप्राकृतिक शब्दावली दिखाई देती है, तो कृपया इसे सुधारने में मदद के लिए डेवलपर को ईमेल करें।</string>
     <string name="about_email_label">ईमेल:</string>
+    <string name="email_app_not_found">कोई ईमेल ऐप नहीं मिला</string>
     <string name="about_signoff">आदर सहित,</string>
     <string name="about_version_format">संस्करण %1$s (%2$d)</string>
     <string name="about_content_desc">ऐप की जानकारी</string>

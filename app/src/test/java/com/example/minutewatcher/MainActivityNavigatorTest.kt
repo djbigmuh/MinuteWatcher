@@ -6,6 +6,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
@@ -13,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowToast
 
 @Config(sdk = [35], application = MinuteWatcherTestApp::class)
 @RunWith(RobolectricTestRunner::class)
@@ -156,5 +158,24 @@ class MainActivityNavigatorTest {
         assertEquals(Intent.ACTION_SENDTO, launchedIntent?.action)
         assertEquals("mailto", launchedIntent?.data?.scheme)
         assertEquals("dj.bigmuh@gmail.com", launchedIntent?.data?.schemeSpecificPart)
+    }
+
+    @Test
+    fun `openEmailComposer shows feedback toast when no email client is available`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        val fakeStarter =
+            object : ActivityStarter {
+                override fun startActivity(
+                    context: Context,
+                    intent: Intent,
+                ): Unit = throw ActivityNotFoundException("No email app")
+            }
+        val navigator = MainActivityNavigator(fakeStarter)
+        navigator.openEmailComposer(appContext, "test@example.com")
+
+        assertEquals(
+            appContext.getString(R.string.email_app_not_found),
+            ShadowToast.getTextOfLatestToast(),
+        )
     }
 }

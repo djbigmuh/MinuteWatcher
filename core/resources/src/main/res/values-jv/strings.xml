@@ -173,6 +173,7 @@
     <string name="about_author_name">Panganggit: Pavel Mukhin</string>
     <string name="about_translation_feedback">Terjemahan mesin digunakake kanggo basa liyane saliyane basa Rusia. Yen sampeyan nemokake kesalahan utawa ukara sing ora wajar, kirim email menyang pangembang kanggo mbantu nambah.</string>
     <string name="about_email_label">Email:</string>
+    <string name="email_app_not_found">Ora ana aplikasi email sing ditemokake</string>
     <string name="about_signoff">Matur nuwun,</string>
     <string name="about_version_format">Versi %1$s (%2$d)</string>
     <string name="about_content_desc">Informasi aplikasi</string>

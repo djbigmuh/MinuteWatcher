@@ -175,6 +175,7 @@
     <string name="about_author_name">लेखक: Pavel Mukhin</string>
     <string name="about_translation_feedback">रूसियन के छोड़ के अन्य भाषा खातिर मशीन अनुवाद के इस्तेमाल होला। अगर आप कोनो गलती चाहे बेतुका बात देखीं त सुधार में मदद खातिर डेवलपर के ईमेल करीं।</string>
     <string name="about_email_label">ईमेल:</string>
+    <string name="email_app_not_found">ईमेल ऐप न मिलल</string>
     <string name="about_signoff">शुभकामना,</string>
     <string name="about_version_format">वर्जन %1$s (%2$d)</string>
     <string name="about_content_desc">जानकारी के बारे में</string>

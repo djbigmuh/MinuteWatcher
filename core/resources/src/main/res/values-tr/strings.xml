@@ -175,6 +175,7 @@
     <string name="about_author_name">Yazar: Pavel Mukhin</string>
     <string name="about_translation_feedback">Rusça dışındaki diller için makine çevirileri kullanılmaktadır. Bir hata veya doğal olmayan bir ifade bulursanız, geliştirmeye yardımcı olmak için lütfen geliştiriciye e-posta gönderin.</string>
     <string name="about_email_label">E-posta:</string>
+    <string name="email_app_not_found">E-posta uygulaması bulunamadı</string>
     <string name="about_signoff">Saygılarımla,</string>
     <string name="about_version_format">Sürüm %1$s (%2$d)</string>
     <string name="about_content_desc">Hakkında bilgisi</string>

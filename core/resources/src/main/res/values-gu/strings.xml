@@ -175,6 +175,7 @@
     <string name="about_author_name">લેખક: Pavel Mukhin</string>
     <string name="about_translation_feedback">રશિયન સિવાયની ભાષાઓ માટે મશીન અનુવાદોનો ઉપયોગ થાય છે. જો તમને કોઈ ભૂલ અથવા અકુદરતી શબ્દપ્રયોગ જણાય, તો તેને સુધારવામાં મદદ કરવા માટે કૃપા કરીને વિકાસકર્તાને ઇમેઇલ કરો.</string>
     <string name="about_email_label">ઈમેઈલ:</string>
+    <string name="email_app_not_found">કોઈ ઇમેઇલ એપ્લિકેશન મળી નથી</string>
     <string name="about_signoff">આપનો,</string>
     <string name="about_version_format">આવૃત્તિ %1$s (%2$d)</string>
     <string name="about_content_desc">માહિતી વિશે</string>

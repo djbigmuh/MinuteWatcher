@@ -185,6 +185,7 @@
     <string name="about_author_name">Auteur : Pavel Mukhin</string>
     <string name="about_translation_feedback">Des traductions automatiques sont utilisees pour les langues autres que le russe. Si vous trouvez une erreur ou une formulation anormale, veuillez envoyer un message au developpeur pour contribuer a l amelioration.</string>
     <string name="about_email_label">E-mail :</string>
+    <string name="email_app_not_found">Aucune application e-mail trouvée</string>
     <string name="about_signoff">Cordialement,</string>
     <string name="about_version_format">Version %1$s (%2$d)</string>
     <string name="about_content_desc">Informations sur l\'application</string>

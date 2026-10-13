@@ -181,6 +181,7 @@
     <string name="about_author_name">作者: Pavel Mukhin</string>
     <string name="about_translation_feedback">ロシア語以外の言語には機械翻訳が使用されています。エラーや不自然な表現を見つけた場合は、開発者にメールでお知らせください。改善に役立ちます。</string>
     <string name="about_email_label">メール:</string>
+    <string name="email_app_not_found">メールアプリが見つかりません</string>
     <string name="about_signoff">敬具</string>
     <string name="about_version_format">バージョン %1$s (%2$d)</string>
     <string name="about_content_desc">アプリの情報</string>
