@@ -142,4 +142,30 @@ class CallTrackerRecoveryTest : CallTrackerTestFixtures() {
             advanceUntilIdle()
             verify(callSessionRepository, atLeastOnce()).getCallStartTime(any())
         }
+
+    @Test
+    fun `recover restarts permission observer after permanent stop`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val callTracker = createTracker(backgroundScope)
+
+            val failingFlow = kotlinx.coroutines.flow.flow<Unit> { throw IllegalStateException("Permanent failure") }
+            whenever(permissionStateNotifier.changes).thenReturn(failingFlow)
+
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
+            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
+
+            callTracker.recover()
+            advanceUntilIdle()
+
+            clearInvocations(callSessionRepository)
+            permissionChangesFlow.emit(Unit)
+            advanceUntilIdle()
+
+            verify(callSessionRepository, atLeastOnce()).getActiveCallSubIds()
+            assertEquals(TrackingStatus.Active, callTracker.status.value)
+        }
 }

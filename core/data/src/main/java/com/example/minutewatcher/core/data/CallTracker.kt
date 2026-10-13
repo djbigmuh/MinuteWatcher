@@ -206,6 +206,20 @@ class CallTracker
         }
 
         /**
+         * Starts permission observation only when no active observer exists;
+         * method is idempotent, uniqueness of observer is preserved;
+         * check and start are performed atomically relative to other calls of the same method.
+         */
+        private fun ensurePermissionObserverActive() {
+            synchronized(this) {
+                val currentJob = permissionObserverJob.get()
+                if (currentJob == null || !currentJob.isActive) {
+                    startPermissionObserver()
+                }
+            }
+        }
+
+        /**
          * Records call start time for a specific subscription ID.
          *
          * Requires [Manifest.permission.READ_PHONE_STATE].
@@ -407,6 +421,7 @@ class CallTracker
 
         override suspend fun recover() {
             ensureStarted()
+            ensurePermissionObserverActive()
             try {
                 initMutex.withLock {
                     clearSessionsAndRefresh("recovery")
