@@ -5,6 +5,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.w3c.dom.Node
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -105,21 +106,26 @@ class UrduLocalizationTest {
         val builder = factory.newDocumentBuilder()
         val doc = builder.parse(file)
         val pluralsList = doc.getElementsByTagName("plurals")
-        val result = mutableMapOf<String, String>()
 
         for (i in 0 until pluralsList.length) {
             val node = pluralsList.item(i)
             if (node.attributes?.getNamedItem("name")?.nodeValue == pluralName) {
-                val items = node.childNodes
-                for (j in 0 until items.length) {
-                    val itemNode = items.item(j)
-                    if (itemNode.nodeName == "item") {
-                        val quantity = itemNode.attributes?.getNamedItem("quantity")?.nodeValue
-                        val value = itemNode.textContent?.trim()
-                        if (quantity != null && value != null) {
-                            result[quantity] = value
-                        }
-                    }
+                return collectPluralItems(node)
+            }
+        }
+        return emptyMap()
+    }
+
+    private fun collectPluralItems(pluralNode: Node): Map<String, String> {
+        val result = mutableMapOf<String, String>()
+        val items = pluralNode.childNodes
+        for (j in 0 until items.length) {
+            val itemNode = items.item(j)
+            if (itemNode.nodeName == "item") {
+                val quantity = itemNode.attributes?.getNamedItem("quantity")?.nodeValue
+                val value = itemNode.textContent?.trim()
+                if (quantity != null && value != null) {
+                    result[quantity] = value
                 }
             }
         }
