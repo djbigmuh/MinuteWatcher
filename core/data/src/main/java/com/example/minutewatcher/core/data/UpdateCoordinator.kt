@@ -46,7 +46,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Centralized update mechanism.
  *
  * Coordinator is a Singleton and uses ApplicationScope, so the observation
- * cycle (observeSnapshot) lives for the entire application lifetime.
+ * cycle (observeSnapshot) lives for the entire process lifetime and is started explicitly via [start].
  *
  * NOTE: TooManyFunctions is suppressed: status management, observation
  * lifecycle and restart/degradation policies are mutually dependent parts of
@@ -114,7 +114,11 @@ class UpdateCoordinator
         @VisibleForTesting
         internal val takeoverUpdateJob = AtomicReference<Job?>(null)
 
-        init {
+        /**
+         * Explicitly starts observation from [Application.onCreate].
+         * Constructor has no side effects. Method is idempotent and thread-safe; repeated calls are ignored.
+         */
+        fun start() {
             ensureObservationStarted()
         }
 

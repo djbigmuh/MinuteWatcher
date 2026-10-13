@@ -58,6 +58,7 @@ class UpdateCoordinatorTakeoverTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            coordinator.start()
 
             // 1. Initial update
             runCurrent()
@@ -112,6 +113,7 @@ class UpdateCoordinatorTakeoverTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            coordinator.start()
 
             // 1. Initial update
             runCurrent()
@@ -171,6 +173,7 @@ class UpdateCoordinatorTakeoverTest {
 
             val coordinator =
                 UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            coordinator.start()
 
             runCurrent()
             advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)

@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.AodSummaryController
 import com.example.minutewatcher.core.data.CallTracker
 import com.example.minutewatcher.core.data.TrafficTracker
+import com.example.minutewatcher.core.data.UpdateCoordinator
 import com.example.minutewatcher.feature.widget.WidgetLimitManager
 import com.example.minutewatcher.service.worker.SemanticInitScheduler
 import dagger.hilt.android.HiltAndroidApp
@@ -46,6 +47,13 @@ class MinuteWatcherApp :
     @Inject
     lateinit var widgetLimitManager: WidgetLimitManager
 
+    /**
+     * Injected to explicitly start widget update observation in [onCreate].
+     * Constructor has no side effects.
+     */
+    @Inject
+    lateinit var updateCoordinator: UpdateCoordinator
+
     override fun onCreate() {
         super.onCreate()
         AppLogger.init(this)
@@ -59,6 +67,7 @@ class MinuteWatcherApp :
         SemanticInitScheduler.schedule(WorkManager.getInstance(this))
         aodSummaryController.start()
         widgetLimitManager.start()
+        updateCoordinator.start()
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(

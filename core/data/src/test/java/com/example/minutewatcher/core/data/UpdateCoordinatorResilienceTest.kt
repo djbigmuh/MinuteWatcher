@@ -82,6 +82,7 @@ class UpdateCoordinatorResilienceTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            coordinator.start()
 
             // Advance time to cover 2 timeouts + delays (10s + 1s + 10s + 2s)
             testScheduler.advanceTimeBy(30.seconds)
@@ -120,6 +121,7 @@ class UpdateCoordinatorResilienceTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            coordinator.start()
 
             // 3 attempts * 10s + delays
             testScheduler.advanceTimeBy(60.seconds)
@@ -149,6 +151,7 @@ class UpdateCoordinatorResilienceTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            coordinator.start()
 
             // Wait for initial Active status
             testScheduler.advanceTimeBy(10.seconds)
@@ -197,6 +200,7 @@ class UpdateCoordinatorResilienceTest {
                     usageStateRepository,
                     supervisorScope,
                 )
+            coordinator.start()
 
             // Immediately recover while setup is pending
             coordinator.recover()
@@ -262,6 +266,7 @@ class UpdateCoordinatorResilienceTest {
                     usageStateRepository,
                     supervisorScope,
                 )
+            coordinator.start()
 
             testScheduler.advanceTimeBy(10.seconds)
             testScheduler.runCurrent()
@@ -340,6 +345,7 @@ class UpdateCoordinatorResilienceTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            coordinator.start()
 
             // Multiple recover calls before scheduler runs
             coordinator.recover()
@@ -370,6 +376,7 @@ class UpdateCoordinatorResilienceTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            coordinator.start()
             testScheduler.runCurrent()
 
             val initialJob = coordinator.currentObservationJob.get()!!
@@ -401,6 +408,7 @@ class UpdateCoordinatorResilienceTest {
                     usageStateRepository,
                     backgroundScope,
                 )
+            coordinator.start()
             testScheduler.runCurrent()
 
             val oldJob = coordinator.currentObservationJob.get()!!
