@@ -45,16 +45,60 @@ class NotificationHelperTest {
     }
 
     @Test
-    fun `aod summary channel is created with min importance`() {
+    fun `aod summary channel is created with low importance and quiet attributes`() {
         val channel =
             notificationManager.getNotificationChannel(
-                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
+                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
             )
         assertNotNull(channel)
-        assertEquals(NotificationManager.IMPORTANCE_MIN, channel.importance)
+        assertEquals(NotificationManager.IMPORTANCE_LOW, channel.importance)
         assertEquals(
             context.getString(R.string.notification_channel_aod_summary_name),
             channel.name,
+        )
+        org.junit.Assert.assertNull(channel.sound)
+        assertFalse(channel.shouldVibrate())
+        assertFalse(channel.canShowBadge())
+    }
+
+    @Test
+    fun `helper initialization migrates old aod summary channel to v2 channel and deletes old channel`() {
+        val oldChannel =
+            NotificationChannel(
+                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
+                "Old AOD",
+                NotificationManager.IMPORTANCE_MIN,
+            )
+        notificationManager.createNotificationChannel(oldChannel)
+        assertNotNull(notificationManager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID))
+
+        val migrationHelper = NotificationHelper(context, navigationProvider, permissionManager)
+        assertNotNull(migrationHelper)
+
+        assertNotNull(
+            notificationManager.getNotificationChannel(
+                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
+            ),
+        )
+        org.junit.Assert.assertNull(
+            notificationManager.getNotificationChannel(
+                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
+            ),
+        )
+    }
+
+    @Test
+    fun `helper initialization handles missing old channel idempotently`() {
+        notificationManager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+        notificationManager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2)
+
+        val freshHelper = NotificationHelper(context, navigationProvider, permissionManager)
+        assertNotNull(freshHelper)
+
+        assertNotNull(
+            notificationManager.getNotificationChannel(
+                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
+            ),
         )
     }
 
@@ -100,7 +144,7 @@ class NotificationHelperTest {
     fun `sendUsageNotification publishes group summary notification with required attributes`() {
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
 
-        helper.sendUsageNotification("Title", "Message", 0, UsageNotificationType.MINUTES)
+        helper.sendUsageNotification("Child Title", "Message", 0, UsageNotificationType.MINUTES)
 
         val shadowNotificationManager = shadowOf(notificationManager)
         val summaryNotification =
@@ -111,6 +155,35 @@ class NotificationHelperTest {
         assertTrue(NotificationCompat.isGroupSummary(summaryNotification!!))
         assertEquals("usage_monitor_group", summaryNotification.group)
         assertEquals(NotificationCompat.GROUP_ALERT_CHILDREN, summaryNotification.groupAlertBehavior)
+
+        val title =
+            summaryNotification.extras
+                .getCharSequence(android.app.Notification.EXTRA_TITLE)
+                .toString()
+        val text =
+            summaryNotification.extras
+                .getCharSequence(android.app.Notification.EXTRA_TEXT)
+                .toString()
+
+        assertEquals(context.getString(R.string.notification_channel_name), title)
+        assertEquals(context.getString(R.string.notification_channel_desc), text)
+    }
+
+    @Test
+    fun `group summary content remains stable across multiple child notifications`() {
+        whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+
+        helper.sendUsageNotification("Slot 0 Minutes", "Msg 1", 0, UsageNotificationType.MINUTES)
+        val summary1 = shadowOf(notificationManager).getNotification(NotificationHelper.GROUP_SUMMARY_NOTIFICATION_ID)
+        val text1 = summary1!!.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString()
+
+        helper.sendUsageNotification("Slot 1 Traffic", "Msg 2", 1, UsageNotificationType.TRAFFIC)
+        val summary2 = shadowOf(notificationManager).getNotification(NotificationHelper.GROUP_SUMMARY_NOTIFICATION_ID)
+        val text2 = summary2!!.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString()
+
+        assertEquals(context.getString(R.string.notification_channel_desc), text1)
+        assertEquals(context.getString(R.string.notification_channel_desc), text2)
+        assertEquals(text1, text2)
     }
 
     @Test
@@ -190,7 +263,7 @@ class NotificationHelperTest {
 
         val blockedChannel =
             NotificationChannel(
-                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
+                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
                 "AOD Channel",
                 NotificationManager.IMPORTANCE_NONE,
             )
@@ -236,7 +309,7 @@ class NotificationHelperTest {
 
         val blockedChannel =
             NotificationChannel(
-                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
+                Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
                 "AOD Channel",
                 NotificationManager.IMPORTANCE_NONE,
             )

@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Kertu SIM</string>
     <string name="no_sim_found">Ora ana kertu SIM sing ditemokake</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">Sisa data:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">dina sasi</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="other">%1$d menit</item>
     </plurals>
@@ -177,8 +171,10 @@
     <string name="about_title">Babagan</string>
     <string name="about_message">MinuteWatcher minangka aplikasi kanggo nglacak sisa menit lan panggunaan data seluler.</string>
     <string name="about_author_name">Panganggit: Pavel Mukhin</string>
+    <string name="about_translation_feedback">Terjemahan mesin digunakake kanggo basa liyane saliyane basa Rusia. Yen sampeyan nemokake kesalahan utawa ukara sing ora wajar, kirim email menyang pangembang kanggo mbantu nambah.</string>
     <string name="about_email_label">Email:</string>
     <string name="about_signoff">Matur nuwun,</string>
     <string name="about_version_format">Versi %1$s (%2$d)</string>
     <string name="about_content_desc">Informasi aplikasi</string>
+    <string name="aod_summary_no_limits_note">Ora ana sing ditampilake: setel wates menit utawa data kanggo paling ora siji kertu SIM - ringkesan mung nuduhake SIM sing nganggo wates.</string>
 </resources>

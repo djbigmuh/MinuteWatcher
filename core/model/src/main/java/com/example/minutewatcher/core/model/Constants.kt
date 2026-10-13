@@ -26,7 +26,31 @@ object Constants {
      */
     object Notifications {
         const val CHANNEL_ID = "usage_monitor_channel"
+
+        /**
+         * Legacy AOD summary notification channel ID (v1).
+         * Retained solely for migrating and deleting the old channel.
+         */
         const val AOD_SUMMARY_CHANNEL_ID = "aod_summary_channel"
+
+        /**
+         * V2 Notification channel ID for Always-on Display summary.
+         * Upgraded from IMPORTANCE_MIN to IMPORTANCE_LOW to ensure visibility across OEM shells on AOD.
+         */
+        const val AOD_SUMMARY_CHANNEL_ID_V2 = "aod_summary_channel_v2"
+    }
+
+    /**
+     * Always-on Display (AOD) summary constants.
+     *
+     * HEARTBEAT_INTERVAL_MS — Periodic self-check interval of limited frequency (15 minutes),
+     *   restoring the summary notification after external removal by the system or user
+     *   (on Android 14+ ongoing notifications not tied to a foreground service can be dismissed
+     *   by the user, including "Clear All") without waiting for data changes.
+     *   Executed only when the process is alive, without wakelock; overhead is negligible.
+     */
+    object Aod {
+        const val HEARTBEAT_INTERVAL_MS = 15 * 60_000L
     }
 
     object UI {

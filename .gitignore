@@ -34,10 +34,13 @@ Thumbs.db
 *.tmp
 *.swp
 
-# Audit scripts (local data only; scripts are now tracked)
+# Audit scripts (local data and verification/audit scripts; not tracked)
 audit_dump/
 verify_status.txt
 verify_output.txt
+*.bat
+!gradlew.bat
+*.ps1
 
 # Debug/diagnostic artifacts (local only)
 build_log.txt
@@ -50,7 +53,6 @@ ktlint_output.txt
 app/benchmark-config.txt
 
 # Diagnostic scripts (local only)
-diag_gradle.ps1
 diag_result.txt
 
 # Junk and local output files

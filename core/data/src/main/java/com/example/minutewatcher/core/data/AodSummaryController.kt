@@ -22,8 +22,10 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -60,10 +62,12 @@ class AodSummaryController
         private var lastPublishedText: String? = null
 
         /**
-         * Starts observing usage snapshot, app settings, and notification permissions.
+         * Starts observing usage snapshot, app settings, and notification permissions,
+         * along with a periodic self-check heartbeat tick.
          *
          * Permission flow acts as a reactivity trigger when notification permission state changes,
          * while availability decision uses [NotificationHelper.isAodSummaryAvailable].
+         * Observation reacts to snapshot, settings, permission changes, and periodic self-check ticks.
          *
          * Thread-safe and idempotent. Consecutive calls are no-ops.
          */
@@ -76,7 +80,13 @@ class AodSummaryController
                         usageStateRepository.observeSnapshot(),
                         appSettingsRepository.observeAppSettings(),
                         permissionRepository.notificationPermissionGranted,
-                    ) { snapshot, settings, _ ->
+                        flow {
+                            while (true) {
+                                emit(Unit)
+                                delay(Constants.Aod.HEARTBEAT_INTERVAL_MS)
+                            }
+                        },
+                    ) { snapshot, settings, _, _ ->
                         snapshot to settings
                     }.debounce(Constants.Flow.DEBOUNCE_MS)
                         .collect { (snapshot, settings) ->

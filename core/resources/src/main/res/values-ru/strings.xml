@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM-карты</string>
     <string name="no_sim_found">SIM-карты не найдены</string>
@@ -108,7 +108,7 @@
     <string name="notify_low_minutes_title">Уведомлять о малом остатке минут</string>
     <string name="notify_low_traffic_title">Уведомлять о малом остатке трафика</string>
     <string name="aod_summary_title">Сводка на Always-on Display</string>
-    <string name="aod_summary_description">Постоянное бесшумное уведомление с остатком минут и трафика. Видимо на экране блокировки, а на устройствах, которые показывают там уведомления, — и на Always-on Display.</string>
+    <string name="aod_summary_description">Постоянное бесшумное уведомление с остатком минут и трафика. Видимо на экране блокировки, а на устройствах, которые показывают там уведомления, - и на Always-on Display.</string>
     <string name="aod_summary_unavailable">Чтобы использовать эту функцию, включите уведомления</string>
     <string name="notification_channel_name">Мониторинг расхода</string>
     <string name="notification_channel_desc">Отслеживание расхода минут и трафика</string>
@@ -137,14 +137,7 @@
     <string name="traffic_label">Трафик</string>
     <string name="traffic_remaining_text">Трафика осталось:</string>
     <string name="gb_abbr">ГБ</string>
-    <string name="auto_reset_day_suffix">число месяца</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
-    <!--
+    <string name="auto_reset_day_suffix">число месяца</string><!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Russian requires: one (1, 21), few (2-4, 22-24), many (0, 5-20), other (fractional).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -190,10 +183,12 @@
 
     <!-- About Dialog -->
     <string name="about_title">О приложении</string>
-    <string name="about_message">MinuteWatcher — приложение для отслеживания остатка минут и мобильного трафика.</string>
+    <string name="about_message">MinuteWatcher - приложение для отслеживания остатка минут и мобильного трафика.</string>
     <string name="about_author_name">Автор: Павел Мухин</string>
+    <string name="about_translation_feedback">Для языков, отличных от русского, используются машинные переводы. Если вы заметили ошибку или неестественную формулировку, пожалуйста, напишите разработчику на e-mail.</string>
     <string name="about_email_label">Email:</string>
     <string name="about_signoff">С уважением,</string>
     <string name="about_version_format">Версия %1$s (%2$d)</string>
     <string name="about_content_desc">О приложении</string>
+    <string name="aod_summary_no_limits_note">Отображать нечего: задайте лимит минут или трафика хотя бы для одной SIM-карты - сводка показывает только SIM с лимитами.</string>
 </resources>

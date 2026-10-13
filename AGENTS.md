@@ -11,7 +11,8 @@ to `NOT_SUPPORTED`. An error banner is not displayed for errors of type `NOT_SUP
 
 ## Always-on Display Note
 
-The Always-on Display summary feature is implemented solely as a persistent silent ongoing notification via documented system APIs (`NotificationManager`, channel with `IMPORTANCE_MIN`).
+The Always-on Display summary feature is implemented solely as a persistent silent ongoing notification via documented
+system APIs (`NotificationManager`, channel with `IMPORTANCE_LOW`).
 - Prohibited for this feature: reading undocumented settings (including `Settings.Secure`), using OEM-specific APIs, using `Notification.ProgressStyle`/Live Updates.
 - Ambient display rendering is determined entirely by the device OS and OEM firmware; firmware deviations from Google documentation are not considered app defects.
 - Availability checks rely exclusively on: `POST_NOTIFICATIONS` permission, `NotificationManagerCompat.areNotificationsEnabled()`, and the summary notification channel importance.

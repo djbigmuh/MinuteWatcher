@@ -14,13 +14,13 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.core.model.TrackingStatusMachine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.retryWhen
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,6 +43,22 @@ internal class TrafficUpdateTimeoutException(
 
 /**
  * Represents the outcome of a traffic update operation.
+ *
+ * Outcomes:
+ * - [Completed]: Traffic update cycle finished without errors and applied a write
+ *   (traffic delta charged or baseline set/reset), or completed normally without write
+ *   because delta was below [Constants.Traffic.MIN_DELTA_MB].
+ * - [Skipped]: Traffic update cycle intentionally skipped usage updating due to:
+ *   a) Active SIMs list is empty.
+ *   b) Stale SIM input during target resolution.
+ *   c) No default data SIM.
+ *   d) No active SIMs during target resolution.
+ *   e) Target SIM identity no longer active.
+ *   f) Unstable target SIM identity.
+ *   g) Default data SIM change handling returned null identity.
+ *   h) Update write rejected due to accounting window mismatch.
+ * - [TimedOut]: Traffic update cycle or underlying reads/writes timed out.
+ * - [Failed]: Traffic update cycle failed with an error.
  */
 sealed interface TrafficUpdateOutcome {
     /**
@@ -199,7 +215,11 @@ class TrafficTracker
          */
         @VisibleForTesting
         internal suspend fun startInitialization() {
-            val oldJob = initJob.getAndSet(currentCoroutineContext().job)
+            val newJob =
+                scope.launch(start = CoroutineStart.LAZY) {
+                    performInitializeWithRetry()
+                }
+            val oldJob = initJob.getAndSet(newJob)
             if (oldJob != null) {
                 oldJob.cancel()
                 val completed =
@@ -214,7 +234,8 @@ class TrafficTracker
                 }
             }
             currentCoroutineContext().ensureActive()
-            performInitializeWithRetry()
+            newJob.start()
+            newJob.join()
         }
 
         private fun startAutomaticRecoveryObservers() {
@@ -427,38 +448,86 @@ class TrafficTracker
             }
         }
 
-        private suspend fun performInitializeWithRetry() {
+    private suspend fun performInitializeWithRetry(): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             var lastException: Exception? = null
+        var finalOutcome: TrafficUpdateOutcome? = null
             for (attempt in 1..MAX_INIT_ATTEMPTS) {
-                try {
-                    updateTrafficUsageLogic()
-                    initializationFailed.set(false)
-                    return
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (isTerminalInitError(e)) {
-                        AppLogger.e("TrafficTracker: terminal init error", e)
-                        initializationFailed.set(true)
-                        handleInitError(startElapsed, e)
-                        return
+                when (val result = executeInitAttempt(startElapsed)) {
+                    is InitAttemptResult.Success -> {
+                        initializationFailed.set(false)
+                        finalOutcome = result.outcome
                     }
-                    lastException = e
-                    if (attempt >= MAX_INIT_ATTEMPTS) break
 
-                    val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
-                    AppLogger.w("TrafficTracker: init attempt $attempt failed, retry in ${delayMs}ms", e)
-                    delay(delayMs.milliseconds)
+                    is InitAttemptResult.TerminalError -> {
+                        initializationFailed.set(true)
+                        finalOutcome = result.outcome
+                    }
+
+                    is InitAttemptResult.RetryableError -> {
+                        lastException = result.exception
+                        if (attempt < MAX_INIT_ATTEMPTS) {
+                            val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
+                            AppLogger.w(
+                                "TrafficTracker: init attempt $attempt failed, retry in ${delayMs}ms",
+                                result.exception,
+                            )
+                            delay(delayMs.milliseconds)
+                        }
+                    }
+                }
+                if (finalOutcome != null) {
+                    return finalOutcome
                 }
             }
-            initializationFailed.set(true)
-            AppLogger.e("TrafficTracker: initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException)
-            handleInitError(
-                startElapsed,
-                IllegalStateException("Initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException),
-            )
+        initializationFailed.set(true)
+        AppLogger.e("TrafficTracker: initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException)
+        val ex = IllegalStateException("Initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException)
+        handleInitError(startElapsed, ex)
+        return TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
+    }
+
+    private sealed interface InitAttemptResult {
+        data class Success(
+            val outcome: TrafficUpdateOutcome,
+        ) : InitAttemptResult
+
+        data class TerminalError(
+            val outcome: TrafficUpdateOutcome,
+        ) : InitAttemptResult
+
+        data class RetryableError(
+            val exception: Exception,
+        ) : InitAttemptResult
+    }
+
+    private suspend fun executeInitAttempt(startElapsed: Long): InitAttemptResult =
+        try {
+            val outcome = updateTrafficUsageLogic()
+            InitAttemptResult.Success(outcome)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (isTerminalInitError(e)) {
+                AppLogger.e("TrafficTracker: terminal init error", e)
+                handleInitError(startElapsed, e)
+                InitAttemptResult.TerminalError(mapTerminalInitOutcome(startElapsed, e))
+            } else {
+                InitAttemptResult.RetryableError(e)
+            }
         }
+
+    private fun mapTerminalInitOutcome(
+        startElapsed: Long,
+        e: Exception,
+    ): TrafficUpdateOutcome =
+        if (e is SecurityException) {
+            TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.PERMISSION_MISSING, null)
+        } else if (e is TrafficUpdateTimeoutException) {
+            TrafficUpdateOutcome.TimedOut(startElapsed)
+        } else {
+            TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
+            }
 
         private fun handleInitError(
             startElapsed: Long,
@@ -539,21 +608,21 @@ class TrafficTracker
         /**
          * Updates mobile traffic usage for the current default data SIM.
          *
+         * Returns [TrafficUpdateOutcome] representing the result of this update cycle:
+         * - [TrafficUpdateOutcome.Completed] when traffic usage or baseline is updated, or delta is below threshold.
+         * - [TrafficUpdateOutcome.Skipped] when the cycle is intentionally skipped (e.g. no active SIMs,
+         *   stale input, unstable identity, or accounting window mismatch).
+         * - [TrafficUpdateOutcome.TimedOut] when the operation or underlying queries time out.
+         * - [TrafficUpdateOutcome.Failed] when an error occurs during processing.
+         *
          * If initialization is currently claimed but has not yet started executing,
          * this call atomically intercepts (supersedes) the initialization, executing
          * the initialization contract instead of a normal update cycle.
          *
-         * Errors, including timeout, are not thrown, but reported in [status] as [TrackingStatus.Error]
-         * with machine-readable `type` and `code`. The calling side that needs to react to a timeout
-         * checks [status] for [TrackingStatus.ErrorCode.TIMEOUT] after returning from the method.
-         *
          * **Thread Safety:** Safe to call from any coroutine context. Holds internal mutex
          * during the entire update process to ensure data consistency.
          */
-        private val lastUpdateSkipped = AtomicBoolean(false)
-
-    suspend fun updateTrafficUsage(): TrafficUpdateOutcome {
-        lastUpdateSkipped.set(false)
+        suspend fun updateTrafficUsage(): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             val token = currentInitToken.get()
             if (token != null) {
@@ -575,17 +644,17 @@ class TrafficTracker
                 }
             }
 
-        return runCatchingTrafficUpdate(startElapsed) {
+            return runCatchingTrafficUpdate(startElapsed) {
                 updateTrafficUsageLogic()
             }
         }
 
         private suspend fun runCatchingTrafficUpdate(
             startElapsed: Long,
-            block: suspend () -> Unit,
+            block: suspend () -> TrafficUpdateOutcome,
         ): TrafficUpdateOutcome =
             try {
-                block()
+                val outcome = block()
                 val currentStatus = statusMachine.current
                 if (currentStatus is TrackingStatus.Error) {
                     if (currentStatus.code == TrackingStatus.ErrorCode.TIMEOUT) {
@@ -593,10 +662,8 @@ class TrafficTracker
                     } else {
                         TrafficUpdateOutcome.Failed(currentStatus.type, currentStatus.code)
                     }
-                } else if (lastUpdateSkipped.get()) {
-                    TrafficUpdateOutcome.Skipped
                 } else {
-                    TrafficUpdateOutcome.Completed
+                    outcome
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -640,9 +707,9 @@ class TrafficTracker
         }
 
         @Suppress("ThrowsCount")
-        private suspend fun updateTrafficUsageLogic() {
+        private suspend fun updateTrafficUsageLogic(): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
-            val result =
+            val outcome =
                 withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
                     updateMutex.withLock {
                         try {
@@ -653,12 +720,17 @@ class TrafficTracker
                                     "Timeout fetching active sims",
                                     code = TrackingStatus.ErrorCode.TIMEOUT,
                                 )
-                                return@withLock
+                                return@withLock TrafficUpdateOutcome.TimedOut(startElapsed)
                             }
 
                             clearPreviousTimeoutError()
 
-                            if (!permissionChecker.checkPermissions { transitionStatus(it) }) return@withLock
+                            if (!permissionChecker.checkPermissions { transitionStatus(it) }) {
+                                return@withLock TrafficUpdateOutcome.Failed(
+                                    TrackingStatus.ErrorType.PERMISSION_MISSING,
+                                    null,
+                                )
+                            }
 
                             handleActiveSims(startElapsed, activeSims)
                         } catch (e: CancellationException) {
@@ -672,10 +744,11 @@ class TrafficTracker
                         }
                     }
                 }
-            if (result == null) {
+            if (outcome == null) {
                 AppLogger.e("TrafficTracker: Traffic update timed out")
                 throw TrafficUpdateTimeoutException(startElapsed)
             }
+            return outcome
         }
 
         private fun clearPreviousTimeoutError() {
@@ -701,14 +774,14 @@ class TrafficTracker
         private suspend fun handleActiveSims(
             startElapsed: Long,
             activeSims: List<ActiveSimInfo>,
-        ) {
+        ): TrafficUpdateOutcome {
             if (activeSims.isEmpty()) {
                 trafficMutex.withLock {
                     baselineManager.cleanupRetries(emptySet())
                     lastSuccessElapsed.set(timeProvider.elapsedRealtime())
                     transitionStatus(TrackingStatus.Idle)
                 }
-                return
+                return TrafficUpdateOutcome.Skipped
             }
 
             val activeIdentities = activeSims.asSequence().map { it.identity.stableId }.toSet()
@@ -716,26 +789,26 @@ class TrafficTracker
                 baselineManager.cleanupRetries(activeIdentities)
             }
 
-            processActiveSimsTraffic(startElapsed, activeSims)
+            return processActiveSimsTraffic(startElapsed, activeSims)
         }
 
         @Suppress("ReturnCount")
         private suspend fun processActiveSimsTraffic(
             startElapsed: Long,
             activeSims: List<ActiveSimInfo>,
-        ) {
+        ): TrafficUpdateOutcome {
             val target =
                 when (val result = targetResolver.resolve(activeSims)) {
                     is TrafficTargetResolver.TargetResult.Success -> result.target
                     is TrafficTargetResolver.TargetResult.StaleInput -> {
                         AppLogger.w("TrafficTracker: stale SIM state during target resolution, skipping this cycle")
-                        return
+                        return TrafficUpdateOutcome.Skipped
                     }
 
                     is TrafficTargetResolver.TargetResult.NoDefaultData -> {
                         AppLogger.d("TrafficTracker: no default data SIM, transitioning to Idle")
                         transitionStatus(TrackingStatus.Idle)
-                        return
+                        return TrafficUpdateOutcome.Skipped
                     }
 
                     is TrafficTargetResolver.TargetResult.Failed -> {
@@ -744,12 +817,12 @@ class TrafficTracker
                             result.message ?: "Traffic target resolution failed",
                             type = TrackingStatus.ErrorType.UNKNOWN,
                         )
-                        return
+                        return TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
                     }
 
                     is TrafficTargetResolver.TargetResult.NoActiveSims -> {
                         AppLogger.w("TrafficTracker: No active SIMs during target resolution")
-                        return
+                        return TrafficUpdateOutcome.Skipped
                     }
                 }
 
@@ -757,9 +830,16 @@ class TrafficTracker
             if (targetSimInfo?.identity?.isStable == false) {
                 AppLogger.w("TrafficTracker: skipping traffic update for unstable identity on slot ${target.slot}")
                 transitionStatus(TrackingStatus.Idle)
-                return
+                return TrafficUpdateOutcome.Skipped
             }
 
+            return executeSimChangeAndTrafficUpdate(startElapsed, target)
+        }
+
+    private suspend fun executeSimChangeAndTrafficUpdate(
+        startElapsed: Long,
+        target: TargetInfo,
+    ): TrafficUpdateOutcome =
             try {
                 simChangeHandler.withSimChangeLock {
                     val targetIdentity =
@@ -773,26 +853,42 @@ class TrafficTracker
                                 transitionStatus(it)
                             }
                         }
-                    targetIdentity?.let { performTrafficUpdate(startElapsed, target, it) }
+                    if (targetIdentity != null) {
+                        performTrafficUpdate(startElapsed, target, targetIdentity)
+                    } else {
+                        TrafficUpdateOutcome.Skipped
+                    }
                 }
             } catch (e: InvalidSlotException) {
                 AppLogger.w("TrafficTracker: InvalidSlotException for slot ${target.slot}", e)
                 updateStatusOnError(startElapsed, e.message, type = TrackingStatus.ErrorType.UNKNOWN)
+                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
             } catch (e: SimNotFoundException) {
                 AppLogger.w("TrafficTracker: SimNotFoundException for slot ${target.slot}", e)
                 updateStatusOnError(startElapsed, e.message, type = TrackingStatus.ErrorType.UNKNOWN)
+                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
             }
-        }
 
         private suspend fun performTrafficUpdate(
             startElapsed: Long,
             target: TargetInfo,
             targetIdentity: String,
-        ) {
-            trafficMutex.withLock {
-                if (!validateActiveIdentity(startElapsed, targetIdentity)) return@withLock
+        ): TrafficUpdateOutcome {
+            return trafficMutex.withLock {
+                if (!validateActiveIdentity(startElapsed, targetIdentity)) {
+                    val currentStatus = statusMachine.current
+                    return@withLock if (currentStatus is TrackingStatus.Error &&
+                        currentStatus.code == TrackingStatus.ErrorCode.TIMEOUT
+                    ) {
+                        TrafficUpdateOutcome.TimedOut(startElapsed)
+                    } else {
+                        TrafficUpdateOutcome.Skipped
+                    }
+                }
                 simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
-                val expectedLastResetDate = readResetDate(startElapsed, targetIdentity) ?: return@withLock
+                val expectedLastResetDate =
+                    readResetDate(startElapsed, targetIdentity)
+                        ?: return@withLock TrafficUpdateOutcome.TimedOut(startElapsed)
                 val retryResult = readBaselineRetryCount(targetIdentity)
                 if (retryResult.isFailure) {
                     updateStatusOnError(
@@ -800,7 +896,7 @@ class TrafficTracker
                         "Timeout reading baseline retry count for $targetIdentity",
                         code = TrackingStatus.ErrorCode.TIMEOUT,
                     )
-                    return@withLock
+                    return@withLock TrafficUpdateOutcome.TimedOut(startElapsed)
                 }
                 val currentRetryCount = retryResult.getOrNull()
                 val statsResult = baselineManager.getCurrentMobileBytes(expectedLastResetDate)
@@ -875,7 +971,7 @@ class TrafficTracker
             currentRetryCount: Int?,
             statsResult: StatsResult,
             expectedLastResetDate: Long,
-        ) {
+        ): TrafficUpdateOutcome =
             if (currentRetryCount != null) {
                 if (currentRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
                     baselineManager.removeRetry(targetIdentity)
@@ -884,6 +980,7 @@ class TrafficTracker
                         "Baseline reset failed for $targetIdentity after all retries",
                         type = TrackingStatus.ErrorType.DATABASE_ERROR,
                     )
+                    TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.DATABASE_ERROR, null)
                 } else {
                     handleRetryAction(
                         startElapsed,
@@ -903,7 +1000,6 @@ class TrafficTracker
                     expectedLastResetDate,
                 )
             }
-        }
 
         private suspend fun executeUpdateAndBaseline(
             startElapsed: Long,
@@ -911,7 +1007,7 @@ class TrafficTracker
             targetIdentity: String,
             statsResult: StatsResult,
             expectedLastResetDate: Long,
-        ) {
+        ): TrafficUpdateOutcome {
             if (statsResult !is StatsResult.Success) {
                 val message =
                     if (statsResult is StatsResult.Error) {
@@ -920,24 +1016,25 @@ class TrafficTracker
                         "Stats unavailable"
                     }
                 updateStatusOnError(startElapsed, message)
+                return TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
+            }
+            val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
+            return if (lastTotalBytes == null) {
+                updateStatusOnError(
+                    startElapsed,
+                    "Timeout reading lastTotalBytes",
+                    code = TrackingStatus.ErrorCode.TIMEOUT,
+                )
+                TrafficUpdateOutcome.TimedOut(startElapsed)
             } else {
-                val lastTotalBytes = fetchLastTotalBytes(targetIdentity, statsResult)
-                if (lastTotalBytes == null) {
-                    updateStatusOnError(
-                        startElapsed,
-                        "Timeout reading lastTotalBytes",
-                        code = TrackingStatus.ErrorCode.TIMEOUT,
-                    )
-                } else {
-                    performUpdateWrite(
-                        startElapsed,
-                        target,
-                        targetIdentity,
-                        statsResult.bytes,
-                        lastTotalBytes,
-                        expectedLastResetDate,
-                    )
-                }
+                performUpdateWrite(
+                    startElapsed,
+                    target,
+                    targetIdentity,
+                    statsResult.bytes,
+                    lastTotalBytes,
+                    expectedLastResetDate,
+                )
             }
         }
 
@@ -948,7 +1045,7 @@ class TrafficTracker
             currentBytes: Long,
             lastTotalBytes: Long,
             expectedLastResetDate: Long,
-        ) {
+        ): TrafficUpdateOutcome {
             val result =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     deltaCalculator.updateTrafficBaselineAndUsage(
@@ -967,17 +1064,21 @@ class TrafficTracker
                     "Traffic update write timeout",
                     code = TrackingStatus.ErrorCode.TIMEOUT,
                 )
+                return TrafficUpdateOutcome.TimedOut(startElapsed)
+            }
+
+            lastSuccessElapsed.set(timeProvider.elapsedRealtime())
+            transitionStatus(TrackingStatus.Active, force = true)
+            simChangeHandler.updateLastDataSubId(target.dataSubId)
+            dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
+            return if (!result) {
+                AppLogger.d(
+                    "TrafficTracker: Traffic update write skipped due to window mismatch " +
+                        "for $targetIdentity",
+                )
+                TrafficUpdateOutcome.Skipped
             } else {
-                if (!result) {
-                    AppLogger.d(
-                        "TrafficTracker: Traffic update write skipped due to window mismatch " +
-                            "for $targetIdentity",
-                    )
-                }
-                lastSuccessElapsed.set(timeProvider.elapsedRealtime())
-                transitionStatus(TrackingStatus.Active, force = true)
-                simChangeHandler.updateLastDataSubId(target.dataSubId)
-                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
+                TrafficUpdateOutcome.Completed
             }
         }
 
@@ -988,59 +1089,92 @@ class TrafficTracker
             currentPending: Int,
             statsResult: StatsResult,
             expectedLastResetDate: Long,
-        ) {
+        ): TrafficUpdateOutcome =
             if (statsResult is StatsResult.Success) {
-                val applied =
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        simUsageResetRepository.setLastTotalBytes(
-                            targetIdentity,
-                            statsResult.bytes,
-                            expectedLastResetDate,
-                        )
-                    }
-                if (applied == null) {
-                    updateStatusOnError(
-                        startElapsed,
-                        "Baseline write timeout on retry",
-                        code = TrackingStatus.ErrorCode.TIMEOUT,
-                    )
-                } else {
-                    baselineManager.removeRetry(targetIdentity)
-                    lastSuccessElapsed.set(timeProvider.elapsedRealtime())
-                    transitionStatus(TrackingStatus.Active, force = true)
-                    simChangeHandler.updateLastDataSubId(target.dataSubId)
-                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
-                    if (applied) {
-                        AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
-                    } else {
-                        AppLogger.d(
-                            "TrafficTracker: retry baseline set skipped due to window mismatch " +
-                                "for $targetIdentity",
-                        )
-                    }
-                }
+                handleSuccessRetryAction(
+                    startElapsed,
+                    target,
+                    targetIdentity,
+                    statsResult,
+                    expectedLastResetDate,
+                )
             } else {
-                val nextRetry = currentPending + 1
-                if (nextRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
-                    baselineManager.removeRetry(targetIdentity)
-                    updateStatusOnError(
-                        startElapsed,
-                        "Baseline reset failed for $targetIdentity after all retries",
-                        type = TrackingStatus.ErrorType.DATABASE_ERROR,
-                    )
+                handleFailedRetryAction(
+                    startElapsed,
+                    targetIdentity,
+                    currentPending,
+                    statsResult,
+                )
+            }
+
+    private suspend fun handleSuccessRetryAction(
+        startElapsed: Long,
+        target: TargetInfo,
+        targetIdentity: String,
+        statsResult: StatsResult.Success,
+        expectedLastResetDate: Long,
+    ): TrafficUpdateOutcome {
+        val applied =
+            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                simUsageResetRepository.setLastTotalBytes(
+                    targetIdentity,
+                    statsResult.bytes,
+                    expectedLastResetDate,
+                )
+            }
+        if (applied == null) {
+            updateStatusOnError(
+                startElapsed,
+                "Baseline write timeout on retry",
+                code = TrackingStatus.ErrorCode.TIMEOUT,
+            )
+            return TrafficUpdateOutcome.TimedOut(startElapsed)
+        }
+        baselineManager.removeRetry(targetIdentity)
+        lastSuccessElapsed.set(timeProvider.elapsedRealtime())
+        transitionStatus(TrackingStatus.Active, force = true)
+        simChangeHandler.updateLastDataSubId(target.dataSubId)
+        dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
+        return if (applied) {
+            AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
+            TrafficUpdateOutcome.Completed
+        } else {
+            AppLogger.d(
+                "TrafficTracker: retry baseline set skipped due to window mismatch " +
+                    "for $targetIdentity",
+            )
+            TrafficUpdateOutcome.Skipped
+        }
+    }
+
+    private suspend fun handleFailedRetryAction(
+        startElapsed: Long,
+        targetIdentity: String,
+        currentPending: Int,
+        statsResult: StatsResult,
+    ): TrafficUpdateOutcome {
+        val nextRetry = currentPending + 1
+        return if (nextRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
+            baselineManager.removeRetry(targetIdentity)
+            updateStatusOnError(
+                startElapsed,
+                "Baseline reset failed for $targetIdentity after all retries",
+                type = TrackingStatus.ErrorType.DATABASE_ERROR,
+            )
+            TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.DATABASE_ERROR, null)
+        } else {
+            baselineManager.setRetryCount(targetIdentity, nextRetry)
+            val reason =
+                if (statsResult is StatsResult.Error) {
+                    statsResult.exception.message
                 } else {
-                    baselineManager.setRetryCount(targetIdentity, nextRetry)
-                    val reason =
-                        if (statsResult is StatsResult.Error) {
-                            statsResult.exception.message
-                        } else {
-                            "Stats unavailable"
-                        }
-                    updateStatusOnError(
-                        startElapsed,
-                        reason ?: "Stats unavailable, retry pending",
-                    )
+                    "Stats unavailable"
                 }
+            updateStatusOnError(
+                startElapsed,
+                reason ?: "Stats unavailable, retry pending",
+            )
+            TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
             }
         }
 

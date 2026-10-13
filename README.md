@@ -10,7 +10,11 @@ MinuteWatcher is an Android application designed to track your mobile carrier's 
 - **Always-on Display Summary**: optional persistent silent notification with remaining minutes and traffic; visible on the lock screen and on the Always-on Display of devices that show notifications there.
 - **Manual Adjustments**: Easily correct usage values if they drift from your carrier's actual data.
 - **Privacy First**: All data is stored locally. No third-party tracking or cloud uploads.
-- **Multi-language Support**: Supports 8+ languages, including RTL (Arabic) and CJK (Japanese, Chinese).
+- **Multi-language Support**: Supports 28 languages (configured in `locales_config.xml`), including RTL (Arabic, Urdu,
+  Persian) and CJK (Japanese, Chinese, Korean). The original (native) UI language is Russian; translations into other
+  languages were generated automatically using a Large Language Model (LLM) and may not have been reviewed by native
+  speakers. If you notice an error or unnatural phrasing in your language, please contact the developer by email
+  (available in the About dialog within the app).
 
 ## Technical Limitations
 
@@ -40,10 +44,14 @@ service).
 
 ### Always-on Display
 Android does not provide a public API to render custom application UI on a phone's ambient display (Always-on Display); documented ambient mode APIs exist only for Wear OS.
-- MinuteWatcher implements this feature using a documented ongoing silent notification with `IMPORTANCE_MIN`.
+
+- MinuteWatcher implements this feature using a documented ongoing silent notification with `IMPORTANCE_LOW`.
 - The visibility and layout of the summary on the Always-on Display depend on the device manufacturer and system settings (some devices show full notification content on AOD, while others show only an icon). This behavior is controlled by the system and OEM firmware.
 - MinuteWatcher does not use undocumented APIs or private system settings (`Settings.Secure`).
 - The summary displays lines only for SIM packages with configured limits. The feature is controlled via a toggle in the Notification Settings section.
+- On Android 14+, the system allows users to dismiss ongoing notifications not tied to a foreground service (including
+  via "Clear All"). When enabled, MinuteWatcher automatically restores the summary within the periodic self-check
+  interval (~15 minutes) while the app process is alive.
 
 ## Permissions
 

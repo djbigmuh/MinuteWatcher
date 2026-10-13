@@ -5,6 +5,7 @@ import com.example.minutewatcher.core.common.util.TimeProvider
 import com.example.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.example.minutewatcher.core.domain.AutoResetUseCase
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.feature.main.controller.AutoResetScheduler.Companion.AUTO_RESET_CHECK_INTERVAL_MS
 import com.example.minutewatcher.feature.main.controller.AutoResetScheduler.Companion.MAX_AUTO_RESET_RETRIES
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
@@ -34,18 +35,21 @@ class AutoResetScheduler
         private val timeProvider: TimeProvider,
     ) {
         /**
-         * Flag for single execution of auto-reset check per ViewModel lifetime.
+         * Concurrency gate flag that prevents simultaneous execution of multiple auto-reset checks.
          *
-         * The flag is reset on [CancellationException] or any unexpected Exception
-         * to allow retrying on next initialization.
+         * The flag is released in `finally` upon completion of each check (whether successful or failed).
+         * Periodicity of repeated checks is governed by the persisted check timestamp
+         * ([AUTO_RESET_CHECK_INTERVAL_MS]) and the failure count window, not by this flag.
          */
         private val isCheckStarted = AtomicBoolean(false)
 
         /**
          * Checks necessity of auto-reset on start.
          *
-         * The flag [isCheckStarted] ensures only concurrent single execution; periodicity
-         * is determined by the persisted check timestamp and internal reset limiters.
+         * Prevents concurrent execution of multiple checks using [isCheckStarted]. Subsequent calls
+         * after a previous check completes are allowed and will perform a new check if the interval
+         * since the persisted check timestamp has expired. Concurrent calls while a check is running
+         * are ignored.
          */
         suspend fun checkOnStart() {
             if (!isCheckStarted.compareAndSet(false, true)) return

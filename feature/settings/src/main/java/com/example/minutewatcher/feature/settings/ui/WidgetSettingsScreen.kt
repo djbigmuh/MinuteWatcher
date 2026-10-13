@@ -58,6 +58,7 @@ fun WidgetSettingsScreen(
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val aodSummaryAvailable by viewModel.aodSummaryAvailable.collectAsStateWithLifecycle()
+    val aodSummaryHasContent by viewModel.aodSummaryHasContent.collectAsStateWithLifecycle()
 
     ObserveResumeEffect(viewModel)
 
@@ -103,6 +104,7 @@ fun WidgetSettingsScreen(
                     screenUiState = screenUiState,
                     saveResult = uiState.saveResult,
                     aodSummaryAvailable = aodSummaryAvailable,
+                    aodSummaryHasContent = aodSummaryHasContent,
                     viewModel = viewModel,
                     onBack = onBack,
                 )
@@ -155,6 +157,7 @@ private fun WidgetSettingsContent(
     screenUiState: WidgetUiState?,
     saveResult: SaveResult?,
     aodSummaryAvailable: Boolean,
+    aodSummaryHasContent: Boolean,
     viewModel: WidgetSettingsViewModel,
     onBack: () -> Unit,
 ) {
@@ -181,6 +184,7 @@ private fun WidgetSettingsContent(
             state = settings,
             uiState = screenUiState,
             aodSummaryAvailable = aodSummaryAvailable,
+            aodSummaryHasContent = aodSummaryHasContent,
             viewModel = viewModel,
         ) {
             showColorPicker = true
@@ -273,6 +277,7 @@ private fun WidgetSettingsList(
     state: WidgetSettingsState,
     uiState: WidgetUiState?,
     aodSummaryAvailable: Boolean,
+    aodSummaryHasContent: Boolean,
     viewModel: WidgetSettingsViewModel,
     onShowColorPicker: () -> Unit,
 ) {
@@ -308,6 +313,7 @@ private fun WidgetSettingsList(
             state = state,
             enabled = true,
             aodSummaryAvailable = aodSummaryAvailable,
+            aodSummaryHasContent = aodSummaryHasContent,
             onUpdateNotifyMinutes = { en -> viewModel.updateSettings { it.copy(notifyLowMinutes = en) } },
             onUpdateNotifyTraffic = { en -> viewModel.updateSettings { it.copy(notifyLowTraffic = en) } },
             onUpdateAodSummary = { en -> viewModel.updateSettings { it.copy(aodSummaryEnabled = en) } },

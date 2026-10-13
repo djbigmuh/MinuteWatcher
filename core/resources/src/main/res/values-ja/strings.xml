@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIMカード</string>
     <string name="no_sim_found">SIMカードが見つかりません</string>
@@ -55,7 +55,7 @@
     <string name="tracking_banner_inaccurate_calls">一部の通話がSIMカードと一致せず、唯一のアクティブなSIMに割り当てられました。値が不正確な場合があります。</string>
     <string name="tracking_banner_calls_attribution_error">複数の同時通話が検出されました。SIMカードを特定できませんでした。通話時間は加算されていません。</string>
     <string name="tracking_banner_observation_failed">複数のエラーが発生したため、データトラッキングサービスが停止しました。再試行するか、アプリを再起動してください。</string>
-    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
+    <string name="tracking_banner_storage_degraded">ストレージ障害：アプリの再起動後に統計情報がリセットされる可能性があります。システム設定を確認してください。</string>
     <string name="settings_load_error">設定読み込みエラー</string>
     <string name="sim_list_unavailable_error">SIMリストが利用できません。再読み込み後にSIM設定が利用可能になります。</string>
     <string name="refresh_error">データ更新エラー</string>
@@ -137,14 +137,7 @@
     <string name="traffic_label">通信量</string>
     <string name="traffic_remaining_text">残り通信量: </string>
     <string name="gb_abbr"> GB</string>
-    <string name="auto_reset_day_suffix">日</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
-    <!--
+    <string name="auto_reset_day_suffix">日</string><!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Japanese requires: other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -183,11 +176,13 @@
     <string name="app_functions_display_description">残りの通話時間とモバイルデータ通信量を端末上のアシスタントに提供します</string>
 
     <!-- About Dialog -->
-    <string name="about_title">About</string>
-    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
-    <string name="about_author_name">Author: Pavel Mukhin</string>
-    <string name="about_email_label">Email:</string>
-    <string name="about_signoff">Best regards,</string>
-    <string name="about_version_format">Version %1$s (%2$d)</string>
-    <string name="about_content_desc">About info</string>
+    <string name="about_title">アプリについて</string>
+    <string name="about_message">MinuteWatcherは、残りの通話分数とモバイルデータ通信量を追跡するアプリです。</string>
+    <string name="about_author_name">作者: Pavel Mukhin</string>
+    <string name="about_translation_feedback">ロシア語以外の言語には機械翻訳が使用されています。エラーや不自然な表現を見つけた場合は、開発者にメールでお知らせください。改善に役立ちます。</string>
+    <string name="about_email_label">メール:</string>
+    <string name="about_signoff">敬具</string>
+    <string name="about_version_format">バージョン %1$s (%2$d)</string>
+    <string name="about_content_desc">アプリの情報</string>
+    <string name="aod_summary_no_limits_note">表示する内容がありません：少なくとも1枚のSIMカードに通話時間またはデータ通信量の制限を設定してください。制限のあるSIMのみが要約に表示されます。</string>
 </resources>

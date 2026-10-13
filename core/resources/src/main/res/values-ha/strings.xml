@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Katin SIM</string>
     <string name="no_sim_found">Ba a sami katin SIM ba</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">Sauran bayanai:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">ranar wata</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="one">Minti %1$d</item>
         <item quantity="other">Mintuna %1$d</item>
@@ -179,8 +173,10 @@
     <string name="about_title">Game da</string>
     <string name="about_message">MinuteWatcher aikace-aikace ne don bin diddigin sauran mintuna da amfani da bayanan intanet.</string>
     <string name="about_author_name">Mawallafi: Pavel Mukhin</string>
+    <string name="about_translation_feedback">Ana amfani da fassarar na waje don harsunan da ba Rashanci ba. Idan kun sami kuskure ko furci mara kyau, da fatan za a aika wa mai rubutu sakon imel don taimakawa wajen inganta shi.</string>
     <string name="about_email_label">Akwatin Imel:</string>
     <string name="about_signoff">Mafi alheri,</string>
     <string name="about_version_format">Sigar %1$s (%2$d)</string>
     <string name="about_content_desc">Bayanai game da aikace-aikacen</string>
+    <string name="aod_summary_no_limits_note">Babu abin da za a nuna: saita iyakacin mintoci ko bayanai don akalla katin SIM guda ɗaya - taƙaitaccen bayanin yana nuna SIMs tare da iyakoki kawai.</string>
 </resources>

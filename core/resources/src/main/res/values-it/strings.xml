@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Schede SIM</string>
     <string name="no_sim_found">Nessuna scheda SIM trovata</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">Traffico rimanente:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">giorno del mese</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d minuto</item>
         <item quantity="many">%1$d di minuti</item>
@@ -181,8 +175,10 @@
     <string name="about_title">Info</string>
     <string name="about_message">MinuteWatcher è un\'applicazione per monitorare i minuti e il traffico dati rimanenti.</string>
     <string name="about_author_name">Autore: Pavel Mukhin</string>
+    <string name="about_translation_feedback">Per le lingue diverse dal russo vengono utilizzate traduzioni automatiche. Se riscontri un errore o una formulazione poco naturale, invia un messaggio allo sviluppatore per contribuire a migliorarlo.</string>
     <string name="about_email_label">Email:</string>
     <string name="about_signoff">Cordiali saluti,</string>
     <string name="about_version_format">Versione %1$s (%2$d)</string>
     <string name="about_content_desc">Informazioni su MinuteWatcher</string>
+    <string name="aod_summary_no_limits_note">Nessun elemento da mostrare: imposta un limite di minuti o traffico per almeno una scheda SIM; il riepilogo mostra solo le SIM con limiti.</string>
 </resources>

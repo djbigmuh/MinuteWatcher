@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM-Karten</string>
     <string name="no_sim_found">Keine SIM-Karten gefunden</string>
@@ -55,7 +55,7 @@
     <string name="tracking_banner_inaccurate_calls">Einige Anrufe konnten keiner SIM-Karte zugeordnet werden und wurden der einzigen aktiven SIM zugerechnet. Angaben können ungenau sein.</string>
     <string name="tracking_banner_calls_attribution_error">Mehrere gleichzeitige Anrufe erkannt. SIM-Karte konnte nicht ermittelt werden; Minuten wurden nicht gutgeschrieben.</string>
     <string name="tracking_banner_observation_failed">Der Datenverfolgungsdienst wurde nach mehreren Fehlern gestoppt. Bitte versuchen Sie es erneut oder starten Sie die App neu.</string>
-    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
+    <string name="tracking_banner_storage_degraded">Speicher beeinträchtigt: Statistiken können nach dem App-Neustart zurückgesetzt werden. Bitte Systemeinstellungen prüfen.</string>
     <string name="settings_load_error">Fehler beim Laden der Einstellungen</string>
     <string name="sim_list_unavailable_error">SIM-Liste nicht verfügbar. SIM-Einstellungen sind nach dem Neuladen verfügbar.</string>
     <string name="refresh_error">Datenaktualisierungsfehler</string>
@@ -137,14 +137,7 @@
     <string name="traffic_label">Daten</string>
     <string name="traffic_remaining_text">Verbleibendes Datenvolumen: </string>
     <string name="gb_abbr"> GB</string>
-    <string name="auto_reset_day_suffix">Tag des Monats</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
-    <!--
+    <string name="auto_reset_day_suffix">Tag des Monats</string><!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       German requires: one (1), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -185,11 +178,13 @@
     <string name="app_functions_display_description">Teilt verbleibende Minuten und mobiles Datenvolumen mit dem Assistenten auf dem Gerät</string>
 
     <!-- About Dialog -->
-    <string name="about_title">About</string>
-    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
-    <string name="about_author_name">Author: Pavel Mukhin</string>
-    <string name="about_email_label">Email:</string>
-    <string name="about_signoff">Best regards,</string>
+    <string name="about_title">Über</string>
+    <string name="about_message">MinuteWatcher ist eine App zum Verfolgen von verbleibenden Minuten und mobilen Daten.</string>
+    <string name="about_author_name">Autor: Pavel Mukhin</string>
+    <string name="about_translation_feedback">Für Nicht-Russisch werden maschinelle Übersetzungen verwendet. Wenn Sie einen Fehler oder eine unnatürliche Formulierung finden, senden Sie bitte eine E-Mail an den Entwickler, um zur Verbesserung beizutragen.</string>
+    <string name="about_email_label">E-Mail:</string>
+    <string name="about_signoff">Mit freundlichen Grüßen</string>
     <string name="about_version_format">Version %1$s (%2$d)</string>
-    <string name="about_content_desc">About info</string>
+    <string name="about_content_desc">Über-Informationen</string>
+    <string name="aod_summary_no_limits_note">Nichts anzuzeigen: Legen Sie ein Minuten- oder Datenlimit für mindestens eine SIM-Karte fest – die Zusammenfassung zeigt nur SIMs with Limits.</string>
 </resources>

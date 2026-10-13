@@ -76,6 +76,13 @@ class SemanticSearchManager
             statusMachine.transition(newStatus, force)
         }
 
+    /**
+     * Cached content hash corresponding only to data that has been fully indexed,
+     * including successful cleanup of stale documents.
+     *
+     * On partial success (when stale document removal fails), this hash is NOT updated
+     * so that subsequent index attempts with the same snapshot content will retry indexing.
+     */
         @VisibleForTesting
         internal var lastSnapshotHash: Int? = null
         private var lastSnapshotVersion: SchemaVersion? = null
@@ -386,11 +393,11 @@ class SemanticSearchManager
                         indexer.performIndexUpdate(currentSession, snapshot) { status ->
                             transitionStatus(status)
                         }
-                    lastSnapshotHash = currentHash
-                    lastSnapshotVersion = snapshot.version
                     if (removeFailed) {
                         IndexResult.PartialSuccess
                     } else {
+                        lastSnapshotHash = currentHash
+                        lastSnapshotVersion = snapshot.version
                         IndexResult.Success
                     }
                 } catch (e: CancellationException) {

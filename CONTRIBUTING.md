@@ -56,6 +56,8 @@ Certain modules require 100% coverage of their public API:
 We enforce strict static analysis. Every developer MUST run verification before committing.
 - **`.\VERIFY.bat --Quick`** (Windows) or **`.\verify.ps1 -Quick`** (PowerShell): Rapid check (ktlint + detekt). Use before minor commits.
 - **`.\VERIFY.bat`** or **`.\verify.ps1`**: Full verification (ktlint + detekt + lint + tests + build). Use before completing any task.
+- Note that `VERIFY.bat`, `verify.ps1`, and `MAKE_AUDIT_DUMP.bat` are local developer environment tools that are not
+  distributed through the repository, and adding them to version control is strictly prohibited.
 
 Your code must pass:
 

@@ -12,6 +12,7 @@ fun NotificationSettingsSection(
     state: WidgetSettingsState,
     enabled: Boolean = true,
     aodSummaryAvailable: Boolean = true,
+    aodSummaryHasContent: Boolean = true,
     onUpdateNotifyMinutes: (Boolean) -> Unit,
     onUpdateNotifyTraffic: (Boolean) -> Unit,
     onUpdateAodSummary: (Boolean) -> Unit = {},
@@ -40,6 +41,12 @@ fun NotificationSettingsSection(
     if (!aodSummaryAvailable) {
         Text(
             text = stringResource(id = R.string.aod_summary_unavailable),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+    } else if (state.aodSummaryEnabled && !aodSummaryHasContent) {
+        Text(
+            text = stringResource(id = R.string.aod_summary_no_limits_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
         )

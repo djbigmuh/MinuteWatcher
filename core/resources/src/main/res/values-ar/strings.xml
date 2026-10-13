@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!--
       Localization note: Ensure translations respect RTL layout for Arabic.
       Test with android:layoutDirection="rtl" in preview.
@@ -59,7 +59,7 @@
     <string name="tracking_banner_inaccurate_calls">تعذر مطابقة بعض المكالمات مع شريحة SIM وتم نسبها إلى شريحة SIM النشطة الوحيدة. قد تكون القيم غير دقيقة.</string>
     <string name="tracking_banner_calls_attribution_error">تم اكتشاف عدة مكالمات متزامنة. تعذر تحديد شريحة الاتصال؛ ولم يتم احتساب الدقائق لهذه المكالمات.</string>
     <string name="tracking_banner_observation_failed">توقفت خدمة تتبع البيانات بعد عدة أخطاء. يرجى المحاولة مرة أخرى أو إعادة تشغيل التطبيق.</string>
-    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
+    <string name="tracking_banner_storage_degraded">تدهور التخزين: قد يتم إعادة ضبط الإحصائيات بعد إعادة تشغيل التطبيق. يرجى التحقق من إعدادات النظام.</string>
     <string name="settings_load_error">خطأ في تحميل الإعدادات</string>
     <string name="sim_list_unavailable_error">قائمة SIM غير متاحة. ستكون إعدادات SIM متاحة بعد إعادة التحميل.</string>
     <string name="refresh_error">خطأ في تحديث البيانات</string>
@@ -141,14 +141,7 @@
     <string name="traffic_label">البيانات</string>
     <string name="traffic_remaining_text">حركة البيانات المتبقية:</string>
     <string name="gb_abbr">جيجابايت</string>
-    <string name="auto_reset_day_suffix">يوم من الشهر</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
-    <!--
+    <string name="auto_reset_day_suffix">يوم من الشهر</string><!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Arabic requires: zero (0), one (1), two (2), few (3-10), many (11-99), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -197,11 +190,13 @@
     <string name="app_functions_display_description">يشارك الدقائق المتبقية وبيانات الجوال مع المساعد الموجود على الجهاز</string>
 
     <!-- About Dialog -->
-    <string name="about_title">About</string>
-    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
-    <string name="about_author_name">Author: Pavel Mukhin</string>
-    <string name="about_email_label">Email:</string>
-    <string name="about_signoff">Best regards,</string>
-    <string name="about_version_format">Version %1$s (%2$d)</string>
-    <string name="about_content_desc">About info</string>
+    <string name="about_title">حول التطبيق</string>
+    <string name="about_message">MinuteWatcher هو تطبيق لتتبع الدقائق المتبقية واستخدام بيانات الهاتف المحمول.</string>
+    <string name="about_author_name">المؤلف: Pavel Mukhin</string>
+    <string name="about_translation_feedback">تُستخدم الترجمات الآلية للغات غير الروسية. إذا وجدت خطأً أو صياغة غير طبيعية، يرجى مراسلة المطور عبر البريد الإلكتروني للمساعدة في تحسينها.</string>
+    <string name="about_email_label">البريد الإلكتروني:</string>
+    <string name="about_signoff">مع أطيب التحيات،</string>
+    <string name="about_version_format">الإصدار %1$s (%2$d)</string>
+    <string name="about_content_desc">معلومات حول التطبيق</string>
+    <string name="aod_summary_no_limits_note">لا يوجد شيء لعرضه: قم بتعيين حد الدقائق أو البيانات لبطاقة SIM واحدة على الأقل - يعرض الملخص بطاقات SIM ذات الحدود فقط.</string>
 </resources>

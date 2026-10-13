@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">સિમ કાર્ડ્સ</string>
     <string name="no_sim_found">સિમ કાર્ડ મળ્યા નથી</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">બાકી ડેટા:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">મહિનાનો દિવસ</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d મિનિટ</item>
         <item quantity="other">%1$d મિનિટો</item>
@@ -179,8 +173,10 @@
     <string name="about_title">વિશે</string>
     <string name="about_message">MinuteWatcher એ બાકીની મિનિટો અને મોબાઇલ ડેટા વપરાશ ટ્રેક કરવા માટેની એક એપ છે.</string>
     <string name="about_author_name">લેખક: Pavel Mukhin</string>
+    <string name="about_translation_feedback">રશિયન સિવાયની ભાષાઓ માટે મશીન અનુવાદોનો ઉપયોગ થાય છે. જો તમને કોઈ ભૂલ અથવા અકુદરતી શબ્દપ્રયોગ જણાય, તો તેને સુધારવામાં મદદ કરવા માટે કૃપા કરીને વિકાસકર્તાને ઇમેઇલ કરો.</string>
     <string name="about_email_label">ઈમેઈલ:</string>
     <string name="about_signoff">આપનો,</string>
     <string name="about_version_format">આવૃત્તિ %1$s (%2$d)</string>
     <string name="about_content_desc">માહિતી વિશે</string>
+    <string name="aod_summary_no_limits_note">પ્રદર્શિત કરવા માટે કંઈ નથી: ઓછામાં ઓછી એક SIM કાર્ડ માટે મિનિટ અથવા ડેટા મર્યાદા સેટ કરો - સારાંશ ફક્ત મર્યાદાવાળા SIM બતાવે છે.</string>
 </resources>

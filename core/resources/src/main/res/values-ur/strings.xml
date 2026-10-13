@@ -1,81 +1,81 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- General UI -->
-    <string name="sim_cards_title">SIM Cards</string>
-    <string name="no_sim_found">SIM cards not found</string>
-    <string name="check_permissions_sim">Check permissions and SIM presence</string>
-    <string name="no_data">No data</string>
-    <string name="error">Error</string>
+    <string name="sim_cards_title">SIM کارڈز</string>
+    <string name="no_sim_found">کوئی SIM کارڈ نہیں ملا</string>
+    <string name="check_permissions_sim">اجازتیں اور SIM کی موجودگی چیک کریں</string>
+    <string name="no_data">کوئی ڈیٹا نہیں</string>
+    <string name="error">خرابی</string>
 
     <!-- Main Screen Actions -->
-    <string name="reset_label">Reset</string>
-    <string name="theme_system">System</string>
-    <string name="theme_light">Light</string>
-    <string name="theme_dark">Dark</string>
-    <string name="limit_button">Limit</string>
-    <string name="add_widget_button">Add Widget</string>
+    <string name="reset_label">ری سیٹ</string>
+    <string name="theme_system">سسٹم</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تاریک</string>
+    <string name="limit_button">حد</string>
+    <string name="add_widget_button">وجٹ شامل کریں</string>
 
     <!-- Settings: General -->
-    <string name="settings_save_partial_success">General settings saved. SIM settings skipped (SIM list unavailable)</string>
-    <string name="settings_save_partial_failure">General settings saved. SIM-specific settings could not be saved</string>
-    <string name="settings_save_partial_failure_slots">General settings saved. SIM-specific settings could not be saved for SIM %1$s</string>
-    <string name="settings_save_failed">Save failed</string>
-    <string name="language_system">System</string>
-    <string name="usage_access_dialog_title">Data Usage Tracking</string>
-    <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission. \n\nThis is a system-level permission that allows the app to see how much data has been sent and received over the cellular network. \n\nWe do not track which apps you use or your browsing history.</string>
-    <string name="phone_permission_permanent_denial">Phone permission is permanently denied. Some features will not work until you enable it in App Settings.</string>
+    <string name="settings_save_partial_success">عمومی ترتیبات محفوظ ہو گئیں۔ SIM کی ترتیبات کو چھوڑ دیا گیا (SIM کی فہرست دستیاب نہیں ہے)</string>
+    <string name="settings_save_partial_failure">عمومی ترتیبات محفوظ ہو گئیں۔ SIM کے لیے مخصوص ترتیبات محفوظ نہیں کی جا سکیں</string>
+    <string name="settings_save_partial_failure_slots">عمومی ترتیبات محفوظ ہو گئیں۔ SIM %1$s کے لیے ترتیبات محفوظ نہیں کی جا سکیں</string>
+    <string name="settings_save_failed">محفوظ کرنا ناکام ہو گیا</string>
+    <string name="language_system">سسٹم</string>
+    <string name="usage_access_dialog_title">ڈیٹا کے استعمال کی ٹریکنگ</string>
+    <string name="usage_access_dialog_description">موبائل ڈیٹا کے استعمال کو ٹریک کرنے کے لیے، MinuteWatcher کو \"استعمال تک رسائی\" کی اجازت درکار ہے۔ \n\nیہ ایک سسٹم لیول اجازت ہے جو ایپ کو یہ دیکھنے کی اجازت دیتی ہے کہ سیلولر نیٹ ورک پر کتنا ڈیٹا بھیجا اور موصول ہوا ہے۔ \n\nہم یہ ٹریک نہیں کرتے کہ آپ کون سی ایپس استعمال کرتے ہیں یا آپ کی براؤزنگ ہسٹری کیا ہے۔</string>
+    <string name="phone_permission_permanent_denial">فون کی اجازت مستقل طور پر مسترد کر دی گئی ہے۔ ایپ کی ترتیبات میں اسے فعال کرنے تک کچھ خصوصیات کام نہیں کریں گی۔</string>
 
     <!-- Settings: Widget -->
-    <string name="settings_widget_title">Widget Settings</string>
-    <string name="widget_description">Displays remaining minutes and mobile traffic per SIM card.</string>
-    <string name="background_transparency">Background Transparency</string>
-    <string name="display_minutes">Show minutes</string>
-    <string name="display_minutes_limit">Show minutes limit</string>
-    <string name="display_traffic">Show traffic</string>
-    <string name="display_traffic_limit">Show traffic limit</string>
-    <string name="display_name">Show name</string>
-    <string name="display_icon">Show icon</string>
-    <string name="show_sim_checkbox">Show this SIM card</string>
-    <string name="preview">Preview</string>
-    <string name="layout_mode_title">Layout mode</string>
-    <string name="sim_arrangement_prompt">Choose SIM arrangement</string>
-    <string name="color_background">Background color:</string>
-    <string name="custom_color">Custom&#8230;</string>
-    <string name="font_size">Font Size</string>
-    <string name="traffic_tracking_limitation_title">Traffic Tracking Limitation</string>
-    <string name="traffic_tracking_limitation_body">Android provides mobile data usage as an aggregate value for the entire device. \n\nMinuteWatcher attributes all mobile traffic to the SIM card currently selected as the \"Default Data SIM\" in your system settings.\n\nIf you switch your default data SIM, the app will detect the change and begin attributing traffic to the new SIM from that moment.</string>
-    <string name="tracking_banner_phone_permission">Phone permission is required to identify SIM cards. Some features may not work.</string>
-    <string name="tracking_banner_usage_access">Usage Access is required to track mobile data usage accurately.</string>
-    <string name="tracking_banner_sim_discovery_error">Failed to discover SIM cards. Please try again.</string>
-    <string name="tracking_banner_traffic_error">There was an error updating traffic data.</string>
-    <string name="tracking_banner_calls_error">There was an error updating call tracking data.</string>
-    <string name="tracking_banner_appsearch_error">AppSearch indexing failed. Global search might be outdated. This does not affect widget or tracking functionality.</string>
-    <string name="tracking_banner_shortcuts_error">Dynamic shortcuts update failed.</string>
-    <string name="tracking_banner_notification_permission">Notification permission is recommended to receive usage alerts.</string>
-    <string name="tracking_banner_widget_error">Widget cannot be updated due to system limitations.</string>
-    <string name="tracking_banner_inaccurate_calls">Some calls could not be matched with a SIM card and were attributed to the single active SIM. Values might be inaccurate.</string>
-    <string name="tracking_banner_calls_attribution_error">Multiple simultaneous calls detected. Unable to determine SIM card; minutes for such calls were not credited.</string>
-    <string name="tracking_banner_observation_failed">Data tracking service has stopped after multiple errors. Please retry or restart the app.</string>
-    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
-    <string name="settings_load_error">Settings load error</string>
-    <string name="sim_list_unavailable_error">SIM list is unavailable. SIM settings will be available after reload.</string>
-    <string name="refresh_error">Data refresh error</string>
+    <string name="settings_widget_title">وجٹ ترتیبات</string>
+    <string name="widget_description">ہر SIM کارڈ کے لیے بقایا منٹ اور موبائل ٹریفک دکھاتا ہے۔</string>
+    <string name="background_transparency">پس منظر کی شفافیت</string>
+    <string name="display_minutes">منٹ دکھائیں</string>
+    <string name="display_minutes_limit">منٹ کی حد دکھائیں</string>
+    <string name="display_traffic">ٹریفک دکھائیں</string>
+    <string name="display_traffic_limit">ٹریفک کی حد دکھائیں</string>
+    <string name="display_name">نام دکھائیں</string>
+    <string name="display_icon">آئیکن دکھائیں</string>
+    <string name="show_sim_checkbox">یہ SIM کارڈ دکھائیں</string>
+    <string name="preview">پیش منظر</string>
+    <string name="layout_mode_title">لے آؤٹ موڈ</string>
+    <string name="sim_arrangement_prompt">SIM کی ترتیب منتخب کریں</string>
+    <string name="color_background">پس منظر کا رنگ:</string>
+    <string name="custom_color">حسب ضرورت&#8230;</string>
+    <string name="font_size">فونٹ کا سائز</string>
+    <string name="traffic_tracking_limitation_title">ٹریفک ٹریکنگ کی حد</string>
+    <string name="traffic_tracking_limitation_body">Android پورے ڈیوائس کے لیے موبائل ڈیٹا کا استعمال کل قدر کے طور پر فراہم کرتا ہے۔ \n\nMinuteWatcher تمام موبائل ٹریفک کو اس SIM کارڈ سے منسوب کرتا ہے جو آپ کی سسٹم ترتیبات میں \"ڈیفالٹ ڈیٹا SIM\" کے طور پر منتخب کی گئی ہے۔\n\nاگر آپ اپنی ڈیفالٹ ڈیٹا SIM تبدیل کرتے ہیں، تو ایپ اس تبدیلی کو پہچان لے گی اور اس لمحے سے نئی SIM کے لیے ٹریفک منسوب کرنا شروع کر دے گی۔</string>
+    <string name="tracking_banner_phone_permission">SIM کارڈز کی شناخت کے لیے فون کی اجازت درکار ہے۔ کچھ خصوصیات کام نہیں کر سکتی ہیں۔</string>
+    <string name="tracking_banner_usage_access">موبائل ڈیٹا کے استعمال کو درست طریقے سے ٹریک کرنے کے لیے استعمال تک رسائی درکار ہے۔</string>
+    <string name="tracking_banner_sim_discovery_error">SIM کارڈز کی تلاش ناکام ہو گئی۔ براہ کرم دوبارہ کوشش کریں۔</string>
+    <string name="tracking_banner_traffic_error">ٹریفک ڈیٹا اپ ڈیٹ کرنے میں خرابی پیش آئی۔</string>
+    <string name="tracking_banner_calls_error">کال ٹریکنگ ڈیٹا اپ ڈیٹ کرنے میں خرابی پیش آئی۔</string>
+    <string name="tracking_banner_appsearch_error">AppSearch انڈیکسنگ ناکام ہو گئی۔ عالمی تلاش پرانی ہو سکتی ہے۔ یہ وجٹ یا ٹریکنگ فنکشنلٹی کو متاثر نہیں کرتا ہے۔</string>
+    <string name="tracking_banner_shortcuts_error">ڈائنامک شارٹ کٹس کی اپ ڈیٹ ناکام ہو گئی۔</string>
+    <string name="tracking_banner_notification_permission">استعمال کے الرٹس موصول کرنے کے لیے نوٹیفکیشن کی اجازت کی سفارش کی جاتی ہے۔</string>
+    <string name="tracking_banner_widget_error">سسٹم کی حدود کی وجہ سے وجٹ اپ ڈیٹ نہیں ہو سکتا۔</string>
+    <string name="tracking_banner_inaccurate_calls">کچھ کالز SIM کارڈ کے ساتھ ملائی نہیں جا سکیں اور انہیں واحد فعال SIM سے منسوب کیا گیا۔ قدریں غیر درست ہو سکتی ہیں۔</string>
+    <string name="tracking_banner_calls_attribution_error">ایک سے زیادہ ہم وقت کالز کا پتہ چلا۔ SIM کارڈ کا تعین کرنے میں ناکام؛ ایسی کالز کے لیے منٹ شامل نہیں کیے گئے۔</string>
+    <string name="tracking_banner_observation_failed">متعدد خرابیوں کے بعد ڈیٹا ٹریکنگ سروس رک گئی ہے۔ براہ کرم دوبارہ کوشش کریں یا ایپ کو دوبارہ شروع کریں۔</string>
+    <string name="tracking_banner_storage_degraded">اسٹوریج متاثر ہوئی: ایپ دوبارہ شروع ہونے کے بعد اعداد و شمار ری سیٹ ہو سکتے ہیں۔ براہ کرم سسٹم ترتیبات چیک کریں۔</string>
+    <string name="settings_load_error">ترتیبات لوڈ کرنے میں خرابی</string>
+    <string name="sim_list_unavailable_error">SIM کی فہرست دستیاب نہیں ہے۔ دوبارہ لوڈ کرنے کے بعد SIM ترتیبات دستیاب ہوں گی۔</string>
+    <string name="refresh_error">ڈیٹا ریفریش کرنے میں خرابی</string>
     <string name="check_mark">✓</string>
-    <string name="stale_data_warning">Data might be outdated</string>
-    <string name="notification_permission_permanent_denial">Notifications are disabled. Please enable them in App Settings to receive alerts.</string>
-    <string name="action_grant">Grant</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_app_settings">App Settings</string>
-    <string name="action_retry">Retry</string>
-    <string name="validation_error_invalid_range">Please enter a value between %1$s and %2$s</string>
-    <string name="validation_error_invalid_number">Please enter a valid number</string>
-    <string name="validation_error_field_required">Field cannot be empty</string>
-    <string name="widget_pin_unsupported">Your launcher does not support automatic widget placement. Please add the widget manually.</string>
-    <string name="widget_already_added">Widget already added to the home screen</string>
-    <string name="widget_added_success">Widget added to the home screen</string>
-    <string name="onboarding_title">Welcome to MinuteWatcher!</string>
-    <string name="onboarding_message">MinuteWatcher cannot automatically retrieve your plan details from your mobile carrier.\n\nTo begin tracking, please manually set your minutes/data limits and the monthly reset day for each SIM card. The app will handle all monitoring from that point forward.</string>
-    <string name="onboarding_button">Got it</string>
+    <string name="stale_data_warning">ڈیٹا پرانا ہو سکتا ہے</string>
+    <string name="notification_permission_permanent_denial">نوٹیفیکیشنز غیر فعال ہیں۔ الرٹس موصول کرنے کے لیے براہ کرم انہیں ایپ ترتیبات میں فعال کریں۔</string>
+    <string name="action_grant">اجازت دیں</string>
+    <string name="action_settings">ترتیبات</string>
+    <string name="action_app_settings">ایپ ترتیبات</string>
+    <string name="action_retry">دوبارہ کوشش کریں</string>
+    <string name="validation_error_invalid_range">براہ کرم %1$s اور %2$s کے درمیان قدر درج کریں</string>
+    <string name="validation_error_invalid_number">براہ کرم درست نمبر درج کریں</string>
+    <string name="validation_error_field_required">فیلڈ خالی نہیں ہو سکتی</string>
+    <string name="widget_pin_unsupported">آپ کا لانچر خودکار وجٹ پلیسمنٹ کی حمایت نہیں کرتا ہے۔ براہ کرم وجٹ دستی طور پر شامل کریں۔</string>
+    <string name="widget_already_added">وجٹ پہلے ہی ہوم اسکرین پر شامل ہے</string>
+    <string name="widget_added_success">وجٹ ہوم اسکرین پر شامل کر دیا گیا</string>
+    <string name="onboarding_title">MinuteWatcher میں خوش آمدید!</string>
+    <string name="onboarding_message">MinuteWatcher آپ کے موبائل کیریئر سے آپ کے پلان کی تفصیلات خودکار طور پر حاصل نہیں کر سکتا۔\n\nٹریکنگ شروع کرنے کے لیے، براہ کرم ہر SIM کارڈ کے لیے اپنے منٹ/ڈیٹا کی حدود اور ماہانہ ری سیٹ کا دن دستی طور پر سیٹ کریں۔ اس کے بعد ایپ تمام نگرانی خود سنبھال لے گی۔</string>
+    <string name="onboarding_button">سمجھ گیا</string>
 
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">غلط SIM سلاٹ انڈیکس: %1$d</string>
@@ -85,104 +85,99 @@
     <string name="error_unknown">نامعلوم خرابی: %1$s</string>
 
     <!-- Dialogs -->
-    <string name="cancel_button">Cancel</string>
-    <string name="save_button">Save</string>
-    <string name="set_button">Set</string>
-    <string name="action_ok">OK</string>
-    <string name="reset_limits_button">Reset limits</string>
-    <string name="reset_counters">Reset counters</string>
-    <string name="reset_confirmation_title">Reset Counters?</string>
-    <string name="reset_confirmation_body">This will clear all tracked usage and adjustments for this SIM card. This action cannot be undone.</string>
-    <string name="reset_limits_confirmation_title">Reset limits?</string>
-    <string name="reset_limits_confirmation_body">This will clear the minutes and traffic limits and disable rollover for this SIM card. Tracked usage will not be changed.</string>
-    <string name="choose_reset_day">Choose the day of the month for automatic reset:</string>
-    <string name="choose_reset_day_dialog_title">Choose reset day</string>
-    <string name="rollover_label">Accumulate remainders</string>
-    <string name="set_minutes_limit">Set monthly minutes limit:</string>
-    <string name="minutes_limit_hint">Minutes limit</string>
-    <string name="set_traffic_limit">Set monthly traffic limit (GB):</string>
-    <string name="traffic_limit_gb_hint_dialog">Traffic limit in GB</string>
-    <string name="limits_for_operator">Limits for %1$s</string>
+    <string name="cancel_button">منسوخ کریں</string>
+    <string name="save_button">محفوظ کریں</string>
+    <string name="set_button">سیٹ کریں</string>
+    <string name="action_ok">ٹھیک ہے</string>
+    <string name="reset_limits_button">حدود ری سیٹ کریں</string>
+    <string name="reset_counters">کاؤنٹرز ری سیٹ کریں</string>
+    <string name="reset_confirmation_title">کاؤنٹرز ری سیٹ کریں؟</string>
+    <string name="reset_confirmation_body">یہ اس SIM کارڈ کے لیے تمام ٹریک کردہ استعمال اور ایڈجسٹمنٹس کو صاف کر دے گا۔ یہ عمل واپس نہیں ہو سکتا۔</string>
+    <string name="reset_limits_confirmation_title">حدود ری سیٹ کریں؟</string>
+    <string name="reset_limits_confirmation_body">یہ اس SIM کارڈ کے لیے منٹ اور ٹریفک کی حدود کو صاف کر دے گا اور رول اوور کو غیر فعال کر دے گا۔ ٹریک کردہ استعمال تبدیل نہیں ہوگا۔</string>
+    <string name="choose_reset_day">خودکار ری سیٹ کے لیے مہینے کا دن منتخب کریں:</string>
+    <string name="choose_reset_day_dialog_title">ری سیٹ کا دن منتخب کریں</string>
+    <string name="rollover_label">بقیہ جات جمع کریں</string>
+    <string name="set_minutes_limit">ماہانہ منٹ کی حد سیٹ کریں:</string>
+    <string name="minutes_limit_hint">منٹ کی حد</string>
+    <string name="set_traffic_limit">ماہانہ ٹریفک حد (GB) سیٹ کریں:</string>
+    <string name="traffic_limit_gb_hint_dialog">GB میں ٹریفک کی حد</string>
+    <string name="limits_for_operator">%1$s کے لیے حدود</string>
 
     <!-- Notifications -->
-    <string name="notifications_title">Notifications</string>
-    <string name="notify_low_minutes_title">Notify about low minutes remaining</string>
-    <string name="notify_low_traffic_title">Notify about low traffic remaining</string>
-    <string name="aod_summary_title">Always-on Display summary</string>
-    <string name="aod_summary_description">Show a persistent silent notification with remaining minutes and traffic. Visible on the lock screen and, on devices that display notifications there, on the Always-on Display.</string>
-    <string name="aod_summary_unavailable">Enable notifications to use this feature</string>
-    <string name="notification_channel_name">Usage Monitoring</string>
-    <string name="notification_channel_desc">Tracking minutes and traffic usage</string>
-    <string name="notification_channel_aod_summary_name">Always-on Display Summary</string>
-    <string name="notification_channel_aod_summary_desc">Persistent silent summary of remaining minutes and traffic</string>
-    <string name="notification_minutes_title">Minutes usage %1$s</string>
-    <string name="notification_minutes_body">%1$s minutes usage! Left %2$s (%3$d%%). Month ends in %4$s.</string>
-    <string name="notification_traffic_title">Traffic usage %1$s</string>
-    <string name="notification_traffic_body">%1$s traffic usage! Left %2$.1f GB (%3$d%%). Month ends in %4$s.</string>
-    <string name="notification_minutes_exhausted_body">Minutes package for the period has ended.</string>
-    <string name="notification_traffic_exhausted_body">Traffic package for the period has ended.</string>
-    <string name="notification_minutes_body_no_period">%1$s minutes usage! Left %2$s (%3$d%%).</string>
-    <string name="notification_traffic_body_no_period">%1$s traffic usage! Left %2$.1f GB (%3$d%%).</string>
-    <string name="notification_minutes_exhausted_body_no_period">Minutes limit reached. Tracked usage keeps accumulating until you reset it.</string>
-    <string name="notification_traffic_exhausted_body_no_period">Traffic limit reached. Tracked usage keeps accumulating until you reset it.</string>
-    <string name="usage_level_low">LOW</string>
-    <string name="usage_level_critical">CRITICAL LOW</string>
+    <string name="notifications_title">نوٹیفیکیشنز</string>
+    <string name="notify_low_minutes_title">بقیہ منٹ کم ہونے پر مطلع کریں</string>
+    <string name="notify_low_traffic_title">بقیہ ٹریفک کم ہونے پر مطلع کریں</string>
+    <string name="aod_summary_title">Always-on Display خلاصہ</string>
+    <string name="aod_summary_description">بقیہ منٹ اور ٹریفک کے ساتھ ایک مستقل خاموش نوٹیفیکیشن دکھائیں۔ لاک اسکرین پر اور ان ڈیوائسز پر نظر آتا ہے جو وہاں نوٹیفیکیشنز دکھاتے ہیں، Always-on Display پر۔</string>
+    <string name="aod_summary_unavailable">اس خصوصیت کو استعمال کرنے کے لیے نوٹیفیکیشنز فعال کریں</string>
+    <string name="notification_channel_name">استعمال کی نگرانی</string>
+    <string name="notification_channel_desc">منٹ اور ٹریفک کے استعمال کی ٹریکنگ</string>
+    <string name="notification_channel_aod_summary_name">Always-on Display خلاصہ</string>
+    <string name="notification_channel_aod_summary_desc">بقیہ منٹ اور ٹریفک کا مستقل خاموش خلاصہ</string>
+    <string name="notification_minutes_title">منٹ کا استعمال %1$s</string>
+    <string name="notification_minutes_body">%1$s منٹ کا استعمال! باقی %2$s (%3$d%%)۔ مہینہ %4$s میں ختم ہو رہا ہے۔</string>
+    <string name="notification_traffic_title">ٹریفک کا استعمال %1$s</string>
+    <string name="notification_traffic_body">%1$s ٹریفک کا استعمال! باقی %2$.1f GB (%3$d%%)۔ مہینہ %4$s میں ختم ہو رہا ہے۔</string>
+    <string name="notification_minutes_exhausted_body">مدت کے لیے منٹ کا پیکج ختم ہو گیا ہے۔</string>
+    <string name="notification_traffic_exhausted_body">مدت کے لیے ٹریفک پیکج ختم ہو گیا ہے۔</string>
+    <string name="notification_minutes_body_no_period">%1$s منٹ کا استعمال! باقی %2$s (%3$d%%)۔</string>
+    <string name="notification_traffic_body_no_period">%1$s ٹریفک کا استعمال! باقی %2$.1f GB (%3$d%%)۔</string>
+    <string name="notification_minutes_exhausted_body_no_period">منٹ کی حد پوری ہو گئی۔ ٹریک کردہ استعمال اس وقت تک جمع ہوتا رہتا ہے جب تک آپ اسے ری سیٹ نہ کریں۔</string>
+    <string name="notification_traffic_exhausted_body_no_period">ٹریفک کی حد پوری ہو گئی۔ ٹریک کردہ استعمال اس وقت تک جمع ہوتا رہتا ہے جب تک آپ اسے ری سیٹ نہ کریں۔</string>
+    <string name="usage_level_low">کم</string>
+    <string name="usage_level_critical">انتہائی کم</string>
 
     <!-- Data & Units -->
-    <string name="remaining_text">Remaining:</string>
-    <string name="used_text">Used</string>
-    <string name="limit_text">Limit</string>
-    <string name="minutes_abbr">min.</string>
-    <string name="unit_minutes">min</string>
+    <string name="remaining_text">بقیہ:</string>
+    <string name="used_text">مستعمل</string>
+    <string name="limit_text">حد</string>
+    <string name="minutes_abbr">منٹ</string>
+    <string name="unit_minutes">منٹ</string>
     <string name="unit_gigabytes">GB</string>
-    <string name="traffic_label">Traffic</string>
-    <string name="traffic_remaining_text">Traffic remaining:</string>
+    <string name="traffic_label">ٹریفک</string>
+    <string name="traffic_remaining_text">بقیہ ٹریفک:</string>
     <string name="gb_abbr">GB</string>
-    <string name="auto_reset_day_suffix">day of month</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
-
+    <string name="auto_reset_day_suffix">مہینے کا دن</string>
     <plurals name="minutes_plurals">
-        <item quantity="one">%1$d minute</item>
-        <item quantity="other">%1$d minutes</item>
+        <item quantity="one">%1$d منٹ</item>
+        <item quantity="other">%1$d منٹ</item>
     </plurals>
     <plurals name="days_plurals">
-        <item quantity="one">%1$d day</item>
-        <item quantity="other">%1$d days</item>
+        <item quantity="one">%1$d دن</item>
+        <item quantity="other">%1$d دن</item>
     </plurals>
 
     <!-- Accessibility -->
-    <string name="sim_icon_content_desc">SIM card icon</string>
-    <string name="sim_card_details_content_desc">%1$s SIM card details</string>
-    <string name="adjust_minutes_content_desc">Adjust remaining minutes</string>
-    <string name="adjust_traffic_content_desc">Adjust remaining traffic</string>
-    <string name="traffic_info_content_desc">More information about traffic tracking</string>
-    <string name="set_limits_content_desc">Set limits for %1$s</string>
-    <string name="change_auto_reset_day_content_desc">Change auto-reset day</string>
-    <string name="toggle_auto_reset_content_desc">Enable or disable auto-reset</string>
-    <string name="menu_language_content_desc">Change language</string>
-    <string name="menu_theme_content_desc">Change theme</string>
-    <string name="navigate_up_content_desc">Navigate up</string>
-    <string name="banner_dismiss_content_desc">Dismiss banner</string>
+    <string name="sim_icon_content_desc">SIM کارڈ آئیکن</string>
+    <string name="sim_card_details_content_desc">%1$s SIM کارڈ کی تفصیلات</string>
+    <string name="adjust_minutes_content_desc">بقیہ منٹ ایڈجسٹ کریں</string>
+    <string name="adjust_traffic_content_desc">بقیہ ٹریفک ایڈجسٹ کریں</string>
+    <string name="traffic_info_content_desc">ٹریفک ٹریکنگ کے بارے میں مزید معلومات</string>
+    <string name="set_limits_content_desc">%1$s کے لیے حدود سیٹ کریں</string>
+    <string name="change_auto_reset_day_content_desc">خودکار ری سیٹ کا دن تبدیل کریں</string>
+    <string name="toggle_auto_reset_content_desc">خودکار ری سیٹ کو فعال یا غیر فعال کریں</string>
+    <string name="menu_language_content_desc">زبان تبدیل کریں</string>
+    <string name="menu_theme_content_desc">تھیم تبدیل کریں</string>
+    <string name="navigate_up_content_desc">اوپر جائیں</string>
+    <string name="banner_dismiss_content_desc">بینر ہٹائیں</string>
 
     <!-- Tracking Settings -->
-    <string name="tracking_title">Tracking</string>
-    <string name="call_tracking_title">Track call minutes</string>
-    <string name="call_tracking_description">Count call minutes for each SIM card. Turn off to track mobile data usage only.</string>
-    <string name="assistant_access_title">Assistant access</string>
-    <string name="assistant_access_description">Allow the on-device assistant to request your remaining minutes and mobile data (Android 16+). Disabled by default. The assistant may process the answers it receives.</string>
-    <string name="app_functions_display_description">Shares remaining minutes and mobile data with the on-device assistant</string>
+    <string name="tracking_title">ٹریکنگ</string>
+    <string name="call_tracking_title">کال منٹس ٹریک کریں</string>
+    <string name="call_tracking_description">ہر SIM کارڈ کے لیے کال کے منٹس گنائیں۔ صرف موبائل ڈیٹا کے استعمال کو ٹریک کرنے کے لیے بند کریں۔</string>
+    <string name="assistant_access_title">اسسٹنٹ رسائی</string>
+    <string name="assistant_access_description">آن ڈیوائس اسسٹنٹ کو اپنے بقیہ منٹ اور موبائل ڈیٹا کی درخواست کرنے کی اجازت دیں (Android 16+)۔ ڈیفالٹ کے طور پر غیر فعال۔ اسسٹنٹ موصول ہونے والے جوابات کو پروسیس کر سکتا ہے۔</string>
+    <string name="app_functions_display_description">بقیہ منٹ اور موبائل ڈیٹا کو آن ڈیوائس اسسٹنٹ کے ساتھ شیئر کرتا ہے</string>
 
     <!-- About Dialog -->
-    <string name="about_title">About</string>
-    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
-    <string name="about_author_name">Author: Pavel Mukhin</string>
-    <string name="about_email_label">Email:</string>
-    <string name="about_signoff">Best regards,</string>
-    <string name="about_version_format">Version %1$s (%2$d)</string>
-    <string name="about_content_desc">About info</string>
+    <string name="about_title">ایپ کے بارے میں</string>
+    <string name="about_message">MinuteWatcher بقیہ منٹس اور موبائل ڈیٹا کے استعمال کو ٹریک کرنے کے لیے ایک ایپ ہے۔</string>
+    <string name="about_author_name">مصنف: Pavel Mukhin</string>
+    <string name="about_translation_feedback">روسی کے علاوہ دوسری زبانوں کے لیے مشینی ترجمے استعمال کیے جاتے ہیں۔ اگر آپ کو کوئی غلطی یا غیر فطری فقرہ ملے تو براہ کرم اسے بہتر بنانے میں مدد کے لیے ڈویلपर کو ای میل کریں۔</string>
+    <string name="about_email_label">ای میل:</string>
+    <string name="about_signoff">نیک تمناؤں کے ساتھ،</string>
+    <string name="about_version_format">ورژن %1$s (%2$d)</string>
+    <string name="about_content_desc">ایپ کی معلومات</string>
+    <string name="aod_summary_no_limits_note">دکھانے کے لیے کچھ نہیں: کم از کم ایک SIM کارڈ کے لیے منٹ یا ڈیٹا کی حد طے کریں - خلاصہ صرف حد والے SIM دکھاتا ہے۔</string>
 </resources>

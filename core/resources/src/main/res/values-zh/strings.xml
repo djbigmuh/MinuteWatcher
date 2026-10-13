@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM 卡</string>
     <string name="no_sim_found">未找到 SIM 卡</string>
@@ -55,7 +55,7 @@
     <string name="tracking_banner_inaccurate_calls">某些通话无法与 SIM 卡匹配，已归因于唯一的活动 SIM 卡。数值可能不准确。</string>
     <string name="tracking_banner_calls_attribution_error">检测到多个同时通话。无法确定SIM卡；此类通话的分钟数未记入。</string>
     <string name="tracking_banner_observation_failed">数据跟踪服务在多次错误后已停止。请重试或重启应用。</string>
-    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
+    <string name="tracking_banner_storage_degraded">存储受损：应用重启后统计数据可能会被重置。请检查系统设置。</string>
     <string name="settings_load_error">设置加载错误</string>
     <string name="sim_list_unavailable_error">SIM列表不可用。重新加载后SIM设置将可用。</string>
     <string name="refresh_error">数据刷新错误</string>
@@ -137,14 +137,7 @@
     <string name="traffic_label">流量</string>
     <string name="traffic_remaining_text">剩余流量: </string>
     <string name="gb_abbr"> GB</string>
-    <string name="auto_reset_day_suffix">日</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
-    <!--
+    <string name="auto_reset_day_suffix">日</string><!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Chinese requires: other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -183,11 +176,13 @@
     <string name="app_functions_display_description">与设备上的助手共享剩余通话分钟数和移动数据流量</string>
 
     <!-- About Dialog -->
-    <string name="about_title">About</string>
-    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
-    <string name="about_author_name">Author: Pavel Mukhin</string>
-    <string name="about_email_label">Email:</string>
-    <string name="about_signoff">Best regards,</string>
-    <string name="about_version_format">Version %1$s (%2$d)</string>
-    <string name="about_content_desc">About info</string>
+    <string name="about_title">关于</string>
+    <string name="about_message">MinuteWatcher 是一款用于追踪剩余通话分钟数和移动数据流量使用情况的应用。</string>
+    <string name="about_author_name">作者: Pavel Mukhin</string>
+    <string name="about_translation_feedback">除俄语外的其他语言均使用机器翻译。如果您发现任何错误或不自然的措辞，请给开发者发电子邮件以帮助改进。</string>
+    <string name="about_email_label">电子邮箱:</string>
+    <string name="about_signoff">此致，</string>
+    <string name="about_version_format">版本 %1$s (%2$d)</string>
+    <string name="about_content_desc">关于信息</string>
+    <string name="aod_summary_no_limits_note">没有可显示的内容：至少为一张 SIM 卡设置通话时长或流量限制 - 摘要仅显示设有限制的 SIM 卡。</string>
 </resources>

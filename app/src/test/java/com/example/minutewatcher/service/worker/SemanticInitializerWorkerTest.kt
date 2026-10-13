@@ -223,6 +223,26 @@ class SemanticInitializerWorkerTest {
             assertEquals(ListenableWorker.Result.retry(), result)
         }
 
+    @Test
+    fun `unexpected exception in executeSemanticInit on attempt below limit retries`() =
+        runTest {
+            whenever(usageStateRepository.observeSnapshot()).thenThrow(RuntimeException("Unexpected error"))
+            val worker = createWorker(1)
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `unexpected exception in executeSemanticInit on attempt at limit fails`() =
+        runTest {
+            whenever(usageStateRepository.observeSnapshot()).thenThrow(RuntimeException("Unexpected error"))
+            val worker = createWorker(3)
+
+            val result = worker.doWork()
+            assertEquals(ListenableWorker.Result.failure(), result)
+        }
+
     private fun createEmptySnapshot() =
         GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),

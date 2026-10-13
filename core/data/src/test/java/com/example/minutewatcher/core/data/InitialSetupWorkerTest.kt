@@ -384,6 +384,7 @@ class InitialSetupWorkerTest {
 
             assertEquals(ListenableWorker.Result.retry(), result)
             verify(migrationService, never()).markSchemaCurrent()
+            verify(migrationFlagsRepository, never()).setMigrationV1Skipped(any())
         }
 
     @Test
@@ -446,6 +447,7 @@ class InitialSetupWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(migrationService).markSchemaCurrent()
+            verify(migrationFlagsRepository).setMigrationV1Skipped(MigrationSkipReason.MIGRATION_PARTIAL_FAILURE)
         }
 
     @Test

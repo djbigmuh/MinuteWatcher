@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">Cartões SIM</string>
@@ -139,12 +139,6 @@
     <string name="traffic_remaining_text">Tráfego restante: </string>
     <string name="gb_abbr"> GB</string>
     <string name="auto_reset_day_suffix">dia do mês</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d minuto</item>
         <item quantity="many">%1$d de minutos</item>
@@ -179,11 +173,13 @@
     <string name="app_functions_display_description">Partilha os minutos e os dados móveis restantes com o assistente do dispositivo</string>
 
     <!-- About Dialog -->
-    <string name="about_title">About</string>
-    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
-    <string name="about_author_name">Author: Pavel Mukhin</string>
-    <string name="about_email_label">Email:</string>
-    <string name="about_signoff">Best regards,</string>
-    <string name="about_version_format">Version %1$s (%2$d)</string>
-    <string name="about_content_desc">About info</string>
+    <string name="about_title">Sobre</string>
+    <string name="about_message">O MinuteWatcher é uma aplicação para monitorizar os minutos restantes e o consumo de dados móveis.</string>
+    <string name="about_author_name">Autor: Pavel Mukhin</string>
+    <string name="about_translation_feedback">São utilizadas traduções automáticas para idiomas que não sejam o russo. Se encontrar um erro ou uma formulação pouco natural, envie um e-mail ao programador para ajudar a melhorar.</string>
+    <string name="about_email_label">E-mail:</string>
+    <string name="about_signoff">Com os melhores cumprimentos,</string>
+    <string name="about_version_format">Versão %1$s (%2$d)</string>
+    <string name="about_content_desc">Informações da aplicação</string>
+    <string name="aod_summary_no_limits_note">Nada para apresentar: defina um limite de minutos ou dados para pelo menos um cartão SIM - o resumo mostra apenas os SIM com limites.</string>
 </resources>

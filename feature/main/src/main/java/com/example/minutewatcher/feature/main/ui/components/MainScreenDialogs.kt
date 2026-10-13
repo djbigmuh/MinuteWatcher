@@ -115,6 +115,7 @@ fun AboutDialog(
                     ),
                 )
                 Text(stringResource(id = R.string.about_author_name))
+                Text(stringResource(id = R.string.about_translation_feedback))
                 val email = stringResource(id = R.string.about_author_email)
                 val emailLabel = stringResource(id = R.string.about_email_label)
                 Row(

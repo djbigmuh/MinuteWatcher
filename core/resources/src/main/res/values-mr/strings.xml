@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">सिम कार्डे</string>
     <string name="no_sim_found">सिम कार्डे सापडली नाहीत</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">शिल्लक डेटा:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">महिन्याचा दिवस</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d मिनिट</item>
         <item quantity="other">%1$d मिनिटे</item>
@@ -179,8 +173,10 @@
     <string name="about_title">बद्दल</string>
     <string name="about_message">MinuteWatcher अ‍ॅप उर्वरित मिनिटे आणि मोबाइल डेटा वापर ट्रॅक करण्यासाठी आहे.</string>
     <string name="about_author_name">लेखक: Pavel Mukhin</string>
+    <string name="about_translation_feedback">रशियन व्यतिरिक्त इतर भाषांसाठी मशीन भाषांतराचा वापर केला जातो. तुम्हाला एखादी त्रुटी किंवा अप्राकृतिक वाक्प्रचार आढळल्यास, त्यात सुधारणा करण्यासाठी कृपया विकासकाला ईमेल पाठवा.</string>
     <string name="about_email_label">ईमेल:</string>
     <string name="about_signoff">आपला,</string>
     <string name="about_version_format">आवृत्ती %1$s (%2$d)</string>
     <string name="about_content_desc">माहितीबद्दल</string>
+    <string name="aod_summary_no_limits_note">दाखवण्यासारखे काही नाही: किमान एका SIM कार्डसाठी मिनिटे किंवा डेटा मर्यादा सेट करा - सारांश फक्त मर्यादेसह SIM दर्शवतो.</string>
 </resources>

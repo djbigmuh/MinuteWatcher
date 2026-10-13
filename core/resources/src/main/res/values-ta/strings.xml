@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">சிம் கார்டுகள்</string>
     <string name="no_sim_found">சிம் கார்டுகள் எதுவும் கிடைக்கவில்லை</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">மீதமுள்ள டேட்டா:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">மாதத்தின் நாள்</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d நிமிடம்</item>
         <item quantity="other">%1$d நிமிடங்கள்</item>
@@ -179,8 +173,10 @@
     <string name="about_title">பற்றி</string>
     <string name="about_message">MinuteWatcher என்பது மீதமுள்ள நிமிடங்கள் மற்றும் மொபைல் தரவு பயன்பாட்டைக் கண்காணிப்பதற்கான ஒரு பயன்பாடாகும்.</string>
     <string name="about_author_name">ஆசிரியர்: Pavel Mukhin</string>
+    <string name="about_translation_feedback">ரஷ்யன் அல்லாத மொழிகளுக்கு இயந்திர மொழிபெயர்ப்புகள் பயன்படுத்தப்படுகின்றன. பிழை அல்லது இயற்கையற்ற சொற்றொடரைக் கண்டால், அதை மேம்படுத்த உதவ டெவலப்பருக்கு மின்னஞ்சல் அனுப்பவும்.</string>
     <string name="about_email_label">மின்னஞ்சல்:</string>
     <string name="about_signoff">வாழ்த்துக்கள்,</string>
     <string name="about_version_format">பதிப்பு %1$s (%2$d)</string>
     <string name="about_content_desc">பற்றிய தகவல்</string>
+    <string name="aod_summary_no_limits_note">காண்பிக்க ஒன்றுமில்லை: குறைந்தபட்சம் ஒரு SIM கார்டுக்கு நிமிடங்கள் அல்லது தரவு வரம்பை அமைக்கவும் - சுருக்கம் வரம்புகள் உள்ள SIM-களை மட்டுமே காட்டும்.</string>
 </resources>

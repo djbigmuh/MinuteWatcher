@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">सिम कार्ड</string>
     <string name="no_sim_found">सिम कार्ड ना मिलल</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">बाक़ी डेटा:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">महीना के दिन</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d मिनट</item>
         <item quantity="other">%1$d मिनट</item>
@@ -179,8 +173,10 @@
     <string name="about_title">बारे में</string>
     <string name="about_message">MinuteWatcher बाक़ी मिनट आ मोबाइल डेटा उपयोग के ट्रैक करे खातिर एगो ऐप हवे।</string>
     <string name="about_author_name">लेखक: Pavel Mukhin</string>
+    <string name="about_translation_feedback">रूसियन के छोड़ के अन्य भाषा खातिर मशीन अनुवाद के इस्तेमाल होला। अगर आप कोनो गलती चाहे बेतुका बात देखीं त सुधार में मदद खातिर डेवलपर के ईमेल करीं।</string>
     <string name="about_email_label">ईमेल:</string>
     <string name="about_signoff">शुभकामना,</string>
     <string name="about_version_format">वर्जन %1$s (%2$d)</string>
     <string name="about_content_desc">जानकारी के बारे में</string>
+    <string name="aod_summary_no_limits_note">देखे के कुछ ना बा: कम से कम एगो SIM कार्ड खातिर मिनटया डेटा के सीमा सेट करीं - सारांश खाली सीमा वाला SIM देखावे ला。</string>
 </resources>

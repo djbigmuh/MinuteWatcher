@@ -1,7 +1,18 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.DataSourceType
+import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.MeasurementUnit
+import com.example.minutewatcher.core.model.PackageType
+import com.example.minutewatcher.core.model.SchemaVersion
+import com.example.minutewatcher.core.model.SemanticEntity
+import com.example.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,7 +45,8 @@ class WidgetSettingsViewModelAodTest : BaseWidgetSettingsViewModelFixture() {
     @Test
     fun `refreshAodSummaryAvailability handles RuntimeException and publishes false`() =
         runTest {
-            whenever(aodSummaryAvailability.isAodSummaryAvailable()).thenThrow(RuntimeException("Service unavailable"))
+            whenever(aodSummaryAvailability.isAodSummaryAvailable())
+                .thenThrow(RuntimeException("Service unavailable"))
             initViewModel()
 
             assertFalse(viewModel.aodSummaryAvailable.value)
@@ -43,12 +55,83 @@ class WidgetSettingsViewModelAodTest : BaseWidgetSettingsViewModelFixture() {
     @Test
     fun `refreshAodSummaryAvailability rethrows CancellationException`() =
         runTest {
-            whenever(aodSummaryAvailability.isAodSummaryAvailable()).thenThrow(CancellationException("Cancelled"))
+            whenever(aodSummaryAvailability.isAodSummaryAvailable())
+                .thenThrow(CancellationException("Cancelled"))
 
             try {
                 initViewModel()
             } catch (e: CancellationException) {
                 assertEquals("Cancelled", e.message)
             }
+        }
+
+    @Test
+    fun `aodSummaryHasContent is false when snapshot timestamp is empty`() =
+        runTest {
+            val snapshotFlow =
+                MutableStateFlow(
+                    GlobalSnapshot(
+                        SchemaVersion(1, 0, 0),
+                        Constants.Data.EMPTY_TIMESTAMP,
+                        emptyList(),
+                        emptyList(),
+                    ),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+            initViewModel()
+            backgroundScope.launch { viewModel.aodSummaryHasContent.collect {} }
+            runCurrent()
+
+            assertFalse(viewModel.aodSummaryHasContent.value)
+        }
+
+    @Test
+    fun `aodSummaryHasContent is false when snapshot has no sims with limits`() =
+        runTest {
+            val sim0 = SimSnapshot(0, "id_0", "MTS", emptyMap(), 1)
+            val snapshotFlow =
+                MutableStateFlow(
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, listOf(sim0), emptyList()),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+            initViewModel()
+            backgroundScope.launch { viewModel.aodSummaryHasContent.collect {} }
+            runCurrent()
+
+            assertFalse(viewModel.aodSummaryHasContent.value)
+        }
+
+    @Test
+    fun `aodSummaryHasContent is true when snapshot has at least one sim with limit`() =
+        runTest {
+            val entities =
+                mapOf(
+                    PackageType.MINUTES to
+                        SemanticEntity(
+                            "min_0",
+                            0,
+                            "MTS",
+                            PackageType.MINUTES,
+                            100L,
+                            10L,
+                            90L,
+                            MeasurementUnit.MINUTES,
+                            0L,
+                            0L,
+                            0L,
+                            DataSourceType.SYSTEM,
+                        ),
+                )
+            val sim0 = SimSnapshot(0, "id_0", "MTS", entities, 1)
+            val snapshotFlow =
+                MutableStateFlow(
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, listOf(sim0), emptyList()),
+                )
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
+            initViewModel()
+            backgroundScope.launch { viewModel.aodSummaryHasContent.collect {} }
+            runCurrent()
+
+            assertTrue(viewModel.aodSummaryHasContent.value)
         }
 }

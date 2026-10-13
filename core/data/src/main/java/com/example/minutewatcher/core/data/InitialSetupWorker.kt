@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.data.InitialSetupWorker.Companion.WORKER_TIMEOUT_MS
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MigrationSkipReason
@@ -100,9 +101,7 @@ class InitialSetupWorker
             throw IOException("Periodic check scheduling failed", e)
             }
 
-        /**
-         * UsageCheckWorker handles its own permissions dynamically during execution.
-         */
+        // UsageCheckWorker handles its own permissions dynamically during execution.
             deps.migrationFlagsRepository.setInitialSetupCompleted(true)
 
         return Result.success()
@@ -217,6 +216,7 @@ class InitialSetupWorker
                 if (totalFailures > 0) {
                     if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) return MigrationDecision.RETRY
                     AppLogger.e("InitialSetupWorker: Max migration attempts reached with $totalFailures failures.")
+                    deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.MIGRATION_PARTIAL_FAILURE)
                 }
 
                 deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)

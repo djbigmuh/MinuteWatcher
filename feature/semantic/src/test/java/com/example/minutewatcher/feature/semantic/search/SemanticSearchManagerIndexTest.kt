@@ -38,6 +38,67 @@ class SemanticSearchManagerIndexTest : SemanticSearchManagerTestFixtures() {
         }
 
     @Test
+    fun `partial success on stale removal sets error status and does not cache hash for retry`() =
+        runTest(testDispatcher) {
+            val manager = createManager(appScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            fakeWrapper.failAllRemoveByDocumentId = true
+
+            val result1 = manager.indexSnapshot(snapshot)
+
+            assertTrue(
+                "Should return PartialSuccess when removal fails",
+                result1 is SemanticSearchManager.IndexResult.PartialSuccess,
+            )
+            assertTrue("Status should be Error on removal failure", manager.status.value is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (manager.status.value as TrackingStatus.Error).type)
+
+            val session = fakeWrapper.lastSession!!
+            val initialPuts = session.putRequests.size
+
+            val result2 = manager.indexSnapshot(snapshot)
+
+            assertTrue(
+                "Should return PartialSuccess again",
+                result2 is SemanticSearchManager.IndexResult.PartialSuccess,
+            )
+            assertEquals(
+                "Should re-attempt put request because hash was not cached",
+                initialPuts + 1,
+                session.putRequests.size,
+            )
+        }
+
+    @Test
+    fun `successful retry after partial success transitions to ready and caches hash`() =
+        runTest(testDispatcher) {
+            val manager = createManager(appScope)
+            val snapshot = createSnapshotWithOneSim()
+
+            fakeWrapper.failAllRemoveByDocumentId = true
+            val result1 = manager.indexSnapshot(snapshot)
+            assertTrue(result1 is SemanticSearchManager.IndexResult.PartialSuccess)
+
+            val session = fakeWrapper.lastSession!!
+            val initialPuts = session.putRequests.size
+
+            fakeWrapper.failAllRemoveByDocumentId = false
+            session.failRemoveByDocumentId = false
+            val result2 = manager.indexSnapshot(snapshot)
+
+            assertTrue("Should return Success on retry", result2 is SemanticSearchManager.IndexResult.Success)
+            assertTrue("Status should transition to Ready", manager.status.value is TrackingStatus.Ready)
+            assertEquals("Should have performed put request on retry", initialPuts + 1, session.putRequests.size)
+
+            val putsBeforeSkip = session.putRequests.size
+            val result3 = manager.indexSnapshot(snapshot)
+
+            assertTrue("Should return Success on skipped attempt", result3 is SemanticSearchManager.IndexResult.Success)
+            assertEquals("Should NOT execute additional put request", putsBeforeSkip, session.putRequests.size)
+        }
+
+    @Test
     fun `indexSnapshot works with slot 1`() =
         runTest(testDispatcher) {
             val manager = createManager(appScope)

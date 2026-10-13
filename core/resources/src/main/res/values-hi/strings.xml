@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">सिम कार्ड</string>
     <string name="no_sim_found">सिम कार्ड नहीं मिले</string>
@@ -55,7 +55,7 @@
     <string name="tracking_banner_inaccurate_calls">कुछ कॉल को SIM कार्ड से मिलाया नहीं जा सका और उन्हें एकमात्र सक्रिय SIM के लिए जिम्मेदार ठहराया गया। मान अशुद्ध हो सकते हैं।</string>
     <string name="tracking_banner_calls_attribution_error">कई एक साथ कॉल का पता चला। SIM कार्ड निर्धारित करने में असमर्थ; ऐसे कॉल के लिए मिनट नहीं जोड़े गए。</string>
     <string name="tracking_banner_observation_failed">कई त्रुटियों के बाद डेटा ट्रैकिंग सेवा रुक गई है। कृपया पुन: प्रयास करें या ऐप को पुनरारंभ करें।</string>
-    <string name="tracking_banner_storage_degraded">Storage degraded: statistics may be reset after app restart. Please check system settings.</string>
+    <string name="tracking_banner_storage_degraded">स्टोरेज प्रभावित: ऐप रीस्टार्ट के बाद आंकड़े रीसेट हो सकते हैं। कृपया सिस्टम सेटिंग्स जांचें।</string>
     <string name="settings_load_error">सेटिंग्स लोड करने में त्रुटि</string>
     <string name="sim_list_unavailable_error">SIM सूची उपलब्ध नहीं है। पुनः लोड करने के बाद SIM सेटिंग्स उपलब्ध होंगी।</string>
     <string name="refresh_error">डेटा ताज़ा करने में त्रुटि</string>
@@ -137,14 +137,7 @@
     <string name="traffic_label">ट्रैफ़िक</string>
     <string name="traffic_remaining_text">शेष ट्रैफ़िक: </string>
     <string name="gb_abbr"> GB</string>
-    <string name="auto_reset_day_suffix">महीने का दिन</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
-    <!--
+    <string name="auto_reset_day_suffix">महीने का दिन</string><!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Hindi requires: one (0, 1), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -185,11 +178,13 @@
     <string name="app_functions_display_description">डिवाइस पर मौजूद सहायक के साथ शेष मिनट और मोबाइल डेटा साझा करता है</string>
 
     <!-- About Dialog -->
-    <string name="about_title">About</string>
-    <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
-    <string name="about_author_name">Author: Pavel Mukhin</string>
-    <string name="about_email_label">Email:</string>
-    <string name="about_signoff">Best regards,</string>
-    <string name="about_version_format">Version %1$s (%2$d)</string>
-    <string name="about_content_desc">About info</string>
+    <string name="about_title">ऐप के बारे में</string>
+    <string name="about_message">MinuteWatcher शेष मिनटों और मोबाइल डेटा उपयोग को ट्रैक करने के लिए एक ऐप है।</string>
+    <string name="about_author_name">लेखक: Pavel Mukhin</string>
+    <string name="about_translation_feedback">रूसी के अलावा अन्य भाषाओं के लिए मशीन अनुवाद का उपयोग किया जाता है। यदि आपको कोई त्रुटि या अप्राकृतिक शब्दावली दिखाई देती है, तो कृपया इसे सुधारने में मदद के लिए डेवलपर को ईमेल करें।</string>
+    <string name="about_email_label">ईमेल:</string>
+    <string name="about_signoff">आदर सहित,</string>
+    <string name="about_version_format">संस्करण %1$s (%2$d)</string>
+    <string name="about_content_desc">ऐप की जानकारी</string>
+    <string name="aod_summary_no_limits_note">प्रदर्शित करने के लिए कुछ नहीं: कम से कम एक SIM कार्ड के लिए मिनट या डेटा सीमा सेट करें - सारांश केवल सीमा वाले SIM को दिखाता है।</string>
 </resources>

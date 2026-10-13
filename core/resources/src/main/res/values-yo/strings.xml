@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Awọn kaadi SIM</string>
     <string name="no_sim_found">Kò sí kaadi SIM ti a rí</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">Data tí ó kù:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">ọjọ́ oṣù</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="other">%1$d ìṣẹ́jú</item>
     </plurals>
@@ -177,8 +171,10 @@
     <string name="about_title">Nípa</string>
     <string name="about_message">MinuteWatcher jẹ́ app kan fun ìtọpa àwọn ìṣẹ́jú àti data ti ó kù.</string>
     <string name="about_author_name">Onkọwe: Pavel Mukhin</string>
+    <string name="about_translation_feedback">A nlo awọn itumọ ẹrọ fun awọn ede ti kii ṣe Russia. Ti o ba ri aṣiṣe tabi gbolohun ti ko wọpọ, jọwọ firṣẹ e-mail si oludasilẹ lati ran lọwọ lati mu ilọsiwaju sii.</string>
     <string name="about_email_label">Imeeli:</string>
     <string name="about_signoff">Pẹlu ọ̀wọ̀,</string>
     <string name="about_version_format">Agbára %1$s (%2$d)</string>
     <string name="about_content_desc">Ìsọfúnni nípa app</string>
+    <string name="aod_summary_no_limits_note">Ko si ohun lati fihan: ṣeto opin iṣẹju tabi data fun o kere ju kaadi SIM kan - akopọ n fihan awọn SIM pẹlu awọn opin nikan.</string>
 </resources>

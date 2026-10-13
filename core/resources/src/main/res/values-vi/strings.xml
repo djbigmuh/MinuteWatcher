@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Thẻ SIM</string>
     <string name="no_sim_found">Không tìm thấy thẻ SIM</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">Dữ liệu còn lại:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">ngày trong tháng</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="other">%1$d phút</item>
     </plurals>
@@ -177,8 +171,10 @@
     <string name="about_title">Giới thiệu</string>
     <string name="about_message">MinuteWatcher là ứng dụng theo dõi số phút còn lại và dung lượng dữ liệu di động.</string>
     <string name="about_author_name">Tác giả: Pavel Mukhin</string>
+    <string name="about_translation_feedback">Bản dịch máy được sử dụng cho các ngôn ngữ không phải tiếng Nga. Nếu bạn tìm thấy lỗi hoặc cách diễn đạt chưa tự nhiên, vui lòng gửi email cho nhà phát triển để giúp cải thiện.</string>
     <string name="about_email_label">Email:</string>
     <string name="about_signoff">Trân trọng,</string>
     <string name="about_version_format">Phiên bản %1$s (%2$d)</string>
     <string name="about_content_desc">Thông tin giới thiệu</string>
+    <string name="aod_summary_no_limits_note">Không có gì để hiển thị: đặt giới hạn phút hoặc dữ liệu cho ít nhất một thẻ SIM - tóm tắt chỉ hiển thị các SIM có giới hạn.</string>
 </resources>

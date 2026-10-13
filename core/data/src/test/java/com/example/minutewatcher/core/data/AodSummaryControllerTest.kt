@@ -1,4 +1,4 @@
-package com.example.minutewatcher.core.data
+﻿package com.example.minutewatcher.core.data
 
 import android.app.LocaleManager
 import android.content.Context
@@ -25,7 +25,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -90,17 +89,20 @@ class AodSummaryControllerTest {
 
     @Test
     fun `setting disabled does not send notification`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = false)
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, never()).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `setting enabled with valid SIMs posts notification sorted by slot`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
 
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
@@ -113,11 +115,10 @@ class AodSummaryControllerTest {
                     trafficLimit = 10 * Constants.BYTES_PER_GB,
                     trafficRemainingBytes = 5 * Constants.BYTES_PER_GB,
                 )
-            // Emitted out of order
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim1, sim0))
 
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             val titleCaptor = argumentCaptor<String>()
             val lineCaptor = argumentCaptor<String>()
@@ -135,76 +136,80 @@ class AodSummaryControllerTest {
             assertEquals(2, expectedLines.size)
             assertEquals(expectedLines.first(), lineCaptor.firstValue)
 
-            // Slot 0 line comes first
             val line0 = expectedLines[0]
             val line1 = expectedLines[1]
 
-            assertEquals(
-                "MTS • 50 minutes",
-                line0,
-            )
-            assertEquals(
-                "Beeline • 120 minutes • 5.0 GB",
-                line1,
-            )
+            assertEquals("MTS • 50 minutes", line0)
+            assertEquals("Beeline • 120 minutes • 5.0 GB", line1)
+
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `SIM without limits is excluded and empty lines cancels summary`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val simNoLimits = createSimSnapshot(0, "MTS")
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(simNoLimits))
 
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, never()).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `empty timestamp snapshot cancels summary if posted`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
-            // First post
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
 
-            // Then empty timestamp
             snapshotFlow.value = createGlobalSnapshot(timestamp = Constants.Data.EMPTY_TIMESTAMP, sims = listOf(sim0))
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).cancelAodSummaryNotification()
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `permission flow value change re-evaluates aod summary availability`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
             verify(notificationHelper, times(1)).isAodSummaryAvailable()
 
             whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(false)
             permissionFlow.value = false
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(2)).isAodSummaryAvailable()
             verify(notificationHelper, times(1)).cancelAodSummaryNotification()
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `stale permission flow false with live availability true posts summary`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             permissionFlow.value = false
             whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(true)
@@ -212,106 +217,124 @@ class AodSummaryControllerTest {
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
 
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `live availability turning false cancels posted summary`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
 
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
 
             whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(false)
             snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0))
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).cancelAodSummaryNotification()
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `channel unavailability cancels posted summary`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
 
             whenever(notificationHelper.isAodSummaryAvailable()).thenReturn(false)
             snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0))
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).cancelAodSummaryNotification()
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `duplicate text prevents re-sending notification`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0))
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `changed text triggers new send`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             val sim0Updated = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 40)
             snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0Updated))
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(2)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `aodSummaryEnabled false cancels posted summary and re-enabling resends`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
             snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = false)
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).cancelAodSummaryNotification()
 
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(2)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `calling start multiple times is idempotent and does not duplicate observers`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
@@ -320,14 +343,17 @@ class AodSummaryControllerTest {
             val initialJob = controller.observationJob
             controller.start()
             assertEquals(initialJob, controller.observationJob)
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     @Test
     fun `exception during send does not kill observer and subsequent update retries`() =
-        runTest {
+        testScope.runTest {
             appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
             val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
 
@@ -337,7 +363,7 @@ class AodSummaryControllerTest {
             ).thenThrow(RuntimeException("Transient error"))
 
             controller.start()
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             whenever(
                 notificationHelper.sendAodSummaryNotification(any(), any(), any()),
@@ -345,9 +371,161 @@ class AodSummaryControllerTest {
 
             val sim0Updated = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 40)
             snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0Updated))
-            testScope.advanceUntilIdle()
+            testScheduler.advanceTimeBy(150L)
 
             verify(notificationHelper, times(2)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun `summary lines format strings according to app locale`() =
+        testScope.runTest {
+            val russianLocale = Locale.forLanguageTag("ru")
+            val localeList = LocaleListCompat.create(russianLocale)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val localeManager = context.getSystemService(LocaleManager::class.java)
+                if (localeManager != null) {
+                    localeManager.applicationLocales = LocaleList(russianLocale)
+                }
+            }
+            AppCompatDelegate.setApplicationLocales(localeList)
+
+            try {
+                appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
+
+                val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 5)
+                snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
+
+                controller.start()
+                testScheduler.advanceTimeBy(150L)
+
+                val lineCaptor = argumentCaptor<String>()
+                verify(notificationHelper).sendAodSummaryNotification(
+                    any(),
+                    lineCaptor.capture(),
+                    any(),
+                )
+
+                assertTrue(
+                    "Summary line should contain Russian plural 'минут'",
+                    lineCaptor.firstValue.contains("минут"),
+                )
+            } finally {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val localeManager = context.getSystemService(LocaleManager::class.java)
+                    if (localeManager != null) {
+                        localeManager.applicationLocales = LocaleList.getEmptyLocaleList()
+                    }
+                }
+                AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+                withTimeout(5.seconds) {
+                    controller.observationJob?.cancelAndJoin()
+                }
+            }
+        }
+
+    @Test
+    fun `reposts summary when notification was externally removed even if content is unchanged`() =
+        testScope.runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
+            val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
+
+            controller.start()
+            testScheduler.advanceTimeBy(150L)
+
+            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+
+            whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(false)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0)).copy(revision = 1L)
+            testScheduler.advanceTimeBy(150L)
+
+            verify(notificationHelper, times(2)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun `cancels summary on start if notification is active but settings or permission became unavailable`() =
+        testScope.runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = false)
+            whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(true)
+
+            controller.start()
+            testScheduler.advanceTimeBy(150L)
+
+            verify(notificationHelper).cancelAodSummaryNotification()
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun `heartbeat tick reposts summary when externally removed and content is unchanged`() =
+        testScope.runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
+            val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
+
+            controller.start()
+            testScheduler.advanceTimeBy(150L)
+
+            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+
+            whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(false)
+
+            testScheduler.advanceTimeBy(Constants.Aod.HEARTBEAT_INTERVAL_MS - 1000L)
+            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+
+            testScheduler.advanceTimeBy(1000L)
+
+            verify(notificationHelper, times(2)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun `heartbeat ticks do not trigger re-posts when notification is active and content unchanged`() =
+        testScope.runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
+            val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
+            snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
+
+            controller.start()
+            testScheduler.advanceTimeBy(150L)
+
+            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+
+            whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(true)
+
+            testScheduler.advanceTimeBy(Constants.Aod.HEARTBEAT_INTERVAL_MS * 3)
+
+            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun `heartbeat ticks do not post notification when disabled in settings`() =
+        testScope.runTest {
+            appSettingsFlow.value = AppSettings(aodSummaryEnabled = false)
+
+            controller.start()
+            testScheduler.advanceTimeBy(150L)
+
+            verify(notificationHelper, never()).sendAodSummaryNotification(any(), any(), any())
+
+            testScheduler.advanceTimeBy(Constants.Aod.HEARTBEAT_INTERVAL_MS)
+
+            verify(notificationHelper, never()).sendAodSummaryNotification(any(), any(), any())
+            withTimeout(5.seconds) {
+                controller.observationJob?.cancelAndJoin()
+            }
         }
 
     private fun createGlobalSnapshot(
@@ -412,85 +590,4 @@ class AodSummaryControllerTest {
             autoResetDay = 1,
         )
     }
-
-    @Test
-    fun `summary lines format strings according to app locale`() =
-        runTest {
-            val russianLocale = Locale.forLanguageTag("ru")
-            val localeList = LocaleListCompat.create(russianLocale)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val localeManager = context.getSystemService(LocaleManager::class.java)
-                if (localeManager != null) {
-                    localeManager.applicationLocales = LocaleList(russianLocale)
-                }
-            }
-            AppCompatDelegate.setApplicationLocales(localeList)
-
-            try {
-                appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
-
-                val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 5)
-                snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
-
-                controller.start()
-                testScope.advanceUntilIdle()
-
-                val lineCaptor = argumentCaptor<String>()
-                verify(notificationHelper).sendAodSummaryNotification(
-                    any(),
-                    lineCaptor.capture(),
-                    any(),
-                )
-
-                assertTrue(
-                    "Summary line should contain Russian plural 'минут'",
-                    lineCaptor.firstValue.contains("минут"),
-                )
-            } finally {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    val localeManager = context.getSystemService(LocaleManager::class.java)
-                    if (localeManager != null) {
-                        localeManager.applicationLocales = LocaleList.getEmptyLocaleList()
-                    }
-                }
-                AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
-            }
-        }
-
-    @Test
-    fun `reposts summary when notification was externally removed even if content is unchanged`() =
-        runTest {
-            appSettingsFlow.value = AppSettings(aodSummaryEnabled = true)
-            val sim0 = createSimSnapshot(0, "MTS", minutesLimit = 100, minutesRemaining = 50)
-            snapshotFlow.value = createGlobalSnapshot(timestamp = 1000L, sims = listOf(sim0))
-
-            controller.start()
-            testScope.advanceUntilIdle()
-
-            verify(notificationHelper, times(1)).sendAodSummaryNotification(any(), any(), any())
-
-            whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(false)
-            snapshotFlow.value = createGlobalSnapshot(timestamp = 2000L, sims = listOf(sim0)).copy(revision = 1L)
-            testScope.advanceUntilIdle()
-
-            verify(notificationHelper, times(2)).sendAodSummaryNotification(any(), any(), any())
-            withTimeout(5.seconds) {
-                controller.observationJob?.cancelAndJoin()
-            }
-        }
-
-    @Test
-    fun `cancels summary on start if notification is active but settings or permission became unavailable`() =
-        runTest {
-            appSettingsFlow.value = AppSettings(aodSummaryEnabled = false)
-            whenever(notificationHelper.isAodSummaryNotificationActive()).thenReturn(true)
-
-            controller.start()
-            testScope.advanceUntilIdle()
-
-            verify(notificationHelper).cancelAodSummaryNotification()
-            withTimeout(5.seconds) {
-                controller.observationJob?.cancelAndJoin()
-            }
-        }
 }

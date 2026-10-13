@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
+import com.example.minutewatcher.service.worker.SemanticInitializerWorker.Companion.MAX_SEMANTIC_INIT_ATTEMPTS
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -26,8 +27,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * Using WorkManager ensures that initialization is attempted reliably even if the
  * initial application process is short-lived.
  *
- * Contract: Upon unsuccessful initialization, work is queued for retry; upon lack of system support,
- * it completes successfully without retries.
+ * Contract: Upon unsuccessful initialization or unexpected error, work is queued for retry
+ * within [MAX_SEMANTIC_INIT_ATTEMPTS]; upon reaching the attempt limit, it fails; upon lack of
+ * system support (NOT_SUPPORTED), it completes successfully without retries.
  */
 @HiltWorker
 class SemanticInitializerWorker
@@ -48,7 +50,11 @@ class SemanticInitializerWorker
             throw e
         } catch (e: Exception) {
             AppLogger.e("SemanticInitializerWorker: unexpected error in doWork", e)
-            Result.failure()
+            if (runAttemptCount < MAX_SEMANTIC_INIT_ATTEMPTS) {
+                Result.retry()
+            } else {
+                Result.failure()
+            }
         }
 
     private suspend fun executeSemanticInit(): Result {

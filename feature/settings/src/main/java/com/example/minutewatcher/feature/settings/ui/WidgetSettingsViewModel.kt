@@ -12,6 +12,7 @@ import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.GlobalSnapshot
+import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -104,6 +105,20 @@ class WidgetSettingsViewModel
         private var loadJob: Job? = null
 
         val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
+
+    val aodSummaryHasContent: StateFlow<Boolean> =
+        snapshot
+            .map { s ->
+                s.timestamp != Constants.Data.EMPTY_TIMESTAMP &&
+                    s.simSnapshots.any { sim ->
+                        (sim.entities[PackageType.MINUTES]?.limit ?: 0L) > 0L ||
+                            (sim.entities[PackageType.DATA]?.limit ?: 0L) > 0L
+                    }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                initialValue = false,
+            )
 
         /**
          * State flow for the current application theme.

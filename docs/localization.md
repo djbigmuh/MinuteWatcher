@@ -22,8 +22,8 @@ The required cardinal plural categories for all supported app languages accordin
 | `hi`         | Hindi                 | `one`, `other`                               |                                                                                   |
 | `id`         | Indonesian            | `other`                                      |                                                                                   |
 | `ja`         | Japanese              | `other`                                      |                                                                                   |
-| `pt-BR`      | Portuguese (Brazil)   | `one`, `other`                               |                                                                                   |
-| `pt-PT`      | Portuguese (Portugal) | `one`, `other`                               |                                                                                   |
+| `pt-BR`      | Portuguese (Brazil)   | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
+| `pt-PT`      | Portuguese (Portugal) | `one`, `many`, `other`                       | `many` is selected only for values 1,000,000+; added for CLDR and Lint compliance |
 | `ru`         | Russian               | `one`, `few`, `many`, `other`                |                                                                                   |
 | `zh`         | Chinese               | `other`                                      |                                                                                   |
 | `ta`         | Tamil                 | `one`, `other`                               |                                                                                   |
@@ -49,3 +49,16 @@ The required cardinal plural categories for all supported app languages accordin
 
 - **Multiples of 1,000,000**: In languages like Spanish and French, the `many` quantity is used for large numbers (e.g., exactly 1,000,000). Even if the application currently deals with smaller numbers (e.g., minutes in a month), providing these quantities ensures compliance with Android Lint and future-proofs the translations.
 - **Verification**: Run `./gradlew lintDebug` to verify that all required quantities are present and no `MissingTranslation` or `PluralsCandidate` issues exist.
+
+## Source Language and Translation Provenance
+
+- **Native Source Language**: The native (source) language of the UI and internal documentation is Russian.
+- **Fallback Language**: The default resource set (`values/`) is English, serving as the fallback for unsupported
+  locales.
+- **Machine Generation**: All translations except Russian were generated automatically using a Large Language Model
+  (LLM) and may not have been proofread by native speakers.
+- **Feedback & Corrections**: User reports on language inaccuracies are welcomed via the developer contact channel
+  (e-mail available in the About dialog). Native speaker corrections are integrated key by key to replace machine
+  values.
+- **Mandatory Compliance**: The plural category table and Android Lint requirements remain strictly mandatory regardless
+  of translation provenance.

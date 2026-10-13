@@ -74,6 +74,8 @@ class WidgetSettingsScreenTest {
             .doReturn(MutableStateFlow(createEmptySnapshot()))
         whenever(viewModel.aodSummaryAvailable)
             .doReturn(MutableStateFlow(true))
+        whenever(viewModel.aodSummaryHasContent)
+            .doReturn(MutableStateFlow(true))
     }
 
     private fun createEmptySnapshot() =
@@ -304,6 +306,66 @@ class WidgetSettingsScreenTest {
             .onNodeWithText(context.getString(R.string.aod_summary_unavailable))
             .performScrollTo()
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun aodSummaryNoLimitsNoteDisplayedWhenEnabledAndAvailableAndNoContent() {
+        val settings = testSettings.copy(aodSummaryEnabled = true)
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
+        whenever(viewModel.aodSummaryHasContent).doReturn(MutableStateFlow(false))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_no_limits_note))
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun aodSummaryNoLimitsNoteNotDisplayedWhenContentExists() {
+        val settings = testSettings.copy(aodSummaryEnabled = true)
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
+        whenever(viewModel.aodSummaryHasContent).doReturn(MutableStateFlow(true))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_no_limits_note))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun aodSummaryUnavailableHasPriorityOverNoLimitsNote() {
+        val settings = testSettings.copy(aodSummaryEnabled = true)
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
+        whenever(viewModel.aodSummaryAvailable).doReturn(MutableStateFlow(false))
+        whenever(viewModel.aodSummaryHasContent).doReturn(MutableStateFlow(false))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(
+                viewModel = viewModel,
+                onBack = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_unavailable))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_no_limits_note))
+            .assertDoesNotExist()
     }
 
     @Test

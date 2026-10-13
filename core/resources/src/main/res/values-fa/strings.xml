@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <!-- General UI -->
     <string name="sim_cards_title">سیم‌کارت‌ها</string>
     <string name="no_sim_found">سیم‌کارتی یافت نشد</string>
@@ -138,12 +138,6 @@
     <string name="traffic_remaining_text">داده باقی‌مانده:</string>
     <string name="gb_abbr">GB</string>
     <string name="auto_reset_day_suffix">روز ماه</string>
-
-    <!-- Shortcuts -->
-    <string name="shortcut_minutes_short">%1$d %2$s</string>
-    <string name="shortcut_traffic_short">%1$.1f %2$s</string>
-    <string name="shortcut_long_format">%1$s: %2$s %3$s</string>
-
     <plurals name="minutes_plurals">
         <item quantity="one">%1$d دقیقه</item>
         <item quantity="other">%1$d دقیقه</item>
@@ -179,8 +173,10 @@
     <string name="about_title">درباره</string>
     <string name="about_message">MinuteWatcher برنامه‌ای برای ردیابی دقایق و مصرف داده‌های همراه باقی‌مانده است.</string>
     <string name="about_author_name">نویسنده: Pavel Mukhin</string>
+    <string name="about_translation_feedback">برای زبان‌های غیرروسی از ترجمه‌های ماشینی استفاده می‌شود. اگر خطا یا عبارت نامتعارفی یافتید، لطفاً برای کمک به بهبود آن به توسعه‌دهنده ایمیل بزنید.</string>
     <string name="about_email_label">ایمیل:</string>
     <string name="about_signoff">با احترام،</string>
     <string name="about_version_format">نسخه %1$s (%2$d)</string>
     <string name="about_content_desc">اطلاعات درباره برنامه</string>
+    <string name="aod_summary_no_limits_note">چیزی برای نمایش وجود ندارد: حد دقیقه یا داده را برای حداقل یک سیم‌کارت تعیین کنید - خلاصه فقط سیم‌کارت‌های دارای حد را نشان می‌دهد.</string>
 </resources>

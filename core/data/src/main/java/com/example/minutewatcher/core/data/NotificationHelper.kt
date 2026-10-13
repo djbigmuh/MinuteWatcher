@@ -105,9 +105,9 @@ class NotificationHelper
                 }
             val aodChannel =
                 NotificationChannel(
-                    Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
+                    Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
                     context.getString(R.string.notification_channel_aod_summary_name),
-                    NotificationManager.IMPORTANCE_MIN,
+                    NotificationManager.IMPORTANCE_LOW,
                 ).apply {
                     description = context.getString(R.string.notification_channel_aod_summary_desc)
                     setSound(null, null)
@@ -122,7 +122,12 @@ class NotificationHelper
             try {
                 manager.createNotificationChannel(aodChannel)
             } catch (e: RuntimeException) {
-                AppLogger.e("Failed to create AOD summary notification channel", e)
+                AppLogger.e("Failed to create V2 AOD summary notification channel", e)
+            }
+            try {
+                manager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+            } catch (e: RuntimeException) {
+                AppLogger.w("Failed to delete legacy AOD summary notification channel: ${e.message}")
             }
         }
 
@@ -168,7 +173,7 @@ class NotificationHelper
                 val notification = buildUsageNotification(title, message, simSlot, type)
                 manager.notify(notificationId, notification)
 
-                val summaryNotification = buildGroupSummaryNotification(title)
+                val summaryNotification = buildGroupSummaryNotification()
                 manager.notify(GROUP_SUMMARY_NOTIFICATION_ID, summaryNotification)
             } catch (e: SecurityException) {
                 AppLogger.w("Notification permission denied: ${e.message}")
@@ -211,7 +216,7 @@ class NotificationHelper
             .build()
     }
 
-    private fun buildGroupSummaryNotification(title: String): android.app.Notification {
+    private fun buildGroupSummaryNotification(): android.app.Notification {
         val summaryIntent =
             Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -228,7 +233,7 @@ class NotificationHelper
         return NotificationCompat
             .Builder(context, Constants.Notifications.CHANNEL_ID)
             .setContentTitle(context.getString(R.string.notification_channel_name))
-            .setContentText(title)
+            .setContentText(context.getString(R.string.notification_channel_desc))
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(ContextCompat.getColor(context, R.color.primary))
             .setContentIntent(summaryPendingIntent)
@@ -277,7 +282,7 @@ class NotificationHelper
 
                     val notification =
                         NotificationCompat
-                            .Builder(context, Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+                            .Builder(context, Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2)
                             .setContentTitle(title)
                             .setContentText(contentLine)
                             .setStyle(NotificationCompat.BigTextStyle().bigText(expandedText))
@@ -347,7 +352,7 @@ class NotificationHelper
                 if (!permissionManager.hasNotificationPermission() || !areNotificationsEnabledSafe()) {
                     false
                 } else {
-                    val channel = manager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+                    val channel = manager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2)
                     channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE
                 }
             } catch (e: SecurityException) {
