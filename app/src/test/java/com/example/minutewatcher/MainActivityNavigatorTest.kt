@@ -16,7 +16,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
 
-@Config(sdk = [35], application = MinuteWatcherTestApp::class)
+@Config(application = MinuteWatcherTestApp::class)
 @RunWith(RobolectricTestRunner::class)
 class MainActivityNavigatorTest {
     @Before
