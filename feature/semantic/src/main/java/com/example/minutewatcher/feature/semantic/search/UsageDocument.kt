@@ -9,7 +9,7 @@ import androidx.appsearch.annotation.Document.StringProperty
 import androidx.appsearch.app.AppSearchSchema
 import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.SemanticEntity
-import com.example.minutewatcher.core.model.util.ColorProvider
+import com.example.minutewatcher.core.model.util.UsageLevelResolver
 
 /**
  * DTO for AppSearch usage data indexing.
@@ -129,7 +129,7 @@ class UsageDocument {
 
         fun fromSemanticEntity(entity: SemanticEntity): UsageDocument {
             val percent = if (entity.limit > 0) ((entity.remaining * PERCENT_MAX) / entity.limit) else 0L
-            val usageStatus = ColorProvider.getUsageStatus(entity.remaining.toFloat(), entity.limit.toFloat()).name
+            val usageStatus = UsageLevelResolver.resolve(entity.remaining, entity.limit).name
 
             return UsageDocument(
                 namespace = AppSearchConstants.NAMESPACE,
