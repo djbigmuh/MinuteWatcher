@@ -448,10 +448,10 @@ class TrafficTracker
             }
         }
 
-    private suspend fun performInitializeWithRetry(): TrafficUpdateOutcome {
+        private suspend fun performInitializeWithRetry(): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             var lastException: Exception? = null
-        var finalOutcome: TrafficUpdateOutcome? = null
+            var finalOutcome: TrafficUpdateOutcome? = null
             for (attempt in 1..MAX_INIT_ATTEMPTS) {
                 when (val result = executeInitAttempt(startElapsed)) {
                     is InitAttemptResult.Success -> {
@@ -480,53 +480,53 @@ class TrafficTracker
                     return finalOutcome
                 }
             }
-        initializationFailed.set(true)
-        AppLogger.e("TrafficTracker: initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException)
-        val ex = IllegalStateException("Initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException)
-        handleInitError(startElapsed, ex)
-        return TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
-    }
-
-    private sealed interface InitAttemptResult {
-        data class Success(
-            val outcome: TrafficUpdateOutcome,
-        ) : InitAttemptResult
-
-        data class TerminalError(
-            val outcome: TrafficUpdateOutcome,
-        ) : InitAttemptResult
-
-        data class RetryableError(
-            val exception: Exception,
-        ) : InitAttemptResult
-    }
-
-    private suspend fun executeInitAttempt(startElapsed: Long): InitAttemptResult =
-        try {
-            val outcome = updateTrafficUsageLogic()
-            InitAttemptResult.Success(outcome)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            if (isTerminalInitError(e)) {
-                AppLogger.e("TrafficTracker: terminal init error", e)
-                handleInitError(startElapsed, e)
-                InitAttemptResult.TerminalError(mapTerminalInitOutcome(startElapsed, e))
-            } else {
-                InitAttemptResult.RetryableError(e)
-            }
+            initializationFailed.set(true)
+            AppLogger.e("TrafficTracker: initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException)
+            val ex = IllegalStateException("Initialization failed after $MAX_INIT_ATTEMPTS attempts", lastException)
+            handleInitError(startElapsed, ex)
+            return TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
         }
 
-    private fun mapTerminalInitOutcome(
-        startElapsed: Long,
-        e: Exception,
-    ): TrafficUpdateOutcome =
-        if (e is SecurityException) {
-            TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.PERMISSION_MISSING, null)
-        } else if (e is TrafficUpdateTimeoutException) {
-            TrafficUpdateOutcome.TimedOut(startElapsed)
-        } else {
-            TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
+        private sealed interface InitAttemptResult {
+            data class Success(
+                val outcome: TrafficUpdateOutcome,
+            ) : InitAttemptResult
+
+            data class TerminalError(
+                val outcome: TrafficUpdateOutcome,
+            ) : InitAttemptResult
+
+            data class RetryableError(
+                val exception: Exception,
+            ) : InitAttemptResult
+        }
+
+        private suspend fun executeInitAttempt(startElapsed: Long): InitAttemptResult =
+            try {
+                val outcome = updateTrafficUsageLogic()
+                InitAttemptResult.Success(outcome)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (isTerminalInitError(e)) {
+                    AppLogger.e("TrafficTracker: terminal init error", e)
+                    handleInitError(startElapsed, e)
+                    InitAttemptResult.TerminalError(mapTerminalInitOutcome(startElapsed, e))
+                } else {
+                    InitAttemptResult.RetryableError(e)
+                }
+            }
+
+        private fun mapTerminalInitOutcome(
+            startElapsed: Long,
+            e: Exception,
+        ): TrafficUpdateOutcome =
+            if (e is SecurityException) {
+                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.PERMISSION_MISSING, null)
+            } else if (e is TrafficUpdateTimeoutException) {
+                TrafficUpdateOutcome.TimedOut(startElapsed)
+            } else {
+                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
             }
 
         private fun handleInitError(
@@ -836,10 +836,10 @@ class TrafficTracker
             return executeSimChangeAndTrafficUpdate(startElapsed, target)
         }
 
-    private suspend fun executeSimChangeAndTrafficUpdate(
-        startElapsed: Long,
-        target: TargetInfo,
-    ): TrafficUpdateOutcome =
+        private suspend fun executeSimChangeAndTrafficUpdate(
+            startElapsed: Long,
+            target: TargetInfo,
+        ): TrafficUpdateOutcome =
             try {
                 simChangeHandler.withSimChangeLock {
                     val targetIdentity =
@@ -1107,74 +1107,74 @@ class TrafficTracker
                 )
             }
 
-    private suspend fun handleSuccessRetryAction(
-        startElapsed: Long,
-        target: TargetInfo,
-        targetIdentity: String,
-        statsResult: StatsResult.Success,
-        expectedLastResetDate: Long,
-    ): TrafficUpdateOutcome {
-        val applied =
-            withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                simUsageResetRepository.setLastTotalBytes(
-                    targetIdentity,
-                    statsResult.bytes,
-                    expectedLastResetDate,
-                )
-            }
-        if (applied == null) {
-            updateStatusOnError(
-                startElapsed,
-                "Baseline write timeout on retry",
-                code = TrackingStatus.ErrorCode.TIMEOUT,
-            )
-            return TrafficUpdateOutcome.TimedOut(startElapsed)
-        }
-        baselineManager.removeRetry(targetIdentity)
-        lastSuccessElapsed.set(timeProvider.elapsedRealtime())
-        transitionStatus(TrackingStatus.Active, force = true)
-        simChangeHandler.updateLastDataSubId(target.dataSubId)
-        dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
-        return if (applied) {
-            AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
-            TrafficUpdateOutcome.Completed
-        } else {
-            AppLogger.d(
-                "TrafficTracker: retry baseline set skipped due to window mismatch " +
-                    "for $targetIdentity",
-            )
-            TrafficUpdateOutcome.Skipped
-        }
-    }
-
-    private suspend fun handleFailedRetryAction(
-        startElapsed: Long,
-        targetIdentity: String,
-        currentPending: Int,
-        statsResult: StatsResult,
-    ): TrafficUpdateOutcome {
-        val nextRetry = currentPending + 1
-        return if (nextRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
-            baselineManager.removeRetry(targetIdentity)
-            updateStatusOnError(
-                startElapsed,
-                "Baseline reset failed for $targetIdentity after all retries",
-                type = TrackingStatus.ErrorType.DATABASE_ERROR,
-            )
-            TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.DATABASE_ERROR, null)
-        } else {
-            baselineManager.setRetryCount(targetIdentity, nextRetry)
-            val reason =
-                if (statsResult is StatsResult.Error) {
-                    statsResult.exception.message
-                } else {
-                    "Stats unavailable"
+        private suspend fun handleSuccessRetryAction(
+            startElapsed: Long,
+            target: TargetInfo,
+            targetIdentity: String,
+            statsResult: StatsResult.Success,
+            expectedLastResetDate: Long,
+        ): TrafficUpdateOutcome {
+            val applied =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    simUsageResetRepository.setLastTotalBytes(
+                        targetIdentity,
+                        statsResult.bytes,
+                        expectedLastResetDate,
+                    )
                 }
-            updateStatusOnError(
-                startElapsed,
-                reason ?: "Stats unavailable, retry pending",
-            )
-            TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
+            if (applied == null) {
+                updateStatusOnError(
+                    startElapsed,
+                    "Baseline write timeout on retry",
+                    code = TrackingStatus.ErrorCode.TIMEOUT,
+                )
+                return TrafficUpdateOutcome.TimedOut(startElapsed)
+            }
+            baselineManager.removeRetry(targetIdentity)
+            lastSuccessElapsed.set(timeProvider.elapsedRealtime())
+            transitionStatus(TrackingStatus.Active, force = true)
+            simChangeHandler.updateLastDataSubId(target.dataSubId)
+            dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
+            return if (applied) {
+                AppLogger.d("Traffic baseline reset on retry for $targetIdentity to ${statsResult.bytes}")
+                TrafficUpdateOutcome.Completed
+            } else {
+                AppLogger.d(
+                    "TrafficTracker: retry baseline set skipped due to window mismatch " +
+                        "for $targetIdentity",
+                )
+                TrafficUpdateOutcome.Skipped
+            }
+        }
+
+        private suspend fun handleFailedRetryAction(
+            startElapsed: Long,
+            targetIdentity: String,
+            currentPending: Int,
+            statsResult: StatsResult,
+        ): TrafficUpdateOutcome {
+            val nextRetry = currentPending + 1
+            return if (nextRetry >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
+                baselineManager.removeRetry(targetIdentity)
+                updateStatusOnError(
+                    startElapsed,
+                    "Baseline reset failed for $targetIdentity after all retries",
+                    type = TrackingStatus.ErrorType.DATABASE_ERROR,
+                )
+                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.DATABASE_ERROR, null)
+            } else {
+                baselineManager.setRetryCount(targetIdentity, nextRetry)
+                val reason =
+                    if (statsResult is StatsResult.Error) {
+                        statsResult.exception.message
+                    } else {
+                        "Stats unavailable"
+                    }
+                updateStatusOnError(
+                    startElapsed,
+                    reason ?: "Stats unavailable, retry pending",
+                )
+                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
             }
         }
 

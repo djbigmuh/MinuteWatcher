@@ -262,22 +262,22 @@ class SimUsageRepositoryImpl
             return applied
         }
 
-    private fun isWindowCompatible(
-        currentResetDate: Long,
-        expectedLastResetDate: Long,
-    ): Boolean =
-        currentResetDate == expectedLastResetDate ||
-            expectedLastResetDate == Constants.Data.EMPTY_TIMESTAMP ||
-            currentResetDate == Constants.Data.EMPTY_TIMESTAMP
+        private fun isWindowCompatible(
+            currentResetDate: Long,
+            expectedLastResetDate: Long,
+        ): Boolean =
+            currentResetDate == expectedLastResetDate ||
+                expectedLastResetDate == Constants.Data.EMPTY_TIMESTAMP ||
+                currentResetDate == Constants.Data.EMPTY_TIMESTAMP
 
-    /**
-     * Ensures tracking window is initialized.
-     *
-     * DataStore.edit provides atomicity within the transaction block. Note that [resetMutex]
-     * is acquired around the external block to serialize concurrent reset/initialization operations
-     * across threads/coroutines.
-     * Safe to call from any coroutine context.
-     */
+        /**
+         * Ensures tracking window is initialized.
+         *
+         * DataStore.edit provides atomicity within the transaction block. Note that [resetMutex]
+         * is acquired around the external block to serialize concurrent reset/initialization operations
+         * across threads/coroutines.
+         * Safe to call from any coroutine context.
+         */
         override suspend fun ensureTrackingWindowInitialized(identity: String): Boolean =
             resetMutex.withLock {
                 var initialized = false

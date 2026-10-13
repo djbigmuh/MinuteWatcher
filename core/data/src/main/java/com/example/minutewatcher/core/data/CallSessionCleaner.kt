@@ -120,7 +120,7 @@ internal class CallSessionCleaner
                 null
             }
 
-    private suspend fun readElapsedRealtime(subId: Int): Long? =
+        private suspend fun readElapsedRealtime(subId: Int): Long? =
             try {
                 callSessionRepository
                     .getElapsedRealtime(subId)

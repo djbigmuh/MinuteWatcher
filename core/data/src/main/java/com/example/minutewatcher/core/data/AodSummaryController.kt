@@ -51,14 +51,14 @@ class AodSummaryController
     ) {
         private val started = AtomicBoolean(false)
 
-    @Volatile
+        @Volatile
         @VisibleForTesting
         internal var observationJob: Job? = null
 
-    @Volatile
+        @Volatile
         private var isPosted = false
 
-    @Volatile
+        @Volatile
         private var lastPublishedText: String? = null
 
         /**

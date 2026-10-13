@@ -111,8 +111,8 @@ class UpdateCoordinator
         internal val currentObservationJob = AtomicReference<Job?>(null)
         private val currentUpdateJob = AtomicReference<Job?>(null)
 
-    @VisibleForTesting
-    internal val takeoverUpdateJob = AtomicReference<Job?>(null)
+        @VisibleForTesting
+        internal val takeoverUpdateJob = AtomicReference<Job?>(null)
 
         init {
             ensureObservationStarted()

@@ -115,10 +115,10 @@ internal class SimIdentityObserver
         @VisibleForTesting
         internal fun emitManualTrigger(): Boolean = manualTrigger.tryEmit(Unit)
 
-    @VisibleForTesting
-    internal fun resetGeneralAttempt() {
-        generalAttempt.set(0)
-    }
+        @VisibleForTesting
+        internal fun resetGeneralAttempt() {
+            generalAttempt.set(0)
+        }
 
         private fun scheduleDiscoveryRecovery(reason: String) {
             val previous = recoveryJob.getAndSet(null)
@@ -199,11 +199,11 @@ internal class SimIdentityObserver
                     replay = 1,
                 )
 
-    /**
-     * Flow of physical active SIMs derived from discovery.
-     *
-     * Invariant: An empty list emitted on failure is always accompanied by a non-Active status.
-     */
+        /**
+         * Flow of physical active SIMs derived from discovery.
+         *
+         * Invariant: An empty list emitted on failure is always accompanied by a non-Active status.
+         */
         @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         private val physicalActiveSims: Flow<List<ActiveSimInfo>> =
             seedFlow
@@ -319,23 +319,23 @@ internal class SimIdentityObserver
                         }
                 }.distinctUntilChanged()
 
-    private suspend fun FlowCollector<List<ActiveSimInfo>>.enterTerminalDiscoveryFailure(
-        message: String,
-        reasonForRecovery: String,
-        emitEmpty: Boolean,
-    ) {
-        AppLogger.e(message)
-        transitionStatus(
-            TrackingStatus.Error(
-                TrackingStatus.ErrorType.UNKNOWN,
-                message,
-            ),
-        )
-        scheduleDiscoveryRecovery(reasonForRecovery)
-        if (emitEmpty) {
-            emit(emptyList())
+        private suspend fun FlowCollector<List<ActiveSimInfo>>.enterTerminalDiscoveryFailure(
+            message: String,
+            reasonForRecovery: String,
+            emitEmpty: Boolean,
+        ) {
+            AppLogger.e(message)
+            transitionStatus(
+                TrackingStatus.Error(
+                    TrackingStatus.ErrorType.UNKNOWN,
+                    message,
+                ),
+            )
+            scheduleDiscoveryRecovery(reasonForRecovery)
+            if (emitEmpty) {
+                emit(emptyList())
+            }
         }
-    }
 
         private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryResult(
             result: SimDiscoveryResult,

@@ -89,21 +89,21 @@ class UsageCheckWorker
                 Result.failure()
             }
 
-    private suspend fun checkUsageAndNotify(): Result =
-        when (deps.trafficTracker.updateTrafficUsage()) {
-            is TrafficUpdateOutcome.TimedOut -> {
-                AppLogger.w("UsageCheckWorker: Traffic update timed out, retrying.")
-                Result.retry()
-            }
+        private suspend fun checkUsageAndNotify(): Result =
+            when (deps.trafficTracker.updateTrafficUsage()) {
+                is TrafficUpdateOutcome.TimedOut -> {
+                    AppLogger.w("UsageCheckWorker: Traffic update timed out, retrying.")
+                    Result.retry()
+                }
 
-            TrafficUpdateOutcome.Completed,
-            TrafficUpdateOutcome.Skipped,
-            is TrafficUpdateOutcome.Failed,
+                TrafficUpdateOutcome.Completed,
+                TrafficUpdateOutcome.Skipped,
+                is TrafficUpdateOutcome.Failed,
                 -> {
-                tryPerformAutoReset()
-                executeRefreshAndProcess()
+                    tryPerformAutoReset()
+                    executeRefreshAndProcess()
+                }
             }
-        }
 
         private suspend fun executeRefreshAndProcess(): Result {
             val refreshResult =
@@ -274,190 +274,190 @@ class UsageCheckWorker
             }
         }
 
-    private suspend fun checkTrafficUsage(
+        private suspend fun checkTrafficUsage(
             entity: SemanticEntity,
             daysRemaining: Int,
             identity: String,
             appSettings: AppSettings,
             autoReset: Boolean,
         ) {
-        if ((entity.limit <= 0) || !appSettings.notifyLowTraffic) return
+            if ((entity.limit <= 0) || !appSettings.notifyLowTraffic) return
 
-        val notifiedExhausted =
+            val notifiedExhausted =
                 deps.simNotificationFlagsRepository
                     .getNotifiedExhaustedTraffic(identity)
                     .firstWithTimeout() ?: run {
                     AppLogger.w("UsageCheckWorker: timeout reading exhausted traffic flag for $identity, skipping")
                     return
                 }
-        if (entity.remaining <= 0) {
-            if (!notifiedExhausted) {
-                val bodyResId = getTrafficExhaustedResId(autoReset)
-                sendNotificationWithBodyRes(
-                    entity.operatorName,
-                    bodyResId,
-                    entity.simSlot,
-                    UsageNotificationType.TRAFFIC,
-                )
-                deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = true)
-            }
-        } else {
-            if (notifiedExhausted) {
-                deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(
+            if (entity.remaining <= 0) {
+                if (!notifiedExhausted) {
+                    val bodyResId = getTrafficExhaustedResId(autoReset)
+                    sendNotificationWithBodyRes(
+                        entity.operatorName,
+                        bodyResId,
+                        entity.simSlot,
+                        UsageNotificationType.TRAFFIC,
+                    )
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = true)
+                }
+            } else {
+                if (notifiedExhausted) {
+                    deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(
+                        identity,
+                        notified = false,
+                    )
+                }
+                checkUsageLevelAndNotify(
+                    entity,
+                    daysRemaining,
                     identity,
-                    notified = false,
+                    autoReset,
+                    PackageType.DATA,
                 )
             }
-            checkUsageLevelAndNotify(
+        }
+
+        /**
+         * Handles usage level check and notification escalation for minutes and traffic.
+         */
+        private suspend fun checkUsageLevelAndNotify(
+            entity: SemanticEntity,
+            daysRem: Int,
+            identity: String,
+            autoReset: Boolean,
+            packageType: PackageType,
+        ) {
+            val level = UsageLevelResolver.resolve(entity.remaining, entity.limit)
+            val isMinutes = packageType == PackageType.MINUTES
+
+            val notifiedLow = fetchLowFlag(identity, isMinutes) ?: return
+            val notifiedCritical = fetchCriticalFlag(identity, isMinutes) ?: return
+
+            handleNotificationDispatch(
                 entity,
-                daysRemaining,
-                identity,
+                daysRem,
                 autoReset,
-                PackageType.DATA,
+                packageType,
+                level,
+                notifiedLow,
+                notifiedCritical,
             )
+            updateFlagsIfNeeded(identity, isMinutes, level, notifiedLow, notifiedCritical)
         }
-    }
 
-    /**
-     * Handles usage level check and notification escalation for minutes and traffic.
-     */
-    private suspend fun checkUsageLevelAndNotify(
-        entity: SemanticEntity,
-        daysRem: Int,
-        identity: String,
-        autoReset: Boolean,
-        packageType: PackageType,
-    ) {
-        val level = UsageLevelResolver.resolve(entity.remaining, entity.limit)
-        val isMinutes = packageType == PackageType.MINUTES
-
-        val notifiedLow = fetchLowFlag(identity, isMinutes) ?: return
-        val notifiedCritical = fetchCriticalFlag(identity, isMinutes) ?: return
-
-        handleNotificationDispatch(
-            entity,
-            daysRem,
-            autoReset,
-            packageType,
-            level,
-            notifiedLow,
-            notifiedCritical,
-        )
-        updateFlagsIfNeeded(identity, isMinutes, level, notifiedLow, notifiedCritical)
-    }
-
-    private suspend fun fetchLowFlag(
-        identity: String,
-        isMinutes: Boolean,
-    ): Boolean? =
-        (
-            if (isMinutes) {
-                deps.simNotificationFlagsRepository.getNotifiedLowMinutes(identity)
-            } else {
-                deps.simNotificationFlagsRepository.getNotifiedLowTraffic(identity)
-            }
+        private suspend fun fetchLowFlag(
+            identity: String,
+            isMinutes: Boolean,
+        ): Boolean? =
+            (
+                if (isMinutes) {
+                    deps.simNotificationFlagsRepository.getNotifiedLowMinutes(identity)
+                } else {
+                    deps.simNotificationFlagsRepository.getNotifiedLowTraffic(identity)
+                }
             ).firstWithTimeout()
 
-    private suspend fun fetchCriticalFlag(
-        identity: String,
-        isMinutes: Boolean,
-    ): Boolean? =
-        (
-            if (isMinutes) {
-                deps.simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)
-            } else {
-                deps.simNotificationFlagsRepository.getNotifiedCriticalTraffic(identity)
-            }
+        private suspend fun fetchCriticalFlag(
+            identity: String,
+            isMinutes: Boolean,
+        ): Boolean? =
+            (
+                if (isMinutes) {
+                    deps.simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)
+                } else {
+                    deps.simNotificationFlagsRepository.getNotifiedCriticalTraffic(identity)
+                }
             ).firstWithTimeout()
 
-    private fun handleNotificationDispatch(
-        entity: SemanticEntity,
-        daysRem: Int,
-        autoReset: Boolean,
-        packageType: PackageType,
-        level: UsageStatus,
-        notifiedLow: Boolean,
-        notifiedCritical: Boolean,
-    ) {
-        if (level == UsageStatus.CRITICAL && !notifiedCritical) {
-            sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.CRITICAL)
-        } else if (level == UsageStatus.LOW && !notifiedLow && !notifiedCritical) {
-            sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.LOW)
-        }
-    }
-
-    private suspend fun updateFlagsIfNeeded(
-        identity: String,
-        isMinutes: Boolean,
-        level: UsageStatus,
-        notifiedLow: Boolean,
-        notifiedCritical: Boolean,
-    ) {
-        val targetCritical = level == UsageStatus.CRITICAL
-        if (notifiedCritical != targetCritical) {
-            setCriticalFlag(identity, isMinutes, targetCritical)
-        }
-
-        val targetLow = level == UsageStatus.LOW
-        if (notifiedLow != targetLow) {
-            setLowFlag(identity, isMinutes, targetLow)
-        }
-    }
-
-    private suspend fun setCriticalFlag(
-        identity: String,
-        isMinutes: Boolean,
-        value: Boolean,
-    ) {
-        if (isMinutes) {
-            deps.simNotificationFlagsRepository.setNotifiedCriticalMinutes(identity, value)
-        } else {
-            deps.simNotificationFlagsRepository.setNotifiedCriticalTraffic(identity, value)
-        }
-    }
-
-    private suspend fun setLowFlag(
-        identity: String,
-        isMinutes: Boolean,
-        value: Boolean,
-    ) {
-        if (isMinutes) {
-            deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, value)
-        } else {
-            deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, value)
-        }
-    }
-
-    private fun sendUsageNotificationForLevel(
-        entity: SemanticEntity,
-        daysRem: Int,
-        autoReset: Boolean,
-        packageType: PackageType,
-        levelStatus: UsageStatus,
-    ) {
-        val appLocaleContext = AppLocaleContexts.forAppLocale(applicationContext)
-        val levelRes =
-            if (levelStatus == UsageStatus.CRITICAL) {
-                R.string.usage_level_critical
-            } else {
-                R.string.usage_level_low
+        private fun handleNotificationDispatch(
+            entity: SemanticEntity,
+            daysRem: Int,
+            autoReset: Boolean,
+            packageType: PackageType,
+            level: UsageStatus,
+            notifiedLow: Boolean,
+            notifiedCritical: Boolean,
+        ) {
+            if (level == UsageStatus.CRITICAL && !notifiedCritical) {
+                sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.CRITICAL)
+            } else if (level == UsageStatus.LOW && !notifiedLow && !notifiedCritical) {
+                sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.LOW)
             }
-        val level = appLocaleContext.getString(levelRes)
-        val isMinutes = packageType == PackageType.MINUTES
+        }
 
-        val body =
+        private suspend fun updateFlagsIfNeeded(
+            identity: String,
+            isMinutes: Boolean,
+            level: UsageStatus,
+            notifiedLow: Boolean,
+            notifiedCritical: Boolean,
+        ) {
+            val targetCritical = level == UsageStatus.CRITICAL
+            if (notifiedCritical != targetCritical) {
+                setCriticalFlag(identity, isMinutes, targetCritical)
+            }
+
+            val targetLow = level == UsageStatus.LOW
+            if (notifiedLow != targetLow) {
+                setLowFlag(identity, isMinutes, targetLow)
+            }
+        }
+
+        private suspend fun setCriticalFlag(
+            identity: String,
+            isMinutes: Boolean,
+            value: Boolean,
+        ) {
             if (isMinutes) {
-                val remText = FormatUtils.formatMinutesPlural(appLocaleContext, entity.remaining.toInt())
-                val remainingPercent = ((entity.remaining * HUNDRED) / entity.limit).toInt()
-                formatLowMinutesBody(appLocaleContext, autoReset, level, remText, remainingPercent, daysRem)
+                deps.simNotificationFlagsRepository.setNotifiedCriticalMinutes(identity, value)
             } else {
-                val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
-                val remainingPercent = ((entity.remaining * HUNDRED) / entity.limit).toInt()
-                formatLowTrafficBody(appLocaleContext, autoReset, level, remainingGb, remainingPercent, daysRem)
+                deps.simNotificationFlagsRepository.setNotifiedCriticalTraffic(identity, value)
             }
+        }
 
-        val notificationType = if (isMinutes) UsageNotificationType.MINUTES else UsageNotificationType.TRAFFIC
-        sendNotificationWithBody(entity.operatorName, body, entity.simSlot, notificationType)
+        private suspend fun setLowFlag(
+            identity: String,
+            isMinutes: Boolean,
+            value: Boolean,
+        ) {
+            if (isMinutes) {
+                deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, value)
+            } else {
+                deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, value)
+            }
+        }
+
+        private fun sendUsageNotificationForLevel(
+            entity: SemanticEntity,
+            daysRem: Int,
+            autoReset: Boolean,
+            packageType: PackageType,
+            levelStatus: UsageStatus,
+        ) {
+            val appLocaleContext = AppLocaleContexts.forAppLocale(applicationContext)
+            val levelRes =
+                if (levelStatus == UsageStatus.CRITICAL) {
+                    R.string.usage_level_critical
+                } else {
+                    R.string.usage_level_low
+                }
+            val level = appLocaleContext.getString(levelRes)
+            val isMinutes = packageType == PackageType.MINUTES
+
+            val body =
+                if (isMinutes) {
+                    val remText = FormatUtils.formatMinutesPlural(appLocaleContext, entity.remaining.toInt())
+                    val remainingPercent = ((entity.remaining * HUNDRED) / entity.limit).toInt()
+                    formatLowMinutesBody(appLocaleContext, autoReset, level, remText, remainingPercent, daysRem)
+                } else {
+                    val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
+                    val remainingPercent = ((entity.remaining * HUNDRED) / entity.limit).toInt()
+                    formatLowTrafficBody(appLocaleContext, autoReset, level, remainingGb, remainingPercent, daysRem)
+                }
+
+            val notificationType = if (isMinutes) UsageNotificationType.MINUTES else UsageNotificationType.TRAFFIC
+            sendNotificationWithBody(entity.operatorName, body, entity.simSlot, notificationType)
         }
 
         private fun getMinutesExhaustedResId(autoReset: Boolean): Int =

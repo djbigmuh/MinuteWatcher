@@ -106,12 +106,12 @@ internal class CallAttributionResolver
                 subId
             }
 
-    /**
-     * Resolves the stable SIM identity for the given subscription ID.
-     *
-     * Consistent with traffic attribution, returns a non-null stable ID only if the active SIM's
-     * identity is stable ([com.example.minutewatcher.core.model.SimIdentity.isStable] == true).
-     */
+        /**
+         * Resolves the stable SIM identity for the given subscription ID.
+         *
+         * Consistent with traffic attribution, returns a non-null stable ID only if the active SIM's
+         * identity is stable ([com.example.minutewatcher.core.model.SimIdentity.isStable] == true).
+         */
         suspend fun resolveIdentity(subId: Int): String? =
             withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                 simIdentityRepository
