@@ -83,7 +83,7 @@ fun SimLimitComposeDialog(
                 overflow = TextOverflow.Ellipsis,
             )
         },
-        text = { DialogFields(state = state, locale = locale) },
+        text = { DialogFields(state = state) },
         confirmButton = {
             DialogButtons(
                 onConfirm = {
@@ -312,17 +312,10 @@ internal class SimLimitState(
 
     /**
      * Handles changes in the minutes input field.
-     *
-     * **Contract:**
-     * 1. Single-character input: if the current text is "0" and the user types a digit '1'-'9',
-     *    the "0" is replaced by that digit. Typing '0' results in "0".
-     * 2. Full selection replacement: trusts [newValue] as the result of the replacement.
-     * 3. All other cases: normalizes the input using [NumberInputNormalizer] and strips leading zeros.
+     * Stored text is kept as typed; parsing and normalization occur once at validation time.
+     * Only [NumberInputNormalizer.isZeroValue] is used here.
      */
-    fun onMinutesChange(
-        newValue: TextFieldValue,
-        locale: Locale,
-    ) {
+    fun onMinutesChange(newValue: TextFieldValue) {
         if (minutesSelectAllPending) {
             minutesSelectAllPending = false
             if (newValue.text == minutesText.text) {
@@ -347,10 +340,11 @@ internal class SimLimitState(
             }
         }
 
-        var text = NumberInputNormalizer.normalize(processed.text, locale)
-        // Strip leading zeros for minutes
-        if (text.length > 1 && text.startsWith("0")) {
-            text = text.dropWhile { it == '0' }.ifEmpty { "0" }
+        var text = processed.text
+        if (text.isNotEmpty()) {
+            while (text.length > 1 && text[0] == '0' && Character.isDigit(text[1])) {
+                text = text.drop(1)
+            }
         }
 
         val selection =
@@ -374,18 +368,10 @@ internal class SimLimitState(
 
     /**
      * Handles changes in the traffic input field.
-     *
-     * **Contract:**
-     * 1. Single-character input: if the current text is "0" or "0.0" and the user types a digit,
-     *    the initial text is replaced by that digit.
-     * 2. Full selection replacement: trusts [newValue] as the result of the replacement.
-     * 3. All other cases: normalizes the input using [NumberInputNormalizer] and strips leading zeros
-     *    if not a decimal.
+     * Stored text is kept as typed; parsing and normalization occur once at validation time.
+     * Only [NumberInputNormalizer.isZeroValue] is used here.
      */
-    fun onTrafficChange(
-        newValue: TextFieldValue,
-        locale: Locale,
-    ) {
+    fun onTrafficChange(newValue: TextFieldValue) {
         if (trafficSelectAllPending) {
             trafficSelectAllPending = false
             if (newValue.text == trafficText.text) {
@@ -399,7 +385,7 @@ internal class SimLimitState(
         val old = trafficText
         var processed = newValue
 
-        // Replace initial "0" or "0.0" only on single-character addition
+        // Replace initial zero only on single-character addition
         if (shouldReplaceInitialTrafficZero(old, newValue)) {
             val typedChar = newValue.text.last()
             if (typedChar.isDigit()) {
@@ -408,10 +394,11 @@ internal class SimLimitState(
             }
         }
 
-        var text = NumberInputNormalizer.normalize(processed.text, locale)
-        // Strip leading zeros for traffic if it's not a decimal starting with "0."
-        if (text.length > 1 && text.startsWith("0") && !text.startsWith("0.")) {
-            text = text.dropWhile { it == '0' }.ifEmpty { "0" }
+        var text = processed.text
+        if (text.isNotEmpty()) {
+            while (text.length > 1 && text[0] == '0' && Character.isDigit(text[1])) {
+                text = text.drop(1)
+            }
         }
 
         val selection =
@@ -432,16 +419,13 @@ internal class SimLimitState(
         old: TextFieldValue,
         newValue: TextFieldValue,
     ): Boolean {
-        val isInitial = old.text == "0" || old.text == "0.0"
+        val isInitial = NumberInputNormalizer.isZeroValue(old.text)
         return isInitial && newValue.text.length == old.text.length + 1 && newValue.text.startsWith(old.text)
     }
 }
 
 @Composable
-private fun DialogFields(
-    state: SimLimitState,
-    locale: Locale,
-) {
+private fun DialogFields(state: SimLimitState) {
     val minutesFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
@@ -451,7 +435,7 @@ private fun DialogFields(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = state.minutesText,
-            onValueChange = { state.onMinutesChange(it, locale) },
+            onValueChange = { state.onMinutesChange(it) },
             label = { Text(stringResource(id = R.string.set_minutes_limit)) },
             placeholder = { Text("0") },
             isError = state.minutesError != null,
@@ -466,7 +450,7 @@ private fun DialogFields(
         )
         OutlinedTextField(
             value = state.trafficText,
-            onValueChange = { state.onTrafficChange(it, locale) },
+            onValueChange = { state.onTrafficChange(it) },
             label = { Text(stringResource(id = R.string.set_traffic_limit)) },
             placeholder = { Text("0") },
             isError = state.trafficError != null,

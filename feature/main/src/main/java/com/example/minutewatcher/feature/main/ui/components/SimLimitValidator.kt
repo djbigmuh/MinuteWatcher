@@ -17,6 +17,11 @@ sealed interface SimLimitValidationResult {
 }
 
 object SimLimitValidator {
+    /**
+     * Validates minutes and traffic input strings.
+     * Normalizes inputs to canonical form once using [NumberInputNormalizer.normalize] under CLDR rules for [locale];
+     * re-normalization of already parsed text is impermissible.
+     */
     fun validate(
         minutesText: String,
         trafficText: String,
