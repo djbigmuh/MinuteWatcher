@@ -14,6 +14,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.NumberInputNormalizer
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -25,6 +26,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.Locale
+import kotlin.math.roundToInt
 
 // UI-infra SDK pin: Espresso InputManager reflection fails on SDK > 35 in Robolectric
 @Config(sdk = [35])
@@ -368,11 +370,84 @@ class SimLimitComposeDialogTest {
         val nonNullRestored = restored!!
         assertEquals("100", nonNullRestored.minutesText.text)
         assertEquals("5,0", nonNullRestored.trafficText.text)
+        assertEquals("5,0", nonNullRestored.initialTrafficText)
         assertTrue(nonNullRestored.rolloverEnabled)
         assertEquals(5120, nonNullRestored.initialTrafficMb)
         assertEquals("Min error", nonNullRestored.minutesError)
         assertEquals("Traffic error", nonNullRestored.trafficError)
         assertTrue(nonNullRestored.isTrafficUnchanged(testLocale))
         assertEquals(NumberInputNormalizer.normalize("5,0", testLocale), nonNullRestored.initialTrafficNormalized)
+    }
+
+    @Test
+    fun `SimLimitState saver preserves edited traffic text and initial values`() {
+        val state =
+            SimLimitState(
+                "100",
+                "5.0",
+                initialTrafficMb = 5120,
+                initialRolloverEnabled = true,
+                locale = Locale.US,
+            )
+        state.trafficText = TextFieldValue("6.0")
+
+        val saver = SimLimitState.saver(Locale.US)
+        val saved = with(saver) { SaverScope { true }.save(state) }
+        assertNotNull(saved)
+        val restored = with(saver) { restore(saved!!) }
+
+        assertNotNull(restored)
+        val nonNullRestored = restored!!
+        assertEquals("6.0", nonNullRestored.trafficText.text)
+        assertEquals("100", nonNullRestored.minutesText.text)
+        assertEquals("5.0", nonNullRestored.initialTrafficText)
+        assertEquals(5120, nonNullRestored.initialTrafficMb)
+        assertFalse(nonNullRestored.isTrafficUnchanged(Locale.US))
+
+        val result =
+            SimLimitValidator.validate(
+                nonNullRestored.minutesText.text,
+                nonNullRestored.trafficText.text,
+                "req",
+                "inv",
+                "min",
+                "traf",
+                Locale.US,
+            )
+        assertTrue(result is SimLimitValidationResult.Valid)
+        val valid = result as SimLimitValidationResult.Valid
+        assertEquals(100, valid.minutes)
+        assertEquals(6.0f, valid.trafficGb)
+        assertEquals(6144, (valid.trafficGb * Constants.MB_PER_GB).roundToInt())
+    }
+
+    @Test
+    fun `SimLimitState saver resets input to initial values when restored in different locale`() {
+        val state =
+            SimLimitState(
+                "100",
+                "5,0",
+                initialTrafficMb = 5120,
+                initialRolloverEnabled = true,
+                locale = Locale.GERMANY,
+            ).apply {
+                trafficText = TextFieldValue("6,0")
+                minutesError = "err"
+            }
+
+        val saverGerman = SimLimitState.saver(Locale.GERMANY)
+        val saved = with(saverGerman) { SaverScope { true }.save(state) }
+        assertNotNull(saved)
+
+        val saverUs = SimLimitState.saver(Locale.US)
+        val restored = with(saverUs) { restore(saved!!) }
+
+        assertNotNull(restored)
+        val nonNullRestored = restored!!
+        assertEquals("5,0", nonNullRestored.trafficText.text)
+        assertEquals("100", nonNullRestored.minutesText.text)
+        assertEquals(null, nonNullRestored.minutesError)
+        assertEquals(5120, nonNullRestored.initialTrafficMb)
+        assertTrue(nonNullRestored.isTrafficUnchanged(Locale.US))
     }
 }
