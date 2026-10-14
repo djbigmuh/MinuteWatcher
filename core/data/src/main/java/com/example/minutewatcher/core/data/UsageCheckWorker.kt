@@ -240,7 +240,10 @@ class UsageCheckWorker
             appSettings: AppSettings,
             autoReset: Boolean,
         ) {
-            if ((entity.limit <= 0) || !appSettings.notifyLowMinutes) return
+            if ((entity.limit <= 0) || !appSettings.notifyLowMinutes) {
+                resetStaleMinutesFlags(identity)
+                return
+            }
 
             val notifiedExhausted =
                 deps.simNotificationFlagsRepository
@@ -284,7 +287,10 @@ class UsageCheckWorker
             appSettings: AppSettings,
             autoReset: Boolean,
         ) {
-            if ((entity.limit <= 0) || !appSettings.notifyLowTraffic) return
+            if ((entity.limit <= 0) || !appSettings.notifyLowTraffic) {
+                resetStaleTrafficFlags(identity)
+                return
+            }
 
             val notifiedExhausted =
                 deps.simNotificationFlagsRepository
@@ -321,6 +327,44 @@ class UsageCheckWorker
                     autoReset,
                     PackageType.DATA,
                 )
+            }
+        }
+
+        /**
+         * Resets stale minute notification flags when checks are inactive,
+         * so that re-enabling notifications or setting limits is not suppressed by stale flags.
+         */
+        private suspend fun resetStaleMinutesFlags(identity: String) {
+            val low = deps.simNotificationFlagsRepository.getNotifiedLowMinutes(identity).firstWithTimeout()
+            if (low == true) {
+                deps.simNotificationFlagsRepository.setNotifiedLowMinutes(identity, false)
+            }
+            val critical = deps.simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity).firstWithTimeout()
+            if (critical == true) {
+                deps.simNotificationFlagsRepository.setNotifiedCriticalMinutes(identity, false)
+            }
+            val exhausted = deps.simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity).firstWithTimeout()
+            if (exhausted == true) {
+                deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, false)
+            }
+        }
+
+        /**
+         * Resets stale traffic notification flags when checks are inactive,
+         * so that re-enabling notifications or setting limits is not suppressed by stale flags.
+         */
+        private suspend fun resetStaleTrafficFlags(identity: String) {
+            val low = deps.simNotificationFlagsRepository.getNotifiedLowTraffic(identity).firstWithTimeout()
+            if (low == true) {
+                deps.simNotificationFlagsRepository.setNotifiedLowTraffic(identity, false)
+            }
+            val critical = deps.simNotificationFlagsRepository.getNotifiedCriticalTraffic(identity).firstWithTimeout()
+            if (critical == true) {
+                deps.simNotificationFlagsRepository.setNotifiedCriticalTraffic(identity, false)
+            }
+            val exhausted = deps.simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity).firstWithTimeout()
+            if (exhausted == true) {
+                deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, false)
             }
         }
 

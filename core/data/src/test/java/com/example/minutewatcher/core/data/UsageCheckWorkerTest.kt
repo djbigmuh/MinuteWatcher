@@ -398,4 +398,129 @@ class UsageCheckWorkerTest {
             assertEquals(ListenableWorker.Result.success(), result)
             verify(simNotificationFlagsRepository, never()).setNotifiedExhaustedMinutes(eq("sim_0"), eq(true))
         }
+
+    @Test
+    fun `reset stale minutes flags when notifyLowMinutes is false`() =
+        runTest(testDispatcher) {
+            whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+            whenever(appSettingsRepository.getAppSettings())
+                .thenReturn(flowOf(AppSettings(notifyLowMinutes = false, notifyLowTraffic = true, isLoaded = true)))
+            val identity = "sim_stale_min"
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalTraffic(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(false))
+
+            val snapshot = createUsageSnapshot(minutesUsed = 85, minutesLimit = 100, identity = identity)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            worker.doWork()
+
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(identity, false)
+            verify(simNotificationFlagsRepository).setNotifiedCriticalMinutes(identity, false)
+            verify(simNotificationFlagsRepository).setNotifiedExhaustedMinutes(identity, false)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+            verify(simNotificationFlagsRepository, never()).setNotifiedLowTraffic(any(), any())
+            verify(simNotificationFlagsRepository, never()).setNotifiedCriticalTraffic(any(), any())
+            verify(simNotificationFlagsRepository, never()).setNotifiedExhaustedTraffic(any(), any())
+        }
+
+    @Test
+    fun `reset stale minutes flags when limit is zero`() =
+        runTest(testDispatcher) {
+            whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+            whenever(appSettingsRepository.getAppSettings())
+                .thenReturn(flowOf(AppSettings(notifyLowMinutes = true, notifyLowTraffic = true, isLoaded = true)))
+            val identity = "sim_zero_limit"
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalTraffic(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(false))
+
+            val snapshot = createUsageSnapshot(minutesUsed = 0, minutesLimit = 0, identity = identity)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            worker.doWork()
+
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(identity, false)
+            verify(simNotificationFlagsRepository).setNotifiedCriticalMinutes(identity, false)
+            verify(simNotificationFlagsRepository).setNotifiedExhaustedMinutes(identity, false)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+        }
+
+    @Test
+    fun `reset stale traffic flags when notifyLowTraffic is false`() =
+        runTest(testDispatcher) {
+            whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+            whenever(appSettingsRepository.getAppSettings())
+                .thenReturn(flowOf(AppSettings(notifyLowMinutes = true, notifyLowTraffic = false, isLoaded = true)))
+            val identity = "sim_stale_traf"
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedLowTraffic(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalTraffic(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(true))
+
+            val limit = 1000L * 1024 * 1024
+            val snapshot =
+                createTrafficSnapshot(
+                    identity,
+                    used = 800L * 1024 * 1024,
+                    limit = limit,
+                    remaining =
+                        200L * 1024 * 1024,
+                )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            worker.doWork()
+
+            verify(simNotificationFlagsRepository).setNotifiedLowTraffic(identity, false)
+            verify(simNotificationFlagsRepository).setNotifiedCriticalTraffic(identity, false)
+            verify(simNotificationFlagsRepository).setNotifiedExhaustedTraffic(identity, false)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+            verify(simNotificationFlagsRepository, never()).setNotifiedLowMinutes(any(), any())
+            verify(simNotificationFlagsRepository, never()).setNotifiedCriticalMinutes(any(), any())
+            verify(simNotificationFlagsRepository, never()).setNotifiedExhaustedMinutes(any(), any())
+        }
+
+    @Test
+    fun `doWork does not call setters when flags are already false`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val snapshot = createUsageSnapshot(minutesUsed = 0, minutesLimit = 0, identity = "sim_0")
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            worker.doWork()
+
+            verify(simNotificationFlagsRepository, never()).setNotifiedLowMinutes(any(), any())
+            verify(simNotificationFlagsRepository, never()).setNotifiedCriticalMinutes(any(), any())
+            verify(simNotificationFlagsRepository, never()).setNotifiedExhaustedMinutes(any(), any())
+        }
+
+    @Test
+    fun `flag read timeout skips write without crashing`() =
+        runTest(testDispatcher) {
+            whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+            whenever(appSettingsRepository.getAppSettings())
+                .thenReturn(flowOf(AppSettings(notifyLowMinutes = false, notifyLowTraffic = true, isLoaded = true)))
+            val identity = "sim_timeout"
+            whenever(
+                simNotificationFlagsRepository.getNotifiedLowMinutes(identity),
+            ).thenReturn(kotlinx.coroutines.flow.flow { })
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
+
+            val snapshot = createUsageSnapshot(minutesUsed = 0, minutesLimit = 0, identity = identity)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(simNotificationFlagsRepository, never()).setNotifiedLowMinutes(eq(identity), any())
+        }
 }
