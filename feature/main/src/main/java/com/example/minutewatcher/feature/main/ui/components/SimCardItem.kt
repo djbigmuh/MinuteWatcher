@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.main.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.minutewatcher.core.model.Constants
@@ -234,6 +236,46 @@ private fun AutoResetSection(
                     .semantics {
                         contentDescription = toggleAutoResetDesc
                     },
+        )
+    }
+}
+
+@Preview(name = "Light Mode", showBackground = true)
+@Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+private fun SimCardItemPreview() {
+    com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme {
+        SimCardItem(
+            model =
+                SimCardUiModel(
+                    slot = 0,
+                    identity = "sim_0",
+                    operatorName = "MTS",
+                    iconRes = R.drawable.ic_unknown,
+                    minutesUsed = 45,
+                    minutesLimit = 100,
+                    manualAdjustment = 0,
+                    minutesRemaining = 55,
+                    effectiveMinutesLimit = 100,
+                    isMinutesLimitSet = true,
+                    trafficUsedMb = 500f,
+                    trafficLimitMb = 2048,
+                    trafficRemainingGb = 1.5f,
+                    effectiveTrafficLimitGb = 2.0f,
+                    trafficAdjustmentGb = 0f,
+                    isTrafficLimitSet = true,
+                    autoResetEnabled = true,
+                    autoResetDay = 1,
+                    rolloverEnabled = false,
+                ),
+            highlighted = false,
+            onSetLimits = {},
+            onResetCounters = {},
+            onToggleAutoReset = {},
+            onEditAutoResetDay = {},
+            onAdjustMinutes = {},
+            onAdjustTraffic = {},
+            onShowTrafficInfo = {},
         )
     }
 }

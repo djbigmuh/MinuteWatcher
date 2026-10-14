@@ -9,7 +9,6 @@ ksp = "2.3.11"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 androidxTestCore = "1.6.1"
-espressoCore = "3.6.1"
 # Robolectric 4.17-beta-2: required for Android SDK 37 support.
 # Update to stable when available.
 robolectric = "4.17-beta-2"
@@ -71,7 +70,6 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidxTestCoreKtx = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTestCore" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidxJunit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-androidxEspressoCore = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
 # Compose
 androidxLifecycleRuntimeKtx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
@@ -103,7 +101,6 @@ androidxAppsearchPlatformStorage = { group = "androidx.appsearch", name = "appse
 androidxAppfunctions = { group = "androidx.appfunctions", name = "appfunctions", version.ref = "appfunctions" }
 androidxAppfunctionsCompiler = { group = "androidx.appfunctions", name = "appfunctions-compiler", version.ref = "appfunctions" }
 javaxInject = { group = "javax.inject", name = "javax.inject", version = "1" }
-json = { group = "org.json", name = "json", version = "20240303" }
 kotlinxCoroutinesCore = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesGuava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }

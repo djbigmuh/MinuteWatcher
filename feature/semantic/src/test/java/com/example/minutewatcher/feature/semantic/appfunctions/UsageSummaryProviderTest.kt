@@ -238,7 +238,7 @@ class UsageSummaryProviderTest {
                 assertEquals(0, summary.sims[0].slot)
                 assertEquals("MTS", summary.sims[0].operatorName)
                 assertFalse(summary.sims[0].minutesLimitSet)
-                assertEquals(true, summary.sims[0].dataLimitSet)
+                assertTrue(summary.sims[0].dataLimitSet)
                 assertEquals(10.0, summary.sims[0].dataRemainingGb, 0.001)
                 assertEquals(2000L, summary.sims[0].periodEndMillis)
 

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import com.example.minutewatcher.core.common.di.SimDataStore
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.data.SimIdentityPersistence.Companion.SAVE_TIMEOUT_MS
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
@@ -22,9 +23,15 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Handles persistence of SIM identities and operator info using [DataStore].
- * Also manages legacy data migrations.
+ * Also orchestrates legacy data migrations via [IdentityMigrationService].
  *
- * Safe to call from any coroutine context.
+ * **Persistence Contract:**
+ * - Identifiers are deduplicated by [SimIdentity.stableId].
+ * - Slot indices and subscription IDs are persisted atomically under mutex synchronization.
+ * - Unmigrated SIMs trigger [IdentityMigrationService.migrateLegacyData] before slot info is written.
+ * - Operations enforce a 60-second timeout ([SAVE_TIMEOUT_MS]) to prevent thread starvation under load.
+ *
+ * **Thread Safety:** Fully safe for concurrent calls across any coroutine context.
  */
 @Singleton
 class SimIdentityPersistence
@@ -38,7 +45,11 @@ class SimIdentityPersistence
         private val migratingIdentities = ConcurrentHashMap.newKeySet<String>()
 
         /**
-         * Saves SIM identities to DataStore and performs migrations if needed.
+         * Saves SIM identities to DataStore and executes required legacy migrations.
+         *
+         * @param identities List of SIM identities to save.
+         * @throws IOException If DataStore read/write times out or fails.
+         * @throws CancellationException If caller coroutine scope is cancelled.
          */
         suspend fun saveSimIdentitiesInfo(identities: List<SimIdentity>) {
             val validIdentities = filterValidIdentities(identities)
@@ -56,11 +67,11 @@ class SimIdentityPersistence
 
                         dataStore.edit { prefs ->
                             val toUpdate = validIdentities.filter { isIdentityUpdateRequired(it, prefs) }
-                            val updatedToUpdate = applyOptimizationAndFilterUpdates(toUpdate, prefs)
-                            if (updatedToUpdate.isEmpty()) return@edit
+                            val filteredUpdates = recordMigratedStatusAndFilterUpdates(toUpdate, prefs)
+                            if (filteredUpdates.isEmpty()) return@edit
 
-                            val toActuallyUpdate = updatedToUpdate.filter { it.stableId !in failedIds }
-                            updatePreferences(toActuallyUpdate, prefs)
+                            val toActuallyUpdate = filteredUpdates.filter { it.stableId !in failedIds }
+                            writeIdentityPreferences(toActuallyUpdate, prefs)
                         }
                     }
                 }
@@ -76,7 +87,7 @@ class SimIdentityPersistence
                 .distinctBy { it.stableId }
                 .toList()
 
-        private fun applyOptimizationAndFilterUpdates(
+    private fun recordMigratedStatusAndFilterUpdates(
             identities: List<SimIdentity>,
             prefs: MutablePreferences,
         ): List<SimIdentity> =
@@ -87,7 +98,7 @@ class SimIdentityPersistence
                 isIdentityUpdateRequired(identity, prefs)
             }
 
-        private fun updatePreferences(
+    private fun writeIdentityPreferences(
             identities: List<SimIdentity>,
             prefs: MutablePreferences,
         ) {
@@ -152,10 +163,17 @@ class SimIdentityPersistence
             }
         }
 
+    /**
+     * Retains migration status cache for the provided active identities.
+     * Prunes stale entries for removed SIMs.
+     */
         fun retainMigrated(currentIdentities: Set<String>) {
             migratedIdentities.retainAll(currentIdentities)
         }
 
+    /**
+     * Persists human-readable operator name for a given SIM identity.
+     */
         suspend fun setSimOperator(
             identity: String,
             name: String,

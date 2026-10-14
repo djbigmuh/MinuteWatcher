@@ -21,17 +21,18 @@ import com.example.minutewatcher.feature.main.ui.components.SimCardItem
 /**
  * Renders SIM card list.
  * Each SIM card is rendered via SimCardListRow.
- *
- * @param simCards List of SIM cards.
- * @param listState Scroll list state.
- * @param viewModel ViewModel for state management.
  */
 @Composable
 fun SimCardList(
     simCards: List<SimCardUiModel>,
     listState: LazyListState,
-    viewModel: MainViewModel,
     highlightedSlot: Int? = null,
+    onSetLimitDialog: (LimitDialogData) -> Unit,
+    onResetUsage: (slot: Int) -> Unit,
+    onToggleAutoReset: (slot: Int, enabled: Boolean) -> Unit,
+    onSetDayDialog: (DayDialogData) -> Unit,
+    onSetAdjustDialog: (AdjustDialogData) -> Unit,
+    onShowTrafficInfo: () -> Unit,
 ) {
     var showResetConfirmSlot by remember { mutableStateOf<Int?>(null) }
 
@@ -49,9 +50,13 @@ fun SimCardList(
         ) { model ->
             SimCardListRow(
                 model = model,
-                viewModel = viewModel,
                 highlighted = highlightedSlot != null && highlightedSlot == model.slot,
                 onReset = { showResetConfirmSlot = model.slot },
+                onSetLimitDialog = onSetLimitDialog,
+                onToggleAutoReset = onToggleAutoReset,
+                onSetDayDialog = onSetDayDialog,
+                onSetAdjustDialog = onSetAdjustDialog,
+                onShowTrafficInfo = onShowTrafficInfo,
             )
         }
     }
@@ -61,7 +66,7 @@ fun SimCardList(
             ResetConfirmationDialog(
                 onDismiss = { showResetConfirmSlot = null },
                 onConfirm = {
-                    viewModel.resetUsage(slot)
+                    onResetUsage(slot)
                     showResetConfirmSlot = null
                 },
             )
@@ -71,25 +76,23 @@ fun SimCardList(
 
 /**
  * Renders a single SIM card item in the list.
- * Contains icon, operator name, minutes and traffic state,
- * limit setting and reset buttons.
- *
- * @param model SIM card model.
- * @param viewModel ViewModel for state management.
- * @param onReset Callback for SIM card reset.
  */
 @Composable
 private fun SimCardListRow(
     model: SimCardUiModel,
-    viewModel: MainViewModel,
     highlighted: Boolean,
     onReset: () -> Unit,
+    onSetLimitDialog: (LimitDialogData) -> Unit,
+    onToggleAutoReset: (slot: Int, enabled: Boolean) -> Unit,
+    onSetDayDialog: (DayDialogData) -> Unit,
+    onSetAdjustDialog: (AdjustDialogData) -> Unit,
+    onShowTrafficInfo: () -> Unit,
 ) {
     SimCardItem(
         model = model,
         highlighted = highlighted,
         onSetLimits = {
-            viewModel.setLimitDialog(
+            onSetLimitDialog(
                 LimitDialogData(
                     model.slot,
                     model.operatorName,
@@ -100,20 +103,20 @@ private fun SimCardListRow(
             )
         },
         onResetCounters = onReset,
-        onToggleAutoReset = { enabled -> viewModel.toggleAutoReset(model.slot, enabled) },
+        onToggleAutoReset = { enabled -> onToggleAutoReset(model.slot, enabled) },
         onEditAutoResetDay = {
-            viewModel.setDayDialog(DayDialogData(model.slot, model.autoResetDay))
+            onSetDayDialog(DayDialogData(model.slot, model.autoResetDay))
         },
         onAdjustMinutes = {
-            viewModel.setAdjustDialog(
+            onSetAdjustDialog(
                 AdjustDialogData(model.slot, model.minutesRemaining.toFloat(), true),
             )
         },
         onAdjustTraffic = {
-            viewModel.setAdjustDialog(
+            onSetAdjustDialog(
                 AdjustDialogData(model.slot, model.trafficRemainingGb ?: 0f, false),
             )
         },
-        onShowTrafficInfo = { viewModel.setTrafficLimitationDialog(true) },
+        onShowTrafficInfo = onShowTrafficInfo,
     )
 }

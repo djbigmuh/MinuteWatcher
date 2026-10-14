@@ -31,6 +31,8 @@ dependencies {
 
     implementation(platform(libs.androidxComposeBom))
     implementation(libs.androidxUi)
+    implementation(libs.androidxUiToolingPreview)
+    debugImplementation(libs.androidxUiTooling)
     implementation(libs.androidxMaterial3)
     implementation(libs.androidxMaterialIconsCore)
     implementation(libs.skydovesColorpickerview)

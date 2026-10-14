@@ -16,7 +16,7 @@ import javax.inject.Inject
  * @property resume Controller for activity resume logic.
  * @property widgetObservationRecovery Lazy reference to coordinator for recovery.
  */
-class MainViewModelControllers
+internal class MainViewModelControllers
     @Inject
     constructor(
         val banner: MainBannerController,

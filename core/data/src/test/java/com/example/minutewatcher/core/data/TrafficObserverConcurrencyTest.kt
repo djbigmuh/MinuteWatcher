@@ -3,6 +3,7 @@ package com.example.minutewatcher.core.data
 import com.example.minutewatcher.core.common.util.FixedTimeProvider
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.common.util.initTestLogger
+import com.example.minutewatcher.core.common.util.pollUntil
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.domain.SimIdentityRepository
 import com.example.minutewatcher.core.domain.SimUsageRepository
@@ -93,11 +94,16 @@ class TrafficObserverConcurrencyTest {
             // 1. Initial start
             tracker.ensureStarted()
 
-            // Wait a moment for background coroutines to start
-            while (tracker.permissionObserverJob.get() == null || tracker.simObserverJob.get() == null) {
-                Thread.sleep(10)
+            // 1. Wait boundedly for background coroutines to start, execute initial observer setup, and stabilize
+            pollUntil(
+                timeoutMs = 5000L,
+                message = "Observers initialized, active, and invoked initial calls after ensureStarted",
+            ) {
+                simCallCount.get() >= 1 &&
+                    changesAccessCount.get() >= 1 &&
+                    tracker.permissionObserverJob.get()?.isActive == true &&
+                    tracker.simObserverJob.get()?.isActive == true
             }
-            Thread.sleep(50) // allow stabilization
 
             assertTrue(tracker.permissionObserverJob.get()?.isActive == true)
             assertTrue(tracker.simObserverJob.get()?.isActive == true)
@@ -106,10 +112,16 @@ class TrafficObserverConcurrencyTest {
             val baselineSimCalls = simCallCount.get()
             val baselineChangesAccess = changesAccessCount.get()
 
-            // 3. Cancel both jobs
+            // 3. Cancel both jobs and wait for cancellation
             tracker.permissionObserverJob.get()?.cancel()
             tracker.simObserverJob.get()?.cancel()
-            Thread.sleep(50) // allow cancellation to take effect
+            pollUntil(
+                timeoutMs = 5000L,
+                message = "Observer jobs cancelled",
+            ) {
+                tracker.permissionObserverJob.get()?.isActive != true &&
+                    tracker.simObserverJob.get()?.isActive != true
+            }
 
             assertTrue(tracker.permissionObserverJob.get()?.isActive != true)
             assertTrue(tracker.simObserverJob.get()?.isActive != true)
@@ -128,7 +140,17 @@ class TrafficObserverConcurrencyTest {
             threads.forEach { it.start() }
             threads.forEach { it.join() }
 
-            Thread.sleep(100) // allow new observers to stabilize
+            pollUntil(
+                timeoutMs = 5000L,
+                message = "New observers active after concurrent ensureStarted",
+            ) {
+                val newSimCalls = simCallCount.get() - baselineSimCalls
+                val newChangesAccess = changesAccessCount.get() - baselineChangesAccess
+                newSimCalls == 1 &&
+                    newChangesAccess == 1 &&
+                    tracker.permissionObserverJob.get()?.isActive == true &&
+                    tracker.simObserverJob.get()?.isActive == true
+            }
 
             // 5. Verify exact counts and active state
             val newSimCalls = simCallCount.get() - baselineSimCalls

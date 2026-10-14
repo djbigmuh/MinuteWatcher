@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.model.GlobalSnapshot
 import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
+import com.example.minutewatcher.service.worker.SemanticInitializerWorker.Companion.MAX_SEMANTIC_INIT_ATTEMPTS
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -67,6 +68,8 @@ class SemanticInitializerWorker
                 if (settings != null) {
                     appFunctionAvailability.setAssistantAccessEnabled(settings.assistantAccessEnabled)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLogger.w("SemanticInitializerWorker: Failed to synchronize AppFunction availability", e)
             }

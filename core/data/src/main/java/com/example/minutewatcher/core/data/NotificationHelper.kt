@@ -8,6 +8,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.example.minutewatcher.core.android.util.AppLocaleContexts
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.domain.NavigationProvider
@@ -88,28 +89,28 @@ class NotificationHelper
         @Volatile
         private var hasLoggedMissingService = false
 
-        init {
-            createNotificationChannel()
-        }
-
+    /**
+     * Creates or updates notification channels with localized names and descriptions.
+     */
         @Suppress("TooGenericExceptionCaught")
-        private fun createNotificationChannel() {
+    fun ensureChannels() {
             val manager = notificationManager ?: return
+        val locContext = AppLocaleContexts.forAppLocale(context)
             val channel =
                 NotificationChannel(
                     Constants.Notifications.CHANNEL_ID,
-                    context.getString(R.string.notification_channel_name),
+                    locContext.getString(R.string.notification_channel_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ).apply {
-                    description = context.getString(R.string.notification_channel_desc)
+                    description = locContext.getString(R.string.notification_channel_desc)
                 }
             val aodChannel =
                 NotificationChannel(
                     Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
-                    context.getString(R.string.notification_channel_aod_summary_name),
+                    locContext.getString(R.string.notification_channel_aod_summary_name),
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = context.getString(R.string.notification_channel_aod_summary_desc)
+                    description = locContext.getString(R.string.notification_channel_aod_summary_desc)
                     setSound(null, null)
                     enableVibration(false)
                     setShowBadge(false)
@@ -117,12 +118,12 @@ class NotificationHelper
             try {
                 manager.createNotificationChannel(channel)
             } catch (e: RuntimeException) {
-                AppLogger.e("Failed to create main notification channel", e)
+                AppLogger.e("Failed to create/update main notification channel", e)
             }
             try {
                 manager.createNotificationChannel(aodChannel)
             } catch (e: RuntimeException) {
-                AppLogger.e("Failed to create V2 AOD summary notification channel", e)
+                AppLogger.e("Failed to create/update V2 AOD summary notification channel", e)
             }
             try {
                 manager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
@@ -144,17 +145,18 @@ class NotificationHelper
             message: String,
             simSlot: Int,
             type: UsageNotificationType,
-        ) {
+        ): Boolean {
+            ensureChannels()
             val manager = notificationManager
             if (manager == null) {
                 if (!hasLoggedMissingService) {
                     hasLoggedMissingService = true
                     AppLogger.w("NotificationManager is unavailable; skipping notification")
                 }
-                return
+                return false
             }
 
-            try {
+            return try {
                 val hasPermission = permissionManager.hasNotificationPermission()
                 val areEnabled = if (hasPermission) areNotificationsEnabledSafe() else false
 
@@ -166,7 +168,13 @@ class NotificationHelper
                             "notifications disabled for app"
                         }
                     AppLogger.d("Notification skipped: $reason")
-                    return
+                    return false
+                }
+
+                val channel = manager.getNotificationChannel(Constants.Notifications.CHANNEL_ID)
+                if (channel != null && channel.importance == NotificationManager.IMPORTANCE_NONE) {
+                    AppLogger.d("Notification skipped: channel is blocked (IMPORTANCE_NONE)")
+                    return false
                 }
 
                 val notificationId = BASE_NOTIFICATION_ID + (simSlot * SLOT_OFFSET) + type.idOffset
@@ -175,10 +183,13 @@ class NotificationHelper
 
                 val summaryNotification = buildGroupSummaryNotification()
                 manager.notify(GROUP_SUMMARY_NOTIFICATION_ID, summaryNotification)
+                true
             } catch (e: SecurityException) {
                 AppLogger.w("Notification permission denied: ${e.message}")
+                false
             } catch (e: RuntimeException) {
                 AppLogger.e("Failed to send notification (runtime error)", e)
+                false
             }
         }
 
@@ -217,6 +228,7 @@ class NotificationHelper
         }
 
         private fun buildGroupSummaryNotification(): android.app.Notification {
+            val locContext = AppLocaleContexts.forAppLocale(context)
             val summaryIntent =
                 Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -232,8 +244,8 @@ class NotificationHelper
 
             return NotificationCompat
                 .Builder(context, Constants.Notifications.CHANNEL_ID)
-                .setContentTitle(context.getString(R.string.notification_channel_name))
-                .setContentText(context.getString(R.string.notification_channel_desc))
+                .setContentTitle(locContext.getString(R.string.notification_channel_name))
+                .setContentText(locContext.getString(R.string.notification_channel_desc))
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(ContextCompat.getColor(context, R.color.primary))
                 .setContentIntent(summaryPendingIntent)
@@ -256,6 +268,7 @@ class NotificationHelper
             contentLine: String,
             expandedText: String,
         ): Boolean {
+            ensureChannels()
             val manager =
                 notificationManager ?: run {
                     if (!hasLoggedMissingService) {

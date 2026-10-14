@@ -198,7 +198,7 @@ class IdentityMigrationServiceTest {
                     ),
                 )
             assertTrue(outcome.migrated > 0)
-            assertEquals(false, service.hasLegacyData(setOf("some_id")))
+            assertFalse(service.hasLegacyData(setOf("some_id")) == true)
         }
 
     @Test
@@ -454,7 +454,7 @@ class IdentityMigrationServiceTest {
             val service = IdentityMigrationService(appDataStore, unreadSimDataStore)
 
             val result = service.hasLegacyData()
-            assertEquals(false, result)
+            assertFalse(result == true)
         }
 
     @Test
@@ -538,7 +538,7 @@ class IdentityMigrationServiceTest {
             assertEquals(0, outcome.migrated)
             assertEquals(0, outcome.failures)
             assertFalse(outcome.hasChanges())
-            assertEquals(false, service.hasLegacyData())
+            assertFalse(service.hasLegacyData() == true)
         }
 
     @Test

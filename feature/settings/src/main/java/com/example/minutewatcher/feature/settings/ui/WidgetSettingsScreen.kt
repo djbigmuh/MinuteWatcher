@@ -1,5 +1,6 @@
 package com.example.minutewatcher.feature.settings.ui
 
+import android.content.res.Configuration
 import android.content.res.Resources
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -46,9 +48,12 @@ import com.example.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
 import com.example.minutewatcher.core.android.util.WidgetStringsFactory
 import com.example.minutewatcher.core.android.util.WidgetUiMapper
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.core.model.SimSettingsState
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import com.example.minutewatcher.core.model.WidgetUiState
 import com.example.minutewatcher.core.resources.R
+
+private typealias SimSettingsTransform = (SimSettingsState) -> SimSettingsState
 
 @Composable
 fun WidgetSettingsScreen(
@@ -60,7 +65,7 @@ fun WidgetSettingsScreen(
     val aodSummaryAvailable by viewModel.aodSummaryAvailable.collectAsStateWithLifecycle()
     val aodSummaryHasContent by viewModel.aodSummaryHasContent.collectAsStateWithLifecycle()
 
-    ObserveResumeEffect(viewModel)
+    ObserveResumeEffect(onResume = viewModel::refreshAodSummaryAvailability)
 
     val context = LocalContext.current
     val strings = remember(context) { WidgetStringsFactory.create(context) }
@@ -77,6 +82,35 @@ fun WidgetSettingsScreen(
             )
         }
 
+    WidgetSettingsScreenBody(
+        isLoadError = uiState.isLoadError,
+        settings = uiState.settings,
+        screenUiState = screenUiState,
+        saveResult = uiState.saveResult,
+        aodSummaryAvailable = aodSummaryAvailable,
+        aodSummaryHasContent = aodSummaryHasContent,
+        onRetryLoad = viewModel::retryLoad,
+        onConsumeSaveResult = viewModel::consumeSaveResult,
+        onUpdateSettings = viewModel::updateSettings,
+        onUpdateSimSettings = viewModel::updateSimSettings,
+        onBack = onBack,
+    )
+}
+
+@Composable
+fun WidgetSettingsScreenBody(
+    isLoadError: Boolean,
+    settings: WidgetSettingsState?,
+    screenUiState: WidgetUiState?,
+    saveResult: SaveResult?,
+    aodSummaryAvailable: Boolean,
+    aodSummaryHasContent: Boolean,
+    onRetryLoad: () -> Unit,
+    onConsumeSaveResult: () -> Unit,
+    onUpdateSettings: ((WidgetSettingsState) -> WidgetSettingsState) -> Unit,
+    onUpdateSimSettings: (slot: Int, transform: SimSettingsTransform) -> Unit,
+    onBack: () -> Unit,
+) {
     Box(
         modifier =
             Modifier
@@ -89,26 +123,25 @@ fun WidgetSettingsScreen(
                     Constants.UI.SWIPE_NAVIGATION_THRESHOLD_DP.dp,
                 ) { onBack() },
     ) {
-        if (uiState.isLoadError) {
+        if (isLoadError) {
             ErrorState(
-                onRetry = { viewModel.retryLoad() },
+                onRetry = onRetryLoad,
                 onBack = onBack,
             )
+        } else if (settings == null) {
+            LoadingState()
         } else {
-            val settings = uiState.settings
-            if (settings == null) {
-                LoadingState()
-            } else {
-                WidgetSettingsContent(
-                    settings = settings,
-                    screenUiState = screenUiState,
-                    saveResult = uiState.saveResult,
-                    aodSummaryAvailable = aodSummaryAvailable,
-                    aodSummaryHasContent = aodSummaryHasContent,
-                    viewModel = viewModel,
-                    onBack = onBack,
-                )
-            }
+            WidgetSettingsContent(
+                settings = settings,
+                screenUiState = screenUiState,
+                saveResult = saveResult,
+                aodSummaryAvailable = aodSummaryAvailable,
+                aodSummaryHasContent = aodSummaryHasContent,
+                onConsumeSaveResult = onConsumeSaveResult,
+                onUpdateSettings = onUpdateSettings,
+                onUpdateSimSettings = onUpdateSimSettings,
+                onBack = onBack,
+            )
         }
     }
 }
@@ -158,7 +191,9 @@ private fun WidgetSettingsContent(
     saveResult: SaveResult?,
     aodSummaryAvailable: Boolean,
     aodSummaryHasContent: Boolean,
-    viewModel: WidgetSettingsViewModel,
+    onConsumeSaveResult: () -> Unit,
+    onUpdateSettings: ((WidgetSettingsState) -> WidgetSettingsState) -> Unit,
+    onUpdateSimSettings: (slot: Int, transform: SimSettingsTransform) -> Unit,
     onBack: () -> Unit,
 ) {
     var showColorPicker by remember { mutableStateOf(value = false) }
@@ -167,7 +202,7 @@ private fun WidgetSettingsContent(
     HandleSaveResultEffect(
         saveResult = saveResult,
         snackbarHostState = snackbarHostState,
-        viewModel = viewModel,
+        onConsumeSaveResult = onConsumeSaveResult,
     )
 
     Scaffold(
@@ -185,7 +220,8 @@ private fun WidgetSettingsContent(
             uiState = screenUiState,
             aodSummaryAvailable = aodSummaryAvailable,
             aodSummaryHasContent = aodSummaryHasContent,
-            viewModel = viewModel,
+            onUpdateSettings = onUpdateSettings,
+            onUpdateSimSettings = onUpdateSimSettings,
         ) {
             showColorPicker = true
         }
@@ -193,7 +229,7 @@ private fun WidgetSettingsContent(
         if (showColorPicker) {
             ColorPickerWrapper(
                 onColorSelected = { color ->
-                    viewModel.updateSettings { it.copy(backgroundColor = color) }
+                    onUpdateSettings { it.copy(backgroundColor = color) }
                 },
                 onDismiss = {
                     showColorPicker = false
@@ -223,7 +259,7 @@ private fun SettingsTopAppBar(onBack: () -> Unit) {
 private fun HandleSaveResultEffect(
     saveResult: SaveResult?,
     snackbarHostState: SnackbarHostState,
-    viewModel: WidgetSettingsViewModel,
+    onConsumeSaveResult: () -> Unit,
 ) {
     val resources = LocalResources.current
     val partialSuccessMessage = stringResource(id = R.string.settings_save_partial_success)
@@ -243,7 +279,7 @@ private fun HandleSaveResultEffect(
                     )
                 message?.let { snackbarHostState.showSnackbar(it) }
             } finally {
-                viewModel.consumeSaveResult()
+                onConsumeSaveResult()
             }
         }
     }
@@ -278,7 +314,8 @@ private fun WidgetSettingsList(
     uiState: WidgetUiState?,
     aodSummaryAvailable: Boolean,
     aodSummaryHasContent: Boolean,
-    viewModel: WidgetSettingsViewModel,
+    onUpdateSettings: ((WidgetSettingsState) -> WidgetSettingsState) -> Unit,
+    onUpdateSimSettings: (slot: Int, transform: SimSettingsTransform) -> Unit,
     onShowColorPicker: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
@@ -291,10 +328,10 @@ private fun WidgetSettingsList(
         GeneralSettingsSection(
             state = state,
             enabled = true,
-            onUpdateLayoutMode = { mode -> viewModel.updateSettings { it.copy(layoutMode = mode) } },
-            onUpdateSimArrangement = { arr -> viewModel.updateSettings { it.copy(simArrangement = arr) } },
-            onUpdateTransparency = { tr -> viewModel.updateSettings { it.copy(transparency = tr) } },
-            onUpdateFontSize = { fs -> viewModel.updateSettings { it.copy(fontSize = fs) } },
+            onUpdateLayoutMode = { mode -> onUpdateSettings { it.copy(layoutMode = mode) } },
+            onUpdateSimArrangement = { arr -> onUpdateSettings { it.copy(simArrangement = arr) } },
+            onUpdateTransparency = { tr -> onUpdateSettings { it.copy(transparency = tr) } },
+            onUpdateFontSize = { fs -> onUpdateSettings { it.copy(fontSize = fs) } },
             onShowColorPicker = onShowColorPicker,
         )
 
@@ -303,8 +340,8 @@ private fun WidgetSettingsList(
         TrackingSettingsSection(
             state = state,
             enabled = true,
-            onUpdateCallTracking = { en -> viewModel.updateSettings { it.copy(callTrackingEnabled = en) } },
-            onUpdateAssistantAccess = { en -> viewModel.updateSettings { it.copy(assistantAccessEnabled = en) } },
+            onUpdateCallTracking = { en -> onUpdateSettings { it.copy(callTrackingEnabled = en) } },
+            onUpdateAssistantAccess = { en -> onUpdateSettings { it.copy(assistantAccessEnabled = en) } },
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -314,9 +351,9 @@ private fun WidgetSettingsList(
             enabled = true,
             aodSummaryAvailable = aodSummaryAvailable,
             aodSummaryHasContent = aodSummaryHasContent,
-            onUpdateNotifyMinutes = { en -> viewModel.updateSettings { it.copy(notifyLowMinutes = en) } },
-            onUpdateNotifyTraffic = { en -> viewModel.updateSettings { it.copy(notifyLowTraffic = en) } },
-            onUpdateAodSummary = { en -> viewModel.updateSettings { it.copy(aodSummaryEnabled = en) } },
+            onUpdateNotifyMinutes = { en -> onUpdateSettings { it.copy(notifyLowMinutes = en) } },
+            onUpdateNotifyTraffic = { en -> onUpdateSettings { it.copy(notifyLowTraffic = en) } },
+            onUpdateAodSummary = { en -> onUpdateSettings { it.copy(aodSummaryEnabled = en) } },
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -325,24 +362,45 @@ private fun WidgetSettingsList(
             state = state,
             uiState = uiState,
             enabled = !state.simListLoadFailed,
-            onUpdateSimSettings = viewModel::updateSimSettings,
+            onUpdateSimSettings = onUpdateSimSettings,
         )
     }
 }
 
 @Composable
-private fun ObserveResumeEffect(viewModel: WidgetSettingsViewModel) {
+private fun ObserveResumeEffect(onResume: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
-                    viewModel.refreshAodSummaryAvailability()
+                    onResume()
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+}
+
+@Preview(name = "Light Mode", showBackground = true)
+@Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+private fun WidgetSettingsScreenPreview() {
+    MaterialTheme {
+        WidgetSettingsScreenBody(
+            isLoadError = false,
+            settings = WidgetSettingsState(),
+            screenUiState = null,
+            saveResult = null,
+            aodSummaryAvailable = true,
+            aodSummaryHasContent = false,
+            onRetryLoad = {},
+            onConsumeSaveResult = {},
+            onUpdateSettings = {},
+            onUpdateSimSettings = { _, _ -> },
+            onBack = {},
+        )
     }
 }

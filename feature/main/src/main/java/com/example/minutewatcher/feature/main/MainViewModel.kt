@@ -48,7 +48,7 @@ import javax.inject.Inject
 @Suppress("TooManyFunctions")
 class MainViewModel
     @Inject
-    constructor(
+    internal constructor(
         private val controllers: MainViewModelControllers,
         private val dialogController: MainDialogController,
         private val initController: MainInitializationController,

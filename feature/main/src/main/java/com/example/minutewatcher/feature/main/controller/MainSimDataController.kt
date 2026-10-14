@@ -72,7 +72,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * @property scope Application-wide coroutine scope for async operations.
  */
 @Suppress("TooManyFunctions")
-class MainSimDataController
+internal class MainSimDataController
     @Inject
     constructor(
         val usageStateRepository: UsageStateRepository,
@@ -136,16 +136,6 @@ class MainSimDataController
         fun retrySimList() {
             retryTrigger.update { it + 1 }
         }
-
-        /**
-         * Error of the last operation if it failed.
-         * The UI should display this error and clear it after showing.
-         */
-        data class OperationError(
-            @StringRes val messageRes: Int,
-            val slot: Int,
-            val args: List<Any> = emptyList(),
-        )
 
         private val _lastOperationError = MutableStateFlow<OperationError?>(null)
         val lastOperationError: StateFlow<OperationError?> = _lastOperationError.asStateFlow()
@@ -536,3 +526,13 @@ fun computeSimCardListState(
         else -> SimCardListState.Empty
     }
 }
+
+/**
+ * Error of the last operation if it failed.
+ * The UI should display this error and clear it after showing.
+ */
+data class OperationError(
+    @StringRes val messageRes: Int,
+    val slot: Int,
+    val args: List<Any> = emptyList(),
+)

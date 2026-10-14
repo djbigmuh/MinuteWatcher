@@ -8,6 +8,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -109,7 +110,7 @@ class SimCardMapperTest {
 
         val model = SimCardMapper.map(context, TEST_SLOT_0, usage)
 
-        assertEquals(false, model.isTrafficLimitSet)
+        assertFalse(model.isTrafficLimitSet)
         org.junit.Assert.assertNull(model.trafficRemainingGb)
     }
 

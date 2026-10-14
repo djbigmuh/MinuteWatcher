@@ -44,7 +44,7 @@ class WidgetLimitManagerTest {
         assertEquals(null, manager.isLimitExceeded())
         manager.start()
         testDispatcher.scheduler.runCurrent()
-        assertEquals(false, manager.isLimitExceeded())
+        assertFalse(requireNotNull(manager.isLimitExceeded()))
     }
 
     @Test
@@ -69,9 +69,9 @@ class WidgetLimitManagerTest {
     @Test
     fun `updateCache updates isLimitExceeded without repository access`() {
         manager.updateCache(true)
-        assertEquals(true, manager.isLimitExceeded())
+        assertTrue(requireNotNull(manager.isLimitExceeded()))
         manager.updateCache(false)
-        assertEquals(false, manager.isLimitExceeded())
+        assertFalse(requireNotNull(manager.isLimitExceeded()))
     }
 
     @Test
@@ -79,17 +79,17 @@ class WidgetLimitManagerTest {
         runTest(testDispatcher) {
             whenever(appSettingsRepository.updateAppSettings(any())).thenThrow(RuntimeException("DB error"))
             manager.setWidgetLimitExceeded(true)
-            assertEquals(true, manager.isLimitExceeded())
+            assertTrue(requireNotNull(manager.isLimitExceeded()))
         }
 
     @Test
     fun `isLimitExceeded returns value set by setWidgetLimitExceeded synchronously`() =
         runTest(testDispatcher) {
             manager.setWidgetLimitExceeded(value = true)
-            assertEquals(true, manager.isLimitExceeded())
+            assertTrue(requireNotNull(manager.isLimitExceeded()))
 
             manager.setWidgetLimitExceeded(value = false)
-            assertEquals(false, manager.isLimitExceeded())
+            assertFalse(requireNotNull(manager.isLimitExceeded()))
         }
 
     @Test

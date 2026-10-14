@@ -12,14 +12,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.feature.main.ui.components.TrackingBanners
 import kotlinx.coroutines.flow.filterIsInstance
@@ -30,16 +27,23 @@ import kotlinx.coroutines.flow.first
 fun MainScreenContent(
     uiState: SimCardListState,
     paddingValues: PaddingValues,
-    viewModel: MainViewModel,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     trackingBannerState: TrackingBannerState,
+    trackingBannerCallbacks: TrackingBannerCallbacks,
     highlightedSlot: Int?,
     actions: SimCardScreenActions,
+    onRetrySimDiscovery: () -> Unit,
+    onRetrySimListAndRefresh: () -> Unit,
+    onSetLimitDialog: (LimitDialogData) -> Unit,
+    onResetUsage: (slot: Int) -> Unit,
+    onToggleAutoReset: (slot: Int, enabled: Boolean) -> Unit,
+    onSetDayDialog: (DayDialogData) -> Unit,
+    onSetAdjustDialog: (AdjustDialogData) -> Unit,
+    onShowTrafficInfo: () -> Unit,
     listState: LazyListState = rememberLazyListState(),
 ) {
-    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-
     val currentUiState by rememberUpdatedState(uiState)
-    val currentActionsState = rememberUpdatedState(actions)
 
     // Wait for the highlighted slot to appear in the loaded data (including gradual SIM discovery).
     // Scroll once and finish the effect. Wait terminates automatically if highlightedSlot is reset.
@@ -58,9 +62,7 @@ fun MainScreenContent(
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = {
-            viewModel.refreshSimCardsNow()
-        },
+        onRefresh = onRefresh,
         modifier =
             Modifier
                 .fillMaxSize()
@@ -69,20 +71,23 @@ fun MainScreenContent(
         Column(modifier = Modifier.fillMaxSize()) {
             TrackingBanners(
                 state = trackingBannerState,
-                callbacks =
-                    rememberTrackingBannerCallbacks(
-                        viewModel = viewModel,
-                        actionsState = currentActionsState,
-                    ),
+                callbacks = trackingBannerCallbacks,
             )
 
             Box(modifier = Modifier.weight(1f)) {
                 SimCardListContent(
                     uiState = uiState,
                     listState = listState,
-                    viewModel = viewModel,
                     highlightedSlot = highlightedSlot,
-                    onGrantPhonePermission = { currentActionsState.value.onGrantPhonePermission() },
+                    onGrantPhonePermission = actions.onGrantPhonePermission,
+                    onRetrySimDiscovery = onRetrySimDiscovery,
+                    onRetrySimListAndRefresh = onRetrySimListAndRefresh,
+                    onSetLimitDialog = onSetLimitDialog,
+                    onResetUsage = onResetUsage,
+                    onToggleAutoReset = onToggleAutoReset,
+                    onSetDayDialog = onSetDayDialog,
+                    onSetAdjustDialog = onSetAdjustDialog,
+                    onShowTrafficInfo = onShowTrafficInfo,
                 )
             }
         }
@@ -90,35 +95,19 @@ fun MainScreenContent(
 }
 
 @Composable
-private fun rememberTrackingBannerCallbacks(
-    viewModel: MainViewModel,
-    actionsState: State<SimCardScreenActions>,
-): TrackingBannerCallbacks =
-    remember(viewModel) {
-        TrackingBannerCallbacks(
-            onGrantPhonePermission = { actionsState.value.onGrantPhonePermission() },
-            onShowUsageAccessDialog = { actionsState.value.onShowUsageAccessDialog() },
-            onOpenAppSettings = { actionsState.value.onOpenAppSettings() },
-            onRetryAppSearch = viewModel::retryAppSearch,
-            onDismissAppSearch = viewModel::dismissAppSearch,
-            onRetryCalls = viewModel::retryCalls,
-            onRetryShortcuts = viewModel::retryShortcuts,
-            onRetryTraffic = viewModel::retryTraffic,
-            onGrantNotificationPermission = { actionsState.value.onGrantNotificationPermission() },
-            onDismissWidgetError = viewModel::dismissWidgetError,
-            onDismissInaccurateCalls = viewModel::dismissInaccurateCalls,
-            onRetryWidgetObservation = { viewModel.retryWidgetObservation() },
-            onRetrySimDiscovery = { viewModel.retrySimDiscovery() },
-        )
-    }
-
-@Composable
 private fun SimCardListContent(
     uiState: SimCardListState,
     listState: LazyListState,
-    viewModel: MainViewModel,
     highlightedSlot: Int?,
     onGrantPhonePermission: () -> Unit,
+    onRetrySimDiscovery: () -> Unit,
+    onRetrySimListAndRefresh: () -> Unit,
+    onSetLimitDialog: (LimitDialogData) -> Unit,
+    onResetUsage: (slot: Int) -> Unit,
+    onToggleAutoReset: (slot: Int, enabled: Boolean) -> Unit,
+    onSetDayDialog: (DayDialogData) -> Unit,
+    onSetAdjustDialog: (AdjustDialogData) -> Unit,
+    onShowTrafficInfo: () -> Unit,
 ) {
     when (uiState) {
         is SimCardListState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
@@ -128,11 +117,8 @@ private fun SimCardListContent(
                 messageRes = uiState.messageRes,
                 onRetry = {
                     when (uiState.kind) {
-                        SimCardListState.ErrorKind.SIM_DISCOVERY -> viewModel.retrySimDiscovery()
-                        SimCardListState.ErrorKind.REFRESH -> {
-                            viewModel.retrySimList()
-                            viewModel.refreshSimCardsNow()
-                        }
+                        SimCardListState.ErrorKind.SIM_DISCOVERY -> onRetrySimDiscovery()
+                        SimCardListState.ErrorKind.REFRESH -> onRetrySimListAndRefresh()
                     }
                 },
             )
@@ -141,8 +127,13 @@ private fun SimCardListContent(
             SimCardList(
                 simCards = uiState.simCards,
                 listState = listState,
-                viewModel = viewModel,
                 highlightedSlot = highlightedSlot,
+                onSetLimitDialog = onSetLimitDialog,
+                onResetUsage = onResetUsage,
+                onToggleAutoReset = onToggleAutoReset,
+                onSetDayDialog = onSetDayDialog,
+                onSetAdjustDialog = onSetAdjustDialog,
+                onShowTrafficInfo = onShowTrafficInfo,
             )
         }
     }

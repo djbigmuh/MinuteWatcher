@@ -65,10 +65,6 @@ configure<ApplicationExtension> {
         }
     }
 
-    lint {
-        disable += listOf("AndroidGradlePluginVersion", "ObsoleteSdkInt")
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -144,7 +140,6 @@ dependencies {
     testImplementation(libs.robolectric)
     androidTestImplementation(platform(libs.androidxComposeBom))
     androidTestImplementation(libs.androidxJunit)
-    androidTestImplementation(libs.androidxEspressoCore)
     androidTestImplementation(libs.androidxUiTestJunit4)
     debugImplementation(platform(libs.androidxComposeBom))
     debugImplementation(libs.androidxUiTooling)

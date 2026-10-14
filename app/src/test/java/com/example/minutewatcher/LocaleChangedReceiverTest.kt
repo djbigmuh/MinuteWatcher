@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.testing.MainDispatcherRule
+import com.example.minutewatcher.core.data.NotificationHelper
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,30 +39,36 @@ class LocaleChangedReceiverTest {
     private lateinit var context: Context
     private lateinit var mockPendingResult: BroadcastReceiver.PendingResult
     private lateinit var mockNotifier: DataChangeNotifier
+    private lateinit var mockNotificationHelper: NotificationHelper
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
         mockNotifier = mock(DataChangeNotifier::class.java)
+        mockNotificationHelper = mock(NotificationHelper::class.java)
     }
+
+    private fun createReceiver(onAcquire: (() -> Unit)? = null) =
+        object : LocaleChangedReceiver() {
+            override fun acquirePendingResult(): PendingResult {
+                onAcquire?.invoke()
+                return mockPendingResult
+            }
+
+            override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
+
+            override suspend fun provideNotificationHelper(appContext: Context): NotificationHelper =
+                mockNotificationHelper
+
+            override suspend fun provideDataChangeNotifier(appContext: Context): DataChangeNotifier = mockNotifier
+        }
 
     @Test
     fun `onReceive with non locale changed action exits early without update`() =
         runTest {
             var acquireCount = 0
-            val receiver =
-                object : LocaleChangedReceiver() {
-                    override fun acquirePendingResult(): PendingResult {
-                        acquireCount++
-                        return mockPendingResult
-                    }
-
-                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
-
-                    override suspend fun provideDataChangeNotifier(appContext: Context): DataChangeNotifier =
-                        mockNotifier
-                }
+            val receiver = createReceiver(onAcquire = { acquireCount++ })
 
             val intent = Intent(Intent.ACTION_BOOT_COMPLETED)
             receiver.onReceive(context, intent)
@@ -78,18 +85,7 @@ class LocaleChangedReceiverTest {
     fun `onReceive with action locale changed notifies data change and finishes pendingResult`() =
         runTest {
             var acquireCount = 0
-            val receiver =
-                object : LocaleChangedReceiver() {
-                    override fun acquirePendingResult(): PendingResult {
-                        acquireCount++
-                        return mockPendingResult
-                    }
-
-                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
-
-                    override suspend fun provideDataChangeNotifier(appContext: Context): DataChangeNotifier =
-                        mockNotifier
-                }
+            val receiver = createReceiver(onAcquire = { acquireCount++ })
 
             val intent = Intent(Intent.ACTION_LOCALE_CHANGED)
             receiver.onReceive(context, intent)
@@ -98,6 +94,7 @@ class LocaleChangedReceiverTest {
             ShadowLooper.idleMainLooper()
 
             assertEquals(1, acquireCount)
+            verify(mockNotificationHelper).ensureChannels()
             verify(mockNotifier).notifyDataChanged(updateWidget = true, force = true)
             verify(mockPendingResult).finish()
         }
@@ -109,15 +106,7 @@ class LocaleChangedReceiverTest {
                 mockNotifier.notifyDataChanged(true, true),
             ).thenThrow(RuntimeException("Storage error"))
 
-            val receiver =
-                object : LocaleChangedReceiver() {
-                    override fun acquirePendingResult(): PendingResult = mockPendingResult
-
-                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
-
-                    override suspend fun provideDataChangeNotifier(appContext: Context): DataChangeNotifier =
-                        mockNotifier
-                }
+            val receiver = createReceiver()
 
             val intent = Intent(Intent.ACTION_LOCALE_CHANGED)
             receiver.onReceive(context, intent)
@@ -135,15 +124,7 @@ class LocaleChangedReceiverTest {
                 mockNotifier.notifyDataChanged(true, true),
             ).thenThrow(CancellationException("Cancelled"))
 
-            val receiver =
-                object : LocaleChangedReceiver() {
-                    override fun acquirePendingResult(): PendingResult = mockPendingResult
-
-                    override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
-
-                    override suspend fun provideDataChangeNotifier(appContext: Context): DataChangeNotifier =
-                        mockNotifier
-                }
+            val receiver = createReceiver()
 
             val intent = Intent(Intent.ACTION_LOCALE_CHANGED)
             receiver.onReceive(context, intent)

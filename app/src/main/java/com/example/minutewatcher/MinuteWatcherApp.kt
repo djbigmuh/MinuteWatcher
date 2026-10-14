@@ -8,6 +8,7 @@ import androidx.work.WorkManager
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.data.AodSummaryController
 import com.example.minutewatcher.core.data.CallTracker
+import com.example.minutewatcher.core.data.NotificationHelper
 import com.example.minutewatcher.core.data.TrafficTracker
 import com.example.minutewatcher.core.data.UpdateCoordinator
 import com.example.minutewatcher.feature.widget.WidgetLimitManager
@@ -54,9 +55,16 @@ class MinuteWatcherApp :
     @Inject
     lateinit var updateCoordinator: UpdateCoordinator
 
+    /**
+     * Injected to ensure notification channels exist on app startup.
+     */
+    @Inject
+    lateinit var notificationHelper: NotificationHelper
+
     override fun onCreate() {
         super.onCreate()
         AppLogger.init(this)
+        notificationHelper.ensureChannels()
 
         WorkManager.initialize(this, workManagerConfiguration)
 

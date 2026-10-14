@@ -5,6 +5,7 @@ plugins {
     id("com.android.test")
     id("minutewatcher.android.lint")
     id("minutewatcher.static-analysis")
+    id("minutewatcher.test-infrastructure")
 }
 
 extensions.configure<TestExtension> {

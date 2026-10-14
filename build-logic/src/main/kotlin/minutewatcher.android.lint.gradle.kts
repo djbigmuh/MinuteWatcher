@@ -12,4 +12,6 @@ extension.apply {
     lint.ignoreTestSources = true
     lint.checkTestSources = false
     lint.disable.add("GradleDependency")
+    lint.disable.add("AndroidGradlePluginVersion")
+    lint.disable.add("ObsoleteSdkInt")
 }

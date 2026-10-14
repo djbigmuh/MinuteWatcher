@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.minutewatcher.core.android.ui.onHorizontalSwipe
 import com.example.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
 import com.example.minutewatcher.core.model.Constants
+import com.example.minutewatcher.feature.main.controller.OperationError
 
 @Composable
 fun SimCardScreen(
@@ -24,15 +25,43 @@ fun SimCardScreen(
     actions: SimCardScreenActions,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val trackingBannerState by viewModel.trackingBannerState.collectAsStateWithLifecycle()
     val highlightedSlot by viewModel.highlightedSlot.collectAsStateWithLifecycle()
     val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+    val showLimitDialog by viewModel.showLimitDialog.collectAsStateWithLifecycle()
+    val showDayDialog by viewModel.showDayDialog.collectAsStateWithLifecycle()
+    val showAdjustDialog by viewModel.showAdjustDialog.collectAsStateWithLifecycle()
+    val showTrafficLimitationDialog by viewModel.showTrafficLimitationDialog.collectAsStateWithLifecycle()
     val showOnboardingDialog by viewModel.showOnboardingDialog.collectAsStateWithLifecycle()
     val showUsageAccessDialog by viewModel.showUsageAccessDialog.collectAsStateWithLifecycle()
     val showAboutDialog by viewModel.showAboutDialog.collectAsStateWithLifecycle()
+    val lastOperationError by viewModel.lastOperationError.collectAsStateWithLifecycle()
 
-    SimCardErrorHost(viewModel = viewModel)
+    val trackingBannerCallbacks =
+        remember(viewModel, actions) {
+            TrackingBannerCallbacks(
+                onGrantPhonePermission = actions.onGrantPhonePermission,
+                onShowUsageAccessDialog = actions.onShowUsageAccessDialog,
+                onOpenAppSettings = actions.onOpenAppSettings,
+                onRetryAppSearch = viewModel::retryAppSearch,
+                onDismissAppSearch = viewModel::dismissAppSearch,
+                onRetryCalls = viewModel::retryCalls,
+                onRetryShortcuts = viewModel::retryShortcuts,
+                onRetryTraffic = viewModel::retryTraffic,
+                onGrantNotificationPermission = actions.onGrantNotificationPermission,
+                onDismissWidgetError = viewModel::dismissWidgetError,
+                onDismissInaccurateCalls = viewModel::dismissInaccurateCalls,
+                onRetryWidgetObservation = viewModel::retryWidgetObservation,
+                onRetrySimDiscovery = viewModel::retrySimDiscovery,
+            )
+        }
+
+    SimCardErrorHost(
+        lastOperationError = lastOperationError,
+        onDismissOperationError = viewModel::dismissOperationError,
+    )
 
     Scaffold(
         modifier =
@@ -61,26 +90,73 @@ fun SimCardScreen(
         MainScreenContent(
             uiState = uiState,
             paddingValues = paddingValues,
-            viewModel = viewModel,
+            isRefreshing = isRefreshing,
+            onRefresh = viewModel::refreshSimCardsNow,
             trackingBannerState = trackingBannerState,
+            trackingBannerCallbacks = trackingBannerCallbacks,
             highlightedSlot = highlightedSlot,
             actions = actions,
+            onRetrySimDiscovery = viewModel::retrySimDiscovery,
+            onRetrySimListAndRefresh = {
+                viewModel.retrySimList()
+                viewModel.refreshSimCardsNow()
+            },
+            onSetLimitDialog = viewModel::setLimitDialog,
+            onResetUsage = viewModel::resetUsage,
+            onToggleAutoReset = viewModel::toggleAutoReset,
+            onSetDayDialog = viewModel::setDayDialog,
+            onSetAdjustDialog = viewModel::setAdjustDialog,
+            onShowTrafficInfo = { viewModel.setTrafficLimitationDialog(true) },
         )
 
         DialogRenderer(
-            viewModel = viewModel,
+            showLimitDialog = showLimitDialog,
+            showDayDialog = showDayDialog,
+            showAdjustDialog = showAdjustDialog,
+            showTrafficLimitationDialog = showTrafficLimitationDialog,
             showUsageAccessDialog = showUsageAccessDialog,
             showOnboardingDialog = showOnboardingDialog,
             showAboutDialog = showAboutDialog,
+            versionName = viewModel.versionName,
+            versionCode = viewModel.code.toLong(),
+            onDismissLimitDialog = { viewModel.setLimitDialog(null) },
+            onConfirmLimits = { slot, min, traf, rollover ->
+                viewModel.updateLimits(slot, min, traf, rollover)
+                viewModel.setLimitDialog(null)
+            },
+            onResetLimits = { slot ->
+                viewModel.updateLimits(slot, 0, 0, false)
+                viewModel.setLimitDialog(null)
+            },
+            onDismissDayDialog = { viewModel.setDayDialog(null) },
+            onConfirmAutoResetDay = { slot, day ->
+                viewModel.updateAutoResetDay(slot, day)
+                viewModel.setDayDialog(null)
+            },
+            onDismissAdjustDialog = { viewModel.setAdjustDialog(null) },
+            onConfirmAdjustMinutes = { slot, value ->
+                viewModel.adjustRemainingMinutes(slot, value)
+                viewModel.setAdjustDialog(null)
+            },
+            onConfirmAdjustTraffic = { slot, value ->
+                viewModel.adjustRemainingTraffic(slot, value)
+                viewModel.setAdjustDialog(null)
+            },
+            onDismissTrafficLimitationDialog = { viewModel.setTrafficLimitationDialog(false) },
+            onDismissUsageAccessDialog = { viewModel.setUsageAccessDialog(false) },
             onOpenUsageAccessSettings = actions.onOpenUsageAccessSettings,
+            onCompleteOnboarding = viewModel::completeOnboarding,
+            onDismissAboutDialog = { viewModel.setShowAboutDialog(false) },
             onEmailAuthor = actions.onEmailAuthor,
         )
     }
 }
 
 @Composable
-private fun SimCardErrorHost(viewModel: MainViewModel) {
-    val lastOperationError by viewModel.lastOperationError.collectAsStateWithLifecycle()
+private fun SimCardErrorHost(
+    lastOperationError: OperationError?,
+    onDismissOperationError: () -> Unit,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
 
     lastOperationError?.let { error ->
@@ -91,7 +167,7 @@ private fun SimCardErrorHost(viewModel: MainViewModel) {
                 message = message,
                 withDismissAction = true,
             )
-            viewModel.dismissOperationError()
+            onDismissOperationError()
         }
     }
 }

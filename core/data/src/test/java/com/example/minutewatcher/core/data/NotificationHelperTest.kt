@@ -42,6 +42,19 @@ class NotificationHelperTest {
         whenever(navigationProvider.mainActivityClassName).thenReturn("MainActivity")
 
         helper = NotificationHelper(context, navigationProvider, permissionManager)
+        helper.ensureChannels()
+    }
+
+    @Test
+    fun `constructor has no side effects and does not create channels until ensureChannels`() {
+        notificationManager.deleteNotificationChannel(Constants.Notifications.CHANNEL_ID)
+        notificationManager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2)
+
+        val freshHelper = NotificationHelper(context, navigationProvider, permissionManager)
+        org.junit.Assert.assertNull(notificationManager.getNotificationChannel(Constants.Notifications.CHANNEL_ID))
+
+        freshHelper.ensureChannels()
+        assertNotNull(notificationManager.getNotificationChannel(Constants.Notifications.CHANNEL_ID))
     }
 
     @Test
@@ -62,7 +75,7 @@ class NotificationHelperTest {
     }
 
     @Test
-    fun `helper initialization migrates old aod summary channel to v2 channel and deletes old channel`() {
+    fun `ensureChannels migrates old aod summary channel to v2 channel and deletes old channel`() {
         val oldChannel =
             NotificationChannel(
                 Constants.Notifications.AOD_SUMMARY_CHANNEL_ID,
@@ -73,7 +86,7 @@ class NotificationHelperTest {
         assertNotNull(notificationManager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID))
 
         val migrationHelper = NotificationHelper(context, navigationProvider, permissionManager)
-        assertNotNull(migrationHelper)
+        migrationHelper.ensureChannels()
 
         assertNotNull(
             notificationManager.getNotificationChannel(
@@ -88,12 +101,12 @@ class NotificationHelperTest {
     }
 
     @Test
-    fun `helper initialization handles missing old channel idempotently`() {
+    fun `ensureChannels handles missing old channel idempotently`() {
         notificationManager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
         notificationManager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2)
 
         val freshHelper = NotificationHelper(context, navigationProvider, permissionManager)
-        assertNotNull(freshHelper)
+        freshHelper.ensureChannels()
 
         assertNotNull(
             notificationManager.getNotificationChannel(
@@ -412,6 +425,7 @@ class NotificationHelperTest {
 
         val testHelper =
             NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+        testHelper.ensureChannels()
 
         verify(mockManager, org.mockito.kotlin.times(2)).createNotificationChannel(any())
 

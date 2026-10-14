@@ -34,6 +34,8 @@ dependencies {
     implementation(libs.googleMaterial)
     implementation(platform(libs.androidxComposeBom))
     implementation(libs.androidxUi)
+    implementation(libs.androidxUiToolingPreview)
+    debugImplementation(libs.androidxUiTooling)
     implementation(libs.androidxMaterial3)
     implementation(libs.androidxMaterialIconsCore)
     implementation(libs.androidxCoreKtx)
@@ -49,5 +51,4 @@ dependencies {
     testImplementation(testFixtures(project(":core:android")))
     testImplementation(testFixtures(project(":core:common")))
     androidTestImplementation(libs.androidxJunit)
-    androidTestImplementation(libs.androidxEspressoCore)
 }

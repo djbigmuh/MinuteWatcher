@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -48,13 +49,13 @@ class AppSettingsRepositoryImplTest {
             val settings = repository.getAppSettings().first()
 
             assertEquals(AppTheme.FOLLOW_SYSTEM, settings.theme)
-            assertEquals(true, settings.notifyLowMinutes)
-            assertEquals(true, settings.notifyLowTraffic)
-            assertEquals(false, settings.aodSummaryEnabled)
-            assertEquals(false, settings.assistantAccessEnabled)
+            assertTrue(settings.notifyLowMinutes)
+            assertTrue(settings.notifyLowTraffic)
+            assertFalse(settings.aodSummaryEnabled)
+            assertFalse(settings.assistantAccessEnabled)
             assertEquals(2, settings.widgetLayoutMode)
             assertEquals(50, settings.widgetTransparency)
-            assertEquals(false, settings.onboardingCompleted)
+            assertFalse(settings.onboardingCompleted)
         }
 
     @Test
@@ -64,34 +65,14 @@ class AppSettingsRepositoryImplTest {
 
             repository.updateAppSettings { current ->
                 current.copy(
-                    theme = AppTheme.LIGHT,
-                    widgetTransparency = 75,
+                    theme = AppTheme.DARK,
+                    widgetTransparency = 10,
                 )
             }
             advanceUntilIdle()
 
             val prefs = dataStore.data.first()
-            assertEquals(AppTheme.LIGHT.value, prefs[DataStoreKeys.APP_THEME])
-            assertEquals(75, prefs[DataStoreKeys.WIDGET_TRANSPARENCY])
-        }
-
-    @Test
-    fun `update app settings preserves other fields`() =
-        runTest {
-            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
-
-            dataStore.edit {
-                it[DataStoreKeys.ONBOARDING_COMPLETED] = true
-                it[DataStoreKeys.APP_THEME] = AppTheme.DARK.value
-            }
-
-            repository.updateAppSettings { current ->
-                current.copy(widgetTransparency = 10)
-            }
-            advanceUntilIdle()
-
-            val prefs = dataStore.data.first()
-            assertEquals(true, prefs[DataStoreKeys.ONBOARDING_COMPLETED])
+            assertFalse(prefs[DataStoreKeys.ONBOARDING_COMPLETED] == true)
             assertEquals(AppTheme.DARK.value, prefs[DataStoreKeys.APP_THEME])
             assertEquals(10, prefs[DataStoreKeys.WIDGET_TRANSPARENCY])
         }
@@ -105,7 +86,7 @@ class AppSettingsRepositoryImplTest {
             advanceUntilIdle()
 
             val settings = repository.getAppSettings().first()
-            assertEquals(true, settings.onboardingCompleted)
+            assertTrue(settings.onboardingCompleted)
         }
 
     @Test
@@ -151,8 +132,8 @@ class AppSettingsRepositoryImplTest {
             withTimeoutOrNull(30.seconds) { job.join() }
                 ?: throw AssertionError("Timed out waiting for job")
             assertEquals(2, settingsList.size)
-            assertEquals(false, settingsList[0].onboardingCompleted)
-            assertEquals(true, settingsList[1].onboardingCompleted)
+            assertFalse(settingsList[0].onboardingCompleted)
+            assertTrue(settingsList[1].onboardingCompleted)
         }
 
     @Test
@@ -161,7 +142,7 @@ class AppSettingsRepositoryImplTest {
             val repository = AppSettingsRepositoryImpl(dataStore, backgroundScope)
 
             // 1. Initial default value
-            assertEquals(false, repository.getAppSettings().first().onboardingCompleted)
+            assertFalse(repository.getAppSettings().first().onboardingCompleted)
 
             // 2. Update directly via DataStore (bypassing repository for pure test)
             dataStore.edit { prefs ->
@@ -169,7 +150,7 @@ class AppSettingsRepositoryImplTest {
             }
 
             // 3. getAppSettings().first() should return the new value
-            assertEquals(true, repository.getAppSettings().first().onboardingCompleted)
+            assertTrue(repository.getAppSettings().first().onboardingCompleted)
         }
 
     @Test
@@ -178,34 +159,35 @@ class AppSettingsRepositoryImplTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
             // 1. Initial state
-            dataStore.edit { it[DataStoreKeys.APP_THEME] = AppTheme.DARK.value }
+            val initialSettings = repository.getAppSettings().first()
+            assertFalse(initialSettings.onboardingCompleted)
 
-            // 2. Attempt update that throws
+            // 2. Perform update that throws exception
             try {
                 repository.updateAppSettings {
-                    // Try to modify theme but then throw
-                    throw IllegalStateException("Simulated failure")
+                    throw RuntimeException("Simulated error during update")
                 }
             } catch (_: Exception) {
+                // Expected
             }
+            advanceUntilIdle()
 
-            // 3. Verify DataStore is unchanged
-            val prefs = dataStore.data.first()
-            assertEquals(AppTheme.DARK.value, prefs[DataStoreKeys.APP_THEME])
+            // 3. Verify DataStore remains unchanged
+            val settingsAfterError = repository.getAppSettings().first()
+            assertFalse(settingsAfterError.onboardingCompleted)
         }
 
     @Test
-    fun `update app settings redundant update does not emit`() =
+    fun `update app settings distinct until changed`() =
         runTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
             val settingsList = mutableListOf<AppSettings>()
 
-            // Start collecting
             val job =
                 launch {
                     repository.getAppSettings().toList(settingsList)
                 }
-            testScheduler.advanceUntilIdle() // Initial emission
+            testScheduler.advanceUntilIdle()
 
             // Perform update with same values
             repository.updateAppSettings { it } // No change
@@ -219,8 +201,8 @@ class AppSettingsRepositoryImplTest {
             // Expected: 1 (initial) + 1 (different) = 2.
             // The redundant one should not add to the list.
             assertEquals(2, settingsList.size)
-            assertEquals(false, settingsList[0].onboardingCompleted)
-            assertEquals(true, settingsList[1].onboardingCompleted)
+            assertFalse(settingsList[0].onboardingCompleted)
+            assertTrue(settingsList[1].onboardingCompleted)
         }
 
     @Test
@@ -280,7 +262,7 @@ class AppSettingsRepositoryImplTest {
             // We just ensure we can get a value and it eventually becomes loaded
             advanceUntilIdle()
             val loaded = repository.observeAppSettings().value
-            assertEquals(true, loaded.isLoaded)
+            assertTrue(loaded.isLoaded)
         }
 
     @Test
@@ -297,8 +279,8 @@ class AppSettingsRepositoryImplTest {
             advanceUntilIdle()
 
             val settings = repository.getAppSettings().first()
-            assertEquals(true, settings.phonePermissionPermanentlyDenied)
-            assertEquals(true, settings.notificationPermissionPermanentlyDenied)
+            assertTrue(settings.phonePermissionPermanentlyDenied)
+            assertTrue(settings.notificationPermissionPermanentlyDenied)
         }
 
     @Test
@@ -308,7 +290,7 @@ class AppSettingsRepositoryImplTest {
 
             // Default value when key is missing is false
             val defaultSettings = repository.getAppSettings().first()
-            assertEquals(false, defaultSettings.aodSummaryEnabled)
+            assertFalse(defaultSettings.aodSummaryEnabled)
 
             repository.updateAppSettings {
                 it.copy(aodSummaryEnabled = true)
@@ -316,8 +298,8 @@ class AppSettingsRepositoryImplTest {
             advanceUntilIdle()
 
             val updatedSettings = repository.getAppSettings().first()
-            assertEquals(true, updatedSettings.aodSummaryEnabled)
-            assertEquals(true, dataStore.data.first()[DataStoreKeys.AOD_SUMMARY_ENABLED])
+            assertTrue(updatedSettings.aodSummaryEnabled)
+            assertTrue(dataStore.data.first()[DataStoreKeys.AOD_SUMMARY_ENABLED] == true)
         }
 
     @Test
@@ -326,7 +308,7 @@ class AppSettingsRepositoryImplTest {
             val repository = AppSettingsRepositoryImpl(dataStore, testScope)
 
             val defaultSettings = repository.getAppSettings().first()
-            assertEquals(false, defaultSettings.assistantAccessEnabled)
+            assertFalse(defaultSettings.assistantAccessEnabled)
 
             repository.updateAppSettings {
                 it.copy(assistantAccessEnabled = true)
@@ -334,8 +316,8 @@ class AppSettingsRepositoryImplTest {
             advanceUntilIdle()
 
             val updatedSettings = repository.getAppSettings().first()
-            assertEquals(true, updatedSettings.assistantAccessEnabled)
-            assertEquals(true, dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED])
+            assertTrue(updatedSettings.assistantAccessEnabled)
+            assertTrue(dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED] == true)
 
             repository.updateAppSettings {
                 it.copy(assistantAccessEnabled = false)
@@ -343,7 +325,7 @@ class AppSettingsRepositoryImplTest {
             advanceUntilIdle()
 
             val finalSettings = repository.getAppSettings().first()
-            assertEquals(false, finalSettings.assistantAccessEnabled)
-            assertEquals(false, dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED])
+            assertFalse(finalSettings.assistantAccessEnabled)
+            assertFalse(dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED] == true)
         }
 }

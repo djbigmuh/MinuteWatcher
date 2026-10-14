@@ -37,6 +37,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.minutewatcher.core.common.util.FormatUtils
 import com.example.minutewatcher.core.common.util.NumberInputNormalizer
@@ -528,4 +529,19 @@ private fun DialogButtons(
             Text(stringResource(id = R.string.cancel_button))
         }
     }
+}
+
+@Preview
+@Composable
+private fun SimLimitComposeDialogPreview() {
+    SimLimitComposeDialog(
+        slot = 0,
+        operatorName = "MTS",
+        initialMinutes = 100,
+        initialTrafficMb = 1024,
+        initialRolloverEnabled = false,
+        onDismiss = {},
+        onConfirm = { _, _, _ -> },
+        onReset = {},
+    )
 }

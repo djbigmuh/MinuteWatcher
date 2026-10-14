@@ -13,6 +13,7 @@ import com.example.minutewatcher.core.model.TrackingStatus
 import com.example.minutewatcher.feature.semantic.ShortcutManager
 import com.example.minutewatcher.feature.semantic.search.SemanticSearchManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -241,6 +242,24 @@ class SemanticInitializerWorkerTest {
 
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.failure(), result)
+        }
+
+    @Test(expected = kotlinx.coroutines.CancellationException::class)
+    fun `doWork propagates CancellationException during app settings read`() =
+        runTest {
+            val hangingFlow =
+                kotlinx.coroutines.flow.MutableSharedFlow<com.example.minutewatcher.core.model.AppSettings>()
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(hangingFlow)
+            val worker = createWorker(1)
+
+            val deferred =
+                async {
+                    worker.doWork()
+                }
+            runCurrent()
+
+            deferred.cancel()
+            deferred.await()
         }
 
     private fun createEmptySnapshot() =

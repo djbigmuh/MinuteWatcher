@@ -25,6 +25,7 @@ import com.example.minutewatcher.controller.MainPermissionController
 import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
+import com.example.minutewatcher.core.data.NotificationHelper
 import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.Constants.IntentExtras
@@ -55,6 +56,9 @@ class MainActivity : AppCompatActivity() {
     lateinit var dataChangeNotifier: DataChangeNotifier
 
     @Inject
+    lateinit var notificationHelper: NotificationHelper
+
+    @Inject
     @ApplicationScope
     lateinit var applicationScope: CoroutineScope
 
@@ -70,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         MainActivityThemeObserver.observe(lifecycleScope, lifecycle, viewModel) {
+            notificationHelper.ensureChannels()
             notifyWidgetDataChanged("locale restore")
         }
         setupLocusContext()
@@ -147,6 +152,7 @@ class MainActivity : AppCompatActivity() {
                 LocaleListCompat.forLanguageTags(lang)
             }
         AppCompatDelegate.setApplicationLocales(appLocale)
+        notificationHelper.ensureChannels()
         viewModel.setLanguage(lang)
         notifyWidgetDataChanged("language change")
     }

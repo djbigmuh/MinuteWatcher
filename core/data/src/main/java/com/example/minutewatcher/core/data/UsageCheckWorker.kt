@@ -252,13 +252,16 @@ class UsageCheckWorker
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     val bodyResId = getMinutesExhaustedResId(autoReset)
-                    sendNotificationWithBodyRes(
-                        entity.operatorName,
-                        bodyResId,
-                        entity.simSlot,
-                        UsageNotificationType.MINUTES,
-                    )
-                    deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = true)
+                    val sent =
+                        sendNotificationWithBodyRes(
+                            entity.operatorName,
+                            bodyResId,
+                            entity.simSlot,
+                            UsageNotificationType.MINUTES,
+                        )
+                    if (sent) {
+                        deps.simNotificationFlagsRepository.setNotifiedExhaustedMinutes(identity, notified = true)
+                    }
                 }
             } else {
                 if (notifiedExhausted) {
@@ -293,13 +296,16 @@ class UsageCheckWorker
             if (entity.remaining <= 0) {
                 if (!notifiedExhausted) {
                     val bodyResId = getTrafficExhaustedResId(autoReset)
-                    sendNotificationWithBodyRes(
-                        entity.operatorName,
-                        bodyResId,
-                        entity.simSlot,
-                        UsageNotificationType.TRAFFIC,
-                    )
-                    deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = true)
+                    val sent =
+                        sendNotificationWithBodyRes(
+                            entity.operatorName,
+                            bodyResId,
+                            entity.simSlot,
+                            UsageNotificationType.TRAFFIC,
+                        )
+                    if (sent) {
+                        deps.simNotificationFlagsRepository.setNotifiedExhaustedTraffic(identity, notified = true)
+                    }
                 }
             } else {
                 if (notifiedExhausted) {
@@ -342,6 +348,7 @@ class UsageCheckWorker
                 level,
                 notifiedLow,
                 notifiedCritical,
+                identity,
             )
             updateFlagsIfNeeded(identity, isMinutes, level, notifiedLow, notifiedCritical)
         }
@@ -370,7 +377,7 @@ class UsageCheckWorker
                 }
             ).firstWithTimeout()
 
-        private fun handleNotificationDispatch(
+    private suspend fun handleNotificationDispatch(
             entity: SemanticEntity,
             daysRem: Int,
             autoReset: Boolean,
@@ -378,11 +385,19 @@ class UsageCheckWorker
             level: UsageStatus,
             notifiedLow: Boolean,
             notifiedCritical: Boolean,
+            identity: String,
         ) {
+        val isMinutes = packageType == PackageType.MINUTES
             if (level == UsageStatus.CRITICAL && !notifiedCritical) {
-                sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.CRITICAL)
+                val sent = sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.CRITICAL)
+                if (sent) {
+                    setCriticalFlag(identity, isMinutes, true)
+                }
             } else if (level == UsageStatus.LOW && !notifiedLow && !notifiedCritical) {
-                sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.LOW)
+                val sent = sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.LOW)
+                if (sent) {
+                    setLowFlag(identity, isMinutes, true)
+                }
             }
         }
 
@@ -394,13 +409,13 @@ class UsageCheckWorker
             notifiedCritical: Boolean,
         ) {
             val targetCritical = level == UsageStatus.CRITICAL
-            if (notifiedCritical != targetCritical) {
-                setCriticalFlag(identity, isMinutes, targetCritical)
+            if (notifiedCritical && !targetCritical) {
+                setCriticalFlag(identity, isMinutes, false)
             }
 
             val targetLow = level == UsageStatus.LOW
-            if (notifiedLow != targetLow) {
-                setLowFlag(identity, isMinutes, targetLow)
+            if (notifiedLow && !targetLow) {
+                setLowFlag(identity, isMinutes, false)
             }
         }
 
@@ -434,7 +449,7 @@ class UsageCheckWorker
             autoReset: Boolean,
             packageType: PackageType,
             levelStatus: UsageStatus,
-        ) {
+        ): Boolean {
             val appLocaleContext = AppLocaleContexts.forAppLocale(applicationContext)
             val levelRes =
                 if (levelStatus == UsageStatus.CRITICAL) {
@@ -457,7 +472,7 @@ class UsageCheckWorker
                 }
 
             val notificationType = if (isMinutes) UsageNotificationType.MINUTES else UsageNotificationType.TRAFFIC
-            sendNotificationWithBody(entity.operatorName, body, entity.simSlot, notificationType)
+            return sendNotificationWithBody(entity.operatorName, body, entity.simSlot, notificationType)
         }
 
         private fun getMinutesExhaustedResId(autoReset: Boolean): Int =
@@ -498,12 +513,12 @@ class UsageCheckWorker
             bodyResId: Int,
             slot: Int,
             type: UsageNotificationType,
-        ) {
+        ): Boolean {
             val appLocaleContext =
                 AppLocaleContexts
                     .forAppLocale(applicationContext)
             val body = appLocaleContext.getString(bodyResId)
-            sendNotificationWithBody(operator, body, slot, type)
+            return sendNotificationWithBody(operator, body, slot, type)
         }
 
         private fun sendNotificationWithBody(
@@ -511,7 +526,7 @@ class UsageCheckWorker
             body: String,
             slot: Int,
             type: UsageNotificationType,
-        ) {
+        ): Boolean {
             val appLocaleContext =
                 AppLocaleContexts
                     .forAppLocale(applicationContext)
@@ -522,7 +537,7 @@ class UsageCheckWorker
                     R.string.notification_traffic_title
                 }
             val title = appLocaleContext.getString(titleRes, operator)
-            deps.notificationHelper.sendUsageNotification(title, body, slot, type)
+            return deps.notificationHelper.sendUsageNotification(title, body, slot, type)
         }
 
         private fun getTrafficExhaustedResId(autoReset: Boolean): Int =

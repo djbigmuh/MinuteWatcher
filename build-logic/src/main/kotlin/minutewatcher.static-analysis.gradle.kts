@@ -11,7 +11,7 @@ plugins {
 extensions.configure<DetektExtension>("detekt") {
     config.setFrom(files("${rootDir}/config/detekt/detekt.yml"))
     buildUponDefaultConfig.set(true)
-    allRules.set(false)
+    allRules.set(true)
 }
 
 configure<KtlintExtension> {

@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -82,7 +83,7 @@ class UsageModelsTest {
 
         assertEquals(90, model.effectiveLimit)
         assertEquals(60, model.remaining)
-        assertEquals(true, model.isLimitSet)
+        assertTrue(model.isLimitSet)
     }
 
     @Test
@@ -120,7 +121,7 @@ class UsageModelsTest {
                 manualAdjustmentGb = 0f,
             )
 
-        assertEquals(false, model.isLimitSet)
+        assertFalse(model.isLimitSet)
         assertNull(model.remainingGb)
     }
 }

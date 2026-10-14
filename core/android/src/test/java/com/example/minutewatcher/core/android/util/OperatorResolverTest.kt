@@ -12,17 +12,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+@RunWith(RobolectricTestRunner::class)
 class OperatorResolverTest {
     @get:Rule
     val singletonResetRule = SingletonResetRule()
@@ -45,6 +48,7 @@ class OperatorResolverTest {
     @Before
     fun setup() {
         OperatorResolver.reset()
+        doReturn(context).whenever(context).createConfigurationContext(any())
         whenever(context.assets).thenReturn(assets)
 
         doAnswer {

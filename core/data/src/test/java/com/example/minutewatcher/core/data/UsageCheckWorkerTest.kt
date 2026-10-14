@@ -87,6 +87,7 @@ class UsageCheckWorkerTest {
 
     private suspend fun setupDefaultMocks() {
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
+        whenever(notificationHelper.sendUsageNotification(any(), any(), any(), any())).thenReturn(true)
         whenever(appSettingsRepository.getAppSettings())
             .thenReturn(flowOf(AppSettings(notifyLowMinutes = true, notifyLowTraffic = true, isLoaded = true)))
         whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(any())).thenReturn(flowOf(false))
@@ -382,5 +383,19 @@ class UsageCheckWorkerTest {
 
             assertEquals(ListenableWorker.Result.retry(), result)
             verify(trafficTracker).updateTrafficUsage()
+        }
+
+    @Test
+    fun `flags are not set when notification delivery fails`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            whenever(notificationHelper.sendUsageNotification(any(), any(), any(), any())).thenReturn(false)
+            val snapshot = createUsageSnapshot(minutesUsed = 100, minutesLimit = 100, identity = "sim_0")
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(simNotificationFlagsRepository, never()).setNotifiedExhaustedMinutes(eq("sim_0"), eq(true))
         }
 }

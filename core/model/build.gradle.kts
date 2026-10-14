@@ -3,6 +3,7 @@ plugins {
     `java-library`
     kotlin("jvm")
     id("minutewatcher.static-analysis")
+    id("minutewatcher.test-infrastructure")
 }
 
 java {
