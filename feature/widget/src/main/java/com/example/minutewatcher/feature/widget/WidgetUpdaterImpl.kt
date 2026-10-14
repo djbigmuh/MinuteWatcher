@@ -168,7 +168,8 @@ class WidgetUpdaterImpl
                         is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
                         is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
                     }
-                } catch (e: CancellationException) {
+                } catch (_: CancellationException) {
+                    AppLogger.d("WidgetUpdater: tail pass cancelled")
                     WidgetUpdateResult.Failure(
                         wasCoalesced = true,
                         isRetryable = true,

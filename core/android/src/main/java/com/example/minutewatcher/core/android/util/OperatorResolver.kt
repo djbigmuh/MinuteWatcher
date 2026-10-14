@@ -346,14 +346,30 @@ object OperatorResolver {
     private const val MCC_LENGTH = 3
     private const val MIN_MCC_MNC_LENGTH = 5
 
+    private fun String.stripDiacritics(): String {
+        val nfd = java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
+        return nfd.replace(Regex("\\p{M}+"), "")
+    }
+
     /**
      * Resolves the operator resource ID from the given operator name.
      * Uses strict token-based matching to prevent partial matches (e.g., "Timor" matching "TIM").
      */
-    fun getOperatorResourceId(operatorName: String): Int? =
-        tokenToResKey.entries
-            .find { (token, _) -> operatorName.hasToken(token) }
-            ?.let { operatorResourceMap[it.value] }
+    fun getOperatorResourceId(operatorName: String): Int? {
+        val normalized = operatorName.lowercase(Locale.ROOT)
+        val stripped = operatorName.stripDiacritics().lowercase(Locale.ROOT)
+
+        return tokenToResKey.entries
+            .filter { (token, _) ->
+                operatorName.hasToken(token) || normalized.hasToken(token) || stripped.hasToken(token)
+            }.maxWithOrNull(
+                compareBy<Map.Entry<String, String>> { (token, _) ->
+                    token.split(" ").filter { it.isNotEmpty() }.size
+                }.thenBy { (token, _) ->
+                    token.length
+                },
+            )?.let { operatorResourceMap[it.value] }
+    }
 
     /**
      * Checks if the string contains [targetToken] as an isolated token.

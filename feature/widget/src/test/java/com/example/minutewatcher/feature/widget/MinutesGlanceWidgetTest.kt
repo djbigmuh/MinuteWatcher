@@ -70,10 +70,18 @@ class MinutesGlanceWidgetTest {
             }
 
             val usageRepo = mock<UsageStateRepository>()
-            whenever(usageRepo.observeSnapshot()).thenReturn(MutableStateFlow(GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())))
+            whenever(
+                usageRepo.observeSnapshot(),
+            ).thenReturn(
+                MutableStateFlow(
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()),
+                ),
+            )
             whenever(usageRepo.refresh()).thenAnswer {
                 runBlocking { kotlinx.coroutines.delay(1000L) }
-                RefreshResult.Success(GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()))
+                RefreshResult.Success(
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()),
+                )
             }
 
             val timeProvider = mock<TimeProvider>()
@@ -94,8 +102,20 @@ class MinutesGlanceWidgetTest {
             whenever(settingsLoader.load()).thenThrow(RuntimeException("Settings load failed"))
 
             val usageRepo = mock<UsageStateRepository>()
-            whenever(usageRepo.observeSnapshot()).thenReturn(MutableStateFlow(GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())))
-            whenever(usageRepo.refresh()).thenReturn(RefreshResult.Success(GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())))
+            whenever(
+                usageRepo.observeSnapshot(),
+            ).thenReturn(
+                MutableStateFlow(
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()),
+                ),
+            )
+            whenever(
+                usageRepo.refresh(),
+            ).thenReturn(
+                RefreshResult.Success(
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()),
+                ),
+            )
 
             val timeProvider = mock<TimeProvider>()
             whenever(timeProvider.now()).thenReturn(System.currentTimeMillis())
@@ -112,8 +132,20 @@ class MinutesGlanceWidgetTest {
             whenever(settingsLoader.load()).thenReturn(WidgetSettingsState(widgetLimitExceeded = true))
 
             val usageRepo = mock<UsageStateRepository>()
-            whenever(usageRepo.observeSnapshot()).thenReturn(MutableStateFlow(GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())))
-            whenever(usageRepo.refresh()).thenReturn(RefreshResult.Success(GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())))
+            whenever(
+                usageRepo.observeSnapshot(),
+            ).thenReturn(
+                MutableStateFlow(
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()),
+                ),
+            )
+            whenever(
+                usageRepo.refresh(),
+            ).thenReturn(
+                RefreshResult.Success(
+                    GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()),
+                ),
+            )
 
             val timeProvider = mock<TimeProvider>()
             whenever(timeProvider.now()).thenReturn(System.currentTimeMillis())

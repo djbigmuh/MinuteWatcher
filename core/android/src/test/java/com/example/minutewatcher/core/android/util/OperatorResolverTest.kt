@@ -311,4 +311,19 @@ class OperatorResolverTest {
             }
             assertTrue("Open count should be at most 3, was $openCount", openCount <= 3)
         }
+
+    @Test
+    fun `getOperatorResourceId handles diacritics and specificity correctly`() {
+        assertEquals(R.string.operator_turk_telekom, OperatorResolver.getOperatorResourceId("Türk Telekom"))
+        assertEquals(R.string.operator_turk_telekom, OperatorResolver.getOperatorResourceId("Turk Telekom"))
+        assertEquals(R.string.operator_turk_telekom, OperatorResolver.getOperatorResourceId("TÜRK TELEKOM"))
+        assertEquals(R.string.operator_telekom, OperatorResolver.getOperatorResourceId("Telekom"))
+        assertEquals(R.string.operator_telekom, OperatorResolver.getOperatorResourceId("Deutsche Telekom"))
+        assertEquals(R.string.operator_turkcell, OperatorResolver.getOperatorResourceId("Turkcell"))
+        assertEquals(R.string.operator_yota, OperatorResolver.getOperatorResourceId("Йота"))
+        assertEquals(R.string.operator_yota, OperatorResolver.getOperatorResourceId("yota"))
+        assertEquals(R.string.operator_yota, OperatorResolver.getOperatorResourceId("YOTA"))
+        assertEquals(R.string.operator_tele2, OperatorResolver.getOperatorResourceId("Т2"))
+        assertNull(OperatorResolver.getOperatorResourceId("Timor Telecom"))
+    }
 }

@@ -24,7 +24,15 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `isRemoteViewsLimitException returns false for generic IllegalArgumentException`() {
         val updater =
-            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier(), defaultScope)
+            WidgetUpdaterImpl(
+                context,
+                mock(),
+                mock(),
+                WidgetUpdateRetryManager(),
+                mock(),
+                WidgetErrorClassifier(),
+                defaultScope,
+            )
         val e =
             IllegalArgumentException(
                 "Something else went wrong",
@@ -39,7 +47,15 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `isRemoteViewsLimitException returns true for TransactionTooLargeException cause`() {
         val updater =
-            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier(), defaultScope)
+            WidgetUpdaterImpl(
+                context,
+                mock(),
+                mock(),
+                WidgetUpdateRetryManager(),
+                mock(),
+                WidgetErrorClassifier(),
+                defaultScope,
+            )
         val e =
             IllegalArgumentException(
                 "RemoteViews too large",
@@ -53,7 +69,15 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `isRemoteViewsLimitException returns true for RuntimeException with TransactionTooLargeException cause`() {
         val updater =
-            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier(), defaultScope)
+            WidgetUpdaterImpl(
+                context,
+                mock(),
+                mock(),
+                WidgetUpdateRetryManager(),
+                mock(),
+                WidgetErrorClassifier(),
+                defaultScope,
+            )
         val cause = TransactionTooLargeException()
         val e = RuntimeException("RemoteViews failed", cause)
         assertTrue(
@@ -64,7 +88,15 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `isRemoteViewsLimitException returns false when stack trace contains only RemoteViews without exception`() {
         val updater =
-            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier(), defaultScope)
+            WidgetUpdaterImpl(
+                context,
+                mock(),
+                mock(),
+                WidgetUpdateRetryManager(),
+                mock(),
+                WidgetErrorClassifier(),
+                defaultScope,
+            )
         val e = IllegalArgumentException("Some other error")
         assertFalse(
             updater.isRemoteViewsLimitException(e),
@@ -74,7 +106,15 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `isRemoteViewsLimitException returns true for deeply nested TransactionTooLargeException cause`() {
         val updater =
-            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier(), defaultScope)
+            WidgetUpdaterImpl(
+                context,
+                mock(),
+                mock(),
+                WidgetUpdateRetryManager(),
+                mock(),
+                WidgetErrorClassifier(),
+                defaultScope,
+            )
         val root = TransactionTooLargeException()
         val nested = RuntimeException("Nested", root)
         val e = IllegalArgumentException("RemoteViews error", nested)
@@ -86,7 +126,15 @@ class WidgetUpdaterErrorClassificationTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `isRemoteViewsLimitException returns false for generic Binder failure`() {
         val updater =
-            WidgetUpdaterImpl(context, mock(), mock(), WidgetUpdateRetryManager(), mock(), WidgetErrorClassifier(), defaultScope)
+            WidgetUpdaterImpl(
+                context,
+                mock(),
+                mock(),
+                WidgetUpdateRetryManager(),
+                mock(),
+                WidgetErrorClassifier(),
+                defaultScope,
+            )
         val e = RuntimeException("Binder transaction failed")
         assertFalse(
             updater.isRemoteViewsLimitException(e),
