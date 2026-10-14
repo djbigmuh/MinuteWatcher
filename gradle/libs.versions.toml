@@ -68,6 +68,7 @@ androidxMaterial3WindowSize = { group = "androidx.compose.material3", name = "ma
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidxTestCoreKtx = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTestCore" }
+androidxTestRunner = { group = "androidx.test", name = "runner", version.ref = "androidxTestCore" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidxJunit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 

@@ -140,6 +140,7 @@ dependencies {
     testImplementation(libs.robolectric)
     androidTestImplementation(platform(libs.androidxComposeBom))
     androidTestImplementation(libs.androidxJunit)
+    androidTestImplementation(libs.androidxTestRunner)
     androidTestImplementation(libs.androidxUiTestJunit4)
     debugImplementation(platform(libs.androidxComposeBom))
     debugImplementation(libs.androidxUiTooling)

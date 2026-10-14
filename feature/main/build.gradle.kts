@@ -51,4 +51,5 @@ dependencies {
     testImplementation(testFixtures(project(":core:android")))
     testImplementation(testFixtures(project(":core:common")))
     androidTestImplementation(libs.androidxJunit)
+    androidTestImplementation(libs.androidxTestRunner)
 }
