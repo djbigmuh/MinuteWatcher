@@ -29,7 +29,7 @@ fun DialogRenderer(
     showOnboardingDialog: Boolean,
     showAboutDialog: Boolean,
     versionName: String,
-    versionCode: Long,
+    versionCode: Int,
     onDismissLimitDialog: () -> Unit,
     onConfirmLimits: (slot: Int, min: Int, traf: Int, rollover: Boolean) -> Unit,
     onResetLimits: (slot: Int) -> Unit,
@@ -88,7 +88,7 @@ fun DialogRenderer(
     if (showAboutDialog) {
         AboutDialog(
             versionName = versionName,
-            versionCode = versionCode.toInt(),
+            versionCode = versionCode,
             onDismiss = onDismissAboutDialog,
             onEmailAuthor = {
                 onDismissAboutDialog()

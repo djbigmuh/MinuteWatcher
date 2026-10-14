@@ -100,7 +100,7 @@ fun AboutDialog(
     versionName: String,
     onEmailAuthor: () -> Unit,
     onDismiss: () -> Unit,
-    versionCode: Int = 1,
+    versionCode: Int,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
