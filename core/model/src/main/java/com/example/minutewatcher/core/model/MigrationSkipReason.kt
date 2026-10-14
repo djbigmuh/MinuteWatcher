@@ -16,8 +16,8 @@ enum class MigrationSkipReason {
     LEGACY_DATA_CHECK_FAILED,
 
     /**
-     * Migration was incomplete: after exhausting attempt limit, some records were not migrated.
-     * Completion flags were set to prevent infinite retry loops, and the reason was recorded for diagnostics.
+     * Migration incomplete: migration incomplete, reason recorded for diagnostics, completion flags not set,
+     * retry performed on next InitialSetupWorker run.
      */
     MIGRATION_PARTIAL_FAILURE,
 }

@@ -204,6 +204,10 @@ class InitialSetupWorker
             return MigrationDecision.PROCEED
         }
 
+        /**
+         * Performs actual migration for active SIMs.
+         * On partial failure, completion flags are intentionally not set so that migration retries on the next worker run.
+         */
         private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): MigrationDecision =
             try {
                 var totalFailures = 0
@@ -213,9 +217,15 @@ class InitialSetupWorker
                 }
 
                 if (totalFailures > 0) {
-                    if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) return MigrationDecision.RETRY
-                    AppLogger.e("InitialSetupWorker: Max migration attempts reached with $totalFailures failures.")
+                    if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
+                        return MigrationDecision.RETRY
+                    }
+                    AppLogger.e(
+                        "InitialSetupWorker: Max migration attempts reached with $totalFailures failures. " +
+                            "Completion flags are intentionally not set so that migration retries on the next worker run.",
+                    )
                     deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.MIGRATION_PARTIAL_FAILURE)
+                    return MigrationDecision.PROCEED
                 }
 
                 deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
