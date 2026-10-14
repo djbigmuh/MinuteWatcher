@@ -58,7 +58,10 @@ fun SimCardScreen(
             )
         }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
     SimCardErrorHost(
+        snackbarHostState = snackbarHostState,
         lastOperationError = lastOperationError,
         onDismissOperationError = viewModel::dismissOperationError,
     )
@@ -85,7 +88,7 @@ fun SimCardScreen(
             )
         },
         floatingActionButton = { MainFab(onAddWidget = actions.onAddWidget) },
-        snackbarHost = { SnackbarHost(hostState = remember { SnackbarHostState() }) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { paddingValues ->
         MainScreenContent(
             uiState = uiState,
@@ -153,12 +156,11 @@ fun SimCardScreen(
 }
 
 @Composable
-private fun SimCardErrorHost(
+internal fun SimCardErrorHost(
+    snackbarHostState: SnackbarHostState,
     lastOperationError: OperationError?,
     onDismissOperationError: () -> Unit,
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
-
     lastOperationError?.let { error ->
         @Suppress("SpreadOperator")
         val message = stringResource(error.messageRes, *error.args.toTypedArray())
