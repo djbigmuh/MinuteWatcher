@@ -206,7 +206,8 @@ class InitialSetupWorker
 
         /**
          * Performs actual migration for active SIMs.
-         * On partial failure, completion flags are intentionally not set so that migration retries on the next worker run.
+         * On partial failure, completion flags are intentionally not set so that
+         * migration retries on the next worker run.
          */
         private suspend fun performActualMigration(activeSims: List<ActiveSimInfo>): MigrationDecision =
             try {
@@ -222,7 +223,8 @@ class InitialSetupWorker
                     }
                     AppLogger.e(
                         "InitialSetupWorker: Max migration attempts reached with $totalFailures failures. " +
-                            "Completion flags are intentionally not set so that migration retries on the next worker run.",
+                            "Completion flags are intentionally not set so that " +
+                            "migration retries on the next worker run.",
                     )
                     deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.MIGRATION_PARTIAL_FAILURE)
                     return MigrationDecision.PROCEED
