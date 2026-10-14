@@ -145,6 +145,19 @@ class MainSettingsControllerTest {
     }
 
     @Test
+    fun `markUsageAccessDialogShown does not crash on IOException`() {
+        runTest {
+            withTimeout(5.seconds) {
+                doAnswer { throw IOException() }.whenever(appSettingsRepository).updateAppSettings(any())
+                val controller = createController(backgroundScope)
+                controller.markUsageAccessDialogShown()
+                advanceUntilIdle()
+                verify(appSettingsRepository).updateAppSettings(any())
+            }
+        }
+    }
+
+    @Test
     fun `cancellation is not suppressed`() {
         runTest {
             withTimeout(5.seconds) {

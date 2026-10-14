@@ -165,6 +165,8 @@ class MainViewModel
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) =
             controllers.settings.setNotificationPermissionPermanentlyDenied(denied)
 
+        fun markUsageAccessDialogShown() = controllers.settings.markUsageAccessDialogShown()
+
         fun completeOnboarding() {
             dialogController.setShowOnboardingDialog(show = false)
             controllers.settings.completeOnboarding()

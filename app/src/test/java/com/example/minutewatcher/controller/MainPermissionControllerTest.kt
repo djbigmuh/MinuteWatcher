@@ -14,7 +14,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -138,31 +137,70 @@ class MainPermissionControllerTest {
         }
 
     @Test
-    fun `checkPermissionsAndInit proceeds immediately without waiting for appSettings when phone permission granted`() =
+    fun `checkPermissionsAndInit shows usage access dialog when phone granted, usage not granted, and dialog not shown`() =
         runTest(testDispatcher) {
-            withTimeout(5000.milliseconds) {
-                whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-                whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+            appSettingsFlow.value = AppSettings(isLoaded = true, usageAccessDialogShown = false)
 
-                var showUsageAccessDialogCalled = false
+            var showDialog = false
+            controller.checkPermissionsAndInit(
+                scope = this,
+                isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                appSettingsLoaded = appSettingsFlow,
+                lastPermissionState = -1,
+                onShowUsageAccessDialog = { showDialog = it },
+                onRequestPhonePermission = {},
+                onCheckNotifications = {},
+            )
 
-                controller.checkPermissionsAndInit(
-                    scope = this,
-                    isInitialSetupCompleted = isInitialSetupCompletedFlow,
-                    appSettingsLoaded = MutableStateFlow(AppSettings(isLoaded = false)),
-                    lastPermissionState = -1,
-                    onShowUsageAccessDialog = { showUsageAccessDialogCalled = true },
-                    onRequestPhonePermission = {},
-                    onCheckNotifications = {},
-                )
+            runCurrent()
+            assertTrue("Usage access dialog should be shown", showDialog)
+        }
 
-                runCurrent()
+    @Test
+    fun `checkPermissionsAndInit does not show usage access dialog when already shown`() =
+        runTest(testDispatcher) {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+            appSettingsFlow.value = AppSettings(isLoaded = true, usageAccessDialogShown = true)
 
-                assertTrue(
-                    "Usage access dialog callback should be invoked without waiting for appSettings",
-                    showUsageAccessDialogCalled,
-                )
-            }
+            var showDialog = false
+            controller.checkPermissionsAndInit(
+                scope = this,
+                isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                appSettingsLoaded = appSettingsFlow,
+                lastPermissionState = -1,
+                onShowUsageAccessDialog = { showDialog = it },
+                onRequestPhonePermission = {},
+                onCheckNotifications = {},
+            )
+
+            runCurrent()
+            assertFalse("Usage access dialog should not be shown when already shown", showDialog)
+        }
+
+    @Test
+    fun `checkPermissionsAndInit does not show usage access dialog on timeout`() =
+        runTest(testDispatcher) {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)
+            appSettingsFlow.value = AppSettings(isLoaded = false)
+
+            var showDialog = false
+            controller.checkPermissionsAndInit(
+                scope = this,
+                isInitialSetupCompleted = isInitialSetupCompletedFlow,
+                appSettingsLoaded = appSettingsFlow,
+                lastPermissionState = -1,
+                onShowUsageAccessDialog = { showDialog = it },
+                onRequestPhonePermission = {},
+                onCheckNotifications = {},
+            )
+
+            advanceTimeBy(Constants.Flow.LONG_TIMEOUT_MS.milliseconds + 100.milliseconds)
+            runCurrent()
+            assertFalse("Usage access dialog should not be shown on timeout", showDialog)
         }
 
     @Test

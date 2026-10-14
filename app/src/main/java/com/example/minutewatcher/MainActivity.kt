@@ -231,7 +231,10 @@ class MainActivity : AppCompatActivity() {
                 isInitialSetupCompleted = viewModel.isInitialSetupCompleted,
                 appSettingsLoaded = viewModel.appSettings,
                 lastPermissionState = lastPermissionState,
-                onShowUsageAccessDialog = { viewModel.setUsageAccessDialog(it) },
+                onShowUsageAccessDialog = { show ->
+                    viewModel.setUsageAccessDialog(show)
+                    if (show) viewModel.markUsageAccessDialogShown()
+                },
                 onRequestPhonePermission = {
                     viewModel.setPhonePermissionRequested()
                     phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE)
@@ -270,18 +273,7 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.onActivityResume()
 
-        val phoneGranted = permissionManager.hasPhoneStatePermission()
-        val usageGranted = permissionManager.hasUsageStatsPermission()
-
         checkPermissionChanges()
-
-        if (phoneGranted) {
-            if (!usageGranted) {
-                viewModel.setUsageAccessDialog(true)
-            } else {
-                permissionHandler.checkNotifications(autoRequest = false)
-            }
-        }
     }
 
     private var lastPermissionState: Int = -1

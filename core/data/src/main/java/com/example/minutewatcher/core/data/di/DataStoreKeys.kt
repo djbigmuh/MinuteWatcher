@@ -87,6 +87,9 @@ internal object DataStoreKeys {
     val WAS_PHONE_PERMISSION_REQUESTED_BEFORE =
         booleanPreferencesKey("was_phone_permission_requested_before")
 
+    val USAGE_ACCESS_DIALOG_SHOWN =
+        booleanPreferencesKey("usage_access_dialog_shown")
+
     val PHONE_PERMISSION_PERMANENTLY_DENIED = booleanPreferencesKey("phone_permission_permanently_denied")
 
     val NOTIFICATION_PERMISSION_PERMANENTLY_DENIED = booleanPreferencesKey("notification_permission_permanently_denied")

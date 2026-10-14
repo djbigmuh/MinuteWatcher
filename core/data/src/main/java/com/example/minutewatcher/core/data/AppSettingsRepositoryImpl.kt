@@ -186,6 +186,7 @@ class AppSettingsRepositoryImpl
                 updated.phonePermissionPermanentlyDenied
             prefs[DataStoreKeys.NOTIFICATION_PERMISSION_PERMANENTLY_DENIED] =
                 updated.notificationPermissionPermanentlyDenied
+            prefs[DataStoreKeys.USAGE_ACCESS_DIALOG_SHOWN] = updated.usageAccessDialogShown
             prefs[DataStoreKeys.BENCHMARK_SIM_COUNT] = updated.benchmarkSimCount
         }
 
@@ -235,6 +236,11 @@ class AppSettingsRepositoryImpl
                     read(
                         DataStoreKeys.NOTIFICATION_PERMISSION_PERMANENTLY_DENIED,
                         current.notificationPermissionPermanentlyDenied,
+                    ),
+                usageAccessDialogShown =
+                    read(
+                        DataStoreKeys.USAGE_ACCESS_DIALOG_SHOWN,
+                        current.usageAccessDialogShown,
                     ),
                 benchmarkSimCount = read(DataStoreKeys.BENCHMARK_SIM_COUNT, current.benchmarkSimCount),
             )

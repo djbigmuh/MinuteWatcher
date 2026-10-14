@@ -18,6 +18,7 @@ package com.example.minutewatcher.core.model
  * @property wasPhonePermissionRequestedBefore Whether phone permission has been requested before.
  * @property phonePermissionPermanentlyDenied Whether phone permission is permanently denied.
  * @property notificationPermissionPermanentlyDenied Whether notification permission is permanently denied.
+ * @property usageAccessDialogShown Whether the automatic usage access dialog has been shown.
  * @property benchmarkSimCount Benchmark SIM count for testing.
  * @property widgetLimitExceeded Widget slot limit exceeded flag.
  * @property inaccurateCallAttributionsCount Counter for fallback attribution events.
@@ -42,6 +43,7 @@ data class AppSettings(
     val wasPhonePermissionRequestedBefore: Boolean = false,
     val phonePermissionPermanentlyDenied: Boolean = false,
     val notificationPermissionPermanentlyDenied: Boolean = false,
+    val usageAccessDialogShown: Boolean = false,
     val benchmarkSimCount: Int = 0,
     val widgetLimitExceeded: Boolean = false,
     /**

@@ -82,21 +82,15 @@ class MainPermissionController
                             }
 
                             if (!permissionManager.hasUsageStatsPermission()) {
-                                onShowUsageAccessDialog(true)
+                                val settings = readLoadedSettings(appSettingsLoaded, "init")
+                                if (settings != null && !settings.usageAccessDialogShown) {
+                                    onShowUsageAccessDialog(true)
+                                }
                             } else {
                                 onCheckNotifications(true)
                             }
                         } else {
-                            val settings =
-                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                    appSettingsLoaded.filter { it.isLoaded }.firstOrNull()
-                                } ?: run {
-                                    AppLogger.w(
-                                        "MainPermissionController: AppSettings read timed " +
-                                            "out during init",
-                                    )
-                                    null
-                                }
+                            val settings = readLoadedSettings(appSettingsLoaded, "init")
                             if (settings != null && !settings.wasPhonePermissionRequestedBefore) {
                                 onRequestPhonePermission()
                             }
@@ -129,16 +123,7 @@ class MainPermissionController
                 scope.launch {
                     try {
                         if (!permissionManager.hasNotificationPermission()) {
-                            val settings =
-                                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                                    appSettingsLoaded.filter { it.isLoaded }.firstOrNull()
-                                } ?: run {
-                                    AppLogger.w(
-                                        "MainPermissionController: AppSettings read timed " +
-                                            "out during checkNotifications",
-                                    )
-                                    null
-                                }
+                            val settings = readLoadedSettings(appSettingsLoaded, "checkNotifications")
                             if (autoRequest && settings != null && !settings.notificationPermissionRequested) {
                                 onRequest()
                             }
@@ -155,4 +140,18 @@ class MainPermissionController
                 newJob.cancel()
             }
         }
+
+        private suspend fun readLoadedSettings(
+            appSettingsLoaded: Flow<AppSettings>,
+            actionName: String,
+        ): AppSettings? =
+            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                appSettingsLoaded.filter { it.isLoaded }.firstOrNull()
+            } ?: run {
+                AppLogger.w(
+                    "MainPermissionController: AppSettings read timed " +
+                        "out during $actionName",
+                )
+                null
+            }
     }

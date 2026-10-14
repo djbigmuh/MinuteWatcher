@@ -175,6 +175,18 @@ class MainSettingsController
             }
         }
 
+        /**
+         * Marks that the usage access dialog has been shown.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         * **AOSP DataStore:** Fully compliant with atomic updates.
+         */
+        fun markUsageAccessDialogShown() {
+            launchSafely("markUsageAccessDialogShown") {
+                appSettingsRepository.updateAppSettings { it.copy(usageAccessDialogShown = true) }
+            }
+        }
+
         private fun launchSafely(
             operationName: String,
             block: suspend () -> Unit,

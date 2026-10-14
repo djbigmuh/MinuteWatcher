@@ -328,4 +328,22 @@ class AppSettingsRepositoryImplTest {
             assertFalse(finalSettings.assistantAccessEnabled)
             assertFalse(dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED] == true)
         }
+
+    @Test
+    fun `update app settings roundtrip usage access dialog shown`() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+
+            val defaultSettings = repository.getAppSettings().first()
+            assertFalse(defaultSettings.usageAccessDialogShown)
+
+            repository.updateAppSettings {
+                it.copy(usageAccessDialogShown = true)
+            }
+            advanceUntilIdle()
+
+            val updatedSettings = repository.getAppSettings().first()
+            assertTrue(updatedSettings.usageAccessDialogShown)
+            assertTrue(dataStore.data.first()[DataStoreKeys.USAGE_ACCESS_DIALOG_SHOWN] == true)
+        }
 }
