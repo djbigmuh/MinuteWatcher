@@ -8,6 +8,7 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.minutewatcher.core.model.AppTheme
 import com.example.minutewatcher.feature.main.MainViewModel
+import com.example.minutewatcher.feature.main.supportedLanguageOptions
 import kotlinx.coroutines.launch
 
 /**
@@ -44,6 +45,7 @@ object MainActivityThemeObserver {
                                 currentTags = currentTags,
                                 savedLanguage = lang,
                                 supportsSystemPerAppLanguages = supportsPerApp,
+                                supportedLanguageCodes = supportedLanguageOptions.mapNotNull { it.code },
                             )
 
                         when (action) {

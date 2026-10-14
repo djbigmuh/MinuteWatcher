@@ -137,7 +137,7 @@ class MainPermissionControllerTest {
         }
 
     @Test
-    fun `checkPermissionsAndInit shows usage access dialog when phone granted, usage not granted, and dialog not shown`() =
+    fun `checkPermissionsAndInit shows usage access dialog when phone granted, usage not granted`() =
         runTest(testDispatcher) {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(false)

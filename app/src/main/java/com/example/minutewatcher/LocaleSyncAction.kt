@@ -14,10 +14,38 @@ internal sealed interface LocaleSyncAction {
     ) : LocaleSyncAction
 }
 
+internal fun normalizeToSupportedLanguageCode(
+    rawTag: String,
+    supportedCodes: List<String>,
+): String {
+    supportedCodes.firstOrNull { it.equals(rawTag, ignoreCase = true) }?.let { return it }
+
+    val rawPrimary =
+        java.util.Locale
+            .forLanguageTag(rawTag)
+            .language
+    if (rawPrimary.isNotEmpty()) {
+        val matchingCodes =
+            supportedCodes.filter { code ->
+                val codePrimary =
+                    java.util.Locale
+                        .forLanguageTag(code)
+                        .language
+                codePrimary.isNotEmpty() && codePrimary.equals(rawPrimary, ignoreCase = true)
+            }
+        if (matchingCodes.size == 1) {
+            return matchingCodes.first()
+        }
+    }
+
+    return rawTag
+}
+
 internal fun resolveLocaleSyncAction(
     currentTags: String?,
     savedLanguage: String?,
     supportsSystemPerAppLanguages: Boolean,
+    supportedLanguageCodes: List<String>,
 ): LocaleSyncAction =
     when {
         currentTags == null ->
@@ -28,5 +56,5 @@ internal fun resolveLocaleSyncAction(
             }
 
         currentTags == savedLanguage -> LocaleSyncAction.None
-        else -> LocaleSyncAction.AdoptSystem(currentTags)
+        else -> LocaleSyncAction.AdoptSystem(normalizeToSupportedLanguageCode(currentTags, supportedLanguageCodes))
     }
