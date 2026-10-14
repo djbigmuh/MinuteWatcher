@@ -34,8 +34,13 @@ object WidgetUiMapper {
         val activeSims = snapshot.simSnapshots
         var currentLayoutMode = WidgetLayoutMode.fromValue(state.layoutMode)
 
+        val visibleSimCount =
+            activeSims.count { sim ->
+                WidgetSimUiFactory.resolveShowSim(state.simStates[sim.slot], state.simListLoadFailed)
+            }
+
         val isPreemptivelyLimited =
-            activeSims.size >= Constants.Widget.PREEMPTIVE_LAYOUT_LIMIT_SIMS &&
+            visibleSimCount >= Constants.Widget.PREEMPTIVE_LAYOUT_LIMIT_SIMS &&
                 currentLayoutMode == WidgetLayoutMode.SIX_LINES
 
         if (state.widgetLimitExceeded) {

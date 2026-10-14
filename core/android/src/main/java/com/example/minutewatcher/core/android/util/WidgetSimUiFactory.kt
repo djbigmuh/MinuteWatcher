@@ -27,6 +27,14 @@ import com.example.minutewatcher.core.model.util.UsageLevelResolver
  * in any layout mode.
  */
 object WidgetSimUiFactory {
+    /**
+     * Resolves whether a SIM is visible based on settings config and load failure fallback.
+     */
+    fun resolveShowSim(
+        simConfig: SimSettingsState?,
+        simListLoadFailed: Boolean,
+    ): Boolean = simConfig?.showSim ?: simListLoadFailed
+
     fun createSimUiState(
         strings: WidgetStrings,
         sim: SimSnapshot,
@@ -48,7 +56,7 @@ object WidgetSimUiFactory {
             slot = sim.slot,
             operatorName = operatorName,
             operatorIconRes = SimUtils.getOperatorIconResource(sim.operatorName),
-            showSim = simConfig?.showSim ?: simListLoadFailed,
+            showSim = resolveShowSim(simConfig, simListLoadFailed),
             showIcon = simConfig?.showIcon ?: true,
             showName = simConfig?.showName ?: true,
             showMinutes = minData.show,
