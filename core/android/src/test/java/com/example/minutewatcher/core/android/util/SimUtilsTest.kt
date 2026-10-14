@@ -38,6 +38,7 @@ class SimUtilsTest {
         assertEquals(R.drawable.ic_tele2, SimUtils.getOperatorIconResource("T2"))
         assertEquals(R.drawable.ic_mgts, SimUtils.getOperatorIconResource("MGTS Mobile"))
         assertEquals(R.drawable.ic_yota, SimUtils.getOperatorIconResource("Yota LTE"))
+        assertEquals(R.drawable.ic_movistar, SimUtils.getOperatorIconResource("Movistar"))
         assertEquals(R.drawable.ic_unknown, SimUtils.getOperatorIconResource("Unknown"))
     }
 

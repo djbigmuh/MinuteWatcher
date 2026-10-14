@@ -13,6 +13,7 @@ object SimUtils {
             R.string.operator_tele2 -> R.drawable.ic_tele2
             R.string.operator_mgts -> R.drawable.ic_mgts
             R.string.operator_yota -> R.drawable.ic_yota
+            R.string.operator_movistar -> R.drawable.ic_movistar
             else -> R.drawable.ic_unknown
         }
 
