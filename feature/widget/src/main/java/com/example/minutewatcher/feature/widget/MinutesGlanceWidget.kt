@@ -1,6 +1,7 @@
 package com.example.minutewatcher.feature.widget
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -32,6 +33,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 /**
  * Main class of MinuteWatcher widget.
@@ -155,44 +158,64 @@ class MinutesGlanceWidget(
         val widgetSettingsLoader = entryPoint.widgetSettingsLoader()
         val timeProvider = entryPoint.timeProvider()
 
-        val refreshResult = getSnapshot(usageRepository, timeProvider)
-        val snapshot = refreshResult.snapshot
-        val refreshFailed =
-            when (refreshResult) {
-                is RefreshResult.Success -> false
-                is RefreshResult.Timeout -> {
-                    AppLogger.w("Widget: using stale snapshot, timestamp=${refreshResult.snapshot.timestamp}")
-                    true
-                }
-                is RefreshResult.Failure -> {
-                    AppLogger.e(
-                        "Widget: refresh failed, using stale snapshot, " +
-                            "timestamp=${refreshResult.snapshot.timestamp}",
-                        refreshResult.cause,
-                    )
-                    true
-                }
-            }
-
-        val settingsState =
-            try {
-                val loaded = widgetSettingsLoader.load()
-                if (forceFullRender) loaded.copy(widgetLimitExceeded = false) else loaded
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Failed to load widget settings, using defaults", e)
-                WidgetSettingsState(settingsLoadFailed = true)
-            }
-
-        return WidgetUiMapper.mapFromSnapshot(
-            strings = WidgetStringsFactory.create(context),
-            snapshot = snapshot,
-            state = settingsState,
-            operatorNames = WidgetStringsFactory.createOperatorNames(context, snapshot.simSnapshots),
-            refreshFailed = refreshFailed,
-        )
+        return getUiStateInternal(context, usageRepository, widgetSettingsLoader, timeProvider)
     }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal suspend fun getUiStateInternal(
+        context: Context,
+        usageRepository: UsageStateRepository,
+        widgetSettingsLoader: WidgetSettingsLoader,
+        timeProvider: TimeProvider,
+    ): WidgetUiState =
+        coroutineScope {
+            val settingsDeferred =
+                async {
+                    try {
+                        val loaded = widgetSettingsLoader.load()
+                        if (forceFullRender) loaded.copy(widgetLimitExceeded = false) else loaded
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Failed to load widget settings, using defaults", e)
+                        WidgetSettingsState(settingsLoadFailed = true)
+                    }
+                }
+
+            val refreshResultDeferred =
+                async {
+                    getSnapshot(usageRepository, timeProvider)
+                }
+
+            val settingsState = settingsDeferred.await()
+            val refreshResult = refreshResultDeferred.await()
+
+            val snapshot = refreshResult.snapshot
+            val refreshFailed =
+                when (refreshResult) {
+                    is RefreshResult.Success -> false
+                    is RefreshResult.Timeout -> {
+                        AppLogger.w("Widget: using stale snapshot, timestamp=${refreshResult.snapshot.timestamp}")
+                        true
+                    }
+                    is RefreshResult.Failure -> {
+                        AppLogger.e(
+                            "Widget: refresh failed, using stale snapshot, " +
+                                "timestamp=${refreshResult.snapshot.timestamp}",
+                            refreshResult.cause,
+                        )
+                        true
+                    }
+                }
+
+            WidgetUiMapper.mapFromSnapshot(
+                strings = WidgetStringsFactory.create(context),
+                snapshot = snapshot,
+                state = settingsState,
+                operatorNames = WidgetStringsFactory.createOperatorNames(context, snapshot.simSnapshots),
+                refreshFailed = refreshFailed,
+            )
+        }
 
     /**
      * Gets snapshot for widget.
