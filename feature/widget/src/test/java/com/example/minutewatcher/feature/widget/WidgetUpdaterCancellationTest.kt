@@ -47,6 +47,7 @@ class WidgetUpdaterCancellationTest {
                 retryManager,
                 limitManager,
                 errorClassifier,
+                scope = testScope,
             )
     }
 
@@ -77,6 +78,7 @@ class WidgetUpdaterCancellationTest {
                     retryManager,
                     limitManager,
                     errorClassifier,
+                    scope = backgroundScope,
                 )
 
             // 1. Start first update

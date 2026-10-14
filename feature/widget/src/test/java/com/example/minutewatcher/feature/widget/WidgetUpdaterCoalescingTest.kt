@@ -1,7 +1,6 @@
 package com.example.minutewatcher.feature.widget
 
 import android.content.Context
-import android.os.TransactionTooLargeException
 import com.example.minutewatcher.core.domain.WidgetUpdateResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -9,9 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,10 +19,88 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
     @Test
-    fun `updateAll coalesces concurrent calls`() =
+    fun `updateAll executes single pass with wasCoalesced false when no parallel calls`() =
         runTest {
-            val startBarrier = CompletableDeferred<Unit>()
-            val finishBarrier = CompletableDeferred<Unit>()
+            var renderCount = 0
+            val fakeRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        renderCount++
+                    }
+                }
+
+            val updater = createUpdater(backgroundScope, fakeRenderer)
+            val result = updater.updateAll()
+
+            assertTrue(result.isSuccess)
+            assertFalse((result as WidgetUpdateResult.Success).wasCoalesced)
+            assertEquals(1, renderCount)
+        }
+
+    @Test
+    fun `request arriving during running pass triggers tail pass and caller receives result of later pass`() =
+        runTest {
+            val startBarrier1 = CompletableDeferred<Unit>()
+            val finishBarrier1 = CompletableDeferred<Unit>()
+            val startBarrier2 = CompletableDeferred<Unit>()
+            val finishBarrier2 = CompletableDeferred<Unit>()
+            var renderCount = 0
+            val passStartTimes = mutableListOf<Long>()
+
+            val fakeRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        renderCount++
+                        passStartTimes.add(System.currentTimeMillis())
+                        if (renderCount == 1) {
+                            startBarrier1.complete(Unit)
+                            withTimeoutOrNull(30.seconds) { finishBarrier1.await() }
+                        } else {
+                            startBarrier2.complete(Unit)
+                            withTimeoutOrNull(30.seconds) { finishBarrier2.await() }
+                        }
+                    }
+                }
+
+            val updater = createUpdater(backgroundScope, fakeRenderer)
+
+            val result1Deferred = async { updater.updateAll() }
+
+            withTimeoutOrNull(30.seconds) { startBarrier1.await() }
+                ?: throw AssertionError("Timed out waiting for startBarrier1")
+
+            // Arrive during running pass 1 -> schedules tail pass
+            val result2Deferred = async { updater.updateAll() }
+
+            finishBarrier1.complete(Unit)
+
+            withTimeoutOrNull(30.seconds) { startBarrier2.await() }
+                ?: throw AssertionError("Timed out waiting for startBarrier2")
+            finishBarrier2.complete(Unit)
+
+            val result1 = result1Deferred.await()
+            val result2 = result2Deferred.await()
+
+            assertTrue(result1.isSuccess)
+            assertTrue(result2.isSuccess)
+            assertFalse((result1 as WidgetUpdateResult.Success).wasCoalesced)
+            assertTrue((result2 as WidgetUpdateResult.Success).wasCoalesced)
+            assertEquals(2, renderCount)
+        }
+
+    @Test
+    fun `multiple parallel requests during running pass are grouped into exactly one tail pass`() =
+        runTest {
+            val startBarrier1 = CompletableDeferred<Unit>()
+            val finishBarrier1 = CompletableDeferred<Unit>()
+            val startBarrier2 = CompletableDeferred<Unit>()
+            val finishBarrier2 = CompletableDeferred<Unit>()
             var renderCount = 0
 
             val fakeRenderer =
@@ -35,127 +110,51 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
                         forceFull: Boolean,
                     ) {
                         renderCount++
-                        startBarrier.complete(Unit)
-                        withTimeoutOrNull(30.seconds) { finishBarrier.await() }
-                            ?: throw AssertionError("Timed out waiting for finishBarrier")
-                    }
-                }
-
-            val updater = createUpdater(backgroundScope, fakeRenderer)
-
-            val result1Deferred = async { updater.updateAll() }
-
-            withTimeoutOrNull(30.seconds) { startBarrier.await() }
-                ?: throw AssertionError("Timed out waiting for startBarrier")
-
-            val result2Deferred = async { updater.updateAll() }
-
-            finishBarrier.complete(Unit)
-
-            val result1 =
-                withTimeoutOrNull(30.seconds) { result1Deferred.await() }
-                    ?: throw AssertionError("Timed out waiting for result1")
-            val result2 =
-                withTimeoutOrNull(30.seconds) { result2Deferred.await() }
-                    ?: throw AssertionError("Timed out waiting for result2")
-
-            assertTrue("Both calls should succeed", result1.isSuccess && result2.isSuccess)
-            assertEquals("Render should be called only once", 1, renderCount)
-
-            val results = listOf(result1, result2)
-            val successResults = results.filterIsInstance<WidgetUpdateResult.Success>()
-            assertEquals(2, successResults.size)
-            assertTrue("At least one update should be coalesced", successResults.any { it.wasCoalesced })
-            assertTrue("At least one update should NOT be coalesced", successResults.any { !it.wasCoalesced })
-        }
-
-    @Test
-    fun `updateAll coalesced calls receive success if recovery succeeds`() =
-        runTest {
-            val startBarrier = CompletableDeferred<Unit>()
-            val finishBarrier = CompletableDeferred<Unit>()
-            var callCount = 0
-
-            val fakeRenderer =
-                object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
-                        callCount++
-                        if (callCount == 1) {
-                            startBarrier.complete(Unit)
-                            withTimeoutOrNull(30.seconds) { finishBarrier.await() }
-                                ?: throw AssertionError("Timed out waiting for finishBarrier")
-                            throw IllegalArgumentException("Too large", TransactionTooLargeException())
+                        if (renderCount == 1) {
+                            startBarrier1.complete(Unit)
+                            withTimeoutOrNull(30.seconds) { finishBarrier1.await() }
+                        } else {
+                            startBarrier2.complete(Unit)
+                            withTimeoutOrNull(30.seconds) { finishBarrier2.await() }
                         }
                     }
                 }
 
-            val updaterWithFake = createUpdater(backgroundScope, fakeRenderer)
-
-            val result1Deferred = async { updaterWithFake.updateAll() }
-
-            withTimeoutOrNull(30.seconds) { startBarrier.await() }
-                ?: throw AssertionError("Timed out waiting for startBarrier")
-
-            val result2Deferred = async { updaterWithFake.updateAll() }
-
-            finishBarrier.complete(Unit)
-
-            val result1 =
-                withTimeoutOrNull(30.seconds) { result1Deferred.await() }
-                    ?: throw AssertionError("Timed out waiting for result1Deferred")
-            val result2 =
-                withTimeoutOrNull(30.seconds) { result2Deferred.await() }
-                    ?: throw AssertionError("Timed out waiting for result2Deferred")
-
-            assertTrue("Original update should succeed after recovery", result1.isSuccess)
-            assertTrue("Joined update should succeed after recovery", result2.isSuccess)
-
-            val success1 = result1 as WidgetUpdateResult.Success
-            val success2 = result2 as WidgetUpdateResult.Success
-
-            assertFalse("Result 1 should NOT be coalesced", success1.wasCoalesced)
-            assertTrue("Result 2 SHOULD be coalesced", success2.wasCoalesced)
-
-            assertEquals("Should have called renderer for full attempt and simplified recovery", 2, callCount)
-        }
-
-    @Test
-    fun `updateAll concurrent call at the end of previous update does not return failure`() =
-        runTest {
-            val finishBarrier = CompletableDeferred<Unit>()
-            val fakeRenderer =
-                object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
-                        withTimeoutOrNull(30.seconds) { finishBarrier.await() }
-                            ?: throw AssertionError("Timed out waiting for finishBarrier")
-                    }
-                }
-
             val updater = createUpdater(backgroundScope, fakeRenderer)
 
             val result1Deferred = async { updater.updateAll() }
+            withTimeoutOrNull(30.seconds) { startBarrier1.await() }
 
-            finishBarrier.complete(Unit)
-            val result2 = updater.updateAll()
-            val result1 =
-                withTimeoutOrNull(30.seconds) { result1Deferred.await() }
-                    ?: throw AssertionError("Timed out waiting for result1Deferred")
+            // Multiple concurrent requests during pass 1
+            val result2Deferred = async { updater.updateAll() }
+            val result3Deferred = async { updater.updateAll() }
+            val result4Deferred = async { updater.updateAll() }
 
-            assertTrue("First update should succeed", result1.isSuccess)
-            assertTrue("Second update should succeed", result2.isSuccess)
+            finishBarrier1.complete(Unit)
+            withTimeoutOrNull(30.seconds) { startBarrier2.await() }
+            finishBarrier2.complete(Unit)
+
+            val r1 = result1Deferred.await()
+            val r2 = result2Deferred.await()
+            val r3 = result3Deferred.await()
+            val r4 = result4Deferred.await()
+
+            assertTrue(r1.isSuccess)
+            assertTrue(r2.isSuccess)
+            assertTrue(r3.isSuccess)
+            assertTrue(r4.isSuccess)
+
+            assertEquals("Renderer should be called exactly twice (1 main + 1 tail)", 2, renderCount)
         }
 
     @Test
-    fun `updateAll coalesced calls receive failure instead of cancellation when primary is cancelled`() =
+    fun `cancellation of main pass coroutine when tail pass is scheduled does not block waiters`() =
         runTest {
-            val startBarrier = CompletableDeferred<Unit>()
-            val finishBarrier = CompletableDeferred<Unit>()
+            val startBarrier1 = CompletableDeferred<Unit>()
+            val finishBarrier1 = CompletableDeferred<Unit>()
+            val startBarrier2 = CompletableDeferred<Unit>()
+            val finishBarrier2 = CompletableDeferred<Unit>()
+            var renderCount = 0
 
             val fakeRenderer =
                 object : WidgetRenderer {
@@ -163,46 +162,42 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
                         context: Context,
                         forceFull: Boolean,
                     ) {
-                        startBarrier.complete(Unit)
-                        withTimeoutOrNull(30.seconds) { finishBarrier.await() }
-                            ?: throw AssertionError("Timed out waiting for finishBarrier")
+                        renderCount++
+                        if (renderCount == 1) {
+                            startBarrier1.complete(Unit)
+                            withTimeoutOrNull(30.seconds) { finishBarrier1.await() }
+                        } else {
+                            startBarrier2.complete(Unit)
+                            withTimeoutOrNull(30.seconds) { finishBarrier2.await() }
+                        }
                     }
                 }
 
             val updater = createUpdater(backgroundScope, fakeRenderer)
 
-            val primaryJob =
-                backgroundScope.launch {
-                    updater.updateAll()
-                }
+            val primaryJob = async { updater.updateAll() }
+            withTimeoutOrNull(30.seconds) { startBarrier1.await() }
 
-            withTimeoutOrNull(30.seconds) { startBarrier.await() }
-                ?: throw AssertionError("Timed out waiting for startBarrier")
+            val waitingDeferred = async { updater.updateAll() }
 
-            val coalescedDeferred =
-                backgroundScope.async {
-                    updater.updateAll()
-                }
-            runCurrent()
-
+            // Cancel primary job while running
             primaryJob.cancel()
-            runCurrent()
-            advanceUntilIdle()
+            finishBarrier1.complete(Unit)
 
-            val result =
-                withTimeoutOrNull(30.seconds) { coalescedDeferred.await() }
-                    ?: throw AssertionError("Timed out waiting for coalescedDeferred")
-            assertTrue("Result should be failure", result is WidgetUpdateResult.Failure)
-            val failure = result as WidgetUpdateResult.Failure
-            assertTrue("Result should be marked as coalesced", failure.wasCoalesced)
-            assertEquals("Reason should be TRANSIENT", WidgetUpdateResult.FailureReason.TRANSIENT, failure.reason)
+            withTimeoutOrNull(30.seconds) { startBarrier2.await() }
+            finishBarrier2.complete(Unit)
+
+            val result = waitingDeferred.await()
+            assertTrue(result.isSuccess)
+            assertTrue((result as WidgetUpdateResult.Success).wasCoalesced)
         }
 
     @Test(expected = CancellationException::class)
-    fun `updateAll propagates CancellationException when joined caller is cancelled`() =
+    fun `cancellation of one waiting caller propagates CancellationException to it without affecting passes`() =
         runTest {
-            val startBarrier = CompletableDeferred<Unit>()
-            val finishBarrier = CompletableDeferred<Unit>()
+            val startBarrier1 = CompletableDeferred<Unit>()
+            val finishBarrier1 = CompletableDeferred<Unit>()
+            var renderCount = 0
 
             val fakeRenderer =
                 object : WidgetRenderer {
@@ -210,20 +205,23 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
                         context: Context,
                         forceFull: Boolean,
                     ) {
-                        startBarrier.complete(Unit)
-                        withTimeoutOrNull(30.seconds) { finishBarrier.await() }
-                            ?: throw AssertionError("Timed out waiting for finishBarrier")
+                        renderCount++
+                        startBarrier1.complete(Unit)
+                        withTimeoutOrNull(30.seconds) { finishBarrier1.await() }
                     }
                 }
 
             val updater = createUpdater(backgroundScope, fakeRenderer)
 
             launch { updater.updateAll() }
-            withTimeoutOrNull(30.seconds) { startBarrier.await() }
-                ?: throw AssertionError("Timed out waiting for startBarrier")
+            withTimeoutOrNull(30.seconds) { startBarrier1.await() }
 
-            val joinedUpdateJob = async { updater.updateAll() }
-            joinedUpdateJob.cancel()
-            withTimeout(30.seconds) { joinedUpdateJob.await() }
+            val waitingJob = async { updater.updateAll() }
+            waitingJob.cancel()
+
+            finishBarrier1.complete(Unit)
+            advanceUntilIdle()
+
+            waitingJob.await()
         }
 }

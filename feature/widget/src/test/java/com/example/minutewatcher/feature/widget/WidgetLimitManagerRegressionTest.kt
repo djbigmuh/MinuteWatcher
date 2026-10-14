@@ -68,6 +68,7 @@ class WidgetLimitManagerRegressionTest {
                     retryManager = retryManager,
                     limitManager = limitManager,
                     errorClassifier = errorClassifier,
+                    scope = backgroundScope,
                 )
 
             repeat(9) {
@@ -102,6 +103,7 @@ class WidgetLimitManagerRegressionTest {
                     retryManager = retryManager,
                     limitManager = limitManager,
                     errorClassifier = errorClassifier,
+                    scope = backgroundScope,
                 )
 
             whenever(renderer.renderAll(any(), any())).thenReturn(Unit)

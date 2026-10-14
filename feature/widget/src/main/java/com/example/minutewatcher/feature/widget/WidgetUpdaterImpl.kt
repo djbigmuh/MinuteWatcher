@@ -2,6 +2,7 @@ package com.example.minutewatcher.feature.widget
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import com.example.minutewatcher.core.common.di.ApplicationScope
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
 import com.example.minutewatcher.core.domain.AppSettingsRepository
@@ -11,8 +12,12 @@ import com.example.minutewatcher.core.model.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -43,9 +48,12 @@ class WidgetUpdaterImpl
         private val retryManager: WidgetUpdateRetryManager,
         private val limitManager: WidgetLimitManager,
         private val errorClassifier: WidgetErrorClassifier,
+        @param:ApplicationScope private val scope: CoroutineScope,
     ) : WidgetUpdater {
         private val coalescingMutex = Mutex()
         private val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+        private var pendingPass: CompletableDeferred<WidgetUpdateResult>? = null
+        private var rerunRequested: Boolean = false
 
         /**
          * Tracks whether a LimitExceeded error has been handled within the CURRENT update call.
@@ -66,19 +74,24 @@ class WidgetUpdaterImpl
         override suspend fun updateAll(): WidgetUpdateResult {
             val (deferred, isCoalesced) =
                 coalescingMutex.withLock {
-                    val active = activeUpdate.get()?.takeIf { !it.isCompleted }
-                    if (active != null) {
-                        active to true
-                    } else {
+                    val active = activeUpdate.get()
+                    val tailScheduled = pendingPass != null
+                    if (active == null && !tailScheduled) {
                         val new = CompletableDeferred<WidgetUpdateResult>()
                         activeUpdate.set(new)
                         new to false
+                    } else {
+                        rerunRequested = true
+                        if (pendingPass == null) {
+                            pendingPass = CompletableDeferred()
+                        }
+                        pendingPass!! to true
                     }
                 }
 
             val result =
                 if (isCoalesced) {
-                    joinInProgressUpdate(deferred)
+                    deferred.await()
                 } else {
                     startNewUpdate(deferred)
                 }
@@ -86,9 +99,9 @@ class WidgetUpdaterImpl
             return result
         }
 
-        private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult =
+        private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
             try {
-                val result =
+                val res =
                     withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                         executeUpdateProcess()
                     } ?: WidgetUpdateResult.Failure(
@@ -96,17 +109,16 @@ class WidgetUpdaterImpl
                         isRetryable = true,
                         reason = WidgetUpdateResult.FailureReason.TRANSIENT,
                     )
-                deferred.complete(result)
-                result
+                deferred.complete(res)
+                return res
             } catch (e: CancellationException) {
-                activeUpdate.compareAndSet(deferred, null)
-                deferred.complete(
+                val failure =
                     WidgetUpdateResult.Failure(
                         wasCoalesced = false,
                         isRetryable = true,
                         reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                    ),
-                )
+                    )
+                deferred.complete(failure)
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("WidgetUpdater: update failed", e)
@@ -117,10 +129,79 @@ class WidgetUpdaterImpl
                         reason = WidgetUpdateResult.FailureReason.TERMINAL,
                     )
                 deferred.complete(failure)
-                failure
+                return failure
             } finally {
-                activeUpdate.compareAndSet(deferred, null)
+                withContext(NonCancellable) {
+                    val nextTail =
+                        coalescingMutex.withLock {
+                            activeUpdate.set(null)
+                            if (rerunRequested) {
+                                rerunRequested = false
+                                val d = pendingPass
+                                pendingPass = null
+                                d
+                            } else {
+                                null
+                            }
+                        }
+                    if (nextTail != null) {
+                        scope.launch {
+                            runTailPass(nextTail)
+                        }
+                    }
+                }
             }
+        }
+
+        private suspend fun runTailPass(tailDeferred: CompletableDeferred<WidgetUpdateResult>) {
+            val result =
+                try {
+                    val res =
+                        withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                            executeUpdateProcess()
+                        } ?: WidgetUpdateResult.Failure(
+                            wasCoalesced = true,
+                            isRetryable = true,
+                            reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                        )
+                    when (res) {
+                        is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
+                        is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
+                    }
+                } catch (e: CancellationException) {
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = true,
+                        isRetryable = true,
+                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                    )
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetUpdater: tail pass failed", e)
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = true,
+                        isRetryable = true,
+                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                    )
+                }
+            tailDeferred.complete(result)
+
+            // Check if another rerun was requested during the tail pass
+            val nextTail =
+                coalescingMutex.withLock {
+                    if (rerunRequested) {
+                        rerunRequested = false
+                        val d = pendingPass
+                        pendingPass = null
+                        d
+                    } else {
+                        null
+                    }
+                }
+            if (nextTail != null) {
+                scope.launch {
+                    runTailPass(nextTail)
+                }
+            }
+        }
 
         private suspend fun executeUpdateProcess(): WidgetUpdateResult =
             try {
@@ -190,17 +271,6 @@ class WidgetUpdaterImpl
                 isRetryable = isRetryable,
                 reason = reason,
             )
-        }
-
-        private suspend fun joinInProgressUpdate(
-            deferred: CompletableDeferred<WidgetUpdateResult>,
-        ): WidgetUpdateResult {
-            AppLogger.d("WidgetUpdater: update already in progress, waiting")
-            val result = deferred.await()
-            return when (result) {
-                is WidgetUpdateResult.Success -> result.copy(wasCoalesced = true)
-                is WidgetUpdateResult.Failure -> result.copy(wasCoalesced = true)
-            }
         }
 
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {

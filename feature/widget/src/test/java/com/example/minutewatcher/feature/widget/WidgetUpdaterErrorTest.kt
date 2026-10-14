@@ -50,6 +50,7 @@ class WidgetUpdaterErrorTest {
             retryManager = retryManager,
             limitManager = limitManager,
             errorClassifier = errorClassifier,
+            scope = scope,
         )
     }
 

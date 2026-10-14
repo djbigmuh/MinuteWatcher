@@ -69,6 +69,7 @@ abstract class BaseWidgetUpdaterFixture {
             retryManager = retryManager,
             limitManager = limitManager,
             errorClassifier = errorClassifier,
+            scope = scope,
         )
     }
 }

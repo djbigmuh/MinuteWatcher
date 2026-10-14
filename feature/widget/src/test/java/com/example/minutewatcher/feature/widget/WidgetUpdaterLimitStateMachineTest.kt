@@ -178,6 +178,7 @@ class WidgetUpdaterLimitStateMachineTest : BaseWidgetUpdaterFixture() {
                     retryManager,
                     mockLimitManager,
                     errorClassifier,
+                    scope = backgroundScope,
                 )
 
             val result = updaterWithMock.updateAll()
@@ -406,6 +407,7 @@ class WidgetUpdaterLimitStateMachineTest : BaseWidgetUpdaterFixture() {
                     retryManager = retryManager,
                     limitManager = mockLimitManager,
                     errorClassifier = errorClassifier,
+                    scope = backgroundScope,
                 )
 
             repeat(WidgetLimitManager.PROBE_INTERVAL_UPDATES) {

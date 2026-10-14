@@ -5,11 +5,16 @@ import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.WidgetSettingsLoader
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.WidgetSettingsState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -159,12 +164,84 @@ class WidgetSettingsSaverTest {
             val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
             whenever(
                 dataChangeNotifier.notifyDataChanged(any(), any()),
-            ).thenThrow(kotlinx.coroutines.CancellationException("Notification cancelled"))
+            ).thenThrow(CancellationException("Notification cancelled"))
 
-            org.junit.Assert.assertThrows(kotlinx.coroutines.CancellationException::class.java) {
-                kotlinx.coroutines.runBlocking {
+            assertThrows(CancellationException::class.java) {
+                runBlocking {
                     saver.notifyDataChanged()
                 }
             }
+        }
+
+    @Test
+    fun `notifyDataChanged retries 3 times when returning false`() =
+        runTest {
+            val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
+            whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(false)
+
+            saver.notifyDataChanged()
+
+            verify(dataChangeNotifier, times(3)).notifyDataChanged(updateWidget = true, force = true)
+        }
+
+    @Test
+    fun `notifyDataChanged retries 3 times when throwing non-cancellation exception`() =
+        runTest {
+            val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
+            whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenThrow(RuntimeException("Error"))
+
+            saver.notifyDataChanged()
+
+            verify(dataChangeNotifier, times(3)).notifyDataChanged(updateWidget = true, force = true)
+        }
+
+    @Test
+    fun `notifyDataChanged succeeds on second attempt and stops retrying`() =
+        runTest {
+            val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
+            whenever(dataChangeNotifier.notifyDataChanged(any(), any()))
+                .thenReturn(false)
+                .thenReturn(true)
+
+            saver.notifyDataChanged()
+
+            verify(dataChangeNotifier, times(2)).notifyDataChanged(updateWidget = true, force = true)
+        }
+
+    @Test
+    fun `notifyDataChanged propagates CancellationException immediately without retries`() =
+        runTest {
+            val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
+            whenever(dataChangeNotifier.notifyDataChanged(any(), any()))
+                .thenThrow(CancellationException("Cancelled"))
+
+            assertThrows(CancellationException::class.java) {
+                runBlocking {
+                    saver.notifyDataChanged()
+                }
+            }
+
+            verify(dataChangeNotifier, times(1)).notifyDataChanged(updateWidget = true, force = true)
+        }
+
+    @Test
+    fun `slow notifier call longer than SHORT_TIMEOUT_MS is not cancelled and completes`() =
+        runTest {
+            var completed = false
+            val slowNotifier =
+                object : DataChangeNotifier {
+                    override suspend fun notifyDataChanged(
+                        updateWidget: Boolean,
+                        force: Boolean,
+                    ): Boolean {
+                        delay(6_000L)
+                        completed = true
+                        return true
+                    }
+                }
+            val saver = WidgetSettingsSaver(loader, slowNotifier, backgroundScope)
+
+            saver.notifyDataChanged()
+            assertTrue(completed)
         }
 }

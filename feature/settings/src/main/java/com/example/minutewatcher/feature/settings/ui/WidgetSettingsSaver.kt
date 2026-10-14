@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -107,17 +108,29 @@ class WidgetSettingsSaver
 
         @VisibleForTesting
         internal suspend fun notifyDataChanged() {
-            try {
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-                } ?: run {
-                    AppLogger.w("WidgetSettingsSaver: widget notification timed out, skipping")
+            var attempt = 0
+            val maxAttempts = 3
+            while (attempt < maxAttempts) {
+                attempt++
+                val success =
+                    try {
+                        dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.w("WidgetSettingsSaver: notification attempt $attempt failed with exception", e)
+                        false
+                    }
+
+                if (success) {
+                    return
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w("WidgetSettingsSaver: data saved, but widget notification failed", e)
+
+                if (attempt < maxAttempts) {
+                    delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
+                }
             }
+            AppLogger.e("WidgetSettingsSaver: widget notification failed after $maxAttempts attempts")
         }
 
         private suspend fun saveGeneralSettings(state: WidgetSettingsState) {

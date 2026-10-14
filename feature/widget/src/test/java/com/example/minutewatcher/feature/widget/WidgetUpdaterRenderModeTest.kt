@@ -44,6 +44,7 @@ class WidgetUpdaterRenderModeTest : BaseWidgetUpdaterFixture() {
                     retryManager = retryManager,
                     limitManager = limitManager,
                     errorClassifier = errorClassifier,
+                    scope = backgroundScope,
                 )
 
             updater.updateAll()
@@ -67,6 +68,7 @@ class WidgetUpdaterRenderModeTest : BaseWidgetUpdaterFixture() {
                     retryManager = retryManager,
                     limitManager = mockLimitManager,
                     errorClassifier = errorClassifier,
+                    scope = backgroundScope,
                 )
 
             whenever(renderer.renderAll(any(), any())).thenReturn(Unit)
@@ -98,6 +100,7 @@ class WidgetUpdaterRenderModeTest : BaseWidgetUpdaterFixture() {
                     retryManager = retryManager,
                     limitManager = mockLimitManager,
                     errorClassifier = errorClassifier,
+                    scope = backgroundScope,
                 )
 
             updaterWithMock.updateAll()
