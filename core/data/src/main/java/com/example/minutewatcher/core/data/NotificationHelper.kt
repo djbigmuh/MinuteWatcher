@@ -89,13 +89,13 @@ class NotificationHelper
         @Volatile
         private var hasLoggedMissingService = false
 
-    /**
-     * Creates or updates notification channels with localized names and descriptions.
-     */
+        /**
+         * Creates or updates notification channels with localized names and descriptions.
+         */
         @Suppress("TooGenericExceptionCaught")
-    fun ensureChannels() {
+        fun ensureChannels() {
             val manager = notificationManager ?: return
-        val locContext = AppLocaleContexts.forAppLocale(context)
+            val locContext = AppLocaleContexts.forAppLocale(context)
             val channel =
                 NotificationChannel(
                     Constants.Notifications.CHANNEL_ID,

@@ -377,7 +377,7 @@ class UsageCheckWorker
                 }
             ).firstWithTimeout()
 
-    private suspend fun handleNotificationDispatch(
+        private suspend fun handleNotificationDispatch(
             entity: SemanticEntity,
             daysRem: Int,
             autoReset: Boolean,
@@ -387,7 +387,7 @@ class UsageCheckWorker
             notifiedCritical: Boolean,
             identity: String,
         ) {
-        val isMinutes = packageType == PackageType.MINUTES
+            val isMinutes = packageType == PackageType.MINUTES
             if (level == UsageStatus.CRITICAL && !notifiedCritical) {
                 val sent = sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.CRITICAL)
                 if (sent) {

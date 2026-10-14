@@ -87,7 +87,7 @@ class SimIdentityPersistence
                 .distinctBy { it.stableId }
                 .toList()
 
-    private fun recordMigratedStatusAndFilterUpdates(
+        private fun recordMigratedStatusAndFilterUpdates(
             identities: List<SimIdentity>,
             prefs: MutablePreferences,
         ): List<SimIdentity> =
@@ -98,7 +98,7 @@ class SimIdentityPersistence
                 isIdentityUpdateRequired(identity, prefs)
             }
 
-    private fun writeIdentityPreferences(
+        private fun writeIdentityPreferences(
             identities: List<SimIdentity>,
             prefs: MutablePreferences,
         ) {
@@ -163,17 +163,17 @@ class SimIdentityPersistence
             }
         }
 
-    /**
-     * Retains migration status cache for the provided active identities.
-     * Prunes stale entries for removed SIMs.
-     */
+        /**
+         * Retains migration status cache for the provided active identities.
+         * Prunes stale entries for removed SIMs.
+         */
         fun retainMigrated(currentIdentities: Set<String>) {
             migratedIdentities.retainAll(currentIdentities)
         }
 
-    /**
-     * Persists human-readable operator name for a given SIM identity.
-     */
+        /**
+         * Persists human-readable operator name for a given SIM identity.
+         */
         suspend fun setSimOperator(
             identity: String,
             name: String,
