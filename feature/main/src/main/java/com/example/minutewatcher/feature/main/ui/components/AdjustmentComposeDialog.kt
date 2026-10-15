@@ -35,15 +35,21 @@ fun AdjustmentComposeDialog(
             if (isMinutes) {
                 initialValue.toInt().toString()
             } else {
-                // Format with the effective UI locale to display the user's localized decimal separator.
                 String.format(locale, "%.1f", initialValue)
             }
         }
 
-    val state = rememberSaveable(initialText, saver = AdjustmentInputState.Saver) { AdjustmentInputState(initialText) }
+    val state =
+        rememberSaveable(initialText, isMinutes, saver = AdjustmentInputState.Saver) {
+            AdjustmentInputState(initialText, isMinutes)
+        }
 
-    val maxLimit = if (isMinutes) Constants.MAX_MINUTES_LIMIT.toFloat() else Constants.MAX_TRAFFIC_LIMIT_GB
-
+    val maxLimit =
+        if (isMinutes) {
+            Constants.MAX_MINUTES_LIMIT.toFloat()
+        } else {
+            Constants.MAX_TRAFFIC_LIMIT_GB
+        }
     val invalidNumberMsg = stringResource(id = R.string.validation_error_invalid_number)
     val invalidRangeMsg =
         stringResource(
@@ -56,53 +62,65 @@ fun AdjustmentComposeDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                stringResource(id = if (isMinutes) R.string.remaining_text else R.string.traffic_remaining_text),
+                stringResource(
+                    id = if (isMinutes) R.string.remaining_text else R.string.traffic_remaining_text,
+                ),
             )
         },
-        text = {
-            AdjustmentDialogContent(
+        text = { AdjustmentDialogContent(state = state, isMinutes = isMinutes) },
+        confirmButton = {
+            AdjustmentConfirmButton(
                 state = state,
                 isMinutes = isMinutes,
                 locale = locale,
+                invalidNumberMsg = invalidNumberMsg,
+                invalidRangeMsg = invalidRangeMsg,
+                onConfirm = onConfirm,
             )
         },
-        confirmButton = {
-            Button(onClick = {
-                when (
-                    val result =
-                        AdjustmentValidator.validate(
-                            text = state.text.text,
-                            isMinutes = isMinutes,
-                            locale = locale,
-                            invalidNumberMsg = invalidNumberMsg,
-                            invalidRangeMsg = invalidRangeMsg,
-                        )
-                ) {
-                    is AdjustmentValidationResult.Valid -> onConfirm(result.value)
-                    is AdjustmentValidationResult.Invalid -> state.errorText = result.errorText
-                }
-            }) {
-                Text(stringResource(id = R.string.save_button))
-            }
-        },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(id = R.string.cancel_button))
-            }
+            TextButton(onClick = onDismiss) { Text(stringResource(id = R.string.cancel_button)) }
         },
     )
+}
+
+@Composable
+private fun AdjustmentConfirmButton(
+    state: AdjustmentInputState,
+    isMinutes: Boolean,
+    locale: Locale,
+    invalidNumberMsg: String,
+    invalidRangeMsg: String,
+    onConfirm: (Float) -> Unit,
+) {
+    Button(onClick = {
+        when (
+            val result =
+                AdjustmentValidator.validate(
+                    text = state.text.text,
+                    isMinutes = isMinutes,
+                    locale = locale,
+                    invalidNumberMsg = invalidNumberMsg,
+                    invalidRangeMsg = invalidRangeMsg,
+                )
+        ) {
+            is AdjustmentValidationResult.Valid -> onConfirm(result.value)
+            is AdjustmentValidationResult.Invalid -> state.errorText = result.errorText
+        }
+    }) {
+        Text(stringResource(id = R.string.save_button))
+    }
 }
 
 @Composable
 private fun AdjustmentDialogContent(
     state: AdjustmentInputState,
     isMinutes: Boolean,
-    locale: Locale,
 ) {
     Column {
         OutlinedTextField(
             value = state.text,
-            onValueChange = { state.onTextChange(it, locale) },
+            onValueChange = { state.onTextChange(it) },
             label = {
                 Text(
                     stringResource(
@@ -116,11 +134,7 @@ private fun AdjustmentDialogContent(
                 )
             },
             isError = state.errorText != null,
-            supportingText = {
-                state.errorText?.let {
-                    Text(text = it)
-                }
-            },
+            supportingText = { state.errorText?.let { Text(text = it) } },
             keyboardOptions =
                 KeyboardOptions(
                     keyboardType = if (isMinutes) KeyboardType.Number else KeyboardType.Decimal,

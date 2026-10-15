@@ -3,6 +3,8 @@ package com.example.minutewatcher.core.android.util
 import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.test.core.app.ApplicationProvider
 import com.example.minutewatcher.core.common.util.initTestLogger
 import com.example.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
@@ -11,11 +13,16 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
+@RunWith(RobolectricTestRunner::class)
 class SimUtilsTest {
     private val context: Context = mock()
     private val resources: Resources = mock()
@@ -31,40 +38,89 @@ class SimUtilsTest {
 
     @Test
     fun `getOperatorIconResource returns correct icons for known tokens`() {
-        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("MTS RUS"))
-        assertEquals(R.drawable.ic_beeline, SimUtils.getOperatorIconResource("Beeline"))
-        assertEquals(R.drawable.ic_megafon, SimUtils.getOperatorIconResource("MegaFon Corp"))
-        assertEquals(R.drawable.ic_tele2, SimUtils.getOperatorIconResource("Tele2 Russia"))
-        assertEquals(R.drawable.ic_tele2, SimUtils.getOperatorIconResource("T2"))
-        assertEquals(R.drawable.ic_mgts, SimUtils.getOperatorIconResource("MGTS Mobile"))
-        assertEquals(R.drawable.ic_yota, SimUtils.getOperatorIconResource("Yota LTE"))
-        assertEquals(R.drawable.ic_movistar, SimUtils.getOperatorIconResource("Movistar"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS RUS"))
+        assertEquals(R.drawable.ic_operator_beeline, SimUtils.getOperatorIconResource("Beeline"))
+        assertEquals(R.drawable.ic_operator_megafon, SimUtils.getOperatorIconResource("MegaFon Corp"))
+        assertEquals(R.drawable.ic_operator_tele2, SimUtils.getOperatorIconResource("Tele2 Russia"))
+        assertEquals(R.drawable.ic_operator_tele2, SimUtils.getOperatorIconResource("T2"))
+        assertEquals(R.drawable.ic_operator_mgts, SimUtils.getOperatorIconResource("MGTS Mobile"))
+        assertEquals(R.drawable.ic_operator_yota, SimUtils.getOperatorIconResource("Yota LTE"))
+        assertEquals(R.drawable.ic_operator_movistar, SimUtils.getOperatorIconResource("Movistar"))
         assertEquals(R.drawable.ic_unknown, SimUtils.getOperatorIconResource("Unknown"))
     }
 
     @Test
     fun `getOperatorIconResource returns correct icons for cyrillic brand names`() {
-        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("МТС"))
-        assertEquals(R.drawable.ic_megafon, SimUtils.getOperatorIconResource("МегаФон"))
-        assertEquals(R.drawable.ic_beeline, SimUtils.getOperatorIconResource("Билайн"))
-        assertEquals(R.drawable.ic_tele2, SimUtils.getOperatorIconResource("Теле2"))
-        assertEquals(R.drawable.ic_tele2, SimUtils.getOperatorIconResource("Т2"))
-        assertEquals(R.drawable.ic_mgts, SimUtils.getOperatorIconResource("МГТС"))
-        assertEquals(R.drawable.ic_yota, SimUtils.getOperatorIconResource("Йота"))
-        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("МТС Россия"))
-        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("MTS МТС"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС"))
+        assertEquals(R.drawable.ic_operator_megafon, SimUtils.getOperatorIconResource("МегаФон"))
+        assertEquals(R.drawable.ic_operator_beeline, SimUtils.getOperatorIconResource("Билайн"))
+        assertEquals(R.drawable.ic_operator_tele2, SimUtils.getOperatorIconResource("Теле2"))
+        assertEquals(R.drawable.ic_operator_tele2, SimUtils.getOperatorIconResource("Т2"))
+        assertEquals(R.drawable.ic_operator_mgts, SimUtils.getOperatorIconResource("МГТС"))
+        assertEquals(R.drawable.ic_operator_yota, SimUtils.getOperatorIconResource("Йота"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС Россия"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS МТС"))
         assertEquals(R.drawable.ic_unknown, SimUtils.getOperatorIconResource("СберМобайл"))
     }
 
     @Test
     fun `getOperatorIconResource is case insensitive`() {
-        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("mts"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("mts"))
     }
 
     @Test
     fun `getOperatorIconResource handles delimiters correctly`() {
-        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("MTS-RUS"))
-        assertEquals(R.drawable.ic_mts, SimUtils.getOperatorIconResource("MTS_RUS"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS-RUS"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS_RUS"))
+    }
+
+    @Test
+    fun `operatorIconMap covers all operatorResourceMap keys`() {
+        val missing = OperatorResolver.operatorResourceMap.values.filter { it !in SimUtils.operatorIconMap }
+        assertTrue("operatorIconMap missing keys for operatorResourceMap: $missing", missing.isEmpty())
+    }
+
+    @Test
+    fun `all operator icons load successfully in Robolectric`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        SimUtils.operatorIconMap.values.toSet().forEach { drawableResId ->
+            val drawable = AppCompatResources.getDrawable(appContext, drawableResId)
+            assertTrue("Drawable $drawableResId must load successfully", drawable != null)
+        }
+    }
+
+    @Test
+    fun `no operator icon has autoMirrored true`() {
+        val resDir = findResDir()
+        val drawableDir = File(resDir, "drawable")
+        assertTrue("Drawable dir must exist at $drawableDir", drawableDir.exists())
+
+        val factory = DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+
+        drawableDir
+            .listFiles { file ->
+                file.name.startsWith(
+                    "ic_operator_",
+                ) &&
+                    file.extension == "xml"
+            }?.forEach { file ->
+                val doc = builder.parse(file)
+                val root = doc.documentElement
+                val autoMirrored = root.getAttribute("android:autoMirrored")
+                assertFalse("Icon ${file.name} must not have android:autoMirrored=\"true\"", autoMirrored == "true")
+            }
+    }
+
+    private fun findResDir(): File {
+        val candidates =
+            listOf(
+                File("core/resources/src/main/res"),
+                File("../core/resources/src/main/res"),
+                File("../../core/resources/src/main/res"),
+                File("C:/MinuteWatcher/core/resources/src/main/res"),
+            )
+        return candidates.firstOrNull { it.exists() } ?: File("core/resources/src/main/res")
     }
 
     @Test
@@ -157,14 +213,12 @@ class SimUtilsTest {
 
     @Test
     fun `getOperatorResourceId handles aliases from consolidated map`() {
-        // "t2" is an alias for Tele2
         val resId = OperatorResolver.getOperatorResourceId("T2")
         assertEquals(R.string.operator_tele2, resId)
     }
 
     @Test
     fun `getOperatorResourceId works for newly added operators`() {
-        // Rostelecom was recently added to the consolidated map
         val resId = OperatorResolver.getOperatorResourceId("Rostelecom")
         assertEquals(R.string.operator_rostelecom, resId)
     }

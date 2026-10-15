@@ -258,7 +258,8 @@ object OperatorResolver {
         candidates: List<String>,
         simSlot: Int,
     ): String {
-        if (isValidSpecificName(operatorName)) return operatorName
+        val trimmedName = operatorName.trim()
+        if (isValidSpecificName(trimmedName)) return trimmedName
 
         val localizedContext = AppLocaleContexts.forAppLocale(context)
         val database = loadDb(localizedContext)
@@ -310,8 +311,20 @@ object OperatorResolver {
      * @param name Operator name to check.
      * @return True if the name is specific and can be used as is.
      */
-    private fun isValidSpecificName(name: String): Boolean =
-        !SimUtils.isInactiveSim(name) && !genericSimRegex.matches(name.trim())
+    private fun isValidSpecificName(name: String): Boolean {
+        val trimmed = name.trim()
+        if (SimUtils.isInactiveSim(trimmed)) return false
+        if (genericSimRegex.matches(trimmed)) return false
+        if (trimmed.equals("null", ignoreCase = true)) return false
+        if (trimmed.all { it.isDigit() } &&
+            (trimmed.length == MIN_MCC_MNC_LENGTH || trimmed.length == MAX_MCC_MNC_LENGTH)
+        ) {
+            return false
+        }
+        return true
+    }
+
+    private const val MAX_MCC_MNC_LENGTH = 6
 
     private fun resolveFromDbKey(
         context: Context,

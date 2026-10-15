@@ -22,11 +22,8 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.example.minutewatcher.controller.MainPermissionController
-import com.example.minutewatcher.core.common.di.ApplicationScope
-import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.PermissionManager
 import com.example.minutewatcher.core.data.NotificationHelper
-import com.example.minutewatcher.core.domain.DataChangeNotifier
 import com.example.minutewatcher.core.domain.PermissionStateNotifier
 import com.example.minutewatcher.core.model.Constants.IntentExtras
 import com.example.minutewatcher.core.resources.R
@@ -36,9 +33,6 @@ import com.example.minutewatcher.feature.main.SimCardScreenActions
 import com.example.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.example.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -53,14 +47,10 @@ class MainActivity : AppCompatActivity() {
     lateinit var permissionController: MainPermissionController
 
     @Inject
-    lateinit var dataChangeNotifier: DataChangeNotifier
-
-    @Inject
     lateinit var notificationHelper: NotificationHelper
 
     @Inject
-    @ApplicationScope
-    lateinit var applicationScope: CoroutineScope
+    lateinit var widgetDataChangeDispatcher: WidgetDataChangeDispatcher
 
     @Inject
     lateinit var navigator: MainActivityNavigator
@@ -75,7 +65,7 @@ class MainActivity : AppCompatActivity() {
 
         MainActivityThemeObserver.observe(lifecycleScope, lifecycle, viewModel) {
             notificationHelper.ensureChannels()
-            notifyWidgetDataChanged("locale restore")
+            widgetDataChangeDispatcher.notifyDataChanged("locale restore")
         }
         setupLocusContext()
 
@@ -154,24 +144,7 @@ class MainActivity : AppCompatActivity() {
         AppCompatDelegate.setApplicationLocales(appLocale)
         notificationHelper.ensureChannels()
         viewModel.setLanguage(lang)
-        notifyWidgetDataChanged("language change")
-    }
-
-    /**
-     * Notifies widget data changed asynchronously within [applicationScope].
-     *
-     * @param reason The description of why the data change notification is triggered.
-     */
-    private fun notifyWidgetDataChanged(reason: String) {
-        applicationScope.launch {
-            try {
-                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("MainActivity: Failed to notify data change on $reason", e)
-            }
-        }
+        widgetDataChangeDispatcher.notifyDataChanged("language change")
     }
 
     override fun onNewIntent(intent: Intent) {

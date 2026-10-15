@@ -123,7 +123,7 @@ class LocaleConfigConsistencyTest {
         assertEquals("appwidget-provider", root.tagName)
 
         assertEquals("@string/widget_description", root.getAttribute("android:description"))
-        assertEquals("@layout/widget_layout", root.getAttribute("android:previewLayout"))
+        assertEquals("@layout/widget_picker_preview", root.getAttribute("android:previewLayout"))
         assertEquals("@drawable/widget_preview", root.getAttribute("android:previewImage"))
         assertEquals("@layout/widget_layout", root.getAttribute("android:initialLayout"))
         assertEquals("3", root.getAttribute("android:targetCellWidth"))

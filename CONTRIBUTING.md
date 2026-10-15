@@ -109,7 +109,9 @@ following configurations are centralized in the build setup and must not be dupl
 individual module build scripts:
 
 - **Test JVM Settings (`maxParallelForks = 1`, `forkEvery = 1`, JVM arguments, Robolectric properties)**:
-  Centralized in the root `build.gradle.kts` within `subprojects { tasks.withType<Test>() }`.
+  Centralized in the convention plugin `build-logic/src/main/kotlin/minutewatcher.test-infrastructure.gradle.kts`,
+  applied to all modules via convention plugins `minutewatcher.android-application`, `minutewatcher.android-library`,
+  and `minutewatcher.android-test`.
     - `maxParallelForks = 1`: Prevents multiple JVMs from competing for system resources and native library locks.
     - `forkEvery = 1`: Ensures each test class runs in a fresh JVM, preventing side effects between test classes and
       avoiding issues with Robolectric native runtimes on Windows.

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.annotation.VisibleForTesting
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import com.example.minutewatcher.core.android.util.AppLocaleContexts
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.widget.MinutesGlanceWidget
 import kotlinx.coroutines.CoroutineDispatcher
@@ -27,17 +28,27 @@ open class PinWidgetReceiver : BroadcastReceiver() {
             return
         }
 
-        Toast
-            .makeText(
-                context,
-                context.getString(R.string.widget_added_success),
-                Toast.LENGTH_SHORT,
-            ).show()
+        val successMessage = resolveSuccessMessage(context)
+        showSuccessToast(context, successMessage)
 
         // Trigger an immediate update for the newly added widget
         goAsyncWithScope(context, acquirePendingResult(), dispatcher = asyncDispatcher()) { appContext ->
             updateWidget(appContext, appWidgetId)
         }
+    }
+
+    @VisibleForTesting
+    protected open fun resolveSuccessMessage(context: Context): String {
+        val localizedContext = AppLocaleContexts.forAppLocale(context)
+        return localizedContext.getString(R.string.widget_added_success)
+    }
+
+    @VisibleForTesting
+    protected open fun showSuccessToast(
+        context: Context,
+        message: String,
+    ) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     @VisibleForTesting

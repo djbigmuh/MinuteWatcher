@@ -90,9 +90,48 @@ class OperatorResolverTest {
     }
 
     @Test
-    fun `resolve treats string literal null as specific display name`() {
-        val result = OperatorResolver.resolve(context, "null", listOf("25099"), 1)
-        assertEquals("null", result)
+    fun `resolve treats string literal null as non-specific and resolves via database`() {
+        val resultNull = OperatorResolver.resolve(context, "null", listOf("25099"), 1)
+        assertEquals("Beeline", resultNull)
+
+        val resultUpper = OperatorResolver.resolve(context, "NULL", listOf("25099"), 1)
+        assertEquals("Beeline", resultUpper)
+
+        val resultMixed = OperatorResolver.resolve(context, "Null", listOf("25099"), 1)
+        assertEquals("Beeline", resultMixed)
+    }
+
+    @Test
+    fun `resolve treats mcc mnc format string as non-specific and resolves via database`() {
+        val result = OperatorResolver.resolve(context, "25001", listOf("25001"), 0)
+        assertEquals("MTS", result)
+    }
+
+    @Test
+    fun `resolve treats unknown mcc mnc format string as non-specific and falls back`() {
+        val result = OperatorResolver.resolve(context, "99999", listOf("99999"), 0)
+        assertEquals("Operator with mcc MCC:999 MNC:99", result)
+    }
+
+    @Test
+    fun `resolve retains short digit string as specific name`() {
+        val result = OperatorResolver.resolve(context, "3", listOf("25001"), 0)
+        assertEquals("3", result)
+    }
+
+    @Test
+    fun `resolve retains non digit string as specific name`() {
+        val result1 = OperatorResolver.resolve(context, "4G", listOf("25001"), 0)
+        assertEquals("4G", result1)
+
+        val result2 = OperatorResolver.resolve(context, "mt3", listOf("25001"), 0)
+        assertEquals("mt3", result2)
+    }
+
+    @Test
+    fun `resolve trims specific operator name`() {
+        val result = OperatorResolver.resolve(context, "  My Operator  ", listOf("25001"), 0)
+        assertEquals("My Operator", result)
     }
 
     @Test

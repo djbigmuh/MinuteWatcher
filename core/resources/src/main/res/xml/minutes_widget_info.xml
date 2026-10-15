@@ -9,7 +9,7 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:previewImage="@drawable/widget_preview"
-    android:previewLayout="@layout/widget_layout"
+    android:previewLayout="@layout/widget_picker_preview"
     android:targetCellWidth="3"
     android:targetCellHeight="2"
     android:minResizeWidth="110dp"

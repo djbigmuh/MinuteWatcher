@@ -183,5 +183,18 @@
   "50503": "operator_vodafone",
   "53001": "operator_vodafone",
   "53005": "operator_spark",
-  "53024": "operator_2degrees"
+    "53024": "operator_2degrees",
+    "72405": "operator_claro",
+    "72438": "operator_claro",
+    "72439": "operator_claro",
+    "722310": "operator_claro",
+    "722320": "operator_claro",
+    "722330": "operator_claro",
+    "73003": "operator_claro",
+    "732101": "operator_claro",
+    "732102": "operator_claro",
+    "71610": "operator_claro",
+    "74001": "operator_claro",
+    "74402": "operator_claro",
+    "74810": "operator_claro"
 }

@@ -14,4 +14,5 @@ extension.apply {
     lint.disable.add("GradleDependency")
     lint.disable.add("AndroidGradlePluginVersion")
     lint.disable.add("ObsoleteSdkInt")
+    lint.disable.add("VectorPath")
 }

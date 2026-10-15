@@ -96,4 +96,7 @@ The project uses a few non-stable (Beta/Alpha) versions of critical libraries to
 
 ## License
 
-MIT License
+MIT License.
+
+Operator icons are trademarks of their respective owners, used for operator identification; list of sources and licenses
+is available in [docs/operator_icons.md](docs/operator_icons.md).
