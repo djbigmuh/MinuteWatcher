@@ -37,7 +37,6 @@ internal class SimIdentityResolver
          * @throws SeedUnavailableException if identity seed is unavailable within timeout.
          * @throws IOException if DataStore access fails during persistence.
          */
-        @Suppress("ReturnCount")
         suspend fun getSimIdentity(
             slot: Int,
             activeSimsCache: StateFlow<List<ActiveSimInfo>>,

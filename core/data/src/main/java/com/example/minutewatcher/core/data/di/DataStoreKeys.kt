@@ -8,14 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 
 /**
  * Centralized registry of all DataStore preference keys.
- *
- * **Architectural Note:** Multiple helper functions are used here to ensure
- * type-safe access to dynamic preference keys (e.g., identity-based keys).
- * This centralized approach prevents key collisions and serves as the single source
- * of truth for the DataStore schema within the module. Decomposition is counterproductive
- * as it would fragment the schema definition.
  */
-@Suppress("TooManyFunctions")
 internal object DataStoreKeys {
     /**
      * **Schema Migration Invariant:** All DataStore key string values and prefixes defined here

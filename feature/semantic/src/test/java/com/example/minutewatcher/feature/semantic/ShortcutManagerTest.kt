@@ -44,6 +44,7 @@ import android.content.pm.ShortcutManager as AndroidShortcutManager
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "en")
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("LargeClass")
 class ShortcutManagerTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -624,13 +625,14 @@ class ShortcutManagerTest {
                                 "MTS",
                                 mapOf(
                                     PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
-                                    PackageType.DATA to createEntity(
-                                        0,
-                                        "MTS",
-                                        PackageType.DATA,
-                                        1000L * 1024 * 1024 * 1024L,
-                                        500L * 1024 * 1024 * 1024L
-                                    ),
+                                    PackageType.DATA to
+                                        createEntity(
+                                            0,
+                                            "MTS",
+                                            PackageType.DATA,
+                                            1000L * 1024 * 1024 * 1024L,
+                                            500L * 1024 * 1024 * 1024L,
+                                        ),
                                 ),
                                 1,
                             ),
@@ -647,10 +649,11 @@ class ShortcutManagerTest {
 
     @Test
     fun `ic_shortcut_usage drawable has high contrast on white and black backgrounds`() {
-        val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(
-            context,
-            com.example.minutewatcher.core.resources.R.drawable.ic_shortcut_usage
-        )
+        val drawable =
+            androidx.appcompat.content.res.AppCompatResources.getDrawable(
+                context,
+                com.example.minutewatcher.core.resources.R.drawable.ic_shortcut_usage,
+            )
         assertNotNull(drawable)
 
         val whiteBitmap = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
@@ -663,24 +666,45 @@ class ShortcutManagerTest {
         for (x in 0 until 96) {
             for (y in 0 until 96) {
                 val pixel = whiteBitmap.getPixel(x, y)
-                val r = android.graphics.Color.red(pixel).toDouble()
-                val g = android.graphics.Color.green(pixel).toDouble()
-                val b = android.graphics.Color.blue(pixel).toDouble()
-                val a = android.graphics.Color.alpha(pixel).toDouble() / 255.0
+                val r =
+                    android.graphics.Color
+                        .red(pixel)
+                        .toDouble()
+                val g =
+                    android.graphics.Color
+                        .green(pixel)
+                        .toDouble()
+                val b =
+                    android.graphics.Color
+                        .blue(pixel)
+                        .toDouble()
+                val a =
+                    android.graphics.Color
+                        .alpha(pixel)
+                        .toDouble() / 255.0
                 val effR = r * a + 255.0 * (1 - a)
                 val effG = g * a + 255.0 * (1 - a)
                 val effB = b * a + 255.0 * (1 - a)
                 val dist =
-                    kotlin.math.sqrt((effR - 255) * (effR - 255) + (effG - 255) * (effG - 255) + (effB - 255) * (effB - 255))
+                    kotlin.math.sqrt(
+                        (effR - 255) * (effR - 255) + (effG - 255) * (effG - 255) + (effB - 255) * (effB - 255),
+                    )
                 if (dist >= 100.0) whiteContrastCount++
             }
         }
         val whiteRatio = whiteContrastCount.toDouble() / (96 * 96).toDouble()
         val finalWhiteRatio =
-            if (whiteRatio == 0.0 && android.os.Build.FINGERPRINT.contains("robolectric")) 1.0 else whiteRatio
+            if (whiteRatio == 0.0 &&
+                android.os.Build.FINGERPRINT
+                    .contains("robolectric")
+            ) {
+                1.0
+            } else {
+                whiteRatio
+            }
         assertTrue(
             "Shortcut icon must have >= 0.5% visible pixels on white (got ${finalWhiteRatio * 100}%)",
-            finalWhiteRatio >= 0.005
+            finalWhiteRatio >= 0.005,
         )
 
         val blackBitmap = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
@@ -693,10 +717,22 @@ class ShortcutManagerTest {
         for (x in 0 until 96) {
             for (y in 0 until 96) {
                 val pixel = blackBitmap.getPixel(x, y)
-                val r = android.graphics.Color.red(pixel).toDouble()
-                val g = android.graphics.Color.green(pixel).toDouble()
-                val b = android.graphics.Color.blue(pixel).toDouble()
-                val a = android.graphics.Color.alpha(pixel).toDouble() / 255.0
+                val r =
+                    android.graphics.Color
+                        .red(pixel)
+                        .toDouble()
+                val g =
+                    android.graphics.Color
+                        .green(pixel)
+                        .toDouble()
+                val b =
+                    android.graphics.Color
+                        .blue(pixel)
+                        .toDouble()
+                val a =
+                    android.graphics.Color
+                        .alpha(pixel)
+                        .toDouble() / 255.0
                 val effR = r * a
                 val effG = g * a
                 val effB = b * a
@@ -706,10 +742,17 @@ class ShortcutManagerTest {
         }
         val blackRatio = blackContrastCount.toDouble() / (96 * 96).toDouble()
         val finalBlackRatio =
-            if (blackRatio == 0.0 && android.os.Build.FINGERPRINT.contains("robolectric")) 1.0 else blackRatio
+            if (blackRatio == 0.0 &&
+                android.os.Build.FINGERPRINT
+                    .contains("robolectric")
+            ) {
+                1.0
+            } else {
+                blackRatio
+            }
         assertTrue(
             "Shortcut icon must have >= 0.5% visible pixels on black (got ${finalBlackRatio * 100}%)",
-            finalBlackRatio >= 0.005
+            finalBlackRatio >= 0.005,
         )
     }
 

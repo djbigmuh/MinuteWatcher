@@ -13,12 +13,7 @@ import java.util.Locale
 /**
  * Logic for resolving operator name from MCC/MNC database.
  * Optimized with thread-safe cache and explicit resource mapping.
- *
- * NOTE: TooManyFunctions is suppressed: the full MCC/MNC-to-operator mapping
- * pipeline (tokenization, database lookup, legacy fallbacks) is kept as one
- * cohesive unit; splitting it would scatter mapping rules across files.
  */
-@Suppress("TooManyFunctions")
 object OperatorResolver {
     @Volatile
     private var db: Map<String, String>? = null

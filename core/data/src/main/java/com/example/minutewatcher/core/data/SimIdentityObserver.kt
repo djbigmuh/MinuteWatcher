@@ -56,13 +56,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * Observer for SIM identities.
  *
  * **Security:** Seed values are secrets and must never be output to logs.
- *
- * NOTE: TooManyFunctions is suppressed: registration, debouncing and conflict
- * resolution form one observer state machine; extraction would split its
- * invariants across classes.
  */
 @Singleton
-@Suppress("TooManyFunctions")
 internal class SimIdentityObserver
     @Inject
     constructor(

@@ -131,10 +131,10 @@ internal class CallEndResolver
 
         /**
          * Queries call state for a subscription ID.
-         * Suppressing MissingPermission, TooGenericExceptionCaught, and ReturnCount due to permission check,
-         * runtime exception handling, and early returns.
+         * Suppressing MissingPermission and TooGenericExceptionCaught due to permission check
+         * and runtime exception handling.
          */
-        @Suppress("MissingPermission", "TooGenericExceptionCaught", "ReturnCount")
+        @Suppress("MissingPermission", "TooGenericExceptionCaught")
         private fun getCallStateForSub(subId: Int): Int? {
             val manager = telephonyManager ?: return null
             if (!permissionManager.hasPhoneStatePermission()) {

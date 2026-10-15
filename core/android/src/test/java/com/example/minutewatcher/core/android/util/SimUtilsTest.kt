@@ -240,7 +240,7 @@ class SimUtilsTest {
                 assertEquals(
                     "ic_operator_vodafone should be shared by exactly 2 keys (operator_vodafone and operator_vodafone_it)",
                     2,
-                    count
+                    count,
                 )
             } else {
                 assertEquals("Drawable $drawableResId should be unique", 1, count)

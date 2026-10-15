@@ -8,6 +8,10 @@ tasks.withType<Test>().configureEach {
 
     // Centralized Robolectric configuration
     systemProperty("robolectric.sdk", "37")
+    systemProperty(
+        "minutewatcher.coreResourcesResDir",
+        File(rootDir, "core/resources/src/main/res").absolutePath,
+    )
 
     val roboUserHome = rootProject.layout.projectDirectory.dir(".gradle/user-home")
     val roboCacheDir = rootProject.layout.projectDirectory.dir(".gradle/robolectric-cache")

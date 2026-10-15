@@ -18,9 +18,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-// Suppressing TooManyFunctions as this handler manages the complex end-of-call logic
-// including multi-SIM resolution, duration calculation, and state cleanup.
-@Suppress("TooManyFunctions")
 internal class CallEndHandler
     @Inject
     constructor(
@@ -258,7 +255,6 @@ internal class CallEndHandler
             )
         }
 
-        @Suppress("ReturnCount")
         private suspend fun processCallEndLocked(
             subId: Int,
             data: CallEndData,

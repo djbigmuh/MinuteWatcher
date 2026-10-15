@@ -20,8 +20,8 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "com.example.minutewatcher"
-        versionCode = 341
-        versionName = "3.4.1"
+        versionCode = 342
+        versionName = "3.4.2"
         vectorDrawables {
             useSupportLibrary = true
         }

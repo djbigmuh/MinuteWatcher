@@ -35,12 +35,8 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Implementation of call tracking logic that monitors call events and records duration.
  * Uses a Mutex (via [CallMutexHolder]) to prevent race conditions during concurrent call events.
- *
- * NOTE: Suppressing TooManyFunctions as this class acts as a central coordinator for call tracking,
- * delegating most logic to handlers but maintaining public API and status management.
  */
 @Singleton
-@Suppress("TooManyFunctions")
 class CallTracker
     @Inject
     internal constructor(
@@ -286,9 +282,7 @@ class CallTracker
          *
          * **Thread Safety:** Safe to call from any coroutine context. Holds internal mutex
          * during DataStore operations.
-         * Suppressing ReturnCount as refreshStatus returns early on sticky errors or missing permissions.
          */
-        @Suppress("ReturnCount")
         override suspend fun refreshStatus(force: Boolean) {
             AppLogger.d("CallTracker: refreshStatus called (force=$force)")
             try {

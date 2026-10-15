@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -28,6 +29,9 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * WidgetUpdaterImpl updates all widget instances with coalescing logic.
  * Delegates responsibilities to specialized managers for modularity.
+ *
+ * Invariant: `activeUpdate` is non-null iff a pass is running or a tail pass is registered
+ * and waiting to start; parallel execution of passes is excluded.
  *
  * This class implements a state machine for handling RemoteViews size limits:
  * 1. FULL: Default mode. Tries to render the complete widget layout.
@@ -82,10 +86,8 @@ class WidgetUpdaterImpl
                         new to false
                     } else {
                         rerunRequested = true
-                        if (pendingPass == null) {
-                            pendingPass = CompletableDeferred()
-                        }
-                        pendingPass!! to true
+                        val tailDef = pendingPass ?: CompletableDeferred<WidgetUpdateResult>().also { pendingPass = it }
+                        tailDef to true
                     }
                 }
 
@@ -134,18 +136,23 @@ class WidgetUpdaterImpl
                 withContext(NonCancellable) {
                     val nextTail =
                         coalescingMutex.withLock {
-                            activeUpdate.set(null)
                             if (rerunRequested) {
                                 rerunRequested = false
                                 val d = pendingPass
                                 pendingPass = null
+                                if (d != null) {
+                                    activeUpdate.set(d)
+                                } else {
+                                    activeUpdate.set(null)
+                                }
                                 d
                             } else {
+                                activeUpdate.set(null)
                                 null
                             }
                         }
                     if (nextTail != null) {
-                        scope.launch {
+                        scope.launch(start = CoroutineStart.ATOMIC) {
                             runTailPass(nextTail)
                         }
                     }
@@ -154,52 +161,76 @@ class WidgetUpdaterImpl
         }
 
         private suspend fun runTailPass(tailDeferred: CompletableDeferred<WidgetUpdateResult>) {
-            val result =
-                try {
-                    val res =
-                        withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                            executeUpdateProcess()
-                        } ?: WidgetUpdateResult.Failure(
-                            wasCoalesced = true,
-                            isRetryable = true,
-                            reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                        )
+            var completed = false
+            try {
+                val res =
+                    withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                        executeUpdateProcess()
+                    } ?: WidgetUpdateResult.Failure(
+                        wasCoalesced = true,
+                        isRetryable = true,
+                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                    )
+                val finalRes =
                     when (res) {
                         is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
                         is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
                     }
-                } catch (_: CancellationException) {
-                    AppLogger.d("WidgetUpdater: tail pass cancelled")
+                tailDeferred.complete(finalRes)
+                completed = true
+            } catch (_: CancellationException) {
+                AppLogger.d("WidgetUpdater: tail pass cancelled")
+                val failure =
                     WidgetUpdateResult.Failure(
                         wasCoalesced = true,
                         isRetryable = true,
                         reason = WidgetUpdateResult.FailureReason.TRANSIENT,
                     )
-                } catch (e: Exception) {
-                    AppLogger.e("WidgetUpdater: tail pass failed", e)
+                tailDeferred.complete(failure)
+                completed = true
+            } catch (e: Exception) {
+                AppLogger.e("WidgetUpdater: tail pass failed", e)
+                val failure =
                     WidgetUpdateResult.Failure(
                         wasCoalesced = true,
                         isRetryable = true,
                         reason = WidgetUpdateResult.FailureReason.TRANSIENT,
                     )
-                }
-            tailDeferred.complete(result)
-
-            // Check if another rerun was requested during the tail pass
-            val nextTail =
-                coalescingMutex.withLock {
-                    if (rerunRequested) {
-                        rerunRequested = false
-                        val d = pendingPass
-                        pendingPass = null
-                        d
-                    } else {
-                        null
+                tailDeferred.complete(failure)
+                completed = true
+            } finally {
+                withContext(NonCancellable) {
+                    if (!completed && !tailDeferred.isCompleted) {
+                        tailDeferred.complete(
+                            WidgetUpdateResult.Failure(
+                                wasCoalesced = true,
+                                isRetryable = true,
+                                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                            ),
+                        )
                     }
-                }
-            if (nextTail != null) {
-                scope.launch {
-                    runTailPass(nextTail)
+                    val nextTail =
+                        coalescingMutex.withLock {
+                            if (rerunRequested) {
+                                rerunRequested = false
+                                val d = pendingPass
+                                pendingPass = null
+                                if (d != null) {
+                                    activeUpdate.set(d)
+                                } else {
+                                    activeUpdate.compareAndSet(tailDeferred, null)
+                                }
+                                d
+                            } else {
+                                activeUpdate.compareAndSet(tailDeferred, null)
+                                null
+                            }
+                        }
+                    if (nextTail != null) {
+                        scope.launch(start = CoroutineStart.ATOMIC) {
+                            runTailPass(nextTail)
+                        }
+                    }
                 }
             }
         }

@@ -12,7 +12,6 @@ import kotlin.coroutines.cancellation.CancellationException
  * Timeout bounding for repository operations is the responsibility of callers
  * (e.g. DataStoreRetryHelper, withTimeoutOrNull).
  */
-@Suppress("TooManyFunctions")
 interface SimNotificationFlagsRepository {
     /**
      * Returns a flow indicating if the user was notified about low minutes.

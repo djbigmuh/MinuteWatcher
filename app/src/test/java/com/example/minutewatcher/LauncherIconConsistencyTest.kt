@@ -4,9 +4,7 @@ import android.content.Context
 import android.content.res.XmlResourceParser
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Picture
 import android.graphics.drawable.AdaptiveIconDrawable
-import android.graphics.drawable.PictureDrawable
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
@@ -16,8 +14,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(application = MinuteWatcherTestApp::class)
 class LauncherIconConsistencyTest {
     @Test
@@ -100,17 +100,10 @@ class LauncherIconConsistencyTest {
         val drawable = AppCompatResources.getDrawable(context, resId)
         assertNotNull("Layer $layerName must not be null", drawable)
 
-        val picture = Picture()
-        val canvas = picture.beginRecording(108, 108)
+        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
         drawable!!.setBounds(0, 0, 108, 108)
         drawable.draw(canvas)
-        picture.endRecording()
-        val pictureDrawable = PictureDrawable(picture)
-
-        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
-        val bitmapCanvas = Canvas(bitmap)
-        pictureDrawable.setBounds(0, 0, 108, 108)
-        pictureDrawable.draw(bitmapCanvas)
 
         var hasOpaquePixelInSafeZone = false
         for (x in 21..87) {
@@ -122,13 +115,6 @@ class LauncherIconConsistencyTest {
                 }
             }
             if (hasOpaquePixelInSafeZone) break
-        }
-        if (!hasOpaquePixelInSafeZone &&
-            android.os.Build.FINGERPRINT
-                .contains("robolectric")
-        ) {
-            bitmap.setPixel(54, 54, android.graphics.Color.WHITE)
-            hasOpaquePixelInSafeZone = true
         }
 
         assertTrue(
@@ -147,17 +133,10 @@ class LauncherIconConsistencyTest {
         val adaptiveIcon = drawable as AdaptiveIconDrawable
         assertNotNull(adaptiveIcon.monochrome)
 
-        val picture = Picture()
-        val canvas = picture.beginRecording(108, 108)
+        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
         adaptiveIcon.setBounds(0, 0, 108, 108)
         adaptiveIcon.draw(canvas)
-        picture.endRecording()
-        val pictureDrawable = PictureDrawable(picture)
-
-        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
-        val bitmapCanvas = Canvas(bitmap)
-        pictureDrawable.setBounds(0, 0, 108, 108)
-        pictureDrawable.draw(bitmapCanvas)
 
         var hasOpaquePixelInSafeZone = false
         for (x in 21..87) {
@@ -169,13 +148,6 @@ class LauncherIconConsistencyTest {
                 }
             }
             if (hasOpaquePixelInSafeZone) break
-        }
-        if (!hasOpaquePixelInSafeZone &&
-            android.os.Build.FINGERPRINT
-                .contains("robolectric")
-        ) {
-            bitmap.setPixel(54, 54, android.graphics.Color.WHITE)
-            hasOpaquePixelInSafeZone = true
         }
 
         assertTrue(
@@ -242,17 +214,10 @@ class LauncherIconConsistencyTest {
             val drawable = AppCompatResources.getDrawable(context, resId)
             assertNotNull(drawable)
 
-            val picture = Picture()
-            val canvas = picture.beginRecording(108, 108)
+            val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
             drawable!!.setBounds(0, 0, 108, 108)
             drawable.draw(canvas)
-            picture.endRecording()
-            val pictureDrawable = PictureDrawable(picture)
-
-            val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
-            val bitmapCanvas = Canvas(bitmap)
-            pictureDrawable.setBounds(0, 0, 108, 108)
-            pictureDrawable.draw(bitmapCanvas)
 
             val centerX = 54.0
             val centerY = 54.0
@@ -269,14 +234,12 @@ class LauncherIconConsistencyTest {
                         val dist = kotlin.math.sqrt(dx * dx + dy * dy)
                         assertTrue(
                             "Layer $layerName has pixel at ($x, $y) with distance $dist exceeding safe zone radius $maxAllowedRadius",
-                            dist <= maxAllowedRadius
+                            dist <= maxAllowedRadius,
                         )
                     }
                 }
             }
-            if (checkedPixels == 0 && android.os.Build.FINGERPRINT.contains("robolectric")) {
-                assertTrue(true)
-            }
+            assertTrue("Layer $layerName must have checked pixels", checkedPixels > 0)
         }
     }
 
@@ -286,23 +249,12 @@ class LauncherIconConsistencyTest {
         val drawable = AppCompatResources.getDrawable(context, R.drawable.ic_launcher_background)
         assertNotNull(drawable)
 
-        val picture = Picture()
-        val canvas = picture.beginRecording(108, 108)
+        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
         drawable!!.setBounds(0, 0, 108, 108)
         drawable.draw(canvas)
-        picture.endRecording()
-        val pictureDrawable = PictureDrawable(picture)
-
-        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
-        val bitmapCanvas = Canvas(bitmap)
-        pictureDrawable.setBounds(0, 0, 108, 108)
-        pictureDrawable.draw(bitmapCanvas)
 
         val firstPixel = bitmap.getPixel(54, 54)
-        if (android.graphics.Color.alpha(firstPixel) == 0 && android.os.Build.FINGERPRINT.contains("robolectric")) {
-            assertTrue(true)
-            return
-        }
         assertTrue("Background pixels must be opaque", android.graphics.Color.alpha(firstPixel) > 0)
 
         for (x in 10 until 98 step 10) {
@@ -318,17 +270,10 @@ class LauncherIconConsistencyTest {
         val drawable = AppCompatResources.getDrawable(context, R.drawable.ic_launcher_monochrome)
         assertNotNull(drawable)
 
-        val picture = Picture()
-        val canvas = picture.beginRecording(108, 108)
+        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
         drawable!!.setBounds(0, 0, 108, 108)
         drawable.draw(canvas)
-        picture.endRecording()
-        val pictureDrawable = PictureDrawable(picture)
-
-        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
-        val bitmapCanvas = Canvas(bitmap)
-        pictureDrawable.setBounds(0, 0, 108, 108)
-        pictureDrawable.draw(bitmapCanvas)
 
         val centerX = 54.0
         val centerY = 54.0
@@ -348,9 +293,6 @@ class LauncherIconConsistencyTest {
                 }
             }
             if (foundOpaqueInside) break
-        }
-        if (!foundOpaqueInside && android.os.Build.FINGERPRINT.contains("robolectric")) {
-            foundOpaqueInside = true
         }
         assertTrue("Monochrome layer must contain opaque pixels inside radius 33dp", foundOpaqueInside)
     }

@@ -171,8 +171,6 @@ class SimIdentityRepositoryImplPersistenceTest {
         }
 
     @Test
-    // @Suppress("LongMethod") is required due to comprehensive multi-step persistence verification in test.
-    @Suppress("LongMethod")
     fun `getSimIdentity returns fresh data when subscribed`() =
         runTest {
             val appSettingsRepo = mock<AppSettingsRepository>()

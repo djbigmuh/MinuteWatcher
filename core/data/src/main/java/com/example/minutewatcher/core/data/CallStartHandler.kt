@@ -136,9 +136,8 @@ internal class CallStartHandler
         }
 
         /**
-         * Processes the call start logic. Suppressing ReturnCount due to early returns on failure.
+         * Processes the call start logic.
          */
-        @Suppress("ReturnCount")
         private suspend fun processCallStartLocked(
             targetSubId: Int,
             data: CallStartData,

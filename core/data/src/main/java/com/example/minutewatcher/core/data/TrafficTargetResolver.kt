@@ -46,7 +46,6 @@ class TrafficTargetResolver
             ) : TargetResult
         }
 
-        @Suppress("ReturnCount")
         fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
             if (activeSims.isEmpty()) {
                 AppLogger.d("TrafficTargetResolver: No active SIMs provided")

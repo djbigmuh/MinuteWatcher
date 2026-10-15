@@ -62,7 +62,6 @@ data class WidgetSettingsUiState(
  * **AOSP DataStore:** Fully compliant with AOSP DataStore semantics via [WidgetSettingsLoader]
  * and [WidgetSettingsSaver].
  *
- * NOTE: TooManyFunctions is suppressed: methods map 1:1 to settings screen
  * @param loader Loader for widget settings.
  * @param saver Saver for widget settings.
  * @param appSettingsRepository Repository for global application settings.
@@ -71,7 +70,6 @@ data class WidgetSettingsUiState(
  * @param aodSummaryAvailability Helper to check Always-on Display summary notification availability.
  */
 @HiltViewModel
-@Suppress("TooManyFunctions")
 class WidgetSettingsViewModel
     @Inject
     constructor(

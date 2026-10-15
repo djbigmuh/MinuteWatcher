@@ -58,8 +58,6 @@ internal class ActiveSimsFetcher
             return SimDiscoveryResult.Failed(SimDiscoveryFailureReason.STORAGE_ERROR)
         }
 
-        // Suppressing ReturnCount as method returns early on discovery failure or unstable identities
-        @Suppress("ReturnCount")
         private suspend fun getActiveSimsInternal(seed: SeedResult): SimDiscoveryResult {
             val (seedValue, isStable) =
                 when (seed) {

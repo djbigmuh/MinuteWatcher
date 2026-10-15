@@ -36,12 +36,8 @@ import javax.inject.Singleton
  * This implementation is AOSP DataStore compliant and follows strict consistency rules
  * for atomic updates using [Mutex].
  * Safe to call from any coroutine context.
- *
- * NOTE: Suppressing TooManyFunctions as this repository manages multiple settings groups
- * with fine-grained update methods, adhering to AOSP DataStore best practices.
  */
 @Singleton
-@Suppress("TooManyFunctions")
 class AppSettingsRepositoryImpl
     @Inject
     constructor(

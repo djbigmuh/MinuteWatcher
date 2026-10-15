@@ -141,21 +141,8 @@ class UsageTileService : TileService() {
             tile.stateDescription = content.stateDescription
         }
         tile.contentDescription = content.contentDescription
-        tile.applyState(if (content.isActive) TileState.ACTIVE else TileState.INACTIVE)
+        tile.state = tileStateConstant(content.isActive)
         tile.updateTile()
-    }
-
-    private enum class TileState {
-        ACTIVE,
-        INACTIVE,
-    }
-
-    private fun Tile.applyState(state: TileState) {
-        this.state =
-            when (state) {
-                TileState.ACTIVE -> Tile.STATE_ACTIVE
-                TileState.INACTIVE -> Tile.STATE_INACTIVE
-            }
     }
 
     override fun onDestroy() {
@@ -163,3 +150,5 @@ class UsageTileService : TileService() {
         job?.cancel()
     }
 }
+
+internal fun tileStateConstant(isActive: Boolean): Int = if (isActive) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE

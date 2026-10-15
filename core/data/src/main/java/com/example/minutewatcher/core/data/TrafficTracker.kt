@@ -97,12 +97,9 @@ sealed interface TrafficUpdateOutcome {
  *
  * **Lifecycle:** Construction of [TrafficTracker] has no side effects. Explicit initialization and recovery
  * observers are started via [ensureStarted], which should be called from [android.app.Application.onCreate].
- *
- * NOTE: Suppressing TooManyFunctions as this class is the central orchestrator for traffic tracking,
- * delegating to specialized components while maintaining the primary tracking lifecycle.
  */
 @Singleton
-@Suppress("TooManyFunctions", "LargeClass")
+@Suppress("LargeClass")
 class TrafficTracker
     @Inject
     constructor(
@@ -408,7 +405,6 @@ class TrafficTracker
             }
         }
 
-        @Suppress("ReturnCount")
         private suspend fun handleDefaultDataChange(sims: List<ActiveSimInfo>) {
             val currentDataSubId = sims.firstOrNull { it.isDefaultData }?.subscriptionId ?: -1
             val previous = lastObservedDataSubId
@@ -792,7 +788,6 @@ class TrafficTracker
             return processActiveSimsTraffic(startElapsed, activeSims)
         }
 
-        @Suppress("ReturnCount")
         private suspend fun processActiveSimsTraffic(
             startElapsed: Long,
             activeSims: List<ActiveSimInfo>,

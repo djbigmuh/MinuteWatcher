@@ -5,19 +5,19 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Outer white gauge ring -->
+    <!-- Outer white gauge ring scaled to radius 33 -->
     <path
-        android:pathData="M 54,12 C 30.8,12 12,30.8 12,54 C 12,77.2 30.8,96 54,96 C 77.2,96 96,77.2 96,54 C 96,30.8 77.2,12 54,12 Z M 54,15 C 75.5,15 93,32.5 93,54 C 93,75.5 75.5,93 54,93 C 32.5,93 15,75.5 15,54 C 15,32.5 32.5,15 54,15 Z"
+        android:pathData="M 54,21 C 35.8,21 21,35.8 21,54 C 21,72.2 35.8,87 54,87 C 72.2,87 87,72.2 87,54 C 87,35.8 72.2,21 54,21 Z M 54,24 C 37.4,24 24,37.4 24,54 C 24,70.6 37.4,84 54,84 C 70.6,84 84,70.6 84,54 C 84,37.4 70.6,24 54,24 Z"
         android:fillColor="#FFFFFFFF" />
 
     <!-- Central vertical gauge needle -->
     <path
-        android:pathData="M 53,28 L 55,28 L 55,78 L 53,78 Z"
+        android:pathData="M 53,38 L 55,38 L 55,70 L 53,70 Z"
         android:fillColor="#FFFFFFFF" />
 
     <!-- Ring at the needle center -->
     <path
-        android:pathData="M 54,53 C 51.2,53 49,50.8 49,48 C 49,45.2 51.2,43 54,43 C 56.8,43 59,45.2 59,48 C 59,50.8 56.8,53 54,53 Z M 54,51 C 55.7,51 57,49.7 57,48 C 57,46.3 55.7,45 54,45 C 52.3,45 51,46.3 51,48 C 51,49.7 52.3,51 54,51 Z"
+        android:pathData="M 54,55 C 52.3,55 51,53.7 51,52 C 51,50.3 52.3,49 54,49 C 55.7,49 57,50.3 57,52 C 57,53.7 55.7,55 54,55 Z M 54,53.5 C 54.8,53.5 55.5,52.8 55.5,52 C 55.5,51.2 54.8,50.5 54,50.5 C 53.2,50.5 52.5,51.2 52.5,52 C 52.5,52.8 53.2,53.5 54,53.5 Z"
         android:fillColor="#FFFFFFFF" />
 
 </vector>

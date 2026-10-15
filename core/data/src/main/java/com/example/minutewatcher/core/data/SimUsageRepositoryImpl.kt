@@ -28,12 +28,8 @@ import kotlin.math.roundToLong
  * Tracks and manages call duration and traffic usage for SIM identities.
  * AOSP DataStore compliant.
  * Safe to call from any coroutine context.
- *
- * NOTE: Suppressing TooManyFunctions as this repository consolidates all usage-related persistence logic
- * for calls and traffic, implementing multiple domain interfaces for a unified DataStore source.
  */
 @Singleton
-@Suppress("TooManyFunctions")
 class SimUsageRepositoryImpl
     @Inject
     constructor(

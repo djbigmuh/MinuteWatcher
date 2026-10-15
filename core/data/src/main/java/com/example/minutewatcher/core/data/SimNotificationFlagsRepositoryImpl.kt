@@ -18,7 +18,6 @@ import javax.inject.Singleton
  * Safe to call from any coroutine context.
  */
 @Singleton
-@Suppress("TooManyFunctions")
 class SimNotificationFlagsRepositoryImpl
     @Inject
     constructor(

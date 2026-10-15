@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.example.minutewatcher.core.common.BuildConfig
+import com.example.minutewatcher.core.common.util.AppLogger.WORKER_JOIN_TIMEOUT_MS
+import com.example.minutewatcher.core.common.util.AppLogger.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,11 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * - Failed file writes and drained entries on write failure threshold are routed to [logger] with `[DRAIN]` prefix
  *   outside state lock, guaranteeing no silent log losses.
  * - Rotation and file write operations are serialized using `synchronized(this)` monitor.
- *
- * NOTE: Suppressing TooManyFunctions as this component manages complex multi-threaded
- * logging lifecycle, including coroutine-based worker, file rotation and test utilities.
  */
-@Suppress("TooManyFunctions")
 object AppLogger {
     private const val TAG = "MinuteWatcher"
     private const val MAX_FILE_SIZE = 1_048_576 // 1 MB
