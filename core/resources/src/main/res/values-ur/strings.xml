@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM کارڈز</string>
@@ -6,7 +6,6 @@
     <string name="check_permissions_sim">اجازتیں اور SIM کی موجودگی چیک کریں</string>
     <string name="no_data">کوئی ڈیٹا نہیں</string>
     <string name="error">خرابی</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">ری سیٹ</string>
     <string name="theme_system">سسٹم</string>
@@ -14,7 +13,6 @@
     <string name="theme_dark">تاریک</string>
     <string name="limit_button">حد</string>
     <string name="add_widget_button">وجٹ شامل کریں</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">عمومی ترتیبات محفوظ ہو گئیں۔ SIM کی ترتیبات کو چھوڑ دیا گیا (SIM کی فہرست دستیاب نہیں ہے)</string>
     <string name="settings_save_partial_failure">عمومی ترتیبات محفوظ ہو گئیں۔ SIM کے لیے مخصوص ترتیبات محفوظ نہیں کی جا سکیں</string>
@@ -24,7 +22,6 @@
     <string name="usage_access_dialog_title">ڈیٹا کے استعمال کی ٹریکنگ</string>
     <string name="usage_access_dialog_description">موبائل ڈیٹا کے استعمال کو ٹریک کرنے کے لیے، MinuteWatcher کو \"استعمال تک رسائی\" کی اجازت درکار ہے۔ \n\nیہ ایک سسٹم لیول اجازت ہے جو ایپ کو یہ دیکھنے کی اجازت دیتی ہے کہ سیلولر نیٹ ورک پر کتنا ڈیٹا بھیجا اور موصول ہوا ہے۔ \n\nہم یہ ٹریک نہیں کرتے کہ آپ کون سی ایپس استعمال کرتے ہیں یا آپ کی براؤزنگ ہسٹری کیا ہے۔</string>
     <string name="phone_permission_permanent_denial">فون کی اجازت مستقل طور پر مسترد کر دی گئی ہے۔ ایپ کی ترتیبات میں اسے فعال کرنے تک کچھ خصوصیات کام نہیں کریں گی۔</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">وجٹ ترتیبات</string>
     <string name="widget_description">ہر SIM کارڈ کے لیے بقایا منٹ اور موبائل ٹریفک دکھاتا ہے۔</string>
@@ -40,7 +37,7 @@
     <string name="layout_mode_title">لے آؤٹ موڈ</string>
     <string name="sim_arrangement_prompt">SIM کی ترتیب منتخب کریں</string>
     <string name="color_background">پس منظر کا رنگ:</string>
-    <string name="custom_color">حسب ضرورت&#8230;</string>
+    <string name="custom_color">حسب ضرورت…</string>
     <string name="font_size">فونٹ کا سائز</string>
     <string name="traffic_tracking_limitation_title">ٹریفک ٹریکنگ کی حد</string>
     <string name="traffic_tracking_limitation_body">Android پورے ڈیوائس کے لیے موبائل ڈیٹا کا استعمال کل قدر کے طور پر فراہم کرتا ہے۔ \n\nMinuteWatcher تمام موبائل ٹریفک کو اس SIM کارڈ سے منسوب کرتا ہے جو آپ کی سسٹم ترتیبات میں \"ڈیفالٹ ڈیٹا SIM\" کے طور پر منتخب کی گئی ہے۔\n\nاگر آپ اپنی ڈیفالٹ ڈیٹا SIM تبدیل کرتے ہیں، تو ایپ اس تبدیلی کو پہچان لے گی اور اس لمحے سے نئی SIM کے لیے ٹریفک منسوب کرنا شروع کر دے گی۔</string>
@@ -76,14 +73,12 @@
     <string name="onboarding_title">MinuteWatcher میں خوش آمدید!</string>
     <string name="onboarding_message">MinuteWatcher آپ کے موبائل کیریئر سے آپ کے پلان کی تفصیلات خودکار طور پر حاصل نہیں کر سکتا۔\n\nٹریکنگ شروع کرنے کے لیے، براہ کرم ہر SIM کارڈ کے لیے اپنے منٹ/ڈیٹا کی حدود اور ماہانہ ری سیٹ کا دن دستی طور پر سیٹ کریں۔ اس کے بعد ایپ تمام نگرانی خود سنبھال لے گی۔</string>
     <string name="onboarding_button">سمجھ گیا</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">غلط SIM سلاٹ انڈیکس: %1$d</string>
     <string name="error_storage_unavailable">سلاٹ %1$d کے لیے اسٹوریج دستیاب نہیں ہے۔ بعد میں کوشش کریں۔</string>
     <string name="error_sim_removed">SIM سلاٹ %1$d سے ہٹا دی گئی تھی</string>
     <string name="error_operation_failed_retry">دوبارہ کوشش کے بعد آپریشن ناکام ہو گیا۔</string>
     <string name="error_unknown">نامعلوم خرابی: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">منسوخ کریں</string>
     <string name="save_button">محفوظ کریں</string>
@@ -103,7 +98,6 @@
     <string name="set_traffic_limit">ماہانہ ٹریفک حد (GB) سیٹ کریں:</string>
     <string name="traffic_limit_gb_hint_dialog">GB میں ٹریفک کی حد</string>
     <string name="limits_for_operator">%1$s کے لیے حدود</string>
-
     <!-- Notifications -->
     <string name="notifications_title">نوٹیفیکیشنز</string>
     <string name="notify_low_minutes_title">بقیہ منٹ کم ہونے پر مطلع کریں</string>
@@ -127,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">ٹریفک کی حد پوری ہو گئی۔ ٹریک کردہ استعمال اس وقت تک جمع ہوتا رہتا ہے جب تک آپ اسے ری سیٹ نہ کریں۔</string>
     <string name="usage_level_low">کم</string>
     <string name="usage_level_critical">انتہائی کم</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">بقیہ:</string>
     <string name="used_text">مستعمل</string>
@@ -147,7 +140,6 @@
         <item quantity="one">%1$d دن</item>
         <item quantity="other">%1$d دن</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">SIM کارڈ آئیکن</string>
     <string name="sim_card_details_content_desc">%1$s SIM کارڈ کی تفصیلات</string>
@@ -161,7 +153,6 @@
     <string name="menu_theme_content_desc">تھیم تبدیل کریں</string>
     <string name="navigate_up_content_desc">اوپر جائیں</string>
     <string name="banner_dismiss_content_desc">بینر ہٹائیں</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">ٹریکنگ</string>
     <string name="call_tracking_title">کال منٹس ٹریک کریں</string>
@@ -169,7 +160,6 @@
     <string name="assistant_access_title">اسسٹنٹ رسائی</string>
     <string name="assistant_access_description">آن ڈیوائس اسسٹنٹ کو اپنے بقیہ منٹ اور موبائل ڈیٹا کی درخواست کرنے کی اجازت دیں (Android 16+)۔ ڈیفالٹ کے طور پر غیر فعال۔ اسسٹنٹ موصول ہونے والے جوابات کو پروسیس کر سکتا ہے۔</string>
     <string name="app_functions_display_description">بقیہ منٹ اور موبائل ڈیٹا کو آن ڈیوائس اسسٹنٹ کے ساتھ شیئر کرتا ہے</string>
-
     <!-- About Dialog -->
     <string name="about_title">ایپ کے بارے میں</string>
     <string name="about_message">MinuteWatcher بقیہ منٹس اور موبائل ڈیٹا کے استعمال کو ٹریک کرنے کے لیے ایک ایپ ہے۔</string>
@@ -181,4 +171,6 @@
     <string name="about_version_format">ورژن %1$s (%2$d)</string>
     <string name="about_content_desc">ایپ کی معلومات</string>
     <string name="aod_summary_no_limits_note">دکھانے کے لیے کچھ نہیں: کم از کم ایک SIM کارڈ کے لیے منٹ یا ڈیٹا کی حد طے کریں - خلاصہ صرف حد والے SIM دکھاتا ہے۔</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

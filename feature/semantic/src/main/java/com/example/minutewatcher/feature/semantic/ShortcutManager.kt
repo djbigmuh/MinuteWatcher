@@ -263,7 +263,7 @@ class ShortcutManager
                 .Builder(context, "minutes_shortcut_$slot")
                 .setShortLabel(shortLabel)
                 .setLongLabel(longLabel)
-                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
+                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_usage))
                 .setIntent(createShortcutIntent(slot))
                 .build()
         }
@@ -296,7 +296,7 @@ class ShortcutManager
                 .Builder(context, "traffic_shortcut_$slot")
                 .setShortLabel(shortLabel)
                 .setLongLabel(longLabel)
-                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_notification))
+                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_usage))
                 .setIntent(createShortcutIntent(slot))
                 .build()
         }

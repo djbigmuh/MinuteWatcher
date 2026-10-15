@@ -141,20 +141,20 @@ class UsageTileService : TileService() {
             tile.stateDescription = content.stateDescription
         }
         tile.contentDescription = content.contentDescription
-        tile.applyState(if (content.isActive) TileState.ACTIVE else TileState.UNAVAILABLE)
+        tile.applyState(if (content.isActive) TileState.ACTIVE else TileState.INACTIVE)
         tile.updateTile()
     }
 
     private enum class TileState {
         ACTIVE,
-        UNAVAILABLE,
+        INACTIVE,
     }
 
     private fun Tile.applyState(state: TileState) {
         this.state =
             when (state) {
                 TileState.ACTIVE -> Tile.STATE_ACTIVE
-                TileState.UNAVAILABLE -> Tile.STATE_UNAVAILABLE
+                TileState.INACTIVE -> Tile.STATE_INACTIVE
             }
     }
 

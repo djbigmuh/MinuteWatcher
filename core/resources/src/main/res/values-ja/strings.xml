@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIMカード</string>
     <string name="no_sim_found">SIMカードが見つかりません</string>
     <string name="check_permissions_sim">権限とSIMの存在を確認してください</string>
     <string name="no_data">データなし</string>
     <string name="error">エラー</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">リセット</string>
     <string name="theme_system">システム</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">ダーク</string>
     <string name="limit_button">制限</string>
     <string name="add_widget_button">ウィジェットを追加</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">一般設定を保存しました。SIM設定はスキップされました（SIMリストが利用不可）</string>
     <string name="settings_save_partial_failure">一般設定を保存しました。SIM固有の設定を保存できませんでした</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">データ使用量の追跡</string>
     <string name="usage_access_dialog_description">モバイルデータ使用量を追跡するために、MinuteWatcherは「使用状況へのアクセス」権限を必要とします。\n\nこれは、モバイルネットワーク経由で送信および受信されたデータ量をアプリが確認できるようにするシステムレベルの権限です。\n\n弊社がお客様の使用しているアプリやブラウザの履歴を追跡することはありません。</string>
     <string name="phone_permission_permanent_denial">電話の権限が永続的に拒否されました。</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">ウィジェット設定</string>
     <string name="widget_description">SIMカードごとの残りの通話時間とモバイルデータ通信量を表示します。</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">レイアウトモード</string>
     <string name="sim_arrangement_prompt">SIMの配置を選択</string>
     <string name="color_background">背景色:</string>
-    <string name="custom_color">カスタム&#8230;</string>
+    <string name="custom_color">カスタム…</string>
     <string name="font_size">フォントサイズ</string>
     <string name="traffic_tracking_limitation_title">通信量トラッキングの制限</string>
     <string name="traffic_tracking_limitation_body">Androidは、デバイス全体の合計値としてモバイルデータ使用量を提供します。 \n\nMinuteWatcherは、すべてのモバイルトラフィックを、システム設定で現在「デフォルトのデータSIM」として選択されているSIMカードに割り当てます。</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">MinuteWatcherへようこそ！</string>
     <string name="onboarding_message">MinuteWatcherは、携帯電話会社からプランの詳細を自動的に取得することはできません。\n\n追跡を開始するには、各SIMカードの無料通話/データ通信量の制限と毎月のリセット日を手動で設定してください。それ以降の監視はすべてアプリが行います。</string>
     <string name="onboarding_button">了解</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">無効なSIMスロット番号: %1$d</string>
     <string name="error_storage_unavailable">スロット %1$d のストレージを利用できません。後でもう一度お試しください。</string>
     <string name="error_sim_removed">SIMカードがスロット %1$d から取り外されました</string>
     <string name="error_operation_failed_retry">再試行しましたが、操作に失敗しました。</string>
     <string name="error_unknown">不明なエラー: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">キャンセル</string>
     <string name="save_button">保存</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">月間の通信量制限を設定 (GB):</string>
     <string name="traffic_limit_gb_hint_dialog">通信量制限 (GB)</string>
     <string name="limits_for_operator">%1$s の制限</string>
-
     <!-- Notifications -->
     <string name="notifications_title">通知</string>
     <string name="notify_low_minutes_title">残り通話時間が少なくなった時に通知</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">データ通信量の上限に達しました。リセットするまで追跡された使用量が蓄積され続けます。</string>
     <string name="usage_level_low">少なめ</string>
     <string name="usage_level_critical">非常に少ない</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">残り:</string>
     <string name="used_text">使用済み</string>
@@ -137,7 +131,8 @@
     <string name="traffic_label">通信量</string>
     <string name="traffic_remaining_text">残り通信量: </string>
     <string name="gb_abbr"> GB</string>
-    <string name="auto_reset_day_suffix">日</string><!--
+    <string name="auto_reset_day_suffix">日</string>
+    <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Japanese requires: other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -152,7 +147,6 @@
     <plurals name="days_plurals">
         <item quantity="other">%1$d 日</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">SIMカードアイコン</string>
     <string name="sim_card_details_content_desc">%1$s SIMカードの詳細</string>
@@ -166,7 +160,6 @@
     <string name="menu_theme_content_desc">テーマを変更</string>
     <string name="navigate_up_content_desc">上に移動</string>
     <string name="banner_dismiss_content_desc">バナーを閉じる</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">トラッキング</string>
     <string name="call_tracking_title">通話時間を記録</string>
@@ -174,7 +167,6 @@
     <string name="assistant_access_title">アシスタントアクセス</string>
     <string name="assistant_access_description">デバイス上のアシスタントに残りの通話時間とデータ通信量の確認を許可します (Android 16+)。デフォルトでは無効です。アシスタントは受信した回答を処理する場合があります。</string>
     <string name="app_functions_display_description">残りの通話時間とモバイルデータ通信量を端末上のアシスタントに提供します</string>
-
     <!-- About Dialog -->
     <string name="about_title">アプリについて</string>
     <string name="about_message">MinuteWatcherは、残りの通話分数とモバイルデータ通信量を追跡するアプリです。</string>
@@ -186,4 +178,6 @@
     <string name="about_version_format">バージョン %1$s (%2$d)</string>
     <string name="about_content_desc">アプリの情報</string>
     <string name="aod_summary_no_limits_note">表示する内容がありません：少なくとも1枚のSIMカードに通話時間またはデータ通信量の制限を設定してください。制限のあるSIMのみが要約に表示されます。</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

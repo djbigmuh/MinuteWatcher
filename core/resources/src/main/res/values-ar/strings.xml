@@ -1,4 +1,5 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!--
       Localization note: Ensure translations respect RTL layout for Arabic.
       Test with android:layoutDirection="rtl" in preview.
@@ -9,7 +10,6 @@
     <string name="check_permissions_sim">تحقق من الأذونات ووجود بطاقة SIM</string>
     <string name="no_data">لا توجد بيانات</string>
     <string name="error">خطأ</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">إعادة ضبط</string>
     <string name="theme_system">النظام</string>
@@ -17,7 +17,6 @@
     <string name="theme_dark">داكن</string>
     <string name="limit_button">الحد</string>
     <string name="add_widget_button">إضافة قطعة</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">تم حفظ الإعدادات العامة. تم تخطي إعدادات SIM (قائمة SIM غير متاحة)</string>
     <string name="settings_save_partial_failure">تم حفظ الإعدادات العامة. تعذر حفظ إعدادات بطاقة SIM</string>
@@ -27,7 +26,6 @@
     <string name="usage_access_dialog_title">تتبع استخدام البيانات</string>
     <string name="usage_access_dialog_description">لتتبع استخدام بيانات الهاتف المحمول، يحتاج MinuteWatcher إلى إذن \"الوصول إلى الاستخدام\".\n\nهذا إذن على مستوى النظام يسمح للتطبيق بمعرفة كمية البيانات التي تم إرسالها واستلامها عبر الشبكة الخلوية.\n\nنحن لا نتتبع التطبيقات التي تستخدمها أو سجل المتصفح الخاص بك.</string>
     <string name="phone_permission_permanent_denial">تم رفض إذن الهاتف بشكل دائم.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">إعدادات القطعة</string>
     <string name="widget_description">يعرض الدقائق المتبقية وبيانات الجوال لكل بطاقة SIM.</string>
@@ -43,7 +41,7 @@
     <string name="layout_mode_title">وضع التخطيط</string>
     <string name="sim_arrangement_prompt">اختر ترتيب SIM</string>
     <string name="color_background">لون الخلفية:</string>
-    <string name="custom_color">مخصص&#8230;</string>
+    <string name="custom_color">مخصص…</string>
     <string name="font_size">حجم الخط</string>
     <string name="traffic_tracking_limitation_title">قيود تتبع البيانات</string>
     <string name="traffic_tracking_limitation_body">يوفر أندرويد استخدام بيانات الهاتف المحمول كقيمة إجمالية للجهاز بالكامل. \n\nيعزو MinuteWatcher جميع حركة البيانات إلى بطاقة SIM المحددة حاليًا كـ \"بطاقة البيانات الافتراضية\" في إعدادات النظام.</string>
@@ -79,14 +77,12 @@
     <string name="onboarding_title">مرحباً بك في MinuteWatcher!</string>
     <string name="onboarding_message">لا يمكن لـ MinuteWatcher استرداد تفاصيل خطتك تلقائيًا من شركة الاتصالات الخاصة بك.\n\nلبدء التتبع، يرجى ضبط حدود الدقائق/البيانات ويوم إعادة التعيين الشهري يدويًا لكل بطاقة SIM. سيتولى التطبيق جميع عمليات المراقبة من ذلك الحين فصاعدًا.</string>
     <string name="onboarding_button">حسناً</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">فهرس فتحة SIM غير صالح: %1$d</string>
     <string name="error_storage_unavailable">وحدة التخزين غير متاحة للفتحة %1$d. أعد المحاولة لاحقًا.</string>
     <string name="error_sim_removed">تمت إزالة شريحة SIM من الفتحة %1$d</string>
     <string name="error_operation_failed_retry">فشلت العملية بعد إعادة المحاولة.</string>
     <string name="error_unknown">خطأ غير معروف: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">إلغاء</string>
     <string name="save_button">حفظ</string>
@@ -106,7 +102,6 @@
     <string name="set_traffic_limit">تعيين حد حركة البيانات الشهري (جيجابايت):</string>
     <string name="traffic_limit_gb_hint_dialog">حد حركة البيانات بالجيجابايت</string>
     <string name="limits_for_operator">الحدود لـ %1$s</string>
-
     <!-- Notifications -->
     <string name="notifications_title">التنبيهات</string>
     <string name="notify_low_minutes_title">تنبيه عند انخفاض الدقائق المتبقية</string>
@@ -130,7 +125,6 @@
     <string name="notification_traffic_exhausted_body_no_period">تم الوصول إلى الحد الأقصى للبيانات. يستمر الاستخدام المتعقب في التراكم حتى تقوم إعادة تعيينه.</string>
     <string name="usage_level_low">منخفض</string>
     <string name="usage_level_critical">منخفض للغاية</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">المتبقي:</string>
     <string name="used_text">المستخدم</string>
@@ -141,7 +135,8 @@
     <string name="traffic_label">البيانات</string>
     <string name="traffic_remaining_text">حركة البيانات المتبقية:</string>
     <string name="gb_abbr">جيجابايت</string>
-    <string name="auto_reset_day_suffix">يوم من الشهر</string><!--
+    <string name="auto_reset_day_suffix">يوم من الشهر</string>
+    <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Arabic requires: zero (0), one (1), two (2), few (3-10), many (11-99), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -166,7 +161,6 @@
         <item quantity="many">%1$d يوماً</item>
         <item quantity="other">%1$d يوم</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">أيقونة بطاقة SIM</string>
     <string name="sim_card_details_content_desc">تفاصيل بطاقة SIM %1$s</string>
@@ -180,7 +174,6 @@
     <string name="menu_theme_content_desc">تغيير السمة</string>
     <string name="navigate_up_content_desc">التنقل إلى الأعلى</string>
     <string name="banner_dismiss_content_desc">إغلاق الإشعار</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">التتبع</string>
     <string name="call_tracking_title">تتبع دقائق المكالمات</string>
@@ -188,7 +181,6 @@
     <string name="assistant_access_title">وصول المساعد</string>
     <string name="assistant_access_description">السماح للمساعد في الجهاز بطلب الدقائق والبيانات المتبقية (Android 16+). معطل افتراضياً. قد يقوم المساعد معالجة الإجابات التي يتلقاها.</string>
     <string name="app_functions_display_description">يشارك الدقائق المتبقية وبيانات الجوال مع المساعد الموجود على الجهاز</string>
-
     <!-- About Dialog -->
     <string name="about_title">حول التطبيق</string>
     <string name="about_message">MinuteWatcher هو تطبيق لتتبع الدقائق المتبقية واستخدام بيانات الهاتف المحمول.</string>
@@ -200,4 +192,6 @@
     <string name="about_version_format">الإصدار %1$s (%2$d)</string>
     <string name="about_content_desc">معلومات حول التطبيق</string>
     <string name="aod_summary_no_limits_note">لا يوجد شيء لعرضه: قم بتعيين حد الدقائق أو البيانات لبطاقة SIM واحدة على الأقل - يعرض الملخص بطاقات SIM ذات الحدود فقط.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

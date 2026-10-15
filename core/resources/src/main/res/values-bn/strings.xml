@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">সিম কার্ড</string>
@@ -6,7 +6,6 @@
     <string name="check_permissions_sim">অনুমতি এবং সিম উপস্থিতি পরীক্ষা করুন</string>
     <string name="no_data">কোনো ডেটা নেই</string>
     <string name="error">ত্রুটি</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">রিসেট</string>
     <string name="theme_system">সিস্টেম</string>
@@ -14,7 +13,6 @@
     <string name="theme_dark">অন্ধকার</string>
     <string name="limit_button">সীমা</string>
     <string name="add_widget_button">উইজেট যোগ করুন</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">সাধারণ সেটিংস সংরক্ষিত হয়েছে। সিম সেটিংস বাদ দেওয়া হয়েছে (সিম তালিকা অনুপলব্ধ)</string>
     <string name="settings_save_partial_failure">সাধারণ সেটিংস সংরক্ষিত হয়েছে। সিম সেটিংস সংরক্ষণ করা যায়নি</string>
@@ -24,7 +22,6 @@
     <string name="usage_access_dialog_title">ডেটা ব্যবহার ট্র্যাকিং</string>
     <string name="usage_access_dialog_description">আপনার মোবাইল ডেটা ব্যবহার ট্র্যাক করতে, MinuteWatcher-এর \"ব্যবহারের অ্যাক্সেস\" অনুমতি প্রয়োজন।\n\nএটি একটি সিস্টেম-স্তরের অনুমতি যা অ্যাপটিকে সেলুলার নেটওয়ার্কে কত ডেটা পাঠানো এবং গ্রহণ করা হয়েছে তা দেখতে দেয়।\n\nআমরা আপনি কোন অ্যাপগুলি ব্যবহার করেন বা আপনার ব্রাউজিং ইতিহাস ট্র্যাক করি না।</string>
     <string name="phone_permission_permanent_denial">ফোনের অনুমতি স্থায়ীভাবে অস্বীকৃত। আপনি অ্যাপ সেটিংসে এটি সক্ষম না করা পর্যন্ত কিছু বৈশিষ্ট্য কাজ করবে না।</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">উইজেট সেটিংস</string>
     <string name="widget_description">প্রতিটি সিম কার্ডের জন্য অবশিষ্ট মিনিট এবং মোবাইল ট্রাফিক প্রদর্শন করে।</string>
@@ -40,7 +37,7 @@
     <string name="layout_mode_title">লেআউট মোড</string>
     <string name="sim_arrangement_prompt">সিম বিন্যাস চয়ন করুন</string>
     <string name="color_background">পটভূমির রঙ:</string>
-    <string name="custom_color">কাস্টম&#8230;</string>
+    <string name="custom_color">কাস্টম…</string>
     <string name="font_size">ফন্টের আকার</string>
     <string name="traffic_tracking_limitation_title">ট্রাফিক ট্র্যাকিং সীমাবদ্ধতা</string>
     <string name="traffic_tracking_limitation_body">অ্যান্ড্রয়েড পুরো ডিভাইসের জন্য একটি সামগ্রিক মান হিসাবে মোবাইল ডেটা ব্যবহার প্রদান করে।\n\nMinuteWatcher আপনার সিস্টেম সেটিংসে বর্তমানে \"ডিফল্ট ডেটা সিম\" হিসাবে নির্বাচিত সিম কার্ডের সমস্ত মোবাইল ট্রাফিককে দায়ী করে।</string>
@@ -76,14 +73,12 @@
     <string name="onboarding_title">MinuteWatcher-এ স্বাগতম!</string>
     <string name="onboarding_message">MinuteWatcher আপনার মোবাইল ক্যারিয়ার থেকে স্বয়ংক্রিয়ভাবে আপনার পরিকল্পনার বিবরণ পুনরুদ্ধার করতে পারে না।\n\nট্র্যাকিং শুরু করতে, অনুগ্রহ করে প্রতিটি সিম কার্ডের জন্য ম্যানুয়ালি আপনার মিনিট/ডেটা সীমা এবং মাসিক রিসেট দিন সেট করুন। অ্যাপটি সেই বিন্দু থেকে সমস্ত পর্যবেক্ষণ পরিচালনা করবে।</string>
     <string name="onboarding_button">বুঝেছি</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">অবৈধ সিম স্লট সূচক: %1$d</string>
     <string name="error_storage_unavailable">স্লট %1$d-এর জন্য স্টোরেজ অনুপলব্ধ। পরে আবার চেষ্টা করুন।</string>
     <string name="error_sim_removed">স্লট %1$d থেকে সিম সরানো হয়েছে</string>
     <string name="error_operation_failed_retry">পুনরায় চেষ্টা করার পরে অপারেশন ব্যর্থ হয়েছে।</string>
     <string name="error_unknown">অজানা ত্রুটি: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">বাতিল করুন</string>
     <string name="save_button">সংরক্ষণ করুন</string>
@@ -103,7 +98,6 @@
     <string name="set_traffic_limit">মাসিক ট্রাফিক সীমা (GB) সেট করুন:</string>
     <string name="traffic_limit_gb_hint_dialog">GB-তে ট্রাফিক সীমা</string>
     <string name="limits_for_operator">%1$s-এর জন্য সীমা</string>
-
     <!-- Notifications -->
     <string name="notifications_title">বিজ্ঞপ্তি</string>
     <string name="notify_low_minutes_title">বাকি কম মিনিট সম্পর্কে অবহিত করুন</string>
@@ -127,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">ট্রাফিকের সীমা পৌঁছে গেছে। আপনি এটি রিসেট না করা পর্যন্ত ট্র্যাক করা ব্যবহার জমা হতে থাকে।</string>
     <string name="usage_level_low">কম</string>
     <string name="usage_level_critical">অত্যন্ত কম</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">অবশিষ্ট:</string>
     <string name="used_text">ব্যবহৃত</string>
@@ -138,7 +131,8 @@
     <string name="traffic_label">ট্রাফিক</string>
     <string name="traffic_remaining_text">অবশিষ্ট ট্রাফিক:</string>
     <string name="gb_abbr">GB</string>
-    <string name="auto_reset_day_suffix">মাসের দিন</string><!--
+    <string name="auto_reset_day_suffix">মাসের দিন</string>
+    <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Bengali requires: one (0, 1), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -151,7 +145,6 @@
         <item quantity="one">%1$d দিন</item>
         <item quantity="other">%1$d দিন</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">সিম কার্ড আইকন</string>
     <string name="sim_card_details_content_desc">%1$s সিম কার্ডের বিবরণ</string>
@@ -165,7 +158,6 @@
     <string name="menu_theme_content_desc">থিম পরিবর্তন করুন</string>
     <string name="navigate_up_content_desc">উপরে নেভিগেট করুন</string>
     <string name="banner_dismiss_content_desc">ব্যানার বন্ধ করুন</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">ট্র্যাকিং</string>
     <string name="call_tracking_title">কল মিনিট ট্র্যাক করুন</string>
@@ -173,7 +165,6 @@
     <string name="assistant_access_title">সহকারী অ্যাক্সেস</string>
     <string name="assistant_access_description">অন-ডিভাইস সহকারীকে আপনার অবশিষ্ট মিনিট এবং মোবাইল ডেটার অনুরোধ করার অনুমতি দিন (Android 16+)। ডিফল্টভাবে নিষ্ক্রিয়। সহকারী প্রাপ্ত উত্তর প্রক্রিয়া করতে পারে।</string>
     <string name="app_functions_display_description">অন-ডিভাইস সহকারীর সাথে অবশিষ্ট মিনিট এবং মোবাইল ডেটা শেয়ার করে</string>
-
     <!-- About Dialog -->
     <string name="about_title">অ্যাপ সম্পর্কে</string>
     <string name="about_message">MinuteWatcher হল অবশিষ্ট মিনিট এবং মোবাইল ডেটা ব্যবহারের হিসাব রাখার একটি অ্যাপ।</string>
@@ -185,4 +176,6 @@
     <string name="about_version_format">সংস্করণ %1$s (%2$d)</string>
     <string name="about_content_desc">অ্যাপ সম্পর্কিত তথ্য</string>
     <string name="aod_summary_no_limits_note">প্রদর্শন করার মত কিছু নেই: অন্তত একটি সিম কার্ডের জন্য মিনিট বা ডেটার সীমা সেট করুন - সারাংশে শুধুমাত্র সীমা সহ সিমগুলো দেখানো হয়。</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

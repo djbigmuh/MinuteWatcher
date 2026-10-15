@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM-карты</string>
     <string name="no_sim_found">SIM-карты не найдены</string>
     <string name="check_permissions_sim">Проверьте разрешения и наличие SIM</string>
     <string name="no_data">Нет данных</string>
     <string name="error">Ошибка</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">Сброс</string>
     <string name="theme_system">Системная</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">Тёмная</string>
     <string name="limit_button">Лимит</string>
     <string name="add_widget_button">Добавить виджет</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">Общие настройки сохранены. Настройки SIM пропущены (список SIM недоступен)</string>
     <string name="settings_save_partial_failure">Общие настройки сохранены. Настройки SIM не удалось сохранить</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">Учет использования трафика</string>
     <string name="usage_access_dialog_description">Для учета мобильного трафика приложению необходимо разрешение «Доступ к использованию данных». \n\nЭто системное разрешение, которое позволяет приложению видеть объем переданных и полученных данных через мобильную сеть. \n\nМы не отслеживаем, какие приложения вы используете, и не храним историю просмотров.</string>
     <string name="phone_permission_permanent_denial">Для работы приложения нужен доступ к телефону, но запрос разрешений заблокирован настройкой «Больше не спрашивать». Пожалуйста, включите его вручную в настройках.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Настройки виджета</string>
     <string name="widget_description">Отображает остаток минут и мобильного трафика для каждой SIM-карты.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">Режим компоновки</string>
     <string name="sim_arrangement_prompt">Выберите расположение SIM</string>
     <string name="color_background">Цвет фона:</string>
-    <string name="custom_color">Другой&#8230;</string>
+    <string name="custom_color">Другой…</string>
     <string name="font_size">Размер шрифта</string>
     <string name="traffic_tracking_limitation_title">Ограничение учета трафика</string>
     <string name="traffic_tracking_limitation_body">Android предоставляет данные об использовании мобильного интернета в виде общего значения для всего устройства. \n\nMinuteWatcher приписывает весь мобильный трафик той SIM-карте, которая в данный момент выбрана в настройках системы как «SIM-карта для передачи данных по умолчанию».\n\nПри смене SIM-карты по умолчанию приложение зафиксирует изменения и начнет учитывать трафик для новой карты с этого момента.</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">Добро пожаловать в MinuteWatcher!</string>
     <string name="onboarding_message">MinuteWatcher не может автоматически узнать условия вашего тарифа у оператора связи.\n\nДля начала работы, пожалуйста, укажите вручную лимиты минут/трафика и день ежемесячного обновления для каждой SIM-карты. После этого приложение само будет вести учет.</string>
     <string name="onboarding_button">Понятно</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">Неверный индекс слота SIM: %1$d</string>
     <string name="error_storage_unavailable">Хранилище недоступно для слота %1$d. Попробуйте позже.</string>
     <string name="error_sim_removed">SIM-карта была извлечена из слота %1$d</string>
     <string name="error_operation_failed_retry">Операция не удалась после повторной попытки.</string>
     <string name="error_unknown">Неизвестная ошибка: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">Отмена</string>
     <string name="save_button">Сохранить</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">Установите месячный лимит трафика (ГБ):</string>
     <string name="traffic_limit_gb_hint_dialog">Лимит трафика в ГБ</string>
     <string name="limits_for_operator">Лимиты для %1$s</string>
-
     <!-- Notifications -->
     <string name="notifications_title">Уведомления</string>
     <string name="notify_low_minutes_title">Уведомлять о малом остатке минут</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">Лимит трафика достигнут. Отслеживаемое использование продолжает накапливаться, пока вы его не сбросите.</string>
     <string name="usage_level_low">НИЗКИЙ</string>
     <string name="usage_level_critical">КРИТИЧЕСКИЙ</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">Осталось:</string>
     <string name="used_text">Использовано</string>
@@ -137,7 +131,8 @@
     <string name="traffic_label">Трафик</string>
     <string name="traffic_remaining_text">Трафика осталось:</string>
     <string name="gb_abbr">ГБ</string>
-    <string name="auto_reset_day_suffix">число месяца</string><!--
+    <string name="auto_reset_day_suffix">число месяца</string>
+    <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       Russian requires: one (1, 21), few (2-4, 22-24), many (0, 5-20), other (fractional).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -158,7 +153,6 @@
         <item quantity="many">%1$d дней</item>
         <item quantity="other">%1$d дня</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Иконка SIM-карты</string>
     <string name="sim_card_details_content_desc">Детали SIM-карты %1$s</string>
@@ -172,7 +166,6 @@
     <string name="menu_theme_content_desc">Смена темы</string>
     <string name="navigate_up_content_desc">Перейти вверх</string>
     <string name="banner_dismiss_content_desc">Закрыть баннер</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">Учёт</string>
     <string name="call_tracking_title">Учитывать минуты звонков</string>
@@ -180,7 +173,6 @@
     <string name="assistant_access_title">Доступ ассистента</string>
     <string name="assistant_access_description">Разрешить ассистенту на устройстве запрашивать оставшиеся минуты и трафик (Android 16+). По умолчанию выключено. Ассистент может обрабатывать полученные ответы.</string>
     <string name="app_functions_display_description">Передаёт ассистенту на устройстве оставшиеся минуты и мобильный трафик</string>
-
     <!-- About Dialog -->
     <string name="about_title">О приложении</string>
     <string name="about_message">MinuteWatcher - приложение для отслеживания остатка минут и мобильного трафика.</string>
@@ -192,4 +184,6 @@
     <string name="about_version_format">Версия %1$s (%2$d)</string>
     <string name="about_content_desc">О приложении</string>
     <string name="aod_summary_no_limits_note">Отображать нечего: задайте лимит минут или трафика хотя бы для одной SIM-карты - сводка показывает только SIM с лимитами.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

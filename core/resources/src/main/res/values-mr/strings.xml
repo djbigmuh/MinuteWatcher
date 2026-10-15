@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">सिम कार्डे</string>
     <string name="no_sim_found">सिम कार्डे सापडली नाहीत</string>
     <string name="check_permissions_sim">परवानग्या आणि सिम उपस्थिती तपासा</string>
     <string name="no_data">डेटा नाही</string>
     <string name="error">त्रुटी</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">रिसेट</string>
     <string name="theme_system">सिस्टम</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">डार्क</string>
     <string name="limit_button">मर्यादा</string>
     <string name="add_widget_button">विजेट जोडा</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">सामान्य सेटिंग्ज जतन केल्या. सिम सेटिंग्ज वगळल्या (सिम सूची उपलब्ध नाही)</string>
     <string name="settings_save_partial_failure">सामान्य सेटिंग्ज जतन केल्या. सिम-विशिष्ट सेटिंग्ज जतन करता आल्या नाहीत</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">डेटा वापर ट्रॅकिंग</string>
     <string name="usage_access_dialog_description">तुमचा मोबाइल डेटा वापर ट्रॅक करण्यासाठी MinuteWatcher ला \"वापर अ‍ॅक्सेस\" परवानगीची आवश्यकता आहे.\n\nही सिस्टीम-स्तरीय परवानगी आहे जी अ‍ॅपला सेल्युलर नेटवर्कवर किती डेटा पाठवला आणि प्राप्त झाला हे पाहण्याची अनुमती देते.</string>
     <string name="phone_permission_permanent_denial">फोन परवानगी कायमची नाकारली आहे.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">विजेट सेटिंग्ज</string>
     <string name="widget_description">प्रत्येक सिम कार्डसाठी उर्वरित मिनिटे आणि मोबाइल डेटा प्रदर्शित करते.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">लेआउट मोड</string>
     <string name="sim_arrangement_prompt">सिम व्यवस्था निवडा</string>
     <string name="color_background">पार्श्वभूमी रंग:</string>
-    <string name="custom_color">कस्टम&#8230;</string>
+    <string name="custom_color">कस्टम…</string>
     <string name="font_size">फॉन्ट आकार</string>
     <string name="traffic_tracking_limitation_title">डेटा ट्रॅकिंग मर्यादा</string>
     <string name="traffic_tracking_limitation_body">Android संपूर्ण उपकरणासाठी एकूण मूल्य म्हणून मोबाइल डेटा वापर प्रदान करते.\n\nMinuteWatcher सर्व मोबाइल ट्रॅफिक तुमच्या सिस्टम सेटिंग्जमध्ये सध्या \"डिफॉल्ट डेटा सिम\" म्हणून निवडलेल्या सिम कार्डला नियुक्त करते.</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">MinuteWatcher मध्ये आपले स्वागत आहे!</string>
     <string name="onboarding_message">MinuteWatcher तुमच्या मोबाइल कॅरियरकडून तुमच्या प्लॅनचे तपशील आपोआप मिळवू शकत नाही.\n\nट्रॅकिंग सुरू करण्यासाठी, कृपया प्रत्येक सिम कार्डसाठी तुमचे मिनिटे/डेटा मर्यादा आणि मासिक रिसेट दिवस मॅन्युअली सेट करा.</string>
     <string name="onboarding_button">समजले</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">अवैध सिम स्लॉट निर्देशांक: %1$d</string>
     <string name="error_storage_unavailable">स्लॉट %1$d साठी स्टोरेज उपलब्ध नाही. नंतर पुन्हा प्रयत्न करा.</string>
     <string name="error_sim_removed">स्लॉट %1$d मधून सिम काढले गेले</string>
     <string name="error_operation_failed_retry">पुन्हा प्रयत्न केल्यानंतरही क्रिया अयशस्वी झाली.</string>
     <string name="error_unknown">अज्ञात त्रुटी: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">रद्द करा</string>
     <string name="save_button">जतन करा</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">मासिक डेटा मर्यादा (GB) सेट करा:</string>
     <string name="traffic_limit_gb_hint_dialog">GB मध्ये डेटा मर्यादा</string>
     <string name="limits_for_operator">%1$s साठी मर्यादा</string>
-
     <!-- Notifications -->
     <string name="notifications_title">सूचना</string>
     <string name="notify_low_minutes_title">कमी मिनिटे शिल्लक असताना सूचित करा</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">डेटा मर्यादा गाठली.</string>
     <string name="usage_level_low">कमी</string>
     <string name="usage_level_critical">अत्यंत कमी</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">शिल्लक:</string>
     <string name="used_text">वापरले</string>
@@ -146,7 +140,6 @@
         <item quantity="one">%1$d दिवस</item>
         <item quantity="other">%1$d दिवस</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">सिम कार्ड आयकॉन</string>
     <string name="sim_card_details_content_desc">%1$s सिम कार्ड तपशील</string>
@@ -160,7 +153,6 @@
     <string name="menu_theme_content_desc">थीम बदला</string>
     <string name="navigate_up_content_desc">वर जा</string>
     <string name="banner_dismiss_content_desc">बॅनर बंद करा</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">ट्रॅकिंग</string>
     <string name="call_tracking_title">कॉल मिनिटे ट्रॅक करा</string>
@@ -168,7 +160,6 @@
     <string name="assistant_access_title">असिस्टंट अ‍ॅक्सेस</string>
     <string name="assistant_access_description">ऑन-डिव्हाइस असिस्टंटला तुमची उर्वरित मिनिटे आणि डेटाची विनंती करण्याची अनुमती द्या.</string>
     <string name="app_functions_display_description">ऑन-डिव्हाइस असिस्टंटसोबत उर्वरित मिनिटे आणि मोबाइल डेटा शेअर करते</string>
-
     <!-- About Dialog -->
     <string name="about_title">बद्दल</string>
     <string name="about_message">MinuteWatcher अ‍ॅप उर्वरित मिनिटे आणि मोबाइल डेटा वापर ट्रॅक करण्यासाठी आहे.</string>
@@ -180,4 +171,6 @@
     <string name="about_version_format">आवृत्ती %1$s (%2$d)</string>
     <string name="about_content_desc">माहितीबद्दल</string>
     <string name="aod_summary_no_limits_note">दाखवण्यासारखे काही नाही: किमान एका SIM कार्डसाठी मिनिटे किंवा डेटा मर्यादा सेट करा - सारांश फक्त मर्यादेसह SIM दर्शवतो.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

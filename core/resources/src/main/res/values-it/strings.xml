@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Schede SIM</string>
     <string name="no_sim_found">Nessuna scheda SIM trovata</string>
     <string name="check_permissions_sim">Verifica i permessi e la presenza della SIM</string>
     <string name="no_data">Nessun dato</string>
     <string name="error">Errore</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">Reimposta</string>
     <string name="theme_system">Sistema</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">Scuro</string>
     <string name="limit_button">Limite</string>
     <string name="add_widget_button">Aggiungi Widget</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">Impostazioni generali salvate. Impostazioni SIM ignorate (elenco SIM non disponibile)</string>
     <string name="settings_save_partial_failure">Impostazioni generali salvate. Le impostazioni specifiche della SIM non sono state salvate</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">Monitoraggio traffico dati</string>
     <string name="usage_access_dialog_description">Per monitorare il traffico dati mobili, MinuteWatcher richiede l\'autorizzazione \"Accesso dati uso\".\n\nSi tratta di un permesso a livello di sistema che consente all\'app di vedere quanti dati sono stati inviati e ricevuti sulla rete cellulare.</string>
     <string name="phone_permission_permanent_denial">Autorizzazione telefono negata permanentemente.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Impostazioni Widget</string>
     <string name="widget_description">Mostra i minuti e il traffico dati rimanenti per ciascuna scheda SIM.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">Modalità di layout</string>
     <string name="sim_arrangement_prompt">Scegli la disposizione delle SIM</string>
     <string name="color_background">Colore dello sfondo:</string>
-    <string name="custom_color">Personalizzato&#8230;</string>
+    <string name="custom_color">Personalizzato…</string>
     <string name="font_size">Dimensione carattere</string>
     <string name="traffic_tracking_limitation_title">Limitazione del monitoraggio traffico</string>
     <string name="traffic_tracking_limitation_body">Android fornisce il consumo di dati mobili come valore aggregato per l\'intero dispositivo.\n\nMinuteWatcher attribuisce tutto il traffico alla scheda SIM attualmente selezionata come \"SIM dati predefinita\" nelle impostazioni.</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">Benvenuto in MinuteWatcher!</string>
     <string name="onboarding_message">MinuteWatcher non può recuperare automaticamente i dettagli del piano dal tuo operatore.\n\nPer iniziare il monitoraggio, imposta manualmente i limiti di minuti/dati e il giorno di rinnovo mensile per ciascuna SIM.</string>
     <string name="onboarding_button">Ho capito</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">Indice dello slot SIM non valido: %1$d</string>
     <string name="error_storage_unavailable">Memoria non disponibile per lo slot %1$d. Riprova più tardi.</string>
     <string name="error_sim_removed">La SIM è stata rimossa dallo slot %1$d</string>
     <string name="error_operation_failed_retry">Operazione non riuscita anche dopo aver riprovato.</string>
     <string name="error_unknown">Errore sconosciuto: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">Annulla</string>
     <string name="save_button">Salva</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">Imposta il limite mensile di traffico (GB):</string>
     <string name="traffic_limit_gb_hint_dialog">Limite traffico in GB</string>
     <string name="limits_for_operator">Limiti per %1$s</string>
-
     <!-- Notifications -->
     <string name="notifications_title">Notifiche</string>
     <string name="notify_low_minutes_title">Notifica quando i minuti sono in esaurimento</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">Limite di traffico dati raggiunto.</string>
     <string name="usage_level_low">BASSO</string>
     <string name="usage_level_critical">MOLTO BASSO</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">Rimanenti:</string>
     <string name="used_text">Usato</string>
@@ -148,7 +142,6 @@
         <item quantity="many">%1$d di giorni</item>
         <item quantity="other">%1$d giorni</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Icona scheda SIM</string>
     <string name="sim_card_details_content_desc">Dettagli scheda SIM %1$s</string>
@@ -162,7 +155,6 @@
     <string name="menu_theme_content_desc">Cambia tema</string>
     <string name="navigate_up_content_desc">Torna su</string>
     <string name="banner_dismiss_content_desc">Chiudi banner</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">Monitoraggio</string>
     <string name="call_tracking_title">Traccia minuti di chiamata</string>
@@ -170,7 +162,6 @@
     <string name="assistant_access_title">Accesso assistente</string>
     <string name="assistant_access_description">Consenti all\'assistente sul dispositivo di richiedere i minuti e i dati rimanenti.</string>
     <string name="app_functions_display_description">Condivide i minuti e i dati rimanenti con l\'assistente sul dispositivo</string>
-
     <!-- About Dialog -->
     <string name="about_title">Info</string>
     <string name="about_message">MinuteWatcher è un\'applicazione per monitorare i minuti e il traffico dati rimanenti.</string>
@@ -182,4 +173,6 @@
     <string name="about_version_format">Versione %1$s (%2$d)</string>
     <string name="about_content_desc">Informazioni su MinuteWatcher</string>
     <string name="aod_summary_no_limits_note">Nessun elemento da mostrare: imposta un limite di minuti o traffico per almeno una scheda SIM; il riepilogo mostra solo le SIM con limiti.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

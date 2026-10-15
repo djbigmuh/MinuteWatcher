@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- General UI -->
     <string name="sim_cards_title">Cartões SIM</string>
@@ -6,7 +6,6 @@
     <string name="check_permissions_sim">Verifique as permissões e a presença de SIM</string>
     <string name="no_data">Sem dados</string>
     <string name="error">Erro</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">Repor</string>
     <string name="theme_system">Sistema</string>
@@ -14,7 +13,6 @@
     <string name="theme_dark">Escuro</string>
     <string name="limit_button">Limite</string>
     <string name="add_widget_button">Adicionar widget</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">Definições gerais guardadas. Definições de SIM ignoradas (lista de SIM indisponível)</string>
     <string name="settings_save_partial_failure">Definições gerais guardadas. Não foi possível guardar as definições de SIM</string>
@@ -24,7 +22,6 @@
     <string name="usage_access_dialog_title">Monitorização de utilização de dados</string>
     <string name="usage_access_dialog_description">Para monitorizar a utilização de dados móveis, o MinuteWatcher precisa da permissão \"Acesso de utilização\".\n\nEsta é uma permissão ao nível do sistema que permite à aplicação ver quantos dados foram enviados e recebidos através da rede móvel.\n\nNão monitorizamos quais as aplicações que utiliza nem o seu histórico de navegação.</string>
     <string name="phone_permission_permanent_denial">A permissão de telefone foi permanentemente recusada. Algumas funcionalidades não funcionarão até que a ative nas Definições da aplicação.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Definições do widget</string>
     <string name="widget_description">Mostra os minutos e o tráfego móvel restantes por cartão SIM.</string>
@@ -76,14 +73,12 @@
     <string name="onboarding_title">Bem-vindo ao MinuteWatcher!</string>
     <string name="onboarding_message">O MinuteWatcher não consegue obter automaticamente os detalhes do seu plano junto da sua operadora de telecomunicações.\n\nPara começar a monitorizar, configure manualmente os seus limites de minutos/dados e o dia de reposição mensal para cada cartão SIM. A aplicação tratará de toda a monitorização a partir desse momento.</string>
     <string name="onboarding_button">Compreendido</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">Índice de ranhura SIM inválido: %1$d</string>
     <string name="error_storage_unavailable">Armazenamento indisponível para a ranhura %1$d. Tente novamente mais tarde.</string>
     <string name="error_sim_removed">O cartão SIM foi removido da ranhura %1$d</string>
     <string name="error_operation_failed_retry">A operação falhou após nova tentativa.</string>
     <string name="error_unknown">Erro desconhecido: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">Cancelar</string>
     <string name="save_button">Guardar</string>
@@ -103,7 +98,6 @@
     <string name="set_traffic_limit">Definir limite mensal de tráfego (GB):</string>
     <string name="traffic_limit_gb_hint_dialog">Limite de tráfego em GB</string>
     <string name="limits_for_operator">Limites para %1$s</string>
-
     <!-- Notifications -->
     <string name="notifications_title">Notificações</string>
     <string name="notify_low_minutes_title">Notificar sobre poucos minutos restantes</string>
@@ -127,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">Limite de tráfego atingido. A utilização registada continua a acumular-se até que a reponha.</string>
     <string name="usage_level_low">BAIXO</string>
     <string name="usage_level_critical">CRITICAMENTE BAIXO</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">Restante:</string>
     <string name="used_text">Utilizado</string>
@@ -149,7 +142,6 @@
         <item quantity="many">%1$d de dias</item>
         <item quantity="other">%1$d dias</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Ícone de cartão SIM</string>
     <string name="sim_card_details_content_desc">Detalhes do cartão SIM %1$s</string>
@@ -163,7 +155,6 @@
     <string name="menu_theme_content_desc">Alterar tema</string>
     <string name="navigate_up_content_desc">Navegar para cima</string>
     <string name="banner_dismiss_content_desc">Dispensar aviso</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">Controlo</string>
     <string name="call_tracking_title">Controlar minutos de chamadas</string>
@@ -171,7 +162,6 @@
     <string name="assistant_access_title">Acesso do assistente</string>
     <string name="assistant_access_description">Permitir que o assistente do dispositivo solicite os minutos e dados restantes (Android 16+). Desativado por predefinição. O assistente pode processar as respostas que recebe.</string>
     <string name="app_functions_display_description">Partilha os minutos e os dados móveis restantes com o assistente do dispositivo</string>
-
     <!-- About Dialog -->
     <string name="about_title">Sobre</string>
     <string name="about_message">O MinuteWatcher é uma aplicação para monitorizar os minutos restantes e o consumo de dados móveis.</string>
@@ -183,4 +173,6 @@
     <string name="about_version_format">Versão %1$s (%2$d)</string>
     <string name="about_content_desc">Informações da aplicação</string>
     <string name="aod_summary_no_limits_note">Nada para apresentar: defina um limite de minutos ou dados para pelo menos um cartão SIM - o resumo mostra apenas os SIM com limites.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

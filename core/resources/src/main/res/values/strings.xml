@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM Cards</string>
     <string name="no_sim_found">SIM cards not found</string>
     <string name="check_permissions_sim">Check permissions and SIM presence</string>
     <string name="no_data">No data</string>
     <string name="error">Error</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">Reset</string>
     <string name="theme_system">System</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">Dark</string>
     <string name="limit_button">Limit</string>
     <string name="add_widget_button">Add Widget</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">General settings saved. SIM settings skipped (SIM list unavailable)</string>
     <string name="settings_save_partial_failure">General settings saved. SIM-specific settings could not be saved</string>
@@ -51,7 +50,6 @@
     <string name="usage_access_dialog_title">Data Usage Tracking</string>
     <string name="usage_access_dialog_description">To track your mobile data usage, MinuteWatcher needs \"Usage Access\" permission. \n\nThis is a system-level permission that allows the app to see how much data has been sent and received over the cellular network. \n\nWe do not track which apps you use or your browsing history.</string>
     <string name="phone_permission_permanent_denial">Phone permission is permanently denied. Some features will not work until you enable it in App Settings.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Widget Settings</string>
     <string name="widget_description">Displays remaining minutes and mobile traffic per SIM card.</string>
@@ -67,7 +65,7 @@
     <string name="layout_mode_title">Layout mode</string>
     <string name="sim_arrangement_prompt">Choose SIM arrangement</string>
     <string name="color_background">Background color:</string>
-    <string name="custom_color">Custom&#8230;</string>
+    <string name="custom_color">Custom…</string>
     <string name="font_size">Font Size</string>
     <string name="traffic_tracking_limitation_title">Traffic Tracking Limitation</string>
     <string name="traffic_tracking_limitation_body">Android provides mobile data usage as an aggregate value for the entire device. \n\nMinuteWatcher attributes all mobile traffic to the SIM card currently selected as the \"Default Data SIM\" in your system settings.\n\nIf you switch your default data SIM, the app will detect the change and begin attributing traffic to the new SIM from that moment.</string>
@@ -103,14 +101,12 @@
     <string name="onboarding_title">Welcome to MinuteWatcher!</string>
     <string name="onboarding_message">MinuteWatcher cannot automatically retrieve your plan details from your mobile carrier.\n\nTo begin tracking, please manually set your minutes/data limits and the monthly reset day for each SIM card. The app will handle all monitoring from that point forward.</string>
     <string name="onboarding_button">Got it</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">Invalid SIM slot index: %1$d</string>
     <string name="error_storage_unavailable">Storage unavailable for slot %1$d. Retry later.</string>
     <string name="error_sim_removed">SIM was removed from slot %1$d</string>
     <string name="error_operation_failed_retry">Operation failed after retry.</string>
     <string name="error_unknown">Unknown error: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">Cancel</string>
     <string name="save_button">Save</string>
@@ -130,7 +126,6 @@
     <string name="set_traffic_limit">Set monthly traffic limit (GB):</string>
     <string name="traffic_limit_gb_hint_dialog">Traffic limit in GB</string>
     <string name="limits_for_operator">Limits for %1$s</string>
-
     <!-- Notifications -->
     <string name="notifications_title">Notifications</string>
     <string name="notify_low_minutes_title">Notify about low minutes remaining</string>
@@ -154,7 +149,6 @@
     <string name="notification_traffic_exhausted_body_no_period">Traffic limit reached. Tracked usage keeps accumulating until you reset it.</string>
     <string name="usage_level_low">LOW</string>
     <string name="usage_level_critical">CRITICAL LOW</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">Remaining:</string>
     <string name="used_text">Used</string>
@@ -168,7 +162,6 @@
     <string name="auto_reset_day_suffix">day of month</string>
     <string name="label_value_format" translatable="false">%1$s: %2$s</string>
     <string name="value_unit_format" translatable="false">%1$s %2$s</string>
-
     <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       English requires: one (1), other (everything else).
@@ -186,7 +179,6 @@
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">SIM card icon</string>
     <string name="sim_card_details_content_desc">%1$s SIM card details</string>
@@ -200,7 +192,6 @@
     <string name="menu_theme_content_desc">Change theme</string>
     <string name="navigate_up_content_desc">Navigate up</string>
     <string name="banner_dismiss_content_desc">Dismiss banner</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">Tracking</string>
     <string name="call_tracking_title">Track call minutes</string>
@@ -208,7 +199,6 @@
     <string name="assistant_access_title">Assistant access</string>
     <string name="assistant_access_description">Allow the on-device assistant to request your remaining minutes and mobile data (Android 16+). Disabled by default. The assistant may process the answers it receives.</string>
     <string name="app_functions_display_description">Shares remaining minutes and mobile data with the on-device assistant</string>
-
     <!-- About Dialog -->
     <string name="about_title">About</string>
     <string name="about_message">MinuteWatcher is an app for tracking remaining minutes and mobile data usage.</string>
@@ -220,4 +210,6 @@
     <string name="about_version_format">Version %1$s (%2$d)</string>
     <string name="about_content_desc">About info</string>
     <string name="aod_summary_no_limits_note">Nothing to display: set minutes or traffic limit for at least one SIM card - summary shows only SIMs with limits.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

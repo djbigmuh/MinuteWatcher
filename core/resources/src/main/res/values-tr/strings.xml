@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM Kartlar</string>
     <string name="no_sim_found">SIM kart bulunamadı</string>
     <string name="check_permissions_sim">İzinleri ve SIM kart durumunu kontrol edin</string>
     <string name="no_data">Veri yok</string>
     <string name="error">Hata</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">Sıfırla</string>
     <string name="theme_system">Sistem</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">Koyu</string>
     <string name="limit_button">Limit</string>
     <string name="add_widget_button">Widget Ekle</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">Genel ayarlar kaydedildi. SIM ayarları atlandı (SIM listesi kullanılamıyor)</string>
     <string name="settings_save_partial_failure">Genel ayarlar kaydedildi. SIM\'e özel ayarlar kaydedilemedi</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">Veri Kullanımı Takibi</string>
     <string name="usage_access_dialog_description">Mobil veri kullanımınızı takip etmek için MinuteWatcher\'ın \"Kullanım Erişimi\" iznine ihtiyacı vardır.\n\nBu, uygulamanın hücresel ağ üzerinden ne kadar veri gönderilip alındığını görmesini sağlayan sistem düzeyinde bir izindir.</string>
     <string name="phone_permission_permanent_denial">Telefon izni kalıcı olarak reddedildi.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Widget Ayarları</string>
     <string name="widget_description">Her SIM kart için kalan dakikaları ve mobil veriyi görüntüler.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">Düzen modu</string>
     <string name="sim_arrangement_prompt">SIM düzenini seçin</string>
     <string name="color_background">Arka plan rengi:</string>
-    <string name="custom_color">Özel&#8230;</string>
+    <string name="custom_color">Özel…</string>
     <string name="font_size">Yazı Tipi Boyutu</string>
     <string name="traffic_tracking_limitation_title">Veri Takibi Sınırlaması</string>
     <string name="traffic_tracking_limitation_body">Android, mobil veri kullanımını tüm cihaz için toplu bir değer olarak sağlar.\n\nMinuteWatcher tüm mobil veriyi sistem ayarlarınızda \"Varsayılan Veri SIM\'i\" olarak seçilen SIM karta atar.</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">MinuteWatcher\'a Hoş Geldiniz!</string>
     <string name="onboarding_message">MinuteWatcher paket detaylarınızı operatörünüzden otomatik olarak alamaz.\n\nTakibe başlamak için lütfen her SIM kart için dakika/veri limitlerinizi ve aylık sıfırlama gününü manuel olarak ayarlayın.</string>
     <string name="onboarding_button">Anlaşıldı</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">Geçersiz SIM yuvası indeksi: %1$d</string>
     <string name="error_storage_unavailable">Yuva %1$d için depolama alanı yok. Daha sonra tekrar deneyin.</string>
     <string name="error_sim_removed">SIM kart yuva %1$d\'den çıkarıldı</string>
     <string name="error_operation_failed_retry">Yeniden denedikten sonra da işlem başarısız oldu.</string>
     <string name="error_unknown">Bilinmeyen hata: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">İptal</string>
     <string name="save_button">Kaydet</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">Aylık veri limitini (GB) ayarlayın:</string>
     <string name="traffic_limit_gb_hint_dialog">GB cinsinden veri limiti</string>
     <string name="limits_for_operator">%1$s için limitler</string>
-
     <!-- Notifications -->
     <string name="notifications_title">Bildirimler</string>
     <string name="notify_low_minutes_title">Dakika azaldığında bildir</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">Veri limitine ulaşıldı.</string>
     <string name="usage_level_low">DÜŞÜK</string>
     <string name="usage_level_critical">KRİTİK DÜŞÜK</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">Kalan:</string>
     <string name="used_text">Kullanılan</string>
@@ -146,7 +140,6 @@
         <item quantity="one">%1$d gün</item>
         <item quantity="other">%1$d gün</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">SIM kart simgesi</string>
     <string name="sim_card_details_content_desc">%1$s SIM kart detayları</string>
@@ -160,7 +153,6 @@
     <string name="menu_theme_content_desc">Temayı değiştir</string>
     <string name="navigate_up_content_desc">Yukarı git</string>
     <string name="banner_dismiss_content_desc">Afişi kapat</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">Takip</string>
     <string name="call_tracking_title">Arama dakikalarını takip et</string>
@@ -168,7 +160,6 @@
     <string name="assistant_access_title">Asistan erişimi</string>
     <string name="assistant_access_description">Cihaz içi asistanın kalan dakikalarınızı ve verilerinizi istemesine izin verin.</string>
     <string name="app_functions_display_description">Kalan dakikaları ve mobil verileri cihaz içi asistanla paylaşır</string>
-
     <!-- About Dialog -->
     <string name="about_title">Hakkında</string>
     <string name="about_message">MinuteWatcher, kalan dakikaları ve mobil veri kullanımını takip etmek için bir uygulamadır.</string>
@@ -180,4 +171,6 @@
     <string name="about_version_format">Sürüm %1$s (%2$d)</string>
     <string name="about_content_desc">Hakkında bilgisi</string>
     <string name="aod_summary_no_limits_note">Görüntülenecek öğe yok: En az bir SIM kart için dakika veya veri sınırı belirleyin - özet yalnızca sınırları olan SIM kartlarını gösterir.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

@@ -15,9 +15,9 @@
                 <aapt:attr name="android:fillColor">
                     <gradient
                         android:type="radial"
-                        android:centerX="0"
-                        android:centerY="0"
-                        android:gradientRadius="1">
+                        android:centerX="48.54"
+                        android:centerY="12.4"
+                        android:gradientRadius="6.43">
                         <item
                             android:color="#FFFFE436"
                             android:offset=".0888" />
@@ -40,9 +40,9 @@
                 <aapt:attr name="android:fillColor">
                     <gradient
                         android:type="radial"
-                        android:centerX="0"
-                        android:centerY="0"
-                        android:gradientRadius="1">
+                        android:centerX="48.54"
+                        android:centerY="12.4"
+                        android:gradientRadius="6.43">
                         <item
                             android:color="#FFFFFFFF"
                             android:offset="0" />

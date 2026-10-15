@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Circular badge background #0A1E36 -->
+    <path
+        android:fillColor="#0A1E36"
+        android:pathData="M24,4A20,20 0,1,1 4,24A20,20 0,0,1 24,4z" />
+
+    <!-- Gauge ring white -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,10C16.3,10 10,16.3 10,24C10,31.7 16.3,38 24,38C31.7,38 38,31.7 38,24C38,16.3 31.7,10 24,10ZM24,12C30.6,12 36,17.4 36,24C36,30.6 30.6,36 24,36C17.4,36 12,30.6 12,24C12,17.4 17.4,12 24,12Z" />
+
+    <!-- Needle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M23,17h2v14h-2z" />
+
+    <!-- Center dot -->
+    <path
+        android:fillColor="#FF8500"
+        android:pathData="M24,24m-3,0a3,3 0 1,1 6,0a3,3 0 1,1 -6,0" />
+</vector>

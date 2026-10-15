@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Cartes SIM</string>
     <string name="no_sim_found">Cartes SIM non trouvées</string>
     <string name="check_permissions_sim">Vérifiez les permissions et la présence SIM</string>
     <string name="no_data">Pas de données</string>
     <string name="error">Erreur</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">Réinitialiser</string>
     <string name="theme_system">Système</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">Sombre</string>
     <string name="limit_button">Limite</string>
     <string name="add_widget_button">Ajouter un widget</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">Paramètres généraux enregistrés. Paramètres SIM ignorés (liste SIM indisponible)</string>
     <string name="settings_save_partial_failure">Paramètres généraux enregistrés. Les paramètres SIM n\'ont pas pu être enregistrés</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">Suivi de l\'utilisation des données</string>
     <string name="usage_access_dialog_description">Pour suivre votre consommation de données mobiles, MinuteWatcher a besoin de l\'autorisation « Accès aux données d\'utilisation ».\n\nIl s\'agit d\'une autorisation au niveau du système qui permet à l\'application de voir quelle quantité de données a été envoyée et reçue sur le réseau cellulaire.\n\nNous ne suivons pas les applications que vous utilisez ni votre historique de navigation.</string>
     <string name="phone_permission_permanent_denial">Autorisation de téléphone refusée de manière permanente.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Paramètres du widget</string>
     <string name="widget_description">Affiche les minutes et les données mobiles restantes par carte SIM.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">Mode de disposition</string>
     <string name="sim_arrangement_prompt">Choisir la disposition SIM</string>
     <string name="color_background">Couleur d\'arrière-plan :</string>
-    <string name="custom_color">Personnalisé&#8230;</string>
+    <string name="custom_color">Personnalisé…</string>
     <string name="font_size">Taille de police</string>
     <string name="traffic_tracking_limitation_title">Limitation du suivi du trafic</string>
     <string name="traffic_tracking_limitation_body">Android fournit l\'utilisation des données mobiles en tant que valeur globale pour l\'ensemble de l\'appareil. \n\nMinuteWatcher atribue tout le trafic mobile à la carte SIM actuellement sélectionnée comme « SIM de données par défaut » dans les paramètres de votre système.</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">Bienvenue sur MinuteWatcher !</string>
     <string name="onboarding_message">MinuteWatcher ne peut pas récupérer automatiquement les détails de votre forfait auprès de votre opérateur mobile.\n\nPour commencer le suivi, veuillez définir manuellement vos limites de minutes/données et le jour de réinitialisation mensuel pour chaque carte SIM. L\'application s\'occupera de toute la surveillance à partir de ce moment-là.</string>
     <string name="onboarding_button">J\'ai compris</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">Index d\'emplacement SIM invalide : %1$d</string>
     <string name="error_storage_unavailable">Stockage indisponible pour l\'emplacement %1$d. Réessayez plus tard.</string>
     <string name="error_sim_removed">La carte SIM a été retirée de l\'emplacement %1$d</string>
     <string name="error_operation_failed_retry">L\'opération a échoué après une nouvelle tentative.</string>
     <string name="error_unknown">Erreur inconnue : %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">Annuler</string>
     <string name="save_button">Enregistrer</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">Définir la limite mensuelle de trafic (Go) :</string>
     <string name="traffic_limit_gb_hint_dialog">Limite de trafic en Go</string>
     <string name="limits_for_operator">Limites pour %1$s</string>
-
     <!-- Notifications -->
     <string name="notifications_title">Notifications</string>
     <string name="notify_low_minutes_title">Notifier quand les minutes sont faibles</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">Limite de données atteinte. L\'utilisation suivie continue de s\'accumuler jusqu\'à ce que vous la réinitialisiez.</string>
     <string name="usage_level_low">FAIBLE</string>
     <string name="usage_level_critical">CRITIQUE</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">Restant:</string>
     <string name="used_text">Utilisé</string>
@@ -137,7 +131,8 @@
     <string name="traffic_label">Trafic</string>
     <string name="traffic_remaining_text">Trafic restant : </string>
     <string name="gb_abbr"> Go</string>
-    <string name="auto_reset_day_suffix">jour du mois</string><!--
+    <string name="auto_reset_day_suffix">jour du mois</string>
+    <!--
       Plural rules per CLDR: https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html
       French requires: one (0, 1), other (everything else).
       Missing any quantity causes Lint fatal error and runtime fallback to 'other'.
@@ -156,7 +151,6 @@
         <item quantity="many">%1$d de jours</item>
         <item quantity="other">%1$d jours</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Icône de carte SIM</string>
     <string name="sim_card_details_content_desc">Détails de la carte SIM %1$s</string>
@@ -170,7 +164,6 @@
     <string name="menu_theme_content_desc">Changer de thème</string>
     <string name="navigate_up_content_desc">Revenir en haut</string>
     <string name="banner_dismiss_content_desc">Fermer la bannière</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">Suivi</string>
     <string name="call_tracking_title">Suivre les minutes d’appel</string>
@@ -178,7 +171,6 @@
     <string name="assistant_access_title">Accès assistant</string>
     <string name="assistant_access_description">Permettre à l’assistant de l’appareil de demander vos minutes et données restantes (Android 16+). Désactivé par défaut. L’assistant peut traiter les réponses reçues.</string>
     <string name="app_functions_display_description">Partage les minutes et les données mobiles restantes avec l\'assistant sur l\'appareil</string>
-
     <!-- About Dialog -->
     <string name="about_title">À propos</string>
     <string name="about_message">MinuteWatcher est une application pour suivre les minutes restantes et la consommation de données mobiles.</string>
@@ -190,4 +182,6 @@
     <string name="about_version_format">Version %1$s (%2$d)</string>
     <string name="about_content_desc">Informations sur l\'application</string>
     <string name="aod_summary_no_limits_note">Rien a afficher : definissez une limite de minutes ou de donnees pour au moins une carte SIM - le resume affiche uniquement les SIM avec des limites.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

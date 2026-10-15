@@ -18,6 +18,8 @@ class UrduLocalizationTest {
             "shortcut_minutes_short", // Structural format template "%1$d %2$s"
             "shortcut_traffic_short", // Structural format template "%1$.1f %2$s"
             "shortcut_long_format", // Structural format template "%1$s: %2$s %3$s"
+            "adjustment_mark", // Symbol marker "*"
+            "adjustment_label_format", // Structural format template "%1$s: %2$s%3$s %4$s"
         )
 
     @Test

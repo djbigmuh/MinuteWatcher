@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Katin SIM</string>
     <string name="no_sim_found">Ba a sami katin SIM ba</string>
     <string name="check_permissions_sim">Duba izini da kasancewar SIM</string>
     <string name="no_data">Babu bayanai</string>
     <string name="error">Kuskure</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">Sake saita</string>
     <string name="theme_system">Tsarin Na\'ura</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">Dare</string>
     <string name="limit_button">Kayan aiki</string>
     <string name="add_widget_button">Ƙara Widget</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">An adana mahimman saiti. An tsallake saitin SIM</string>
     <string name="settings_save_partial_failure">An adana saitin gabaɗaya. Ba a iya adana saitin SIM ba</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">Binciken Amfanin Bayanai</string>
     <string name="usage_access_dialog_description">Domin bin diddigin amfani da bayanan wayar hannu, MinuteWatcher tana buƙatar izinin \"Kular Amfani\".\n\nWannan izini ne na matakin tsari wanda ke ba aikace-aikacen damar ganin adadin bayanan da aka aika da aka karɓa ta hanyar cibiyar sadarwa.</string>
     <string name="phone_permission_permanent_denial">An ƙana izinin waya har abada.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Saitunan Widget</string>
     <string name="widget_description">Yana nuna sauran mintuna da bayanan intanet na kowane katin SIM.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">Salan Tsari</string>
     <string name="sim_arrangement_prompt">Zaɓi tsarin SIM</string>
     <string name="color_background">Latsa Baya:</string>
-    <string name="custom_color">Keɓaɓɓe&#8230;</string>
+    <string name="custom_color">Keɓaɓɓe…</string>
     <string name="font_size">Girman rubutu</string>
     <string name="traffic_tracking_limitation_title">Iyakantar Binciken Intanet</string>
     <string name="traffic_tracking_limitation_body">Android tana ba da amfani da bayanan intanet a matsayin adadi guda ɗaya na dukkan na\'urar.\n\nMinuteWatcher tana haɗa duk amfanin intanet zuwa katin SIM da aka zaɓa a matsayin \"Tsohuwar SIM ta Bayanai\" a cikin saitunan ku.</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">Barka da zuwa MinuteWatcher!</string>
     <string name="onboarding_message">MinuteWatcher ba za ta iya samun bayanan tsarin ku ta hanyar kamfanin sadarwa na ku ta kanta ba.\n\nDon farawa, da fatan za a saita mintuna/iyakar bayanai da ranar sake saita ta kowane wata da kanku ga kowane katin SIM.</string>
     <string name="onboarding_button">An gane</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">Lamba na ramukan SIM mara inganci: %1$d</string>
     <string name="error_storage_unavailable">Ajiyar bayanai ba ya samuwa ga rami %1$d. Sake gwada daga baya.</string>
     <string name="error_sim_removed">An cire SIM daga rami %1$d</string>
     <string name="error_operation_failed_retry">Aiki ya gaza bayan sake gwadawa.</string>
     <string name="error_unknown">Kuskuren da ba a sani ba: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">Soke</string>
     <string name="save_button">Adana</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">Saita iyakar intanet na wata (GB):</string>
     <string name="traffic_limit_gb_hint_dialog">Iyakar intanet a GB</string>
     <string name="limits_for_operator">Iyakoki ga %1$s</string>
-
     <!-- Notifications -->
     <string name="notifications_title">Sanarwa</string>
     <string name="notify_low_minutes_title">Yi sanarwa lokacin da mintuna suka kusa ƙarewa</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">An kai iyakar bayanai.</string>
     <string name="usage_level_low">KASAN-KASAN</string>
     <string name="usage_level_critical">KYAU-KYAU KASAN</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">Sauran:</string>
     <string name="used_text">An yi amfani</string>
@@ -146,7 +140,6 @@
         <item quantity="one">Rana %1$d</item>
         <item quantity="other">Rana %1$d</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Alamar katin SIM</string>
     <string name="sim_card_details_content_desc">Bayanin katin SIM %1$s</string>
@@ -160,7 +153,6 @@
     <string name="menu_theme_content_desc">Sauya salo</string>
     <string name="navigate_up_content_desc">Koma sama</string>
     <string name="banner_dismiss_content_desc">Rufe tallan</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">Bin Diddigi</string>
     <string name="call_tracking_title">Lissafa mintunan kiran waya</string>
@@ -168,7 +160,6 @@
     <string name="assistant_access_title">Samun Damar Taimako</string>
     <string name="assistant_access_description">Bada damar mai taimakawa a kan na\'ura ya tambayi sauran mintuna da bayanan intanet.</string>
     <string name="app_functions_display_description">Yana raba sauran mintuna da bayanan intanet tare da mai taimakawa a kan na\'ura</string>
-
     <!-- About Dialog -->
     <string name="about_title">Game da</string>
     <string name="about_message">MinuteWatcher aikace-aikace ne don bin diddigin sauran mintuna da amfani da bayanan intanet.</string>
@@ -180,4 +171,6 @@
     <string name="about_version_format">Sigar %1$s (%2$d)</string>
     <string name="about_content_desc">Bayanai game da aikace-aikacen</string>
     <string name="aod_summary_no_limits_note">Babu abin da za a nuna: saita iyakacin mintoci ko bayanai don akalla katin SIM guda ɗaya - taƙaitaccen bayanin yana nuna SIMs tare da iyakoki kawai.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

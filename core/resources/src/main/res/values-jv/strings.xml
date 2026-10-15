@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">Kertu SIM</string>
     <string name="no_sim_found">Ora ana kertu SIM sing ditemokake</string>
     <string name="check_permissions_sim">Priksa izin lan anane SIM</string>
     <string name="no_data">Bora ana data</string>
     <string name="error">Luput</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">Reset</string>
     <string name="theme_system">Sistem</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">Peteng</string>
     <string name="limit_button">Watesan</string>
     <string name="add_widget_button">Tambah Widget</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">Pengaturan umum disimpen. Pengaturan SIM dilewati (daftar SIM ora ana)</string>
     <string name="settings_save_partial_failure">Pengaturan umum disimpen. Pengaturan khusus SIM ora bisa disimpen</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">Lacak Penggunaan Data</string>
     <string name="usage_access_dialog_description">Kanggo nglacak panggunaan data seluler, MinuteWatcher mbutuhake izin \"Akses Panggunaan\".\n\nIki minangka izin tingkat sistem sing ngidini aplikasi ndeleng pira data sing dikirim lan ditampa liwat jaringan seluler.</string>
     <string name="phone_permission_permanent_denial">Izin telpon ditolak permanen.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">Setelan Widget</string>
     <string name="widget_description">Nampilake sisa menit lan data seluler saben kertu SIM.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">Mode Tata Letak</string>
     <string name="sim_arrangement_prompt">Pilih tata letak SIM</string>
     <string name="color_background">Warna latar wuri:</string>
-    <string name="custom_color">Kustom&#8230;</string>
+    <string name="custom_color">Kustom…</string>
     <string name="font_size">Ukuran Aksara</string>
     <string name="traffic_tracking_limitation_title">Watesan Pelacakan Data</string>
     <string name="traffic_tracking_limitation_body">Android nyedhiyakake panggunaan data seluler minangka nilai total kanggo kabeh piranti.\n\nMinuteWatcher ngalokasikake kabeh data seluler menyang kertu SIM sing saiki dipilih minangka \"SIM Data Utama\" ing setelan sistem sampeyan.</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">Sugeng rawuh ing MinuteWatcher!</string>
     <string name="onboarding_message">MinuteWatcher ora bisa njupuk rincian paket saka operator sampeyan kanthi otomatis.\n\nKanggo nglacak, atur watesan menit/data lan dina reset bulanan kanthi manual kanggo saben kertu SIM.</string>
     <string name="onboarding_button">Paham</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">Indeks slot SIM ora bener: %1$d</string>
     <string name="error_storage_unavailable">Panyimpenan ora kasedhiya kanggo slot %1$d. Coba maneh mengko.</string>
     <string name="error_sim_removed">SIM dicopot saka slot %1$d</string>
     <string name="error_operation_failed_retry">Operasi gagal sawise dicoba maneh.</string>
     <string name="error_unknown">Kesalahan ora dingerteni: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">Batal</string>
     <string name="save_button">Simpen</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">Atur watesan data bulanan (GB):</string>
     <string name="traffic_limit_gb_hint_dialog">Watesan data ing GB</string>
     <string name="limits_for_operator">Watesan kanggo %1$s</string>
-
     <!-- Notifications -->
     <string name="notifications_title">Kabar</string>
     <string name="notify_low_minutes_title">Kandhani yen menit wis sithik</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">Wis tekan watesan data.</string>
     <string name="usage_level_low">SITHIK</string>
     <string name="usage_level_critical">SITHIK BANGET</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">Sisa:</string>
     <string name="used_text">Dienggo</string>
@@ -144,7 +138,6 @@
     <plurals name="days_plurals">
         <item quantity="other">%1$d dina</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">Lambang kertu SIM</string>
     <string name="sim_card_details_content_desc">Rincian kertu SIM %1$s</string>
@@ -158,7 +151,6 @@
     <string name="menu_theme_content_desc">Ganti tema</string>
     <string name="navigate_up_content_desc">Munggah</string>
     <string name="banner_dismiss_content_desc">Tutup spanduk</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">Pelacakan</string>
     <string name="call_tracking_title">Lacak menit telpon</string>
@@ -166,7 +158,6 @@
     <string name="assistant_access_title">Akses asisten</string>
     <string name="assistant_access_description">Mengizinkan asisten ing piranti njaluk sisa menit lan data seluler.</string>
     <string name="app_functions_display_description">Ngedum sisa menit lan data seluler karo asisten ing piranti</string>
-
     <!-- About Dialog -->
     <string name="about_title">Babagan</string>
     <string name="about_message">MinuteWatcher minangka aplikasi kanggo nglacak sisa menit lan panggunaan data seluler.</string>
@@ -178,4 +169,6 @@
     <string name="about_version_format">Versi %1$s (%2$d)</string>
     <string name="about_content_desc">Informasi aplikasi</string>
     <string name="aod_summary_no_limits_note">Ora ana sing ditampilake: setel wates menit utawa data kanggo paling ora siji kertu SIM - ringkesan mung nuduhake SIM sing nganggo wates.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

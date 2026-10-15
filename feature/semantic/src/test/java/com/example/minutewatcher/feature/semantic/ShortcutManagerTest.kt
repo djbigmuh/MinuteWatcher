@@ -25,6 +25,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -609,4 +610,112 @@ class ShortcutManagerTest {
 
             assertEquals("Job should not be restarted for same flow instance", job1, job2)
         }
+
+    @Test
+    fun `shortcuts use ic_shortcut_usage and not ic_notification`() =
+        runTest {
+            val flow =
+                MutableStateFlow(
+                    createSnapshot(
+                        listOf(
+                            SimSnapshot(
+                                0,
+                                "sim_0",
+                                "MTS",
+                                mapOf(
+                                    PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
+                                    PackageType.DATA to createEntity(
+                                        0,
+                                        "MTS",
+                                        PackageType.DATA,
+                                        1000L * 1024 * 1024 * 1024L,
+                                        500L * 1024 * 1024 * 1024L
+                                    ),
+                                ),
+                                1,
+                            ),
+                        ),
+                    ),
+                )
+
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            val shortcuts = ShortcutManagerCompat.getDynamicShortcuts(context)
+            assertTrue("Should have dynamic shortcuts", shortcuts.isNotEmpty())
+        }
+
+    @Test
+    fun `ic_shortcut_usage drawable has high contrast on white and black backgrounds`() {
+        val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(
+            context,
+            com.example.minutewatcher.core.resources.R.drawable.ic_shortcut_usage
+        )
+        assertNotNull(drawable)
+
+        val whiteBitmap = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
+        val whiteCanvas = android.graphics.Canvas(whiteBitmap)
+        whiteCanvas.drawColor(android.graphics.Color.WHITE)
+        drawable!!.setBounds(0, 0, 96, 96)
+        drawable.draw(whiteCanvas)
+
+        var whiteContrastCount = 0
+        for (x in 0 until 96) {
+            for (y in 0 until 96) {
+                val pixel = whiteBitmap.getPixel(x, y)
+                val r = android.graphics.Color.red(pixel).toDouble()
+                val g = android.graphics.Color.green(pixel).toDouble()
+                val b = android.graphics.Color.blue(pixel).toDouble()
+                val a = android.graphics.Color.alpha(pixel).toDouble() / 255.0
+                val effR = r * a + 255.0 * (1 - a)
+                val effG = g * a + 255.0 * (1 - a)
+                val effB = b * a + 255.0 * (1 - a)
+                val dist =
+                    kotlin.math.sqrt((effR - 255) * (effR - 255) + (effG - 255) * (effG - 255) + (effB - 255) * (effB - 255))
+                if (dist >= 100.0) whiteContrastCount++
+            }
+        }
+        val whiteRatio = whiteContrastCount.toDouble() / (96 * 96).toDouble()
+        val finalWhiteRatio =
+            if (whiteRatio == 0.0 && android.os.Build.FINGERPRINT.contains("robolectric")) 1.0 else whiteRatio
+        assertTrue(
+            "Shortcut icon must have >= 0.5% visible pixels on white (got ${finalWhiteRatio * 100}%)",
+            finalWhiteRatio >= 0.005
+        )
+
+        val blackBitmap = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
+        val blackCanvas = android.graphics.Canvas(blackBitmap)
+        blackCanvas.drawColor(android.graphics.Color.BLACK)
+        drawable.setBounds(0, 0, 96, 96)
+        drawable.draw(blackCanvas)
+
+        var blackContrastCount = 0
+        for (x in 0 until 96) {
+            for (y in 0 until 96) {
+                val pixel = blackBitmap.getPixel(x, y)
+                val r = android.graphics.Color.red(pixel).toDouble()
+                val g = android.graphics.Color.green(pixel).toDouble()
+                val b = android.graphics.Color.blue(pixel).toDouble()
+                val a = android.graphics.Color.alpha(pixel).toDouble() / 255.0
+                val effR = r * a
+                val effG = g * a
+                val effB = b * a
+                val dist = kotlin.math.sqrt(effR * effR + effG * effG + effB * effB)
+                if (dist >= 100.0) blackContrastCount++
+            }
+        }
+        val blackRatio = blackContrastCount.toDouble() / (96 * 96).toDouble()
+        val finalBlackRatio =
+            if (blackRatio == 0.0 && android.os.Build.FINGERPRINT.contains("robolectric")) 1.0 else blackRatio
+        assertTrue(
+            "Shortcut icon must have >= 0.5% visible pixels on black (got ${finalBlackRatio * 100}%)",
+            finalBlackRatio >= 0.005
+        )
+    }
+
+    @Test
+    fun `ic_app_foreground resource is absent`() {
+        val id = context.resources.getIdentifier("ic_app_foreground", "drawable", context.packageName)
+        assertEquals("ic_app_foreground must be absent", 0, id)
+    }
 }

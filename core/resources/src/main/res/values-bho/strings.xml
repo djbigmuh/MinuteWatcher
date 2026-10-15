@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">सिम कार्ड</string>
     <string name="no_sim_found">सिम कार्ड ना मिलल</string>
     <string name="check_permissions_sim">अनुमति आ सिम कार्ड के मौजूदगी जांचीं</string>
     <string name="no_data">काहे डेटा नइखे</string>
     <string name="error">गलती</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">रीसेट</string>
     <string name="theme_system">सिस्टम</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">डार्क</string>
     <string name="limit_button">सीमा</string>
     <string name="add_widget_button">विजेट जोड़ीं</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">सामान्य सेटिंग्स सेव भ गइल। सिम सेटिंग्स छोड़ दीहल गइल (सिम सूची उपलब्ध नइखे)</string>
     <string name="settings_save_partial_failure">सामान्य सेटिंग्स सेव भ गइल। सिम के सेटिंग्स सेव ना भ पावल</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">डेटा उपयोग ट्रैकिंग</string>
     <string name="usage_access_dialog_description">मोबाइल डेटा उपयोग के ट्रैक करे खातिर, MinuteWatcher के \"उपयोग एक्सेस\" अनुमति के जरूरत बा।\n\nई एक सिस्टम स्तर के अनुमति हवे जे ऐप के ई देखे के अनुमति देले कि सेलुलर नेटवर्क पर कितना डेटा भेजल आ प्राप्त कइल गइल बा।</string>
     <string name="phone_permission_permanent_denial">फोन अनुमति हमेशा खातिर मना क दिहल गइल बा।</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">विजेट सेटिंग्स</string>
     <string name="widget_description">हर सिम कार्ड खातिर बाक़ी मिनट आ मोबाइल डेटा देखावेला।</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">लेआउट मोड</string>
     <string name="sim_arrangement_prompt">सिम व्यवस्था चुनीं</string>
     <string name="color_background">बैकग्राउंड रंग:</string>
-    <string name="custom_color">कस्टम&#8230;</string>
+    <string name="custom_color">कस्टम…</string>
     <string name="font_size">फॉन्ट के आकार</string>
     <string name="traffic_tracking_limitation_title">डेटा ट्रैकिंग सीमा</string>
     <string name="traffic_tracking_limitation_body">Android पूरा डिवाइस खातिर एक कुल मान के रूप में मोबाइल डेटा उपयोग प्रदान करेला।\n\nMinuteWatcher सब मोबाइल डेटा के ओही सिम कार्ड खातिर मानेला जे वर्तमान में रउआ सिस्टम सेटिंग्स में \"डिफ़ॉल्ट डेटा सिम\" के रूप में चुनल गइल बा।</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">MinuteWatcher में रउआ सब के स्वागत बा!</string>
     <string name="onboarding_message">MinuteWatcher रउआ मोबाइल ऑपरेटर से रउआ प्लान के जानकारी अपने आप नइखे पा सकत।\n\nट्रैकिंग शुरू करे खातिर, हर सिम कार्ड खातिर मिनट/डेटा सीमा आ महीना के रीसेट दिन खुद सेट करीं।</string>
     <string name="onboarding_button">समझ गइलीं</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">अमान्य सिम स्लॉट इंडेक्स: %1$d</string>
     <string name="error_storage_unavailable">स्लॉट %1$d खातिर स्टोरेज उपलब्ध नइखे। बाद में फिर कोशिश करीं।</string>
     <string name="error_sim_removed">स्लॉट %1$d से सिम निकाल दिहल गइल</string>
     <string name="error_operation_failed_retry">दोबारा कोशिश कइला के बाद भी काम असफल रहल।</string>
     <string name="error_unknown">अज्ञात गलती: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">रद्द करीं</string>
     <string name="save_button">सेव करीं</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">महीना के डेटा सीमा (GB) सेट करीं:</string>
     <string name="traffic_limit_gb_hint_dialog">GB में डेटा सीमा</string>
     <string name="limits_for_operator">%1$s खातिर सीमा</string>
-
     <!-- Notifications -->
     <string name="notifications_title">नोटिफिकेशन</string>
     <string name="notify_low_minutes_title">कम मिनट बाक़ी रहला पर खबर दीं</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">डेटा सीमा खतम हो गइल।</string>
     <string name="usage_level_low">कम</string>
     <string name="usage_level_critical">बहुत कम</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">बाक़ी:</string>
     <string name="used_text">उपयोग भइल</string>
@@ -146,7 +140,6 @@
         <item quantity="one">%1$d दिन</item>
         <item quantity="other">%1$d दिन</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">सिम कार्ड आइकन</string>
     <string name="sim_card_details_content_desc">%1$s सिम कार्ड जानकारी</string>
@@ -160,7 +153,6 @@
     <string name="menu_theme_content_desc">थीम बदलीं</string>
     <string name="navigate_up_content_desc">ऊपर जाईं</string>
     <string name="banner_dismiss_content_desc">बैनर बंद करीं</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">ट्रैकिंग</string>
     <string name="call_tracking_title">कॉल मिनट ट्रैक करीं</string>
@@ -168,7 +160,6 @@
     <string name="assistant_access_title">असिस्टेंट एक्सेस</string>
     <string name="assistant_access_description">ऑन-डिवाइस असिस्टेंट के रउआ बाक़ी मिनट आ डेटा पूछे के अनुमति दीं।</string>
     <string name="app_functions_display_description">ऑन-डिवाइस असिस्टेंट के साथ बाक़ी मिनट आ मोबाइल डेटा शेयर करेला</string>
-
     <!-- About Dialog -->
     <string name="about_title">बारे में</string>
     <string name="about_message">MinuteWatcher बाक़ी मिनट आ मोबाइल डेटा उपयोग के ट्रैक करे खातिर एगो ऐप हवे।</string>
@@ -180,4 +171,6 @@
     <string name="about_version_format">वर्जन %1$s (%2$d)</string>
     <string name="about_content_desc">जानकारी के बारे में</string>
     <string name="aod_summary_no_limits_note">देखे के कुछ ना बा: कम से कम एगो SIM कार्ड खातिर मिनटया डेटा के सीमा सेट करीं - सारांश खाली सीमा वाला SIM देखावे ला。</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

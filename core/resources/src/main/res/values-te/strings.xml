@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">సిమ్ కార్డ్‌లు</string>
     <string name="no_sim_found">సిమ్ కార్డ్‌లు కనుగొనబడలేదు</string>
     <string name="check_permissions_sim">అనుమతులు మరియు సిమ్ ఉనికిని సరిచూడండి</string>
     <string name="no_data">డేటా లేదు</string>
     <string name="error">లోపం</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">రీసెట్</string>
     <string name="theme_system">సిస్టమ్</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">డార్క్</string>
     <string name="limit_button">పరిమితి</string>
     <string name="add_widget_button">విడ్జెట్‌ను జోడించండి</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">సాధారణ సెట్టింగ్‌లు సేవ్ చేయబడ్డాయి. సిమ్ సెట్టింగ్‌లు విస్మరించబడ్డాయి (సిమ్ జాబితా అందుబాటులో లేదు)</string>
     <string name="settings_save_partial_failure">సాధారణ సెట్టింగ్‌లు సేవ్ చేయబడ్డాయి. సిమ్ నిర్దిష్ట సెట్టింగ్‌లు సేవ్ చేయబడలేదు</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">డేటా వినియోగ ట్రాకింగ్</string>
     <string name="usage_access_dialog_description">మొబైల్ డేటా వినియోగాన్ని ట్రాక్ చేయడానికి MinuteWatcher కి \"వినియోగ యాక్సెస్\" అనుమతి అవసరం.\n\nఇది సెల్యులార్ నెట్‌వర్క్ ద్వారా ఎంత డేటా పంపబడిందో మరియు స్వీకరించబడిందో యాప్‌ని చూడటానికి అనుమతించే సిస్టమ్ అనుమతి.</string>
     <string name="phone_permission_permanent_denial">ఫోన్ అనుమతి శాశ్వతంగా నిరాకరించబడింది.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">విడ్జెట్ సెట్టింగ్‌లు</string>
     <string name="widget_description">ప్రతి సిమ్ కార్డ్‌కు మిగిలి ఉన్న నిమిషాలు మరియు మొబైల్ డేటాను ప్రదర్శిస్తుంది.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">లేఅవుట్ మోడ్</string>
     <string name="sim_arrangement_prompt">సిమ్ అమరికను ఎంచుకోండి</string>
     <string name="color_background">నేపథ్య రంగు:</string>
-    <string name="custom_color">కస్టమ్&#8230;</string>
+    <string name="custom_color">కస్టమ్…</string>
     <string name="font_size">ఫాంట్ పరిమాణం</string>
     <string name="traffic_tracking_limitation_title">డేటా ట్రాకింగ్ పరిమితి</string>
     <string name="traffic_tracking_limitation_body">ఆండ్రాయిడ్మొబైల్ డేటా వినియోగాన్ని మొత్తం పరికరానికి ఒకే విలువగా అందిస్తుంది.\n\nMinuteWatcher మీ సిస్టమ్ సెట్టింగ్‌లలో \"డిఫాల్ట్ డేటా సిమ్\"గా ఎంచుకున్న సిమ్ కార్డ్‌కే డేటాను కేటాయిస్తుంది.</string>
@@ -75,15 +73,12 @@
     <string name="onboarding_title">MinuteWatcher కు స్వాగతం!</string>
     <string name="onboarding_message">MinuteWatcher మీ ప్లాన్ వివరాలను ఆటోమేటిక్‌గా పొందలేదు.\n\nట్రాకింగ్ ప్రారంభించడానికి, దయచేసి ప్రతి సిమ్ కార్డ్‌కు నిమిషాలు/డేటా పరిమితులను మరియు నెలవారీ రీసెట్ రోజును మాన్యువల్‌గా సెట్ చేయండి.</string>
     <string name="onboarding_button">అర్థమైంది</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">చెల్లుబాటు లేని సిమ్ స్లాట్ సూచిక: %1$d</string>
     <string name="error_storage_unavailable">స్లాట్ %1$d కోసం నిల్వ అందుబాటులో లేదు. తర్వాత మళ్లీ ప్రయత్నించండి.</string>
-
     <string name="error_sim_removed">స్లాట్ %1$d నుండి సిమ్ తీసివేయబడింది</string>
     <string name="error_operation_failed_retry">మళ్లీ ప్రయత్నించిన తర్వాత కూడా ఆపరేషన్ విఫలమైంది.</string>
     <string name="error_unknown">తెలియని లోపం: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">రద్దు చేయండి</string>
     <string name="save_button">సేవ్ చేయండి</string>
@@ -103,7 +98,6 @@
     <string name="set_traffic_limit">నెలవారీ డేటా పరిమితిని (GB) సెట్ చేయండి:</string>
     <string name="traffic_limit_gb_hint_dialog">GB లో డేటా పరిమితి</string>
     <string name="limits_for_operator">%1$s కోసం పరిమితులు</string>
-
     <!-- Notifications -->
     <string name="notifications_title">నోటిఫికేషన్‌లు</string>
     <string name="notify_low_minutes_title">తక్కువ నిమిషాలు మిగిలి ఉన్నప్పుడు తెలియజేయండి</string>
@@ -127,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">డేటా పరిమితికి చేరుకుంది.</string>
     <string name="usage_level_low">తక్కువ</string>
     <string name="usage_level_critical">అత్యంత తక్కువ</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">మిగిలింది:</string>
     <string name="used_text">ఉపయోగించారు</string>
@@ -147,7 +140,6 @@
         <item quantity="one">%1$d రోజు</item>
         <item quantity="other">%1$d రోజులు</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">సిమ్ కార్డ్ ఐకాన్</string>
     <string name="sim_card_details_content_desc">%1$s సిమ్ కార్డ్ వివరాలు</string>
@@ -161,7 +153,6 @@
     <string name="menu_theme_content_desc">థీమ్‌ను మార్చండి</string>
     <string name="navigate_up_content_desc">పైకి వెళ్లండి</string>
     <string name="banner_dismiss_content_desc">బ్యానర్‌ను తీసివేయండి</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">ట్రాకింగ్</string>
     <string name="call_tracking_title">కాల్ నిమిషాలను ట్రాక్ చేయండి</string>
@@ -169,7 +160,6 @@
     <string name="assistant_access_title">అసిస్టెంట్ యాక్సెస్</string>
     <string name="assistant_access_description">మీ మిగిలిన నిమిషాలు మరియు డేటాను అభ్యర్థించడానికి ఆన్-డివైస్ అసిస్టెంట్‌ని అనుమతించండి.</string>
     <string name="app_functions_display_description">ఆన్-డివైస్ అసిస్టెంట్‌తో మిగిలిన నిమిషాలు మరియు మొబైల్ డేటాను షేర్ చేస్తుంది</string>
-
     <!-- About Dialog -->
     <string name="about_title">గురించి</string>
     <string name="about_message">MinuteWatcher అనేది మిగిలి ఉన్న నిమిషాలు మరియు మొబైల్ డేటా వినియోగాన్ని ట్రాక్ చేయడానికి ఒక యాప్.</string>
@@ -181,4 +171,6 @@
     <string name="about_version_format">వెర్షన్ %1$s (%2$d)</string>
     <string name="about_content_desc">గురించి సమాచారం</string>
     <string name="aod_summary_no_limits_note">చూపించడానికి ఏమీ లేదు: కనీసం ఒక SIM కార్డ్ కోసం నిమిషాలు లేదా డేటా పరిమితిని సెట్ చేయండి - సారాంశం పరిమితులు ఉన్న SIMలను మాత్రమే చూపుతుంది.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">ਸਿਮ ਕਾਰਡ</string>
     <string name="no_sim_found">ਕੋਈ ਸਿਮ ਕਾਰਡ ਨਹੀਂ ਮਿਲਿਆ</string>
     <string name="check_permissions_sim">ਮਨਜ਼ੂਰੀਆਂ ਅਤੇ ਸਿਮ ਦੀ ਮੌਜੂਦਗੀ ਦੀ ਜਾਂਚ ਕਰੋ</string>
     <string name="no_data">ਕੋਈ ਡਾਟਾ ਨਹੀਂ</string>
     <string name="error">ਗਲਤੀ</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">ਰੀਸੈੱਟ</string>
     <string name="theme_system">ਸਿਸਟਮ</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">ਡਾਰਕ</string>
     <string name="limit_button">ਸੀਮਾ</string>
     <string name="add_widget_button">ਵਿਜੇਟ ਜੋੜੋ</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">ਆਮ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਗਈਆਂ। ਸਿਮ ਸੈਟਿੰਗਾਂ ਛੱਡੀਆਂ ਗਈਆਂ (ਸਿਮ ਸੂਚੀ ਉਪਲਬਧ ਨਹੀਂ)</string>
     <string name="settings_save_partial_failure">ਆਮ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਗਈਆਂ। ਸਿਮ ਸੈਟਿੰਗਾਂ ਸੰਭਾਲੀਆਂ ਨਹੀਂ ਜਾ ਸਕੀਆਂ</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">ਡਾਟਾ ਵਰਤੋਂ ਟਰੈਕਿੰਗ</string>
     <string name="usage_access_dialog_description">ਮੋਬਾਈਲ ਡਾਟਾ ਵਰਤੋਂ ਨੂੰ ਟਰੈਕ ਕਰਨ ਲਈ MinuteWatcher ਨੂੰ \"ਵਰਤੋਂ ਪਹੁੰਚ\" ਇਜਾਜ਼ਤ ਦੀ ਲੋੜ ਹੈ।\n\nਇਹ ਇੱਕ ਸਿਸਟਮ ਪੱਧਰ ਦੀ ਇਜਾਜ਼ਤ ਹੈ ਜੋ ਐਪ ਨੂੰ ਇਹ ਦੇਖਣ ਦੀ ਇਜਾਜ਼ਤ ਦਿੰਦੀ ਹੈ ਕਿ ਮੋਬਾਈਲ ਨੈੱਟਵਰਕ \'ਤੇ ਕਿੰਨਾ ਡਾਟਾ ਭੇਜਿਆ ਅਤੇ ਪ੍ਰਾਪਤ ਕੀਤਾ ਗਿਆ ਹੈ।</string>
     <string name="phone_permission_permanent_denial">ਫੋਨ ਦੀ ਇਜਾਜ਼ਤ ਪੱਕੇ ਤੌਰ \'ਤੇ ਨਕਾਰੀ ਗਈ ਹੈ।</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">ਵਿਜੇਟ ਸੈਟਿੰਗਾਂ</string>
     <string name="widget_description">ਹਰੇਕ ਸਿਮ ਕਾਰਡ ਲਈ ਬਾਕੀ ਰਹਿੰਦੇ ਮਿੰਟ ਅਤੇ ਮੋਬਾਈਲ ਡਾਟਾ ਦਿਖਾਉਂਦਾ ਹੈ।</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">ਲੇਆਊਟ ਮੋਡ</string>
     <string name="sim_arrangement_prompt">ਸਿਮ ਤਰਤੀਬ ਚੁਣੋ</string>
     <string name="color_background">ਬੈਕਗ੍ਰਾਊਂਡ ਰੰਗ:</string>
-    <string name="custom_color">ਕਸਟਮ&#8230;</string>
+    <string name="custom_color">ਕਸਟਮ…</string>
     <string name="font_size">ਫੌਂਟ ਦਾ ਆਕਾਰ</string>
     <string name="traffic_tracking_limitation_title">ਡਾਟਾ ਟਰੈਕਿੰਗ ਸੀਮਾ</string>
     <string name="traffic_tracking_limitation_body">Android ਪੂਰੀ ਡਿਵਾਈਸ ਲਈ ਇੱਕ ਕੁੱਲ ਮੁੱਲ ਵਜੋਂ ਮੋਬਾਈਲ ਡਾਟਾ ਵਰਤੋਂ ਪ੍ਰਦਾਨ ਕਰਦਾ ਹੈ।\n\nMinuteWatcher ਸਾਰੇ ਮੋਬਾਈਲ ਡਾਟਾ ਵਰਤੋਂ ਨੂੰ ਉਸ ਸਿਮ ਕਾਰਡ ਨਾਲ ਜੋੜਦਾ ਹੈ ਜੋ ਤੁਹਾਡੀਆਂ ਸਿਸਟਮ ਸੈਟਿੰਗਾਂ ਵਿੱਚ \"ਡਿਫਾਲਟ ਡਾਟਾ ਸਿਮ\" ਵਜੋਂ ਚੁਣਿਆ ਗਿਆ ਹੈ।</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">MinuteWatcher ਵਿੱਚ ਜੀ ਆਇਆਂ ਨੂੰ!</string>
     <string name="onboarding_message">MinuteWatcher ਤੁਹਾਡੇ ਮੋਬਾਈਲ ਆਪਰੇਟਰ ਤੋਂ ਤੁਹਾਡੇ ਪਲਾਨ ਦੇ ਵੇਰਵੇ ਆਟੋਮੈਟਿਕ ਪ੍ਰਾਪਤ ਨਹੀਂ ਕਰ ਸਕਦਾ।\n\nਟਰੈਕਿੰਗ ਸ਼ੁਰੂ ਕਰਨ ਲਈ, ਕਿਰਪਾ ਕਰਕੇ ਹਰੇਕ ਸਿਮ ਕਾਰਡ ਲਈ ਮਿੰਟ/ਡਾਟਾ ਸੀਮਾ ਅਤੇ ਮਹੀਨਾਵਾਰ ਰੀਸੈੱਟ ਦਿਨ ਖੁਦ ਸੈੱਟ ਕਰੋ।</string>
     <string name="onboarding_button">ਸਮਝ ਗਿਆ</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">ਅਵੈਧ ਸਿਮ ਸਲਾਟ ਇੰਡੈਕਸ: %1$d</string>
     <string name="error_storage_unavailable">ਸਲਾਟ %1$d ਲਈ ਸਟੋਰੇਜ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਬਾਅਦ ਵਿੱਚ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="error_sim_removed">ਸਲਾਟ %1$d ਤੋਂ ਸਿਮ ਹਟਾ ਦਿੱਤਾ ਗਿਆ</string>
     <string name="error_operation_failed_retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਬਾਅਦ ਵੀ ਕਾਰਵਾਈ ਅਸਫਲ ਰਹੀ।</string>
     <string name="error_unknown">ਅਣਜਾਣ ਗਲਤੀ: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">ਰੱਦ ਕਰੋ</string>
     <string name="save_button">ਸੰਭਾਲੋ</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">ਮਹੀਨਾਵਾਰ ਡਾਟਾ ਸੀਮਾ (GB) ਸੈੱਟ ਕਰੋ:</string>
     <string name="traffic_limit_gb_hint_dialog">GB ਵਿੱਚ ਡਾਟਾ ਸੀਮਾ</string>
     <string name="limits_for_operator">%1$s ਲਈ ਸੀਮਾਵਾਂ</string>
-
     <!-- Notifications -->
     <string name="notifications_title">ਨੋਟੀਫਿਕੇਸ਼ਨ</string>
     <string name="notify_low_minutes_title">ਘੱਟ ਮਿੰਟ ਬਾਕੀ ਰਹਿਣ \'ਤੇ ਸੂਚਿਤ ਕਰੋ</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">ਡਾਟਾ ਸੀਮਾ ਪੂਰੀ ਹੋ ਗਈ ਹੈ।</string>
     <string name="usage_level_low">ਘੱਟ</string>
     <string name="usage_level_critical">ਬਹੁਤ ਘੱਟ</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">ਬਾਕੀ:</string>
     <string name="used_text">ਵਰਤਿਆ ਗਿਆ</string>
@@ -146,7 +140,6 @@
         <item quantity="one">%1$d ਦਿਨ</item>
         <item quantity="other">%1$d ਦਿਨ</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">ਸਿਮ ਕਾਰਡ ਆਈਕਨ</string>
     <string name="sim_card_details_content_desc">%1$s ਸਿਮ ਕਾਰਡ ਵੇਰਵੇ</string>
@@ -160,7 +153,6 @@
     <string name="menu_theme_content_desc">ਥੀਮ ਬਦਲੋ</string>
     <string name="navigate_up_content_desc">ਉੱਪਰ ਜਾਓ</string>
     <string name="banner_dismiss_content_desc">ਬੈਨਰ ਹਟਾਓ</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">ਟਰੈਕਿੰਗ</string>
     <string name="call_tracking_title">ਕਾਲ ਮਿੰਟ ਟਰੈਕ ਕਰੋ</string>
@@ -168,7 +160,6 @@
     <string name="assistant_access_title">ਸਹਾਇਕ ਪਹੁੰਚ</string>
     <string name="assistant_access_description">ਡਿਵਾਈਸ \'ਤੇ ਸਹਾਇਕ ਨੂੰ ਤੁਹਾਡੇ ਬਾਕੀ ਰਹਿੰਦੇ ਮਿੰਟਾਂ ਅਤੇ ਡਾਟਾ ਦੀ ਬੇਨਤੀ ਕਰਨ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ।</string>
     <string name="app_functions_display_description">ਡਿਵਾਈਸ ਸਹਾਇਕ ਨਾਲ ਬਾਕੀ ਮਿੰਟ ਅਤੇ ਮੋਬਾਈਲ ਡਾਟਾ ਸਾਂਝਾ ਕਰਦਾ ਹੈ</string>
-
     <!-- About Dialog -->
     <string name="about_title">ਬਾਰੇ</string>
     <string name="about_message">MinuteWatcher ਬਾਕੀ ਮਿੰਟਾਂ ਅਤੇ ਮੋਬਾਈਲ ਡਾਟਾ ਵਰਤੋਂ ਨੂੰ ਟਰੈਕ ਕਰਨ ਲਈ ਇੱਕ ਐਪ ਹੈ।</string>
@@ -180,4 +171,6 @@
     <string name="about_version_format">ਵਰਜਨ %1$s (%2$d)</string>
     <string name="about_content_desc">ਜਾਣਕਾਰੀ ਬਾਰੇ</string>
     <string name="aod_summary_no_limits_note">ਕوئੀ ਵੀ ਚੀਜ਼ ਪ੍ਰਦਰਸ਼ਤ ਕਰਨ ਲਈ ਨਹੀਂ ਹੈ: ਘੱਟੋ-ਘੱਟ ਇੱਕ SIM ਕਾਰਡ ਲਈ ਮਿੰਟ ਜਾਂ ਡੇਟਾ ਸੀਮਾ ਸੈੱਟ ਕਰੋ - ਸਾਰਿਰ ਸਿਰਫ਼ ਸੀਮਾ ਵਾਲੇ SIM ਦਿਖਾਉਂਦਾ ਹੈ.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

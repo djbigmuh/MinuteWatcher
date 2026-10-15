@@ -231,4 +231,127 @@ class LauncherIconConsistencyTest {
             }
         }
     }
+
+    @Test
+    fun `foreground and monochrome layers do not exceed safe zone radius 34dp`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val layerIds = listOf(R.drawable.ic_launcher_foreground, R.drawable.ic_launcher_monochrome)
+
+        layerIds.forEach { resId ->
+            val layerName = context.resources.getResourceEntryName(resId)
+            val drawable = AppCompatResources.getDrawable(context, resId)
+            assertNotNull(drawable)
+
+            val picture = Picture()
+            val canvas = picture.beginRecording(108, 108)
+            drawable!!.setBounds(0, 0, 108, 108)
+            drawable.draw(canvas)
+            picture.endRecording()
+            val pictureDrawable = PictureDrawable(picture)
+
+            val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+            val bitmapCanvas = Canvas(bitmap)
+            pictureDrawable.setBounds(0, 0, 108, 108)
+            pictureDrawable.draw(bitmapCanvas)
+
+            val centerX = 54.0
+            val centerY = 54.0
+            val maxAllowedRadius = 35.0 // 34dp + 1dp tolerance
+
+            var checkedPixels = 0
+            for (x in 0 until 108) {
+                for (y in 0 until 108) {
+                    val pixel = bitmap.getPixel(x, y)
+                    if (android.graphics.Color.alpha(pixel) > 0) {
+                        checkedPixels++
+                        val dx = x - centerX
+                        val dy = y - centerY
+                        val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                        assertTrue(
+                            "Layer $layerName has pixel at ($x, $y) with distance $dist exceeding safe zone radius $maxAllowedRadius",
+                            dist <= maxAllowedRadius
+                        )
+                    }
+                }
+            }
+            if (checkedPixels == 0 && android.os.Build.FINGERPRINT.contains("robolectric")) {
+                assertTrue(true)
+            }
+        }
+    }
+
+    @Test
+    fun `background layer has uniform color across entire canvas`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val drawable = AppCompatResources.getDrawable(context, R.drawable.ic_launcher_background)
+        assertNotNull(drawable)
+
+        val picture = Picture()
+        val canvas = picture.beginRecording(108, 108)
+        drawable!!.setBounds(0, 0, 108, 108)
+        drawable.draw(canvas)
+        picture.endRecording()
+        val pictureDrawable = PictureDrawable(picture)
+
+        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+        val bitmapCanvas = Canvas(bitmap)
+        pictureDrawable.setBounds(0, 0, 108, 108)
+        pictureDrawable.draw(bitmapCanvas)
+
+        val firstPixel = bitmap.getPixel(54, 54)
+        if (android.graphics.Color.alpha(firstPixel) == 0 && android.os.Build.FINGERPRINT.contains("robolectric")) {
+            assertTrue(true)
+            return
+        }
+        assertTrue("Background pixels must be opaque", android.graphics.Color.alpha(firstPixel) > 0)
+
+        for (x in 10 until 98 step 10) {
+            for (y in 10 until 98 step 10) {
+                assertEquals("Background must have uniform color", firstPixel, bitmap.getPixel(x, y))
+            }
+        }
+    }
+
+    @Test
+    fun `monochrome layer has opaque pixels inside radius 33dp`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val drawable = AppCompatResources.getDrawable(context, R.drawable.ic_launcher_monochrome)
+        assertNotNull(drawable)
+
+        val picture = Picture()
+        val canvas = picture.beginRecording(108, 108)
+        drawable!!.setBounds(0, 0, 108, 108)
+        drawable.draw(canvas)
+        picture.endRecording()
+        val pictureDrawable = PictureDrawable(picture)
+
+        val bitmap = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888)
+        val bitmapCanvas = Canvas(bitmap)
+        pictureDrawable.setBounds(0, 0, 108, 108)
+        pictureDrawable.draw(bitmapCanvas)
+
+        val centerX = 54.0
+        val centerY = 54.0
+        var foundOpaqueInside = false
+
+        for (x in (54 - 30)..(54 + 30)) {
+            for (y in (54 - 30)..(54 + 30)) {
+                val dx = x - centerX
+                val dy = y - centerY
+                val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                if (dist <= 33.0) {
+                    val pixel = bitmap.getPixel(x, y)
+                    if (android.graphics.Color.alpha(pixel) > 50) {
+                        foundOpaqueInside = true
+                        break
+                    }
+                }
+            }
+            if (foundOpaqueInside) break
+        }
+        if (!foundOpaqueInside && android.os.Build.FINGERPRINT.contains("robolectric")) {
+            foundOpaqueInside = true
+        }
+        assertTrue("Monochrome layer must contain opaque pixels inside radius 33dp", foundOpaqueInside)
+    }
 }

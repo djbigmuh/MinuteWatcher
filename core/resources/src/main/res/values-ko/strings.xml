@@ -1,11 +1,11 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
     <!-- General UI -->
     <string name="sim_cards_title">SIM 카드</string>
     <string name="no_sim_found">SIM 카드를 찾을 수 없습니다</string>
     <string name="check_permissions_sim">권한 및 SIM 카드 상태를 확인하세요</string>
     <string name="no_data">데이터 없음</string>
     <string name="error">오류</string>
-
     <!-- Main Screen Actions -->
     <string name="reset_label">초기화</string>
     <string name="theme_system">시스템</string>
@@ -13,7 +13,6 @@
     <string name="theme_dark">다크</string>
     <string name="limit_button">한도</string>
     <string name="add_widget_button">위젯 추가</string>
-
     <!-- Settings: General -->
     <string name="settings_save_partial_success">일반 설정이 저장되었습니다. SIM 설정은 건너뛰었습니다 (SIM 목록을 사용할 수 없음)</string>
     <string name="settings_save_partial_failure">일반 설정이 저장되었습니다. SIM 전용 설정을 저장할 수 없습니다</string>
@@ -23,7 +22,6 @@
     <string name="usage_access_dialog_title">데이터 사용량 추적</string>
     <string name="usage_access_dialog_description">모바일 데이터 사용량을 추적하려면 MinuteWatcher에 \"사용 기록 접근\" 권한이 필요합니다.\n\n이는 앱이 셀룰러 네트워크를 통해 전송 및 수신된 데이터 양을 확인할 수 있도록 하는 시스템 권한입니다.</string>
     <string name="phone_permission_permanent_denial">전화 권한이 영구적으로 거부되었습니다.</string>
-
     <!-- Settings: Widget -->
     <string name="settings_widget_title">위젯 설정</string>
     <string name="widget_description">각 SIM 카드별 잔여 통화 시간 및 모바일 데이터를 표시합니다.</string>
@@ -39,7 +37,7 @@
     <string name="layout_mode_title">레이아웃 모드</string>
     <string name="sim_arrangement_prompt">SIM 배치 선택</string>
     <string name="color_background">배경색:</string>
-    <string name="custom_color">사용자 지정&#8230;</string>
+    <string name="custom_color">사용자 지정…</string>
     <string name="font_size">글꼴 크기</string>
     <string name="traffic_tracking_limitation_title">데이터 추적 제한</string>
     <string name="traffic_tracking_limitation_body">Android는 모바일 데이터 사용량을 전체 기기에 대한 합산 값으로 제공합니다.\n\nMinuteWatcher는 모든 모바일 데이터를 시스템 설정에서 현재 \"기본 데이터 SIM\"으로 선택된 SIM 카드에 할당합니다.</string>
@@ -75,14 +73,12 @@
     <string name="onboarding_title">MinuteWatcher에 오신 것을 환영합니다!</string>
     <string name="onboarding_message">MinuteWatcher는 통신사로부터 요금제 정보를 자동으로 가져올 수 없습니다.\n\n추적을 시작하려면 각 SIM 카드의 분/데이터 한도 및 월간 초기화 일을 직접 설정해 주세요.</string>
     <string name="onboarding_button">확인</string>
-
     <!-- Operation Errors -->
     <string name="error_invalid_sim_slot">잘못된 SIM 슬롯 인덱스: %1$d</string>
     <string name="error_storage_unavailable">슬롯 %1$d에 대한 저장소 공간을 사용할 수 없습니다. 나중에 다시 시도해 주세요.</string>
     <string name="error_sim_removed">슬롯 %1$d에서 SIM 카드가 제거되었습니다</string>
     <string name="error_operation_failed_retry">재시도 후에도 작업에 실패했습니다.</string>
     <string name="error_unknown">알 수 없는 오류: %1$s</string>
-
     <!-- Dialogs -->
     <string name="cancel_button">취소</string>
     <string name="save_button">저장</string>
@@ -102,7 +98,6 @@
     <string name="set_traffic_limit">월간 데이터 한도 설정 (GB):</string>
     <string name="traffic_limit_gb_hint_dialog">GB 단위 데이터 한도</string>
     <string name="limits_for_operator">%1$s 한도 설정</string>
-
     <!-- Notifications -->
     <string name="notifications_title">알림</string>
     <string name="notify_low_minutes_title">통화 시간 부족 시 알림</string>
@@ -126,7 +121,6 @@
     <string name="notification_traffic_exhausted_body_no_period">데이터 한도에 도달했습니다.</string>
     <string name="usage_level_low">부족</string>
     <string name="usage_level_critical">심각한 부족</string>
-
     <!-- Data & Units -->
     <string name="remaining_text">남음:</string>
     <string name="used_text">사용함</string>
@@ -144,7 +138,6 @@
     <plurals name="days_plurals">
         <item quantity="other">%1$d일</item>
     </plurals>
-
     <!-- Accessibility -->
     <string name="sim_icon_content_desc">SIM 카드 아이콘</string>
     <string name="sim_card_details_content_desc">%1$s SIM 카드 상세 정보</string>
@@ -158,7 +151,6 @@
     <string name="menu_theme_content_desc">테마 변경</string>
     <string name="navigate_up_content_desc">위로 이동</string>
     <string name="banner_dismiss_content_desc">배너 닫기</string>
-
     <!-- Tracking Settings -->
     <string name="tracking_title">추적</string>
     <string name="call_tracking_title">통화 시간 추적</string>
@@ -166,7 +158,6 @@
     <string name="assistant_access_title">어시스턴트 접근</string>
     <string name="assistant_access_description">온디바이스 어시스턴트가 남은 통화 시간 및 데이터를 요청할 수 있도록 허용합니다.</string>
     <string name="app_functions_display_description">온디바이스 어시스턴트와 남은 통화 시간 및 모바일 데이터를 공유합니다</string>
-
     <!-- About Dialog -->
     <string name="about_title">정보</string>
     <string name="about_message">MinuteWatcher는 잔여 통화 시간 및 모바일 데이터 사용량을 추적하는 앱입니다.</string>
@@ -178,4 +169,6 @@
     <string name="about_version_format">버전 %1$s (%2$d)</string>
     <string name="about_content_desc">정보</string>
     <string name="aod_summary_no_limits_note">표시할 내용 없음: 최소 한 개의 SIM 카드에 통화 시간 또는 데이터 한도를 설정하세요. 요약에는 한도가 있는 SIM만 표시됩니다.</string>
+    <string name="adjustment_mark">*</string>
+    <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
 </resources>

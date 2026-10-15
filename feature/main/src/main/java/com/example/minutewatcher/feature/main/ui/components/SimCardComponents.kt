@@ -37,7 +37,14 @@ internal fun AdjustmentLabel(
     isPositive: Boolean,
 ) {
     Text(
-        text = "${stringResource(R.string.adjustment_mark)}: ${if (isPositive) "+" else ""}$value $unit",
+        text =
+            stringResource(
+                R.string.adjustment_label_format,
+                stringResource(R.string.adjustment_mark),
+                if (isPositive) "+" else "",
+                value,
+                unit,
+            ),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 4.dp, start = 4.dp),
@@ -69,7 +76,8 @@ internal fun EditableValueBox(
                 .background(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(4.dp),
-                ).drawBehind {
+                )
+                .drawBehind {
                     val strokeWidth = 2.dp.toPx()
                     val y = size.height - strokeWidth / 2
                     drawLine(
@@ -78,11 +86,13 @@ internal fun EditableValueBox(
                         end = Offset(size.width, y),
                         strokeWidth = strokeWidth,
                     )
-                }.clip(RoundedCornerShape(4.dp))
+                }
+                .clip(RoundedCornerShape(4.dp))
                 .semantics {
                     role = Role.Button
                     contentDescription?.let { this.contentDescription = it }
-                }.clickable { onClick() }
+                }
+                .clickable { onClick() }
                 .padding(horizontal = horizontalPadding.dp, vertical = 4.dp),
     ) {
         Text(

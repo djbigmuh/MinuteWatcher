@@ -222,4 +222,36 @@ class SimUtilsTest {
         val resId = OperatorResolver.getOperatorResourceId("Rostelecom")
         assertEquals(R.string.operator_rostelecom, resId)
     }
+
+    @Test
+    fun `operatorIconMap values follow ic_operator schema and are distinct except vodafone_it`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        val seenDrawables = mutableMapOf<Int, Int>()
+
+        SimUtils.operatorIconMap.forEach { (_, drawableResId) ->
+            val resName = appContext.resources.getResourceEntryName(drawableResId)
+            assertTrue("Drawable name $resName must start with ic_operator_", resName.startsWith("ic_operator_"))
+            seenDrawables[drawableResId] = (seenDrawables[drawableResId] ?: 0) + 1
+        }
+
+        val vodafoneDrawable = R.drawable.ic_operator_vodafone
+        seenDrawables.forEach { (drawableResId, count) ->
+            if (drawableResId == vodafoneDrawable) {
+                assertEquals(
+                    "ic_operator_vodafone should be shared by exactly 2 keys (operator_vodafone and operator_vodafone_it)",
+                    2,
+                    count
+                )
+            } else {
+                assertEquals("Drawable $drawableResId should be unique", 1, count)
+            }
+        }
+    }
+
+    @Test
+    fun `ic_movistar legacy drawable is absent from resources`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        val movistarId = appContext.resources.getIdentifier("ic_movistar", "drawable", appContext.packageName)
+        assertEquals("ic_movistar must not exist in resources", 0, movistarId)
+    }
 }
