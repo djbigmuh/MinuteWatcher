@@ -137,6 +137,7 @@ class MainActivityWidgetNotificationTest {
             assertEquals(1, capturingLogger.errorLogs.size)
             assertEquals(testException, capturingLogger.errorLogs[0].third)
             assertTrue(capturingLogger.errorLogs[0].second.contains("test reason"))
+            assertTrue(capturingLogger.errorLogs[0].second.startsWith("WidgetDataChangeDispatcher:"))
         }
 
     @Test
@@ -159,5 +160,6 @@ class MainActivityWidgetNotificationTest {
             assertEquals(1, capturingLogger.errorLogs.size)
             assertEquals(testException, capturingLogger.errorLogs[0].third)
             assertTrue(capturingLogger.errorLogs[0].second.contains("language change"))
+            assertTrue(capturingLogger.errorLogs[0].second.startsWith("WidgetDataChangeDispatcher:"))
         }
 }

@@ -38,7 +38,7 @@ fun BottomPreviewBar(uiState: WidgetUiState?) {
 
         // Box provides widget preview centering.
         // contentAlignment = Alignment.Center centers content.
-        // Dynamic height capped at 350.dp allows fitting 6-line mode.
+        // wrapContentHeight() grows the preview to fit any layout mode, including 6-line mode.
         // background(MaterialTheme.colorScheme.surface) provides preview background.
         Box(
             modifier =

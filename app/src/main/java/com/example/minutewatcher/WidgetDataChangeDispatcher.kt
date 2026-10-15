@@ -24,7 +24,7 @@ constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                AppLogger.e("MainActivity: Failed to notify data change on $reason", e)
+                AppLogger.e("WidgetDataChangeDispatcher: Failed to notify data change on $reason", e)
             }
         }
 }

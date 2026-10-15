@@ -115,66 +115,33 @@ class UsageTileService : TileService() {
             AppLocaleContexts
                 .forAppLocale(this)
 
-        // Use all SIMs from snapshot (already filtered by active physical SIMs in repository)
-        val activeSims = snapshot.simSnapshots
-        if (activeSims.isEmpty()) {
-            tile.applyState(TileState.UNAVAILABLE)
-            tile.label = appLocaleContext.getString(R.string.no_sim_found)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = appLocaleContext.getString(R.string.no_sim_found)
-            }
-            tile.updateTile()
-            return
+        val content =
+            TileContentResolver.resolve(
+                sims = snapshot.simSnapshots,
+                noSimText = appLocaleContext.getString(R.string.no_sim_found),
+                noDataText = appLocaleContext.getString(R.string.no_data),
+                supportsSubtitle = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
+                operatorNameOf = { sim ->
+                    SimUtils.getShortOperatorName(appLocaleContext, sim.operatorName, sim.slot)
+                },
+                remainingTextOf = { sim ->
+                    val remaining = (sim.entities[PackageType.MINUTES]?.remaining ?: 0L).toInt()
+                    appLocaleContext.resources.getQuantityString(R.plurals.minutes_plurals, remaining, remaining)
+                },
+                formatOperatorValue = { operator, value ->
+                    appLocaleContext.getString(R.string.tile_operator_value_format, operator, value)
+                },
+            )
+
+        tile.label = content.label
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            tile.subtitle = content.subtitle
         }
-
-        // Select SIM with limit and lowest minutes, or null if no SIM has limit
-        val activeSim = TileSimSelector.select(activeSims) ?: activeSims[0]
-
-        val operatorName = SimUtils.getShortOperatorName(appLocaleContext, activeSim.operatorName, activeSim.slot)
-        val minutes = activeSim.entities[PackageType.MINUTES]
-
-        // Note: remaining == 0 when limit == 0 means "no limit set", not "exhausted".
-        if (minutes != null && minutes.limit > 0) {
-            val remaining = minutes.remaining.toInt()
-            val remainingText =
-                appLocaleContext
-                    .resources
-                    .getQuantityString(R.plurals.minutes_plurals, remaining, remaining)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.label = operatorName
-                tile.subtitle = remainingText
-            } else {
-                // For older versions (API 26-28), subtitle is not supported.
-                // We use a compact "Name: Value" format in the label.
-                tile.label =
-                    appLocaleContext.getString(R.string.tile_operator_value_format, operatorName, remainingText)
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                tile.stateDescription = remainingText
-            }
-            tile.contentDescription =
-                appLocaleContext.getString(
-                    R.string.tile_operator_value_format,
-                    operatorName,
-                    remainingText,
-                )
-            tile.applyState(TileState.ACTIVE)
-        } else {
-            tile.label = operatorName
-            tile.applyState(TileState.UNAVAILABLE)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = appLocaleContext.getString(R.string.no_data)
-            }
-            tile.contentDescription =
-                appLocaleContext.getString(
-                    R.string.tile_operator_value_format,
-                    operatorName,
-                    appLocaleContext.getString(R.string.no_data),
-                )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            tile.stateDescription = content.stateDescription
         }
-
+        tile.contentDescription = content.contentDescription
+        tile.applyState(if (content.isActive) TileState.ACTIVE else TileState.UNAVAILABLE)
         tile.updateTile()
     }
 

@@ -1,7 +1,7 @@
 # Operator brand assets — inventory
 
 Assets collected from Wikimedia (Commons / en.wikipedia / ru.wikipedia) for all 65 operator keys used by
-`OperatorResolver.operatorResourceMap` (64 keys present in `mcc_mnc_db.json` + `operator_claro`).
+`OperatorResolver.operatorResourceMap` (all 65 keys are present in `mcc_mnc_db.json`, including `operator_claro`).
 
 | Operator key             | Brand            | Source file                                                                                                                                          | Host    | License       | Uploaded   | Project format               |
 |--------------------------|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------------|------------|------------------------------|

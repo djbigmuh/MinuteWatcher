@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.common.util.firstWithTimeout
+import com.example.minutewatcher.core.data.InitialSetupWorker.Companion.WORKER_TIMEOUT_MS
 import com.example.minutewatcher.core.model.ActiveSimInfo
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.MigrationSkipReason
@@ -60,7 +61,6 @@ class InitialSetupWorker
         private enum class MigrationDecision {
             PROCEED,
             RETRY,
-            FAIL,
         }
 
         private suspend fun performSetupSteps(): Result {
@@ -77,7 +77,6 @@ class InitialSetupWorker
             val migrationResult =
                 when (checkAndPerformMigrations()) {
                     MigrationDecision.RETRY -> Result.retry()
-                    MigrationDecision.FAIL -> Result.failure()
                     MigrationDecision.PROCEED -> null
                 }
             if (migrationResult != null) return migrationResult

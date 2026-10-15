@@ -84,7 +84,6 @@ object Constants {
      * MIN_SIMS_FOR_SEPARATOR — minimum number of SIMs to show separator.
      * PERCENT_MAX_FLOAT — maximum transparency value (100%).
      * SEPARATOR_ALPHA — separator alpha transparency (0.5).
-     * PADDING_DEFAULT — default widget padding (dp).
      * PADDING_SIM_ITEM — SIM item padding in widget (dp).
      * CORNER_RADIUS — widget corner radius (dp).
      * SEPARATOR_THICKNESS — separator thickness (dp).
@@ -103,7 +102,6 @@ object Constants {
         const val MIN_SIMS_FOR_SEPARATOR = 2
         const val PERCENT_MAX_FLOAT = 100f
         const val SEPARATOR_ALPHA = 0.5f
-        const val PADDING_DEFAULT = 8
         const val PADDING_SIM_ITEM = 4
         const val CORNER_RADIUS = 16
         const val SEPARATOR_THICKNESS = 1
