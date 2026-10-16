@@ -142,7 +142,7 @@ class UsageCheckWorker
 
         private suspend fun handleRefreshTimeout(refreshResult: RefreshResult.Timeout): Result {
             val snapshot = refreshResult.snapshot
-            return if (snapshot.timestamp == 0L) {
+            return if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
                 AppLogger.w("UsageCheckWorker: no data loaded, scheduling retry")
                 Result.retry()
             } else {

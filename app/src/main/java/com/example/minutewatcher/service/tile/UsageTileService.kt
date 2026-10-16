@@ -14,6 +14,7 @@ import com.example.minutewatcher.core.common.di.MainImmediateDispatcher
 import com.example.minutewatcher.core.common.util.AppLogger
 import com.example.minutewatcher.core.domain.NavigationProvider
 import com.example.minutewatcher.core.domain.UsageStateRepository
+import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.PackageType
 import com.example.minutewatcher.core.resources.R
 import com.example.minutewatcher.feature.semantic.SemanticRepository
@@ -57,7 +58,7 @@ class UsageTileService : TileService() {
         super.onStartListening()
         updateTile()
 
-        if (semanticRepository.snapshot.value.timestamp == 0L) {
+        if (semanticRepository.snapshot.value.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
             applicationScope.launch {
                 try {
                     usageStateRepository.refresh()

@@ -228,7 +228,7 @@ class MinutesGlanceWidget(
         val now = timeProvider.now()
         val isStale = (now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS
 
-        if ((initialSnapshot.timestamp != 0L) && !isStale) {
+        if ((initialSnapshot.timestamp != Constants.Data.EMPTY_TIMESTAMP) && !isStale) {
             return RefreshResult
                 .Success(initialSnapshot)
         }

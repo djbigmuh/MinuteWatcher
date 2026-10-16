@@ -38,6 +38,11 @@ class SnapshotIndexer
          *
          * **Contract:** A snapshot with [Constants.Data.EMPTY_TIMESTAMP] is ignored to prevent
          * accidental index wipes during initialization.
+         *
+         * @return `true` if documents were indexed but removal of stale documents failed
+         * (partial success; the caller must not treat the indexed content as fully committed
+         * and must retry on the next attempt); `false` if the update completed fully or was
+         * skipped because the snapshot is not loaded yet.
          */
         suspend fun performIndexUpdate(
             session: AppSearchSessionWrapper,

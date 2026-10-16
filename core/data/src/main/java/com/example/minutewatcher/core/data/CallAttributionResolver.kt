@@ -39,11 +39,21 @@ internal class CallAttributionResolver
         /**
          * Resolves the target identity for a call event.
          *
-         * The active SIMs snapshot is read with a bounded wait
+         * Resolution order:
+         * 1. [savedIdentity] recorded for the session, when present.
+         * 2. Stable identity of the active SIM matching [subId] (primary read).
+         * 3. Re-read of the active SIMs list: stable identity of the SIM matching
+         *    [subId]. An exact subscription match with a stable identity is precise
+         *    attribution, not a fallback.
+         * 4. Fallback: exactly one active SIM with a stable identity is present.
+         *
+         * Each read of the active SIMs snapshot is performed with a bounded wait
          * ([Constants.Flow.SHORT_TIMEOUT_MS]); on timeout the identity remains
          * unresolved and the caller applies the standard attribution failure
-         * handling. Fallback attribution is used only when exactly one active
-         * SIM with a stable identity is present.
+         * handling. Unstable identities are never used for attribution.
+         *
+         * @return pair of the resolved stable identity (or null when unresolved)
+         * and a flag that is true only when the single-active-SIM fallback was used.
          */
         suspend fun resolveTargetIdentity(
             subId: Int,
@@ -62,7 +72,17 @@ internal class CallAttributionResolver
                     }
                 val matched = activeSims.find { it.subscriptionId == subId }
                 if (matched != null) {
-                    AppLogger.w("CallTracker: SIM matched subId=$subId but identity is unstable, attribution refused")
+                    if (subId != -1 && matched.identity.isStable) {
+                        targetIdentity = matched.identity.stableId
+                        AppLogger.d(
+                            "CallTracker: identity resolved from active SIM matched by subId=$subId",
+                        )
+                    } else {
+                        AppLogger.w(
+                            "CallTracker: SIM matched subId=$subId but identity is unstable, " +
+                                "attribution refused",
+                        )
+                    }
                 } else if (activeSims.size == 1) {
                     val fallbackSim = activeSims.first()
                     if (fallbackSim.identity.isStable) {

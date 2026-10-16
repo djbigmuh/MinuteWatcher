@@ -199,11 +199,11 @@ class WidgetUpdaterImpl
                 wasCoalesced = true,
                 isRetryable = true,
                 reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-            )
+                )
         return when (res) {
             is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
             is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
-        }
+            }
     }
 
     private suspend fun handleTailFinally(

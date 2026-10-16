@@ -103,7 +103,7 @@ class PermissionManager
             return granted
         }
 
-        @Suppress("DEPRECATION", "TooGenericExceptionCaught", "SwallowedException")
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
         fun hasUsageStatsPermission(): Boolean {
             val appOps = context.getSystemService(AppOpsManager::class.java)
             val mode =

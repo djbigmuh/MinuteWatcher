@@ -9,6 +9,7 @@ import com.example.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
@@ -17,6 +18,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -197,5 +200,53 @@ class CallAttributionResolverTest {
                 resolver.resolveTargetIdentity(subId = 999, savedIdentity = null)
             assertEquals(null, identity)
             assertTrue(!isFallback)
+        }
+
+    @Test
+    fun `resolveTargetIdentity returns stable identity of sim matched by subId when primary read found none`() =
+        runBlocking {
+            val sim =
+                ActiveSimInfo(
+                    SimIdentity("icc_stable", 7, 0, IdentitySource.ICCID, true),
+                    0,
+                    7,
+                    "i7",
+                    "S7",
+                    "C7",
+                    "25001",
+                    false,
+                    false,
+                )
+            whenever(simIdentityRepository.observeActiveSims())
+                .thenReturn(emptyFlow(), flowOf(listOf(sim)))
+
+            val (identity, isFallback) = resolver.resolveTargetIdentity(subId = 7, savedIdentity = null)
+
+            assertEquals("icc_stable", identity)
+            assertFalse(isFallback)
+        }
+
+    @Test
+    fun `resolveTargetIdentity refuses attribution when sim matched by subId has unstable identity`() =
+        runBlocking {
+            val sim =
+                ActiveSimInfo(
+                    SimIdentity("sub_7", 7, 0, IdentitySource.SUBSCRIPTION_ID, false),
+                    0,
+                    7,
+                    "i7",
+                    "S7",
+                    "C7",
+                    "25001",
+                    false,
+                    false,
+                )
+            whenever(simIdentityRepository.observeActiveSims())
+                .thenReturn(emptyFlow(), flowOf(listOf(sim)))
+
+            val (identity, isFallback) = resolver.resolveTargetIdentity(subId = 7, savedIdentity = null)
+
+            assertNull(identity)
+            assertFalse(isFallback)
         }
 }
