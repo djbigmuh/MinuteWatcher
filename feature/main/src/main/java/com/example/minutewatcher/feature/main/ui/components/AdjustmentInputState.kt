@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.example.minutewatcher.core.common.util.NumberInputNormalizer
+import com.example.minutewatcher.core.model.Constants
 
 @Stable
 internal class AdjustmentInputState(
@@ -52,57 +53,18 @@ internal class AdjustmentInputState(
             }
         }
 
-        val maxChars = if (isMinutes) 6 else 10
-        if (newValue.text.length > maxChars) return
-
-        val processed = processInput(text, newValue)
-        val textStr = removeLeadingZeros(processed.text)
-
-        val selection =
-            if (textStr == processed.text) {
-                TextRange(
-                    processed.selection.min.coerceIn(0, textStr.length),
-                    processed.selection.max.coerceIn(0, textStr.length),
-                )
-            } else {
-                TextRange(textStr.length)
-            }
-
-        text = processed.copy(text = textStr, selection = selection)
-        errorText = null
-    }
-
-    private fun processInput(
-        old: TextFieldValue,
-        newValue: TextFieldValue,
-    ): TextFieldValue {
-        if (NumberInputNormalizer.isZeroValue(old.text) && newValue.text.length == 2 && newValue.text.startsWith("0")) {
-            val typedChar = newValue.text.last()
+        val maxChars =
             if (isMinutes) {
-                if (typedChar in '1'..'9') {
-                    val newText = typedChar.toString()
-                    return newValue.copy(text = newText, selection = TextRange(newText.length))
-                } else if (typedChar == '0') {
-                    return newValue.copy(text = "0", selection = TextRange(1))
-                }
+                Constants.UI.MAX_MINUTES_INPUT_CHARS
             } else {
-                if (typedChar.isDigit()) {
-                    val newText = typedChar.toString()
-                    return newValue.copy(text = newText, selection = TextRange(newText.length))
-                }
+                Constants.UI.MAX_TRAFFIC_INPUT_CHARS
             }
-        }
-        return newValue
-    }
+        val mode = if (isMinutes) NumericInputMode.MINUTES else NumericInputMode.TRAFFIC
 
-    private fun removeLeadingZeros(input: String): String {
-        var textStr = input
-        if (textStr.isNotEmpty()) {
-            while (textStr.length > 1 && textStr[0] == '0' && Character.isDigit(textStr[1])) {
-                textStr = textStr.drop(1)
-            }
-        }
-        return textStr
+        val processed = NumericTextInputProcessor.process(text, newValue, maxChars, mode) ?: return
+
+        text = processed
+        errorText = null
     }
 
     companion object {

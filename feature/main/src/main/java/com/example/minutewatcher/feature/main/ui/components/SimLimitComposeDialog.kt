@@ -255,8 +255,6 @@ internal class SimLimitState(
     }
 
     companion object {
-        private const val MAX_MINUTES_CHARS = 6
-        private const val MAX_TRAFFIC_CHARS = 10
         private const val INDEX_INITIAL_MINUTES_TEXT = 0
         private const val INDEX_INITIAL_TRAFFIC_TEXT = 1
         private const val INDEX_INITIAL_ROLLOVER_ENABLED = 2
@@ -360,47 +358,17 @@ internal class SimLimitState(
             }
         }
 
-        if (newValue.text.length > MAX_MINUTES_CHARS) return
+        val processed =
+            NumericTextInputProcessor.process(
+                minutesText,
+                newValue,
+                Constants.UI.MAX_MINUTES_INPUT_CHARS,
+                NumericInputMode.MINUTES,
+            ) ?: return
 
-        val old = minutesText
-        var processed = newValue
-
-        // Replace initial "0" only on single-character addition
-        if (shouldReplaceInitialZero(old, newValue)) {
-            val typedChar = newValue.text.last()
-            if (typedChar in '1'..'9') {
-                val newText = typedChar.toString()
-                processed = newValue.copy(text = newText, selection = TextRange(newText.length))
-            } else if (typedChar == '0') {
-                processed = newValue.copy(text = "0", selection = TextRange(1))
-            }
-        }
-
-        var text = processed.text
-        if (text.isNotEmpty()) {
-            while (text.length > 1 && text[0] == '0' && Character.isDigit(text[1])) {
-                text = text.drop(1)
-            }
-        }
-
-        val selection =
-            if (text == processed.text) {
-                TextRange(
-                    processed.selection.min.coerceIn(0, text.length),
-                    processed.selection.max.coerceIn(0, text.length),
-                )
-            } else {
-                TextRange(text.length)
-            }
-
-        minutesText = processed.copy(text = text, selection = selection)
+        minutesText = processed
         minutesError = null
     }
-
-    private fun shouldReplaceInitialZero(
-        old: TextFieldValue,
-        newValue: TextFieldValue,
-    ): Boolean = old.text == "0" && newValue.text.length == 2 && newValue.text.startsWith("0")
 
     /**
      * Handles changes in the traffic input field.
@@ -416,47 +384,16 @@ internal class SimLimitState(
             }
         }
 
-        if (newValue.text.length > MAX_TRAFFIC_CHARS) return
+        val processed =
+            NumericTextInputProcessor.process(
+                trafficText,
+                newValue,
+                Constants.UI.MAX_TRAFFIC_INPUT_CHARS,
+                NumericInputMode.TRAFFIC,
+            ) ?: return
 
-        val old = trafficText
-        var processed = newValue
-
-        // Replace initial zero only on single-character addition
-        if (shouldReplaceInitialTrafficZero(old, newValue)) {
-            val typedChar = newValue.text.last()
-            if (typedChar.isDigit()) {
-                val newText = typedChar.toString()
-                processed = newValue.copy(text = newText, selection = TextRange(newText.length))
-            }
-        }
-
-        var text = processed.text
-        if (text.isNotEmpty()) {
-            while (text.length > 1 && text[0] == '0' && Character.isDigit(text[1])) {
-                text = text.drop(1)
-            }
-        }
-
-        val selection =
-            if (text == processed.text) {
-                TextRange(
-                    processed.selection.min.coerceIn(0, text.length),
-                    processed.selection.max.coerceIn(0, text.length),
-                )
-            } else {
-                TextRange(text.length)
-            }
-
-        trafficText = processed.copy(text = text, selection = selection)
+        trafficText = processed
         trafficError = null
-    }
-
-    private fun shouldReplaceInitialTrafficZero(
-        old: TextFieldValue,
-        newValue: TextFieldValue,
-    ): Boolean {
-        val isInitial = NumberInputNormalizer.isZeroValue(old.text)
-        return isInitial && newValue.text.length == old.text.length + 1 && newValue.text.startsWith(old.text)
     }
 }
 

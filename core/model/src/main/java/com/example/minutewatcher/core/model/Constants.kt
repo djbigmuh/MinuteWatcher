@@ -64,6 +64,16 @@ object Constants {
          * Density-independent threshold.
          */
         const val SWIPE_NAVIGATION_THRESHOLD_DP = 72
+
+        /**
+         * Maximum length (in characters) of numeric input for minutes.
+         */
+        const val MAX_MINUTES_INPUT_CHARS = 6
+
+        /**
+         * Maximum length (in characters) of numeric input for traffic in GB.
+         */
+        const val MAX_TRAFFIC_INPUT_CHARS = 10
     }
 
     /**

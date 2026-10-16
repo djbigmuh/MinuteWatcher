@@ -163,19 +163,7 @@ class WidgetUpdaterImpl
         private suspend fun runTailPass(tailDeferred: CompletableDeferred<WidgetUpdateResult>) {
             var completed = false
             try {
-                val res =
-                    withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                        executeUpdateProcess()
-                    } ?: WidgetUpdateResult.Failure(
-                        wasCoalesced = true,
-                        isRetryable = true,
-                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                    )
-                val finalRes =
-                    when (res) {
-                        is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
-                        is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
-                    }
+                val finalRes = executeTailUpdate()
                 tailDeferred.complete(finalRes)
                 completed = true
             } catch (_: CancellationException) {
@@ -199,37 +187,59 @@ class WidgetUpdaterImpl
                 tailDeferred.complete(failure)
                 completed = true
             } finally {
-                withContext(NonCancellable) {
-                    if (!completed && !tailDeferred.isCompleted) {
-                        tailDeferred.complete(
-                            WidgetUpdateResult.Failure(
-                                wasCoalesced = true,
-                                isRetryable = true,
-                                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                            ),
-                        )
-                    }
-                    val nextTail =
-                        coalescingMutex.withLock {
-                            if (rerunRequested) {
-                                rerunRequested = false
-                                val d = pendingPass
-                                pendingPass = null
-                                if (d != null) {
-                                    activeUpdate.set(d)
-                                } else {
-                                    activeUpdate.compareAndSet(tailDeferred, null)
-                                }
-                                d
+                handleTailFinally(tailDeferred, completed)
+            }
+        }
+
+    private suspend fun executeTailUpdate(): WidgetUpdateResult {
+        val res =
+            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                executeUpdateProcess()
+            } ?: WidgetUpdateResult.Failure(
+                wasCoalesced = true,
+                isRetryable = true,
+                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+            )
+        return when (res) {
+            is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
+            is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
+        }
+    }
+
+    private suspend fun handleTailFinally(
+        tailDeferred: CompletableDeferred<WidgetUpdateResult>,
+        completed: Boolean,
+    ) {
+        withContext(NonCancellable) {
+            if (!completed && !tailDeferred.isCompleted) {
+                tailDeferred.complete(
+                    WidgetUpdateResult.Failure(
+                        wasCoalesced = true,
+                        isRetryable = true,
+                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+                    ),
+                )
+            }
+            val nextTail =
+                coalescingMutex.withLock {
+                    if (rerunRequested) {
+                        rerunRequested = false
+                        val d = pendingPass
+                        pendingPass = null
+                        if (d != null) {
+                            activeUpdate.set(d)
                             } else {
                                 activeUpdate.compareAndSet(tailDeferred, null)
-                                null
                             }
+                        d
+                    } else {
+                        activeUpdate.compareAndSet(tailDeferred, null)
+                        null
                         }
-                    if (nextTail != null) {
-                        scope.launch(start = CoroutineStart.ATOMIC) {
-                            runTailPass(nextTail)
-                        }
+                }
+            if (nextTail != null) {
+                scope.launch(start = CoroutineStart.ATOMIC) {
+                    runTailPass(nextTail)
                     }
                 }
             }
