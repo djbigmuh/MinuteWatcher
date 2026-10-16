@@ -20,8 +20,8 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "com.example.minutewatcher"
-        versionCode = 343
-        versionName = "3.4.3"
+        versionCode = 344
+        versionName = "3.4.4"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -59,6 +59,10 @@ configure<ApplicationExtension> {
         buildConfig = true
     }
 
+    // The bundle language DSL is incubating in Gradle. Disabling language splits is the
+    // documented requirement for per-app language support on API 26-32: all locales must
+    // remain in the base APK. Suppression is intentional and documented.
+    @Suppress("UnstableApiUsage")
     bundle {
         language {
             enableSplit = false
@@ -142,7 +146,6 @@ dependencies {
     androidTestImplementation(libs.androidxJunit)
     androidTestImplementation(libs.androidxTestRunner)
     androidTestImplementation(libs.androidxUiTestJunit4)
-    debugImplementation(platform(libs.androidxComposeBom))
     debugImplementation(libs.androidxUiTooling)
     debugImplementation(libs.androidxUiTestManifest)
 }

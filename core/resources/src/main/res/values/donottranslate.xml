@@ -58,6 +58,12 @@
     <string name="operator_base" translatable="false">BASE</string>
     <string name="operator_tdc" translatable="false">TDC</string>
     <string name="operator_ice" translatable="false">ice</string>
+    <string name="operator_onecall" translatable="false">OneCall</string>
+    <string name="operator_mycall" translatable="false">MyCall</string>
+    <string name="operator_phonero" translatable="false">Phonero</string>
+    <string name="operator_talkmore" translatable="false">Talkmore</string>
+    <string name="operator_chilimobil" translatable="false">Chilimobil</string>
+    <string name="operator_fjordkraft" translatable="false">Fjordkraft Mobil</string>
     <string name="operator_maxis" translatable="false">Maxis</string>
     <string name="operator_celcom" translatable="false">Celcom</string>
     <string name="operator_digi" translatable="false">Digi</string>
@@ -69,6 +75,19 @@
     <string name="operator_optus" translatable="false">Optus</string>
     <string name="operator_spark" translatable="false">Spark</string>
     <string name="operator_2degrees" translatable="false">2degrees</string>
+    <string name="operator_yoigo" translatable="false">Yoigo</string>
+    <string name="operator_euskaltel" translatable="false">Euskaltel</string>
+    <string name="operator_telecable" translatable="false">Telecable</string>
+    <string name="operator_r" translatable="false">R</string>
+    <string name="operator_simyo" translatable="false">simyo</string>
+    <string name="operator_jazztel" translatable="false">jazztel</string>
+    <string name="operator_amena" translatable="false">amena</string>
+    <string name="operator_masmovil" translatable="false">MásMóvil</string>
+    <string name="operator_pepephone" translatable="false">pepephone</string>
+    <string name="operator_lowi" translatable="false">lowi</string>
+    <string name="operator_lebara" translatable="false">Lebara</string>
+    <string name="operator_lycamobile" translatable="false">Lycamobile</string>
+    <string name="operator_finetwork" translatable="false">finetwork</string>
     <string name="operator_generic" translatable="false">Operator %1$d</string>
     <string name="operator_with_mcc" translatable="false">Operator (%1$s)</string>
     <string name="tile_operator_value_format" translatable="false">%1$s: %2$s</string>

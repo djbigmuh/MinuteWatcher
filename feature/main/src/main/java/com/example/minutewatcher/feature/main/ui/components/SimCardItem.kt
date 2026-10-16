@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.minutewatcher.core.android.util.SimUtils
 import com.example.minutewatcher.core.model.Constants
 import com.example.minutewatcher.core.model.SimCardUiModel
 import com.example.minutewatcher.core.model.util.ColorProvider
@@ -153,11 +155,22 @@ private fun SimCardHeader(
     val simCardDetailsDesc = stringResource(id = R.string.sim_card_details_content_desc, model.operatorName)
     val setLimitsDesc = stringResource(id = R.string.set_limits_content_desc, model.operatorName)
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Image(
-            painter = painterResource(id = model.iconRes),
-            contentDescription = stringResource(id = R.string.sim_icon_content_desc),
-            modifier = Modifier.size(32.dp),
-        )
+        val iconPainter = painterResource(id = model.iconRes)
+        val iconDescription = stringResource(id = R.string.sim_icon_content_desc)
+        if (SimUtils.isMonochromeOperatorIcon(model.iconRes)) {
+            Icon(
+                painter = iconPainter,
+                contentDescription = iconDescription,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        } else {
+            Image(
+                painter = iconPainter,
+                contentDescription = iconDescription,
+                modifier = Modifier.size(32.dp),
+            )
+        }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = model.operatorName,

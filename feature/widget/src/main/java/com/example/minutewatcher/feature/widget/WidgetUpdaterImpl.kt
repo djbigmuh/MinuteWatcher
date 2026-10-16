@@ -106,56 +106,20 @@ class WidgetUpdaterImpl
                 val res =
                     withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                         executeUpdateProcess()
-                    } ?: WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = true,
-                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                    )
+                    } ?: transientFailure(wasCoalesced = false)
                 deferred.complete(res)
                 return res
             } catch (e: CancellationException) {
-                val failure =
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = true,
-                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                    )
-                deferred.complete(failure)
+                deferred.complete(transientFailure(wasCoalesced = false))
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("WidgetUpdater: update failed", e)
-                val failure =
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = false,
-                        isRetryable = false,
-                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                    )
+                val failure = terminalFailure(wasCoalesced = false)
                 deferred.complete(failure)
                 return failure
             } finally {
                 withContext(NonCancellable) {
-                    val nextTail =
-                        coalescingMutex.withLock {
-                            if (rerunRequested) {
-                                rerunRequested = false
-                                val d = pendingPass
-                                pendingPass = null
-                                if (d != null) {
-                                    activeUpdate.set(d)
-                                } else {
-                                    activeUpdate.set(null)
-                                }
-                                d
-                            } else {
-                                activeUpdate.set(null)
-                                null
-                            }
-                        }
-                    if (nextTail != null) {
-                        scope.launch(start = CoroutineStart.ATOMIC) {
-                            runTailPass(nextTail)
-                        }
-                    }
+                    scheduleNextTailPass(deferred)
                 }
             }
         }
@@ -168,23 +132,11 @@ class WidgetUpdaterImpl
                 completed = true
             } catch (_: CancellationException) {
                 AppLogger.d("WidgetUpdater: tail pass cancelled")
-                val failure =
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = true,
-                        isRetryable = true,
-                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                    )
-                tailDeferred.complete(failure)
+                tailDeferred.complete(transientFailure(wasCoalesced = true))
                 completed = true
             } catch (e: Exception) {
                 AppLogger.e("WidgetUpdater: tail pass failed", e)
-                val failure =
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = true,
-                        isRetryable = true,
-                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                    )
-                tailDeferred.complete(failure)
+                tailDeferred.complete(transientFailure(wasCoalesced = true))
                 completed = true
             } finally {
                 handleTailFinally(tailDeferred, completed)
@@ -195,11 +147,7 @@ class WidgetUpdaterImpl
         val res =
             withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                 executeUpdateProcess()
-            } ?: WidgetUpdateResult.Failure(
-                wasCoalesced = true,
-                isRetryable = true,
-                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                )
+            } ?: transientFailure(wasCoalesced = true)
         return when (res) {
             is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
             is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
@@ -212,14 +160,19 @@ class WidgetUpdaterImpl
     ) {
         withContext(NonCancellable) {
             if (!completed && !tailDeferred.isCompleted) {
-                tailDeferred.complete(
-                    WidgetUpdateResult.Failure(
-                        wasCoalesced = true,
-                        isRetryable = true,
-                        reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-                    ),
-                )
+                tailDeferred.complete(transientFailure(wasCoalesced = true))
             }
+            scheduleNextTailPass(tailDeferred)
+            }
+    }
+
+    /**
+     * Consumes the pending tail pass registered under [coalescingMutex] and schedules
+     * its execution, or clears [activeUpdate] held by [owner] when no tail pass is pending.
+     *
+     * Must be invoked from a NonCancellable context.
+     */
+    private suspend fun scheduleNextTailPass(owner: CompletableDeferred<WidgetUpdateResult>) {
             val nextTail =
                 coalescingMutex.withLock {
                     if (rerunRequested) {
@@ -228,22 +181,35 @@ class WidgetUpdaterImpl
                         pendingPass = null
                         if (d != null) {
                             activeUpdate.set(d)
-                            } else {
-                                activeUpdate.compareAndSet(tailDeferred, null)
-                            }
+                        } else {
+                            activeUpdate.compareAndSet(owner, null)
+                        }
                         d
                     } else {
-                        activeUpdate.compareAndSet(tailDeferred, null)
+                        activeUpdate.compareAndSet(owner, null)
                         null
-                        }
-                }
-            if (nextTail != null) {
-                scope.launch(start = CoroutineStart.ATOMIC) {
-                    runTailPass(nextTail)
                     }
+                }
+        if (nextTail != null) {
+            scope.launch(start = CoroutineStart.ATOMIC) {
+                runTailPass(nextTail)
                 }
             }
         }
+
+    private fun transientFailure(wasCoalesced: Boolean): WidgetUpdateResult.Failure =
+        WidgetUpdateResult.Failure(
+            wasCoalesced = wasCoalesced,
+            isRetryable = true,
+            reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+        )
+
+    private fun terminalFailure(wasCoalesced: Boolean): WidgetUpdateResult.Failure =
+        WidgetUpdateResult.Failure(
+            wasCoalesced = wasCoalesced,
+            isRetryable = false,
+            reason = WidgetUpdateResult.FailureReason.TERMINAL,
+        )
 
         private suspend fun executeUpdateProcess(): WidgetUpdateResult =
             try {
@@ -289,11 +255,7 @@ class WidgetUpdaterImpl
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("WidgetUpdater: update process failed", e)
-                WidgetUpdateResult.Failure(
-                    wasCoalesced = false,
-                    isRetryable = false,
-                    reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                )
+                terminalFailure(wasCoalesced = false)
             }
 
         private fun createFailureResult(lastOutcome: UpdateOutcome?): WidgetUpdateResult {

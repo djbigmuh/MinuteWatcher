@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
@@ -107,6 +108,7 @@ internal fun SimItemIcon(component: SimLayoutComponent.Icon) {
         provider = ImageProvider(component.iconRes),
         contentDescription = null,
         modifier = GlanceModifier.size(component.sizeDp.dp),
+        colorFilter = component.tint?.let { ColorFilter.tint(ColorProvider(day = Color(it), night = Color(it))) },
     )
 }
 

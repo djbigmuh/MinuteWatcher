@@ -167,7 +167,7 @@ data class SimLayoutRow(
  * Sealed class ensures exhaustive processing of all variants.
  *
  * Variants:
- * - [Icon] — icon (iconRes, sizeDp).
+ * - [Icon] — icon (iconRes, sizeDp, tint).
  * - [Text] — text (text, color, fontSizeSp, isBold).
  * - [Spacer] — spacer (widthDp, heightDp).
  */
@@ -177,6 +177,7 @@ sealed interface SimLayoutComponent {
     data class Icon(
         val iconRes: Int,
         val sizeDp: Int,
+        val tint: Int? = null,
     ) : SimLayoutComponent
 
     @Immutable

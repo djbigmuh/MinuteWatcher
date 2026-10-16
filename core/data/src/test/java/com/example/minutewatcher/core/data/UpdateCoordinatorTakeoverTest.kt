@@ -52,7 +52,9 @@ class UpdateCoordinatorTakeoverTest {
     fun `forced update takeover does not kill observation cycle`() =
         runTest {
             // Snapshots must differ by fields included in content hash (e.g. used/remaining).
-            // timestamp and operatorName are excluded from hash (see SnapshotUtils.calculateContentHash).
+            // GlobalSnapshot.timestamp, SemanticEntity.lastUpdateTime, SimSnapshot.identity and
+            // SimSnapshot.operatorName are excluded from the hash; SemanticEntity.operatorName is
+            // included (see SnapshotUtils.calculateContentHash).
             val snapshotFlow = MutableStateFlow(createSnapshot(500L, "Initial", used = 0))
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
 

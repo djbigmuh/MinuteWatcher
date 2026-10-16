@@ -230,11 +230,15 @@ class SimUtilsTest {
 
         SimUtils.operatorIconMap.forEach { (_, drawableResId) ->
             val resName = appContext.resources.getResourceEntryName(drawableResId)
-            assertTrue("Drawable name $resName must start with ic_operator_", resName.startsWith("ic_operator_"))
+            assertTrue(
+                "Drawable name $resName must start with ic_operator_ or be ic_unknown",
+                resName.startsWith("ic_operator_") || resName == "ic_unknown",
+            )
             seenDrawables[drawableResId] = (seenDrawables[drawableResId] ?: 0) + 1
         }
 
         val vodafoneDrawable = R.drawable.ic_operator_vodafone
+        val unknownDrawable = R.drawable.ic_unknown
         seenDrawables.forEach { (drawableResId, count) ->
             if (drawableResId == vodafoneDrawable) {
                 assertEquals(
@@ -242,6 +246,8 @@ class SimUtilsTest {
                     2,
                     count,
                 )
+            } else if (drawableResId == unknownDrawable) {
+                // Neutral icon can be shared
             } else {
                 assertEquals("Drawable $drawableResId should be unique", 1, count)
             }

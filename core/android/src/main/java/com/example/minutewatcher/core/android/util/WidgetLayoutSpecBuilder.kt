@@ -94,7 +94,13 @@ object WidgetLayoutSpecBuilder {
     ) {
         if (sim.showIcon) {
             val size = (iconSizeBase * sim.fontMultiplier).toInt()
-            components.add(SimLayoutComponent.Icon(sim.operatorIconRes, size))
+            components.add(
+                SimLayoutComponent.Icon(
+                    iconRes = sim.operatorIconRes,
+                    sizeDp = size,
+                    tint = resolveIconTint(sim),
+                ),
+            )
             components.add(SimLayoutComponent.Spacer(widthDp = WidgetDimens.SPACING_DEFAULT))
         }
         if (sim.showName) {
@@ -110,6 +116,16 @@ object WidgetLayoutSpecBuilder {
             }
         }
     }
+
+    /**
+     * Resolves the tint for the operator icon of [sim].
+     *
+     * Single-tone (monochrome) icons carry no brand color information, so they are tinted
+     * with the same contrast-aware color used for the SIM text to stay visible on any
+     * widget background. Brand-colored icons keep their original colors (null tint).
+     */
+    private fun resolveIconTint(sim: SimUiState): Int? =
+        if (SimUtils.isMonochromeOperatorIcon(sim.operatorIconRes)) sim.textColor else null
 
     private fun addUsageInfo(
         components: MutableList<SimLayoutComponent>,
@@ -243,7 +259,17 @@ object WidgetLayoutSpecBuilder {
         }
         if (sim.showIcon) {
             val size = (WidgetDimens.SIZE_ICON_MULTI * sim.fontMultiplier).toInt()
-            rows.add(SimLayoutRow(listOf(SimLayoutComponent.Icon(sim.operatorIconRes, size))))
+            rows.add(
+                SimLayoutRow(
+                    listOf(
+                        SimLayoutComponent.Icon(
+                            iconRes = sim.operatorIconRes,
+                            sizeDp = size,
+                            tint = resolveIconTint(sim),
+                        ),
+                    ),
+                ),
+            )
         }
         if (sim.showMinutes) {
             addSixLinesUsageRow(rows, sim.minutesUsedFullText, sim.textColor, sim.fontMultiplier)

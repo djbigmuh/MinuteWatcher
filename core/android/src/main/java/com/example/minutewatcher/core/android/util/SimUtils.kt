@@ -74,7 +74,89 @@ object SimUtils {
             R.string.operator_2degrees to R.drawable.ic_operator_2degrees,
             R.string.operator_movistar to R.drawable.ic_operator_movistar,
             R.string.operator_claro to R.drawable.ic_operator_claro,
+            R.string.operator_euskaltel to R.drawable.ic_operator_euskaltel,
+            R.string.operator_amena to R.drawable.ic_operator_amena,
+            R.string.operator_lycamobile to R.drawable.ic_operator_lycamobile,
+            R.string.operator_yoigo to R.drawable.ic_unknown,
+            R.string.operator_telecable to R.drawable.ic_unknown,
+            R.string.operator_r to R.drawable.ic_unknown,
+            R.string.operator_simyo to R.drawable.ic_unknown,
+            R.string.operator_jazztel to R.drawable.ic_unknown,
+            R.string.operator_masmovil to R.drawable.ic_unknown,
+            R.string.operator_pepephone to R.drawable.ic_unknown,
+            R.string.operator_lowi to R.drawable.ic_unknown,
+            R.string.operator_lebara to R.drawable.ic_unknown,
+            R.string.operator_finetwork to R.drawable.ic_unknown,
+            R.string.operator_onecall to R.drawable.ic_unknown,
+            R.string.operator_mycall to R.drawable.ic_unknown,
+            R.string.operator_phonero to R.drawable.ic_unknown,
+            R.string.operator_talkmore to R.drawable.ic_unknown,
+            R.string.operator_chilimobil to R.drawable.ic_unknown,
+            R.string.operator_fjordkraft to R.drawable.ic_unknown,
         )
+
+    /**
+     * Operator icons whose artwork is a single-tone silhouette: every visible solid color
+     * of the icon is near-black or every visible solid color is near-white.
+     *
+     * Such icons carry no brand color information and are rendered with a theme-aware tint
+     * so they stay visible on both light and dark surfaces.
+     *
+     * Invariant: this set must exactly match the XML-derived classification enforced by
+     * OperatorIconMonochromeTest.
+     */
+    @VisibleForTesting
+    internal val monochromeOperatorIcons: Set<Int> =
+        setOf(
+            R.drawable.ic_operator_2degrees,
+            R.drawable.ic_operator_a1,
+            R.drawable.ic_operator_airtel,
+            R.drawable.ic_operator_base,
+            R.drawable.ic_operator_bouygues,
+            R.drawable.ic_operator_celcom,
+            R.drawable.ic_operator_china_mobile,
+            R.drawable.ic_operator_china_telecom,
+            R.drawable.ic_operator_china_unicom,
+            R.drawable.ic_operator_claro,
+            R.drawable.ic_operator_digi,
+            R.drawable.ic_operator_dna,
+            R.drawable.ic_operator_elisa,
+            R.drawable.ic_operator_etisalat,
+            R.drawable.ic_operator_jio,
+            R.drawable.ic_operator_kddi,
+            R.drawable.ic_operator_kpn,
+            R.drawable.ic_operator_m1,
+            R.drawable.ic_operator_mobily,
+            R.drawable.ic_operator_o2,
+            R.drawable.ic_operator_optus,
+            R.drawable.ic_operator_play,
+            R.drawable.ic_operator_plus,
+            R.drawable.ic_operator_proximus,
+            R.drawable.ic_operator_rostelecom,
+            R.drawable.ic_operator_salt,
+            R.drawable.ic_operator_sfr,
+            R.drawable.ic_operator_singtel,
+            R.drawable.ic_operator_softbank,
+            R.drawable.ic_operator_spark,
+            R.drawable.ic_operator_stc,
+            R.drawable.ic_operator_swisscom,
+            R.drawable.ic_operator_t_mobile,
+            R.drawable.ic_operator_tdc,
+            R.drawable.ic_operator_telenor,
+            R.drawable.ic_operator_telia,
+            R.drawable.ic_operator_three,
+            R.drawable.ic_operator_turkcell,
+            R.drawable.ic_operator_u_mobile,
+            R.drawable.ic_operator_verizon,
+            R.drawable.ic_operator_windtre,
+            R.drawable.ic_operator_zain,
+        )
+
+    /**
+     * Returns true when [iconRes] is a single-tone operator icon that must be rendered
+     * with a theme-aware tint instead of its raw file colors.
+     */
+    fun isMonochromeOperatorIcon(iconRes: Int): Boolean = iconRes in monochromeOperatorIcons
 
     fun getOperatorIconResource(operatorName: String): Int {
         val resId = OperatorResolver.getOperatorResourceId(operatorName)

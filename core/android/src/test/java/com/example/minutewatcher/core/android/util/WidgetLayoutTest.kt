@@ -292,4 +292,65 @@ class WidgetLayoutTest {
             limitText = "Limit",
             gbAbbr = "GB",
         )
+
+    @Test
+    fun `monochrome operator icon gets tinted with text color in icon-bearing modes`() {
+        val modes =
+            listOf(
+                WidgetLayoutMode.SINGLE_LINE,
+                WidgetLayoutMode.TWO_LINES,
+                WidgetLayoutMode.THREE_LINES,
+                WidgetLayoutMode.SIX_LINES,
+            )
+        val expectedColor = 0xFF112233.toInt()
+        for (mode in modes) {
+            val uiState = createWidgetUiState(mode = mode)
+            val sim =
+                uiState.simUiStates.first().copy(
+                    operatorIconRes = com.example.minutewatcher.core.resources.R.drawable.ic_operator_telenor,
+                    textColor = expectedColor,
+                )
+            val spec = WidgetLayoutSpecBuilder.generateLayoutSpec(sim, mode)
+            val icons = spec.rows.flatMap { row -> row.components }.filterIsInstance<SimLayoutComponent.Icon>()
+            org.junit.Assert.assertTrue("Icons should be present in mode $mode", icons.isNotEmpty())
+            for (icon in icons) {
+                assertEquals("Icon tint should match text color in mode $mode", expectedColor, icon.tint)
+            }
+        }
+    }
+
+    @Test
+    fun `multicolored operator icon has null tint in icon-bearing modes`() {
+        val modes =
+            listOf(
+                WidgetLayoutMode.SINGLE_LINE,
+                WidgetLayoutMode.TWO_LINES,
+                WidgetLayoutMode.THREE_LINES,
+                WidgetLayoutMode.SIX_LINES,
+            )
+        for (mode in modes) {
+            val uiState = createWidgetUiState(mode = mode)
+            val sim =
+                uiState.simUiStates.first().copy(
+                    operatorIconRes = com.example.minutewatcher.core.resources.R.drawable.ic_operator_mts,
+                )
+            val spec = WidgetLayoutSpecBuilder.generateLayoutSpec(sim, mode)
+            val icons = spec.rows.flatMap { row -> row.components }.filterIsInstance<SimLayoutComponent.Icon>()
+            org.junit.Assert.assertTrue("Icons should be present in mode $mode", icons.isNotEmpty())
+            for (icon in icons) {
+                assertEquals("Multicolor icon tint should be null in mode $mode", null, icon.tint)
+            }
+        }
+    }
+
+    @Test
+    fun `SIMPLE mode does not contain icon components`() {
+        val uiState = createWidgetUiState(mode = WidgetLayoutMode.SIMPLE)
+        val sim = uiState.simUiStates.first()
+        val icons =
+            sim.layoutSpec.rows
+                .flatMap { row -> row.components }
+                .filterIsInstance<SimLayoutComponent.Icon>()
+        assertEquals(0, icons.size)
+    }
 }
