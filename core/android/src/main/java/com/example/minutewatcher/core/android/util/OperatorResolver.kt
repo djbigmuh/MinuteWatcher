@@ -11,6 +11,14 @@ import java.io.InputStreamReader
 import java.util.Locale
 
 /**
+ * Immutable result type for operator resolution containing display name and brand key.
+ */
+data class ResolutionResult(
+    val displayName: String,
+    val brandKey: String?,
+)
+
+/**
  * Logic for resolving operator name from MCC/MNC database.
  * Optimized with thread-safe cache and explicit resource mapping.
  */
@@ -32,7 +40,7 @@ object OperatorResolver {
     private val tokenSplitWithoutDashRegex = Regex("[^a-z0-9&\u0400-\u04FF]+")
 
     @VisibleForTesting
-    internal val operatorResourceMap =
+    val operatorResourceMap =
         mapOf(
             "operator_mts" to R.string.operator_mts,
             "operator_megafon" to R.string.operator_megafon,
@@ -47,7 +55,6 @@ object OperatorResolver {
             "operator_att" to R.string.operator_att,
             "operator_verizon" to R.string.operator_verizon,
             "operator_tim" to R.string.operator_tim,
-            "operator_vodafone_it" to R.string.operator_vodafone_it,
             "operator_windtre" to R.string.operator_windtre,
             "operator_sfr" to R.string.operator_sfr,
             "operator_bouygues" to R.string.operator_bouygues,
@@ -118,10 +125,11 @@ object OperatorResolver {
             "operator_lebara" to R.string.operator_lebara,
             "operator_lycamobile" to R.string.operator_lycamobile,
             "operator_finetwork" to R.string.operator_finetwork,
+            "operator_ee" to R.string.operator_ee,
         )
 
     @VisibleForTesting
-    internal val tokenToResKey =
+    val tokenToResKey =
         mapOf(
             "mts" to "operator_mts",
             "мтс" to "operator_mts",
@@ -214,6 +222,8 @@ object OperatorResolver {
             "lebara" to "operator_lebara",
             "lycamobile" to "operator_lycamobile",
             "finetwork" to "operator_finetwork",
+            "r" to "operator_r",
+            "ee" to "operator_ee",
         )
 
     /**
@@ -290,9 +300,12 @@ object OperatorResolver {
         operatorName: String,
         candidates: List<String>,
         simSlot: Int,
-    ): String {
+    ): ResolutionResult {
         val trimmedName = operatorName.trim()
-        if (isValidSpecificName(trimmedName)) return trimmedName
+        if (isValidSpecificName(trimmedName)) {
+            val brandKey = getOperatorBrandKey(trimmedName)
+            return ResolutionResult(trimmedName, brandKey)
+        }
 
         val localizedContext = AppLocaleContexts.forAppLocale(context)
         val database = loadDb(localizedContext)
@@ -300,13 +313,17 @@ object OperatorResolver {
 
         val resolved =
             if (resKey != null) {
-                resolveFromDbKey(localizedContext, resKey)
+                val displayName =
+                    resolveFromDbKey(localizedContext, resKey)
+                        ?: fallbackResolution(localizedContext, candidates.firstOrNull().orEmpty(), simSlot)
+                ResolutionResult(displayName, resKey)
             } else {
                 logUnknownCandidates(candidates)
                 null
             }
 
-        return resolved ?: fallbackResolution(localizedContext, candidates.firstOrNull().orEmpty(), simSlot)
+        return resolved
+            ?: ResolutionResult(fallbackResolution(localizedContext, candidates.firstOrNull().orEmpty(), simSlot), null)
     }
 
     private fun findInDatabase(
@@ -398,23 +415,55 @@ object OperatorResolver {
     }
 
     /**
+     * Resolves the operator brand key from the given operator name.
+     * Lowercases query once, eliminates redundant checks, checks exact/normalized map lookup first,
+     * and checks diacritics fallback only on cache/lowercase miss.
+     */
+    fun getOperatorBrandKey(operatorName: String): String? {
+        val normalized = operatorName.lowercase(Locale.ROOT)
+        tokenToResKey[normalized]?.let { return it }
+
+        val stripped = operatorName.stripDiacritics().lowercase(Locale.ROOT)
+        if (stripped != normalized) {
+            tokenToResKey[stripped]?.let { return it }
+        }
+
+        val match =
+            tokenToResKey.entries
+                .filter { (token, _) ->
+                    operatorName.hasToken(token) || normalized.hasToken(token)
+                }.maxWithOrNull(
+                    compareBy<Map.Entry<String, String>> { (token, _) ->
+                        token.split(" ").filter { it.isNotEmpty() }.size
+                    }.thenBy { (token, _) ->
+                        token.length
+                    },
+                )?.value
+
+        if (match != null) return match
+
+        if (stripped != normalized) {
+            return tokenToResKey.entries
+                .filter { (token, _) ->
+                    stripped.hasToken(token)
+                }.maxWithOrNull(
+                    compareBy<Map.Entry<String, String>> { (token, _) ->
+                        token.split(" ").filter { it.isNotEmpty() }.size
+                    }.thenBy { (token, _) ->
+                        token.length
+                    },
+                )?.value
+        }
+        return null
+    }
+
+    /**
      * Resolves the operator resource ID from the given operator name.
      * Uses strict token-based matching to prevent partial matches (e.g., "Timor" matching "TIM").
      */
     fun getOperatorResourceId(operatorName: String): Int? {
-        val normalized = operatorName.lowercase(Locale.ROOT)
-        val stripped = operatorName.stripDiacritics().lowercase(Locale.ROOT)
-
-        return tokenToResKey.entries
-            .filter { (token, _) ->
-                operatorName.hasToken(token) || normalized.hasToken(token) || stripped.hasToken(token)
-            }.maxWithOrNull(
-                compareBy<Map.Entry<String, String>> { (token, _) ->
-                    token.split(" ").filter { it.isNotEmpty() }.size
-                }.thenBy { (token, _) ->
-                    token.length
-                },
-            )?.let { operatorResourceMap[it.value] }
+        val brandKey = getOperatorBrandKey(operatorName)
+        return brandKey?.let { operatorResourceMap[it] }
     }
 
     /**

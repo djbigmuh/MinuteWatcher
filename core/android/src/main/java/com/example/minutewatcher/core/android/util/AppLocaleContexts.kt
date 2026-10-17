@@ -7,6 +7,7 @@ import android.content.res.Configuration
 import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Utility for creating localized contexts that respect the per-app locale
@@ -15,8 +16,16 @@ import androidx.core.os.LocaleListCompat
  * Safe to call on any API level and with any context (Application, Service, or Activity).
  */
 object AppLocaleContexts {
+    private data class CacheKey(
+        val appContext: Context,
+        val localeTag: String,
+    )
+
+    private val cache = ConcurrentHashMap<CacheKey, Context>()
+
     /**
      * Returns a [Context] with the application locale applied if specified via [AppCompatDelegate] or system settings.
+     * Caches localized contexts for performance.
      *
      * If no per-app locale is set, returns the original [context].
      *
@@ -32,12 +41,16 @@ object AppLocaleContexts {
             return context
         }
 
-        val configuration = Configuration(context.resources.configuration)
-        configuration.setLocale(firstLocale)
-        configuration.setLayoutDirection(firstLocale)
+        val localeTag = firstLocale.toLanguageTag()
+        val appContext = context.applicationContext ?: context
+        val key = CacheKey(appContext, localeTag)
 
-        val localizedContext = context.createConfigurationContext(configuration)
-        return localizedContext
+        return cache.computeIfAbsent(key) {
+            val configuration = Configuration(context.resources.configuration)
+            configuration.setLocale(firstLocale)
+            configuration.setLayoutDirection(firstLocale)
+            context.createConfigurationContext(configuration)
+        }
     }
 
     private fun getAppLocales(context: Context): LocaleListCompat =

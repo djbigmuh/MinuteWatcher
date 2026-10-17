@@ -65,6 +65,7 @@ interface SimIdentityRepository {
     suspend fun setSimOperator(
         identity: String,
         name: String,
+        brandKey: String? = null,
     )
 }
 

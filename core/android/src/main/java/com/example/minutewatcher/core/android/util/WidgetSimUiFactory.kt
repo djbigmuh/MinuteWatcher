@@ -55,7 +55,7 @@ object WidgetSimUiFactory {
         return SimUiState(
             slot = sim.slot,
             operatorName = operatorName,
-            operatorIconRes = SimUtils.getOperatorIconResource(sim.operatorName),
+            operatorIconRes = SimUtils.getOperatorIconResource(sim.brandKey),
             showSim = resolveShowSim(simConfig, simListLoadFailed),
             showIcon = simConfig?.showIcon ?: true,
             showName = simConfig?.showName ?: true,

@@ -13,4 +13,5 @@
 
     <!-- Colors for transparency -->
     <color name="surface_container">#211F26</color>
+    <color name="widget_preview_bg_color">#FF211F26</color>
 </resources>

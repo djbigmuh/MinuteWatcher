@@ -95,7 +95,7 @@ object SimCardMapper {
             slot = slot,
             identity = usage.identity,
             operatorName = SimUtils.getShortOperatorName(context, usage.operator, slot),
-            iconRes = SimUtils.getOperatorIconResource(usage.operator),
+            iconRes = SimUtils.getOperatorIconResource(usage.brandKey),
             minutesUsed = safeMinutesUsed,
             minutesLimit = safeMinutesLimit,
             manualAdjustment = usage.manualAdjustment,

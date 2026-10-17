@@ -172,13 +172,21 @@ class SimIdentityPersistence
         }
 
         /**
-         * Persists human-readable operator name for a given SIM identity.
+         * Persists human-readable operator name and brand key for a given SIM identity.
          */
         suspend fun setSimOperator(
             identity: String,
             name: String,
+            brandKey: String? = null,
         ) {
-            dataStore.edit { it[DataStoreKeys.simOperatorKey(identity)] = name }
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.simOperatorKey(identity)] = name
+                if (brandKey != null) {
+                    prefs[DataStoreKeys.simOperatorBrandKeyKey(identity)] = brandKey
+                } else {
+                    prefs.remove(DataStoreKeys.simOperatorBrandKeyKey(identity))
+                }
+            }
         }
 
         companion object {

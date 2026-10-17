@@ -61,14 +61,14 @@ class UsageUseCaseImpl
 
                     val candidates = SimIdentityUtils.mccMncCandidates(info)
 
-                    val operatorName =
+                    val resolution =
                         OperatorResolver.resolve(
                             context,
                             displayName.ifEmpty { carrierName },
                             candidates,
                             slot,
                         )
-                    simIdentityRepository.setSimOperator(identity, operatorName)
+                    simIdentityRepository.setSimOperator(identity, resolution.displayName, resolution.brandKey)
                 }
             }
         }

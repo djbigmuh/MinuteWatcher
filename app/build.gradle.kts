@@ -20,18 +20,33 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "com.example.minutewatcher"
-        versionCode = 344
-        versionName = "3.4.4"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        versionCode = 351
+        versionName = "3.5.1"
         testInstrumentationRunner = "com.example.minutewatcher.HiltTestRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            val keystoreFile = rootProject.file("release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("MINUTEWATCHER_STORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("MINUTEWATCHER_KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("MINUTEWATCHER_KEY_PASSWORD") ?: ""
+            } else {
+                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

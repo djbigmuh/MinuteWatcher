@@ -258,6 +258,7 @@ class UsageStateRepositoryImpl
                 entities = entities,
                 autoResetDay = usage.autoResetDay,
                 autoReset = usage.autoReset,
+                brandKey = usage.brandKey,
             )
         }
 

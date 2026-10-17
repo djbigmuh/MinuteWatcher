@@ -17,7 +17,6 @@
     <string name="operator_att" translatable="false">AT&amp;T</string>
     <string name="operator_verizon" translatable="false">Verizon</string>
     <string name="operator_tim" translatable="false">TIM</string>
-    <string name="operator_vodafone_it" translatable="false">Vodafone IT</string>
     <string name="operator_windtre" translatable="false">WindTre</string>
     <string name="operator_sfr" translatable="false">SFR</string>
     <string name="operator_bouygues" translatable="false">Bouygues</string>
@@ -99,5 +98,7 @@
     <string name="shortcut_long_format" translatable="false">%1$s: %2$s %3$s</string>
     <string name="limit_suffix_format" translatable="false">/%1$s</string>
     <string name="value_placeholder" translatable="false">—</string>
+    <string name="operator_sample" translatable="false">Operator 1</string>
+    <string name="operator_ee" translatable="false">EE</string>
     <string name="about_author_email" translatable="false">dj.bigmuh@gmail.com</string>
 </resources>

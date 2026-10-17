@@ -13,4 +13,5 @@
 
     <!-- New semantic colors -->
     <color name="surface_container">#F3EDF7</color>
+    <color name="widget_preview_bg_color">#FFF3EDF7</color>
 </resources>

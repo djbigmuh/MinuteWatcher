@@ -1,6 +1,7 @@
 package com.example.minutewatcher.core.data
 
 import androidx.datastore.preferences.core.Preferences
+import com.example.minutewatcher.core.android.util.OperatorResolver
 import com.example.minutewatcher.core.data.di.DataStoreKeys
 import com.example.minutewatcher.core.model.SimUsage
 import javax.inject.Inject
@@ -18,13 +19,22 @@ class SimUsageMapper
         fun mapToSimUsage(
             identity: String,
             prefs: Preferences,
-        ): SimUsage =
-            SimUsage(
+        ): SimUsage {
+            val storedBrandKey = prefs[DataStoreKeys.simOperatorBrandKeyKey(identity)]
+            val operator = prefs[DataStoreKeys.simOperatorKey(identity)].orEmpty()
+            val brandKey =
+                if (storedBrandKey.isNullOrEmpty() && operator.isNotEmpty()) {
+                    OperatorResolver.getOperatorBrandKey(operator)
+                } else {
+                    storedBrandKey
+                }
+
+            return SimUsage(
                 identity = identity,
                 slotIndex = prefs[DataStoreKeys.slotIndexKey(identity)] ?: -1,
                 subscriptionId = prefs[DataStoreKeys.subscriptionIdKey(identity)],
-                operator =
-                    prefs[DataStoreKeys.simOperatorKey(identity)].orEmpty(),
+                operator = operator,
+                brandKey = brandKey,
                 minutesUsed = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0,
                 minutesLimit = prefs[DataStoreKeys.monthlyLimitKey(identity)] ?: 0,
                 trafficUsedMb = prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f,
@@ -36,4 +46,5 @@ class SimUsageMapper
                 lastResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: 0L,
                 rolloverEnabled = prefs[DataStoreKeys.rolloverEnabledKey(identity)] ?: false,
             )
+        }
     }

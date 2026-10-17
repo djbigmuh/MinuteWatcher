@@ -57,5 +57,6 @@ class SimIdentityRepositoryImpl
         override suspend fun setSimOperator(
             identity: String,
             name: String,
-        ) = persistence.setSimOperator(identity, name)
+            brandKey: String?,
+        ) = persistence.setSimOperator(identity, name, brandKey)
     }

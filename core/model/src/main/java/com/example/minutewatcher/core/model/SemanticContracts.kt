@@ -101,6 +101,7 @@ data class SimSnapshot(
     val autoResetDay: Int,
     /** Whether automatic statistics reset is enabled for this SIM. */
     val autoReset: Boolean = false,
+    val brandKey: String? = null,
 )
 
 /**

@@ -50,4 +50,5 @@ data class SimUsage(
     val autoResetDay: Int,
     val lastResetDate: Long,
     val rolloverEnabled: Boolean = false,
+    val brandKey: String? = null,
 )

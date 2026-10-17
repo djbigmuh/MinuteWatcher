@@ -174,6 +174,10 @@ internal object DataStoreKeys {
 
     const val CUSTOM_SIM_OPERATOR_PREFIX = "custom_sim_operator_"
 
+    const val SIM_OPERATOR_BRAND_KEY_PREFIX = "sim_operator_brand_key_"
+
+    fun simOperatorBrandKeyKey(identity: String) = stringPreferencesKey("$SIM_OPERATOR_BRAND_KEY_PREFIX$identity")
+
     fun slotIndexKey(identity: String) = intPreferencesKey("$SLOT_INDEX_PREFIX$identity")
 
     const val SUBSCRIPTION_ID_PREFIX = "subscription_id_"

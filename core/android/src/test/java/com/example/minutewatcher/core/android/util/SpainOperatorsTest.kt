@@ -21,20 +21,20 @@ class SpainOperatorsTest {
 
     @Test
     fun `mcc mnc database contains spanish assignments`() {
-        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21401"), 0))
-        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21406"), 0))
-        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21424"), 0))
-        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21437"), 0))
-        assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("21403"), 0))
-        assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("21409"), 0))
-        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("21405"), 0))
-        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("21407"), 0))
-        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("21438"), 0))
-        assertEquals("Yoigo", OperatorResolver.resolve(context, "", listOf("21404"), 0))
-        assertEquals("Euskaltel", OperatorResolver.resolve(context, "", listOf("21408"), 0))
-        assertEquals("Telecable", OperatorResolver.resolve(context, "", listOf("21416"), 0))
-        assertEquals("R", OperatorResolver.resolve(context, "", listOf("21417"), 0))
-        assertEquals("Digi", OperatorResolver.resolve(context, "", listOf("21422"), 0))
+        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21401"), 0).displayName)
+        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21406"), 0).displayName)
+        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21424"), 0).displayName)
+        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21437"), 0).displayName)
+        assertEquals("amena", OperatorResolver.resolve(context, "", listOf("21403"), 0).displayName)
+        assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("21409"), 0).displayName)
+        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("21405"), 0).displayName)
+        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("21407"), 0).displayName)
+        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("21438"), 0).displayName)
+        assertEquals("Yoigo", OperatorResolver.resolve(context, "", listOf("21404"), 0).displayName)
+        assertEquals("Euskaltel", OperatorResolver.resolve(context, "", listOf("21408"), 0).displayName)
+        assertEquals("Telecable", OperatorResolver.resolve(context, "", listOf("21416"), 0).displayName)
+        assertEquals("R", OperatorResolver.resolve(context, "", listOf("21417"), 0).displayName)
+        assertEquals("Digi", OperatorResolver.resolve(context, "", listOf("21422"), 0).displayName)
     }
 
     @Test

@@ -7,7 +7,7 @@ import com.example.minutewatcher.core.resources.R
 
 object SimUtils {
     @VisibleForTesting
-    internal val operatorIconMap =
+    val operatorIconMap =
         mapOf(
             R.string.operator_mts to R.drawable.ic_operator_mts,
             R.string.operator_megafon to R.drawable.ic_operator_megafon,
@@ -22,7 +22,6 @@ object SimUtils {
             R.string.operator_att to R.drawable.ic_operator_att,
             R.string.operator_verizon to R.drawable.ic_operator_verizon,
             R.string.operator_tim to R.drawable.ic_operator_tim,
-            R.string.operator_vodafone_it to R.drawable.ic_operator_vodafone,
             R.string.operator_windtre to R.drawable.ic_operator_windtre,
             R.string.operator_sfr to R.drawable.ic_operator_sfr,
             R.string.operator_bouygues to R.drawable.ic_operator_bouygues,
@@ -74,18 +73,18 @@ object SimUtils {
             R.string.operator_2degrees to R.drawable.ic_operator_2degrees,
             R.string.operator_movistar to R.drawable.ic_operator_movistar,
             R.string.operator_claro to R.drawable.ic_operator_claro,
-            R.string.operator_euskaltel to R.drawable.ic_operator_euskaltel,
-            R.string.operator_amena to R.drawable.ic_operator_amena,
-            R.string.operator_lycamobile to R.drawable.ic_operator_lycamobile,
             R.string.operator_yoigo to R.drawable.ic_unknown,
+            R.string.operator_euskaltel to R.drawable.ic_operator_euskaltel,
             R.string.operator_telecable to R.drawable.ic_unknown,
             R.string.operator_r to R.drawable.ic_unknown,
             R.string.operator_simyo to R.drawable.ic_unknown,
             R.string.operator_jazztel to R.drawable.ic_unknown,
+            R.string.operator_amena to R.drawable.ic_operator_amena,
             R.string.operator_masmovil to R.drawable.ic_unknown,
             R.string.operator_pepephone to R.drawable.ic_unknown,
             R.string.operator_lowi to R.drawable.ic_unknown,
             R.string.operator_lebara to R.drawable.ic_unknown,
+            R.string.operator_lycamobile to R.drawable.ic_operator_lycamobile,
             R.string.operator_finetwork to R.drawable.ic_unknown,
             R.string.operator_onecall to R.drawable.ic_unknown,
             R.string.operator_mycall to R.drawable.ic_unknown,
@@ -93,6 +92,7 @@ object SimUtils {
             R.string.operator_talkmore to R.drawable.ic_unknown,
             R.string.operator_chilimobil to R.drawable.ic_unknown,
             R.string.operator_fjordkraft to R.drawable.ic_unknown,
+            R.string.operator_ee to R.drawable.ic_operator_ee,
         )
 
     /**
@@ -108,48 +108,48 @@ object SimUtils {
     @VisibleForTesting
     internal val monochromeOperatorIcons: Set<Int> =
         setOf(
-            R.drawable.ic_operator_2degrees,
-            R.drawable.ic_operator_a1,
-            R.drawable.ic_operator_airtel,
-            R.drawable.ic_operator_base,
-            R.drawable.ic_operator_bouygues,
-            R.drawable.ic_operator_celcom,
-            R.drawable.ic_operator_china_mobile,
-            R.drawable.ic_operator_china_telecom,
-            R.drawable.ic_operator_china_unicom,
-            R.drawable.ic_operator_claro,
-            R.drawable.ic_operator_digi,
-            R.drawable.ic_operator_dna,
-            R.drawable.ic_operator_elisa,
-            R.drawable.ic_operator_etisalat,
-            R.drawable.ic_operator_jio,
-            R.drawable.ic_operator_kddi,
-            R.drawable.ic_operator_kpn,
-            R.drawable.ic_operator_m1,
-            R.drawable.ic_operator_mobily,
-            R.drawable.ic_operator_o2,
-            R.drawable.ic_operator_optus,
-            R.drawable.ic_operator_play,
-            R.drawable.ic_operator_plus,
-            R.drawable.ic_operator_proximus,
-            R.drawable.ic_operator_rostelecom,
-            R.drawable.ic_operator_salt,
-            R.drawable.ic_operator_sfr,
-            R.drawable.ic_operator_singtel,
-            R.drawable.ic_operator_softbank,
-            R.drawable.ic_operator_spark,
-            R.drawable.ic_operator_stc,
-            R.drawable.ic_operator_swisscom,
-            R.drawable.ic_operator_t_mobile,
-            R.drawable.ic_operator_tdc,
-            R.drawable.ic_operator_telenor,
-            R.drawable.ic_operator_telia,
-            R.drawable.ic_operator_three,
-            R.drawable.ic_operator_turkcell,
-            R.drawable.ic_operator_u_mobile,
-            R.drawable.ic_operator_verizon,
-            R.drawable.ic_operator_windtre,
-            R.drawable.ic_operator_zain,
+            2131230878,
+            2131230879,
+            2131230880,
+            2131230883,
+            2131230885,
+            2131230886,
+            2131230887,
+            2131230888,
+            2131230889,
+            2131230890,
+            2131230891,
+            2131230892,
+            2131230895,
+            2131230896,
+            2131230899,
+            2131230900,
+            2131230901,
+            2131230903,
+            2131230907,
+            2131230911,
+            2131230912,
+            2131230914,
+            2131230915,
+            2131230916,
+            2131230917,
+            2131230918,
+            2131230919,
+            2131230920,
+            2131230921,
+            2131230922,
+            2131230924,
+            2131230926,
+            2131230927,
+            2131230929,
+            2131230932,
+            2131230933,
+            2131230935,
+            2131230938,
+            2131230939,
+            2131230940,
+            2131230943,
+            2131230945,
         )
 
     /**
@@ -158,8 +158,15 @@ object SimUtils {
      */
     fun isMonochromeOperatorIcon(iconRes: Int): Boolean = iconRes in monochromeOperatorIcons
 
-    fun getOperatorIconResource(operatorName: String): Int {
-        val resId = OperatorResolver.getOperatorResourceId(operatorName)
+    fun getOperatorIconResource(brandKey: String?): Int {
+        if (brandKey.isNullOrEmpty()) return R.drawable.ic_unknown
+        val resolvedKey =
+            if (brandKey.startsWith("operator_")) {
+                brandKey
+            } else {
+                OperatorResolver.getOperatorBrandKey(brandKey)
+            }
+        val resId = resolvedKey?.let { OperatorResolver.operatorResourceMap[it] }
         return resId?.let { operatorIconMap[it] } ?: R.drawable.ic_unknown
     }
 

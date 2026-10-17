@@ -62,7 +62,7 @@ class UsageUseCaseImplTest {
 
             usageUseCase.refreshOperatorInfo()
 
-            verify(simIdentityRepository).setSimOperator(eq("sim_0"), any())
+            verify(simIdentityRepository).setSimOperator(eq("sim_0"), any(), eq(null))
         }
 
     @Test
@@ -131,7 +131,7 @@ class UsageUseCaseImplTest {
             whenever(subInfo.mncString).thenReturn("01")
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(subInfo))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
-            whenever(simIdentityRepository.setSimOperator(any(), any())).thenAnswer {
+            whenever(simIdentityRepository.setSimOperator(any(), any(), eq(null))).thenAnswer {
                 throw IOException("Write error")
             }
 

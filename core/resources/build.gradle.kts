@@ -20,5 +20,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidxTestCoreKtx)
+    testImplementation(project(":core:android"))
     testImplementation(testFixtures(project(":core:resources")))
 }

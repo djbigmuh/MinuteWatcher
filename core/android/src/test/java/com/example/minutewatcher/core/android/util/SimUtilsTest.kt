@@ -242,8 +242,8 @@ class SimUtilsTest {
         seenDrawables.forEach { (drawableResId, count) ->
             if (drawableResId == vodafoneDrawable) {
                 assertEquals(
-                    "ic_operator_vodafone should be shared by exactly 2 keys (operator_vodafone and operator_vodafone_it)",
-                    2,
+                    "ic_operator_vodafone should be shared by exactly 1 key (operator_vodafone)",
+                    1,
                     count,
                 )
             } else if (drawableResId == unknownDrawable) {
