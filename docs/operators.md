@@ -1,88 +1,58 @@
-# Operators Architecture and Brand Management
+# Operators and Brand Management
 
 ## Scope
-
-The set of supported mobile operator brands is determined by the keys defined in `OperatorResolver.operatorResourceMap`. The single source of truth for operator brand resolution is code (`OperatorResolver` and `OperatorBrandDatabase`), not a separate configuration list.
+The set of supported operator brands is determined by the keys defined in `OperatorResolver.operatorResourceMap` (implemented via `OperatorBrandDatabase`). The source code serves as the single source of truth; no separate standalone list dictates supported brands.
 
 ## Adding a Brand
-
-Adding a new operator brand requires a complete set of seven artifacts:
-1. String resource in `core/resources/src/main/res/values/donottranslate.xml`:
-   `<string name="operator_<brand_key>" translatable="false"><Display Name></string>`
-2. Vector drawable icon in `core/resources/src/main/res/drawable/ic_operator_<brand_key>.xml` following icon guidelines.
-3. Token mappings `"<token>" to "operator_<brand_key>"` in `OperatorResolver.tokenToResKey`.
-4. Resource map entry `"operator_<brand_key>" to R.string.operator_<brand_key>` in `OperatorResolver.operatorResourceMap`.
-5. Icon map entry `R.string.operator_<brand_key> to R.drawable.ic_operator_<brand_key>` in `SimUtils.operatorIconMap`.
-6. PLMN database entries in `core/android/src/main/assets/mcc_mnc_db.json`.
-7. Provenance and documentation entries in `docs/operator_plmn_sources.md` and `docs/operator_icons.md`.
+To add a new operator brand to the application, the following seven artifacts must be provided and updated:
+1. **String Resource**: Add string resource definition in `core/resources/src/main/res/values/strings.xml` and translations.
+2. **Vector Icon**: Add vector drawable icon in `core/resources/src/main/res/drawable/ic_operator_<brand>.xml`.
+3. **Search Tokens**: Configure search tokens in `OperatorBrandDatabase`.
+4. **Brand Map Entry**: Add mapping in `OperatorBrandDatabase.operatorResourceMap`.
+5. **Icon Map Entry**: Add mapping in `SimUtils.operatorIconMap`.
+6. **PLMN Entries**: Add corresponding PLMN code to brand mapping in `mcc_mnc_db.json`.
+7. **Documentation**: Update documentation in `docs/operator_icons.md` and `docs/operator_plmn_sources.md`.
 
 ## MVNO Handling
-
-Virtual network operators (MVNOs) are identified by the network name provided in the subscription / network operator details, because MVNOs share host network PLMN identifiers. PLMN database entries are not added for pure MVNO brands unless assigned a dedicated MCC/MNC by ITU-T E.212.
+Virtual network operators (MVNOs) typically share the PLMN of their host mobile network operator (MNO). Consequently, MVNOs are identified by their subscription network name rather than direct PLMN matching. Dedicated PLMN entries in `mcc_mnc_db.json` are not added for MVNO brands that piggyback on host network PLMNs.
 
 ## Unsupported Networks
-
-For networks not present in the supported brand set, the application falls back to displaying the network name provided by the subscription or the raw MCC/MNC string, using the generic `ic_unknown` icon.
+When a network is encountered whose MCC/MNC is absent from `mcc_mnc_db.json` or whose brand is unmapped, the application falls back to displaying the subscription network name or the MCC/MNC identifier string, using the generic `ic_unknown` icon.
 
 ## Candidate Brands
+The following table lists candidate brands under consideration for addition across specified regions, categorized by MCC:
 
 | Brand | Country | MCC | Priority |
 |---|---|---|---|
+| LG Uplus | South Korea | 450 | Medium |
 | SK Telecom | South Korea | 450 | High |
-| KT | South Korea | 450 | High |
-| LG U+ | South Korea | 450 | High |
-| Globe | Philippines | 515 | High |
+| Dito | Philippines | 515 | Medium |
 | Smart | Philippines | 515 | High |
-| DITO | Philippines | 515 | Medium |
 | Telkomsel | Indonesia | 510 | High |
-| Indosat | Indonesia | 510 | High |
-| XL Axiata | Indonesia | 510 | High |
-| Smartfren | Indonesia | 510 | Medium |
+| Indosat Ooredoo | Indonesia | 510 | Medium |
 | Chunghwa Telecom | Taiwan | 466 | High |
-| Taiwan Mobile | Taiwan | 466 | High |
-| FarEasTone | Taiwan | 466 | Medium |
+| Taiwan Mobile | Taiwan | 466 | Medium |
 | Rogers | Canada | 302 | High |
 | Bell | Canada | 302 | High |
-| Telus | Canada | 302 | High |
-| Vodacom | South Africa | 655 | High |
 | MTN | South Africa | 655 | High |
-| Cell C | South Africa | 655 | Medium |
-| Telkom | South Africa | 655 | Medium |
+| Vodacom | South Africa | 655 | High |
 | MTN | Nigeria | 621 | High |
-| Globacom | Nigeria | 621 | High |
+| Glo | Nigeria | 621 | Medium |
 | Safaricom | Kenya | 639 | High |
 | Maroc Telecom | Morocco | 604 | High |
-| Orange | Morocco | 604 | High |
 | Tunisie Telecom | Tunisia | 605 | High |
-| Ooredoo | Tunisia | 605 | High |
 | Mobilis | Algeria | 603 | High |
-| Djezzy | Algeria | 603 | High |
-| Vodafone | Egypt | 602 | High |
-| Orange | Egypt | 602 | High |
 | Etisalat | Egypt | 602 | High |
 | Azercell | Azerbaijan | 400 | High |
-| Bakcell | Azerbaijan | 400 | High |
 | Kcell | Kazakhstan | 401 | High |
-| Beeline | Kazakhstan | 401 | High |
-| Vodafone | Ireland | 272 | High |
-| Three | Ireland | 272 | High |
-| Vodafone | Portugal | 268 | High |
+| Eir | Ireland | 272 | Medium |
 | MEO | Portugal | 268 | High |
-| A1 | Bulgaria | 284 | High |
-| Yettel | Bulgaria | 284 | High |
-| Cosmote | Greece | 202 | High |
+| Vivacom | Bulgaria | 284 | High |
 | Vodafone | Greece | 202 | High |
-| Hrvatski Telekom | Croatia | 219 | High |
-| A1 | Croatia | 219 | High |
+| A1 | Croatia | 294 | High |
 | Telekom Srbija | Serbia | 220 | High |
-| Yettel | Serbia | 220 | High |
 | Telia | Lithuania | 246 | High |
-| Tele2 | Lithuania | 246 | High |
 | LMT | Latvia | 247 | High |
-| Tele2 | Latvia | 247 | High |
-| Pelephone | Israel | 425 | High |
 | Cellcom | Israel | 425 | High |
-| GO Malta | Malta | 278 | High |
-| Epic Malta | Malta | 278 | High |
-| Síminn | Iceland | 274 | High |
-| Nova | Iceland | 274 | High |
+| GO | Malta | 270 | Medium |
+| Siminn | Iceland | 274 | High |

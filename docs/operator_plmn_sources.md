@@ -1,109 +1,105 @@
-# Operator PLMN Sources
-
-This document records the provenance and verification sources for all Mobile Network Codes (MNC) and Mobile Country Codes (MCC) listed in `mcc_mnc_db.json`.
+# Operator PLMN Sources and Provenance
 
 ## Allowed Sources
+- ITU-T E.212 "Mobile Network Codes (MNC) for the international identification plan for public networks and subscriptions", current edition, https://www.itu.int/rec/T-REC-E.212
+- National telecommunication regulators (official numbering plan publications)
+- Official operator publications regarding their PLMNs
 
-- ITU-T E.212 «Mobile Network Codes (MNC) for the international identification plan for public networks and subscriptions», current edition, [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212);
-- National telecommunication regulators (official numbering lists and frequency allocation registries);
-- Official operator publications regarding their assigned PLMN identifiers.
-
-## PLMN Provenance Table
+## MCC Provenance Table
 
 | MCC | Country / territory | PLMN list | Source | Retrieved |
 |---|---|---|---|---|
-| 202 | Greece | 01=operator_cosmote, 02=operator_cosmote, 05=operator_vodafone, 09=operator_windtre, 10=operator_windtre | ITU-T E.212 Operational Bulletin and National Regulator registry for Greece | 2025-01-15 |
-| 204 | Netherlands | 02=operator_odido, 04=operator_vodafone, 08=operator_kpn, 09=operator_kpn, 10=operator_kpn, 12=operator_t_mobile, 16=operator_odido, 20=operator_odido | ITU-T E.212 Operational Bulletin and National Regulator registry for Netherlands | 2025-01-15 |
-| 206 | Belgium | 01=operator_proximus, 02=operator_proximus, 05=operator_proximus, 10=operator_orange, 20=operator_base, 30=operator_base | ITU-T E.212 Operational Bulletin and National Regulator registry for Belgium | 2025-01-15 |
-| 208 | France | 01=operator_orange, 02=operator_orange, 09=operator_sfr, 10=operator_sfr, 11=operator_sfr, 13=operator_sfr, 15=operator_free, 16=operator_free, 20=operator_bouygues, 21=operator_bouygues, 88=operator_bouygues, 89=operator_orange, 91=operator_orange | ITU-T E.212 Operational Bulletin and National Regulator registry for France | 2025-01-15 |
-| 214 | Spain | 01=operator_vodafone, 03=operator_orange, 04=operator_yoigo, 05=operator_movistar, 06=operator_vodafone, 07=operator_movistar, 08=operator_euskaltel, 09=operator_orange, 16=operator_telecable, 17=operator_r, 19=operator_simyo, 21=operator_jazztel, 22=operator_digi, 25=operator_lycamobile, 38=operator_movistar | ITU-T E.212 Operational Bulletin and National Regulator registry for Spain | 2025-01-15 |
-| 216 | Hungary | 01=operator_yettel, 30=operator_telekom, 70=operator_vodafone | ITU-T E.212 Operational Bulletin and National Regulator registry for Hungary | 2025-01-15 |
-| 222 | Italy | 01=operator_tim, 07=operator_tim, 10=operator_vodafone, 35=operator_lycamobile, 50=operator_iliad, 88=operator_windtre, 99=operator_windtre | ITU-T E.212 Operational Bulletin and National Regulator registry for Italy | 2025-01-15 |
-| 226 | Romania | 01=operator_vodafone, 03=operator_telekom, 05=operator_digi, 06=operator_telekom, 10=operator_orange | ITU-T E.212 Operational Bulletin and National Regulator registry for Romania | 2025-01-15 |
-| 228 | Switzerland | 01=operator_swisscom, 02=operator_sunrise, 03=operator_salt | ITU-T E.212 Operational Bulletin and National Regulator registry for Switzerland | 2025-01-15 |
-| 230 | Czech Republic | 01=operator_t_mobile, 02=operator_o2, 03=operator_vodafone | ITU-T E.212 Operational Bulletin and National Regulator registry for Czech Republic | 2025-01-15 |
-| 231 | Slovakia | 01=operator_orange, 02=operator_t_mobile, 03=operator_telekom, 06=operator_o2 | ITU-T E.212 Operational Bulletin and National Regulator registry for Slovakia | 2025-01-15 |
-| 232 | Austria | 01=operator_a1, 02=operator_a1, 03=operator_magenta, 05=operator_three, 07=operator_magenta, 09=operator_a1, 10=operator_three | ITU-T E.212 Operational Bulletin and National Regulator registry for Austria | 2025-01-15 |
-| 234 | United Kingdom | 02=operator_o2, 10=operator_o2, 11=operator_o2, 15=operator_vodafone, 20=operator_three, 26=operator_lycamobile, 30=operator_ee, 31=operator_ee, 32=operator_ee, 33=operator_ee, 34=operator_ee, 91=operator_vodafone | ITU-T E.212 Operational Bulletin and National Regulator registry for United Kingdom | 2025-01-15 |
-| 238 | Denmark | 01=operator_tdc, 02=operator_telenor, 06=operator_three, 20=operator_telia | ITU-T E.212 Operational Bulletin and National Regulator registry for Denmark | 2025-01-15 |
-| 240 | Sweden | 01=operator_telia, 02=operator_three, 04=operator_three, 05=operator_telia, 07=operator_tele2, 08=operator_telenor | ITU-T E.212 Operational Bulletin and National Regulator registry for Sweden | 2025-01-15 |
-| 242 | Norway | 01=operator_telenor, 02=operator_telia, 05=operator_telia, 06=operator_ice, 07=operator_phonero, 08=operator_telia, 12=operator_telenor, 14=operator_ice | ITU-T E.212 Operational Bulletin and National Regulator registry for Norway | 2025-01-15 |
-| 244 | Finland | 03=operator_dna, 05=operator_elisa, 12=operator_dna, 13=operator_dna, 36=operator_telia, 91=operator_telia | ITU-T E.212 Operational Bulletin and National Regulator registry for Finland | 2025-01-15 |
-| 246 | Lithuania | 01=operator_telia, 03=operator_tele2 | ITU-T E.212 Operational Bulletin and National Regulator registry for Lithuania | 2025-01-15 |
-| 247 | Latvia | 02=operator_tele2 | ITU-T E.212 Operational Bulletin and National Regulator registry for Latvia | 2025-01-15 |
-| 248 | Estonia | 01=operator_telia, 02=operator_elisa, 03=operator_tele2 | ITU-T E.212 Operational Bulletin and National Regulator registry for Estonia | 2025-01-15 |
-| 250 | Russia | 01=operator_mts, 02=operator_megafon, 04=operator_tele2, 11=operator_yota, 20=operator_tele2, 27=operator_tattelecom, 28=operator_beeline, 39=operator_rostelecom, 99=operator_beeline | ITU-T E.212 Operational Bulletin and National Regulator registry for Russia | 2025-01-15 |
-| 255 | Ukraine | 01=operator_vodafone, 02=operator_kyivstar, 03=operator_kyivstar, 06=operator_lifecell | ITU-T E.212 Operational Bulletin and National Regulator registry for Ukraine | 2025-01-15 |
-| 257 | Belarus | 01=operator_a1, 02=operator_mts, 04=operator_life_by | ITU-T E.212 Operational Bulletin and National Regulator registry for Belarus | 2025-01-15 |
-| 259 | Moldova | 01=operator_orange, 02=operator_moldcell, 03=operator_orange | ITU-T E.212 Operational Bulletin and National Regulator registry for Moldova | 2025-01-15 |
-| 260 | Poland | 01=operator_plus, 02=operator_t_mobile, 03=operator_orange, 06=operator_play | ITU-T E.212 Operational Bulletin and National Regulator registry for Poland | 2025-01-15 |
-| 262 | Germany | 01=operator_telekom, 02=operator_vodafone, 03=operator_o2, 04=operator_vodafone, 05=operator_o2, 06=operator_telekom, 07=operator_o2, 08=operator_o2, 09=operator_vodafone, 11=operator_o2, 23=operator_oneandone | ITU-T E.212 Operational Bulletin and National Regulator registry for Germany | 2025-01-15 |
-| 268 | Portugal | 01=operator_vodafone, 03=operator_orange, 06=operator_orange | ITU-T E.212 Operational Bulletin and National Regulator registry for Portugal | 2025-01-15 |
-| 270 | Luxembourg | 01=operator_orange, 77=operator_orange | ITU-T E.212 Operational Bulletin and National Regulator registry for Luxembourg | 2025-01-15 |
-| 272 | Ireland | 01=operator_vodafone, 05=operator_three | ITU-T E.212 Operational Bulletin and National Regulator registry for Ireland | 2025-01-15 |
-| 276 | Albania | 02=operator_vodafone | ITU-T E.212 Operational Bulletin and National Regulator registry for Albania | 2025-01-15 |
-| 280 | Cyprus | 01=operator_vodafone | ITU-T E.212 Operational Bulletin and National Regulator registry for Cyprus | 2025-01-15 |
-| 284 | Bulgaria | 01=operator_a1, 05=operator_yettel | ITU-T E.212 Operational Bulletin and National Regulator registry for Bulgaria | 2025-01-15 |
-| 286 | Turkey | 01=operator_turkcell, 02=operator_vodafone, 03=operator_turk_telekom, 04=operator_turk_telekom | ITU-T E.212 Operational Bulletin and National Regulator registry for Turkey | 2025-01-15 |
-| 293 | Slovenia | 40=operator_a1, 41=operator_telekom | ITU-T E.212 Operational Bulletin and National Regulator registry for Slovenia | 2025-01-15 |
-| 294 | North Macedonia | 01=operator_telekom, 02=operator_a1 | ITU-T E.212 Operational Bulletin and National Regulator registry for North Macedonia | 2025-01-15 |
-| 297 | Montenegro | 01=operator_telenor, 02=operator_t_mobile | ITU-T E.212 Operational Bulletin and National Regulator registry for Montenegro | 2025-01-15 |
-| 310 | United States | 004=operator_verizon, 010=operator_verizon, 012=operator_verizon, 013=operator_verizon, 030=operator_att, 070=operator_att, 080=operator_att, 090=operator_att, 120=operator_t_mobile, 150=operator_att, 160=operator_t_mobile, 170=operator_att, 200=operator_t_mobile, 210=operator_t_mobile, 220=operator_t_mobile, 230=operator_t_mobile, 240=operator_t_mobile, 250=operator_t_mobile, 260=operator_t_mobile, 270=operator_t_mobile, 280=operator_att, 300=operator_t_mobile, 310=operator_t_mobile, 380=operator_att, 410=operator_att, 490=operator_t_mobile, 530=operator_t_mobile, 560=operator_att, 640=operator_t_mobile, 660=operator_t_mobile, 680=operator_att, 800=operator_t_mobile, 890=operator_verizon, 910=operator_verizon | ITU-T E.212 Operational Bulletin and National Regulator registry for United States | 2025-01-15 |
-| 311 | United States | 110=operator_verizon, 180=operator_att, 270=operator_verizon, 271=operator_verizon, 272=operator_verizon, 273=operator_verizon, 274=operator_verizon, 275=operator_verizon, 276=operator_verizon, 277=operator_verizon, 278=operator_verizon, 279=operator_verizon, 280=operator_verizon, 281=operator_verizon, 282=operator_verizon, 283=operator_verizon, 284=operator_verizon, 285=operator_verizon, 286=operator_verizon, 287=operator_verizon, 288=operator_verizon, 289=operator_verizon, 390=operator_verizon, 480=operator_verizon, 481=operator_verizon, 482=operator_verizon, 483=operator_verizon, 484=operator_verizon, 485=operator_verizon, 486=operator_verizon, 487=operator_verizon, 488=operator_verizon, 489=operator_verizon, 660=operator_t_mobile, 880=operator_t_mobile | ITU-T E.212 Operational Bulletin and National Regulator registry for United States | 2025-01-15 |
-| 312 | United States | 190=operator_t_mobile, 250=operator_t_mobile, 530=operator_t_mobile, 670=operator_att, 770=operator_verizon | ITU-T E.212 Operational Bulletin and National Regulator registry for United States | 2025-01-15 |
-| 330 | Puerto Rico | 110=operator_claro, 120=operator_t_mobile | ITU-T E.212 Operational Bulletin and National Regulator registry for Puerto Rico | 2025-01-15 |
-| 334 | Mexico | 020=operator_telcel, 030=operator_movistar, 050=operator_att, 090=operator_att | ITU-T E.212 Operational Bulletin and National Regulator registry for Mexico | 2025-01-15 |
-| 401 | Kazakhstan | 01=operator_beeline, 77=operator_tele2 | ITU-T E.212 Operational Bulletin and National Regulator registry for Kazakhstan | 2025-01-15 |
-| 404 | India | 01=operator_vi, 02=operator_airtel, 03=operator_airtel, 05=operator_vi, 10=operator_airtel, 11=operator_vi, 13=operator_vi, 20=operator_vi, 24=operator_vi, 27=operator_vi, 30=operator_vi, 31=operator_airtel, 34=operator_bsnl, 38=operator_bsnl, 40=operator_airtel, 43=operator_vi, 45=operator_airtel, 46=operator_vi, 49=operator_airtel, 51=operator_bsnl, 52=operator_bsnl, 53=operator_bsnl, 54=operator_bsnl, 55=operator_bsnl, 56=operator_bsnl, 57=operator_bsnl, 58=operator_bsnl, 59=operator_bsnl, 60=operator_vi, 62=operator_bsnl, 64=operator_bsnl, 66=operator_bsnl, 68=operator_bsnl, 69=operator_bsnl, 70=operator_airtel, 71=operator_bsnl, 72=operator_bsnl, 73=operator_bsnl, 74=operator_bsnl, 75=operator_bsnl, 76=operator_bsnl, 77=operator_bsnl, 80=operator_bsnl, 81=operator_bsnl, 84=operator_vi, 86=operator_vi, 88=operator_bsnl, 90=operator_airtel, 91=operator_airtel, 92=operator_airtel, 93=operator_airtel, 94=operator_airtel, 95=operator_airtel, 96=operator_airtel, 97=operator_airtel, 98=operator_airtel | ITU-T E.212 Operational Bulletin and National Regulator registry for India | 2025-01-15 |
-| 405 | India | 001=operator_vi, 002=operator_vi, 003=operator_vi, 004=operator_vi, 005=operator_vi, 006=operator_vi, 007=operator_vi, 008=operator_vi, 009=operator_vi, 10=operator_vi, 11=operator_vi, 12=operator_vi, 13=operator_vi, 14=operator_vi, 15=operator_vi, 16=operator_vi, 17=operator_vi, 18=operator_vi, 19=operator_vi, 20=operator_vi, 51=operator_airtel, 52=operator_airtel, 53=operator_airtel, 54=operator_airtel, 55=operator_airtel, 56=operator_airtel, 66=operator_vi, 67=operator_vi, 840=operator_jio, 841=operator_jio, 842=operator_jio, 843=operator_jio, 844=operator_jio, 845=operator_jio, 846=operator_jio, 847=operator_jio, 848=operator_jio, 849=operator_jio, 850=operator_jio, 851=operator_jio, 852=operator_jio, 853=operator_jio, 854=operator_jio, 855=operator_jio, 856=operator_jio, 857=operator_jio, 858=operator_jio, 859=operator_jio, 860=operator_jio, 861=operator_jio, 862=operator_jio, 863=operator_jio, 864=operator_jio, 865=operator_jio, 866=operator_jio, 867=operator_jio, 868=operator_jio, 869=operator_jio, 870=operator_jio, 871=operator_jio, 872=operator_jio, 873=operator_jio, 874=operator_jio | ITU-T E.212 Operational Bulletin and National Regulator registry for India | 2025-01-15 |
-| 410 | Pakistan | 06=operator_telenor | ITU-T E.212 Operational Bulletin and National Regulator registry for Pakistan | 2025-01-15 |
-| 412 | Afghanistan | 50=operator_etisalat | ITU-T E.212 Operational Bulletin and National Regulator registry for Afghanistan | 2025-01-15 |
-| 413 | Sri Lanka | 05=operator_airtel | ITU-T E.212 Operational Bulletin and National Regulator registry for Sri Lanka | 2025-01-15 |
-| 414 | Myanmar | 06=operator_telenor | ITU-T E.212 Operational Bulletin and National Regulator registry for Myanmar | 2025-01-15 |
-| 416 | Jordan | 01=operator_zain, 77=operator_orange | ITU-T E.212 Operational Bulletin and National Regulator registry for Jordan | 2025-01-15 |
-| 418 | Iraq | 20=operator_zain, 30=operator_zain | ITU-T E.212 Operational Bulletin and National Regulator registry for Iraq | 2025-01-15 |
-| 419 | Kuwait | 02=operator_zain, 04=operator_stc | ITU-T E.212 Operational Bulletin and National Regulator registry for Kuwait | 2025-01-15 |
-| 420 | Saudi Arabia | 01=operator_stc, 03=operator_mobily, 04=operator_zain, 07=operator_stc | ITU-T E.212 Operational Bulletin and National Regulator registry for Saudi Arabia | 2025-01-15 |
-| 424 | United Arab Emirates | 02=operator_etisalat, 03=operator_du | ITU-T E.212 Operational Bulletin and National Regulator registry for United Arab Emirates | 2025-01-15 |
-| 426 | Bahrain | 02=operator_zain, 04=operator_stc | ITU-T E.212 Operational Bulletin and National Regulator registry for Bahrain | 2025-01-15 |
-| 427 | Qatar | 01=operator_vodafone, 02=operator_vodafone | ITU-T E.212 Operational Bulletin and National Regulator registry for Qatar | 2025-01-15 |
-| 434 | Uzbekistan | 04=operator_beeline | ITU-T E.212 Operational Bulletin and National Regulator registry for Uzbekistan | 2025-01-15 |
-| 440 | Japan | 10=operator_ntt_docomo, 11=operator_rakuten, 20=operator_softbank, 50=operator_kddi, 51=operator_kddi | ITU-T E.212 Operational Bulletin and National Regulator registry for Japan | 2025-01-15 |
-| 452 | Vietnam | 01=operator_mobifone, 02=operator_vinaphone, 04=operator_viettel | ITU-T E.212 Operational Bulletin and National Regulator registry for Vietnam | 2025-01-15 |
-| 454 | Hong Kong | 07=operator_china_unicom, 12=operator_china_mobile | ITU-T E.212 Operational Bulletin and National Regulator registry for Hong Kong | 2025-01-15 |
-| 455 | Macau | 02=operator_china_telecom | ITU-T E.212 Operational Bulletin and National Regulator registry for Macau | 2025-01-15 |
-| 460 | China | 00=operator_china_mobile, 01=operator_china_unicom, 02=operator_china_mobile, 03=operator_china_telecom, 05=operator_china_telecom, 06=operator_china_unicom, 07=operator_china_mobile, 08=operator_china_mobile, 09=operator_china_unicom, 11=operator_china_telecom | ITU-T E.212 Operational Bulletin and National Regulator registry for China | 2025-01-15 |
-| 470 | Bangladesh | 07=operator_airtel | ITU-T E.212 Operational Bulletin and National Regulator registry for Bangladesh | 2025-01-15 |
-| 502 | Malaysia | 10=operator_celcomdigi, 12=operator_maxis, 13=operator_celcom, 16=operator_celcomdigi, 18=operator_u_mobile | ITU-T E.212 Operational Bulletin and National Regulator registry for Malaysia | 2025-01-15 |
-| 505 | Australia | 01=operator_telstra, 02=operator_optus, 03=operator_vodafone, 06=operator_optus, 71=operator_telstra, 72=operator_telstra | ITU-T E.212 Operational Bulletin and National Regulator registry for Australia | 2025-01-15 |
-| 520 | Thailand | 01=operator_ais, 03=operator_ais, 04=operator_truemove, 05=operator_dtac, 18=operator_dtac | ITU-T E.212 Operational Bulletin and National Regulator registry for Thailand | 2025-01-15 |
-| 525 | Singapore | 01=operator_singtel, 02=operator_singtel, 03=operator_m1, 05=operator_starhub | ITU-T E.212 Operational Bulletin and National Regulator registry for Singapore | 2025-01-15 |
-| 530 | New Zealand | 01=operator_onenz, 05=operator_spark, 24=operator_2degrees | ITU-T E.212 Operational Bulletin and National Regulator registry for New Zealand | 2025-01-15 |
-| 602 | Egypt | 01=operator_orange, 02=operator_vodafone, 03=operator_etisalat | ITU-T E.212 Operational Bulletin and National Regulator registry for Egypt | 2025-01-15 |
-| 604 | Morocco | 00=operator_orange | ITU-T E.212 Operational Bulletin and National Regulator registry for Morocco | 2025-01-15 |
-| 605 | Tunisia | 01=operator_orange | ITU-T E.212 Operational Bulletin and National Regulator registry for Tunisia | 2025-01-15 |
-| 621 | Nigeria | 20=operator_airtel | ITU-T E.212 Operational Bulletin and National Regulator registry for Nigeria | 2025-01-15 |
-| 639 | Kenya | 03=operator_airtel | ITU-T E.212 Operational Bulletin and National Regulator registry for Kenya | 2025-01-15 |
-| 704 | Guatemala | 01=operator_claro, 03=operator_movistar | ITU-T E.212 Operational Bulletin and National Regulator registry for Guatemala | 2025-01-15 |
-| 706 | El Salvador | 01=operator_claro, 04=operator_movistar | ITU-T E.212 Operational Bulletin and National Regulator registry for El Salvador | 2025-01-15 |
-| 708 | Honduras | 01=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Honduras | 2025-01-15 |
-| 710 | Nicaragua | 21=operator_claro, 30=operator_movistar, 73=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Nicaragua | 2025-01-15 |
-| 712 | Costa Rica | 03=operator_claro, 04=operator_movistar | ITU-T E.212 Operational Bulletin and National Regulator registry for Costa Rica | 2025-01-15 |
-| 714 | Panama | 02=operator_movistar, 03=operator_claro, 20=operator_movistar | ITU-T E.212 Operational Bulletin and National Regulator registry for Panama | 2025-01-15 |
-| 716 | Peru | 06=operator_movistar, 10=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Peru | 2025-01-15 |
-| 722 | Argentina | 07=operator_movistar, 31=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Argentina | 2025-01-15 |
-| 724 | Brazil | 02=operator_tim, 03=operator_tim, 04=operator_tim, 05=operator_claro, 06=operator_vivo, 10=operator_vivo, 11=operator_vivo, 23=operator_vivo, 32=operator_algar, 33=operator_algar, 34=operator_algar, 38=operator_claro, 39=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Brazil | 2025-01-15 |
-| 730 | Chile | 02=operator_movistar, 03=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Chile | 2025-01-15 |
-| 732 | Colombia | 101=operator_claro, 103=operator_movistar, 123=operator_movistar | ITU-T E.212 Operational Bulletin and National Regulator registry for Colombia | 2025-01-15 |
-| 734 | Venezuela | 04=operator_movistar | ITU-T E.212 Operational Bulletin and National Regulator registry for Venezuela | 2025-01-15 |
-| 740 | Ecuador | 00=operator_movistar, 01=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Ecuador | 2025-01-15 |
-| 744 | Paraguay | 02=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Paraguay | 2025-01-15 |
-| 748 | Uruguay | 07=operator_movistar, 10=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Uruguay | 2025-01-15 |
-| 429 | Region 429 | 01=operator_ntc, 02=operator_ncell | ITU-T E.212 Operational Bulletin | 2025-01-15 |
-| 450 | Region 450 | 02=operator_kt, 04=operator_kt, 05=operator_sk_telecom, 06=operator_lg_uplus, 08=operator_kt | ITU-T E.212 Operational Bulletin | 2025-01-15 |
-| 456 | Region 456 | 01=operator_cellcard, 06=operator_smart_kh, 18=operator_metfone | ITU-T E.212 Operational Bulletin | 2025-01-15 |
-| 457 | Region 457 | 01=operator_lao_telecom, 03=operator_unitel | ITU-T E.212 Operational Bulletin | 2025-01-15 |
-| 466 | Region 466 | 01=operator_fareastone, 92=operator_cht, 97=operator_taiwan_mobile | ITU-T E.212 Operational Bulletin | 2025-01-15 |
-| 510 | Region 510 | 01=operator_indosat, 09=operator_smartfren, 10=operator_telkomsel, 11=operator_xl_axiata, 20=operator_telkomsel, 21=operator_indosat, 28=operator_smartfren, 89=operator_tri_id | ITU-T E.212 Operational Bulletin | 2025-01-15 |
-| 515 | Region 515 | 02=operator_globe, 03=operator_smart, 66=operator_dito | ITU-T E.212 Operational Bulletin | 2025-01-15 |
-| 528 | Region 528 | 02=operator_bmobile, 11=operator_dst | ITU-T E.212 Operational Bulletin | 2025-01-15 |
+| 202 | Greece | 20201=operator_cosmote, 20202=operator_cosmote, 20205=operator_vodafone, 20209=operator_windtre, 20210=operator_windtre | ITU-T E.212 / EETT Greece | 2025-01-15 |
+| 204 | Netherlands | 20402=operator_odido, 20404=operator_vodafone, 20408=operator_kpn, 20409=operator_kpn, 20410=operator_kpn, 20412=operator_t_mobile, 20416=operator_odido, 20420=operator_odido | ITU-T E.212 / RDI Netherlands | 2025-01-15 |
+| 206 | Belgium | 20601=operator_proximus, 20602=operator_proximus, 20605=operator_proximus, 20610=operator_orange, 20620=operator_base, 20630=operator_base | ITU-T E.212 / BIPT Belgium | 2025-01-15 |
+| 208 | France | 20801=operator_orange, 20802=operator_orange, 20809=operator_sfr, 20810=operator_sfr, 20811=operator_sfr, 20813=operator_sfr, 20815=operator_free, 20816=operator_free, 20820=operator_bouygues, 20821=operator_bouygues, 20888=operator_bouygues, 20889=operator_orange, 20891=operator_orange | ITU-T E.212 / ARCEP France | 2025-01-15 |
+| 214 | Spain | 21401=operator_vodafone, 21403=operator_orange, 21404=operator_yoigo, 21405=operator_movistar, 21406=operator_vodafone, 21407=operator_movistar, 21408=operator_euskaltel, 21409=operator_orange, 21416=operator_telecable, 21417=operator_r, 21419=operator_simyo, 21421=operator_jazztel, 21422=operator_digi, 21425=operator_lycamobile, 21438=operator_movistar | ITU-T E.212 / CNMC Spain | 2025-01-15 |
+| 216 | Hungary | 21601=operator_yettel, 21630=operator_telekom, 21670=operator_vodafone | ITU-T E.212 / NMHH Hungary | 2025-01-15 |
+| 222 | Italy | 22201=operator_tim, 22207=operator_tim, 22210=operator_vodafone, 22235=operator_lycamobile, 22250=operator_iliad, 22288=operator_windtre, 22299=operator_windtre | ITU-T E.212 / AGCOM Italy | 2025-01-15 |
+| 226 | Romania | 22601=operator_vodafone, 22603=operator_telekom, 22605=operator_digi, 22606=operator_telekom, 22610=operator_orange | ITU-T E.212 / ANCOM Romania | 2025-01-15 |
+| 228 | Switzerland | 22801=operator_swisscom, 22802=operator_sunrise, 22803=operator_salt | ITU-T E.212 / BAKOM Switzerland | 2025-01-15 |
+| 230 | Czech Republic | 23001=operator_t_mobile, 23002=operator_o2, 23003=operator_vodafone | ITU-T E.212 / CTU Czech Republic | 2025-01-15 |
+| 231 | Slovakia | 23101=operator_orange, 23102=operator_t_mobile, 23103=operator_telekom, 23106=operator_o2 | ITU-T E.212 / RU Slovakia | 2025-01-15 |
+| 232 | Austria | 23201=operator_a1, 23202=operator_a1, 23203=operator_magenta, 23205=operator_three, 23207=operator_magenta, 23209=operator_a1, 23210=operator_three | ITU-T E.212 / RTR Austria | 2025-01-15 |
+| 234 | United Kingdom | 23402=operator_o2, 23410=operator_o2, 23411=operator_o2, 23415=operator_vodafone, 23420=operator_three, 23426=operator_lycamobile, 23430=operator_ee, 23431=operator_ee, 23432=operator_ee, 23433=operator_ee, 23434=operator_ee, 23491=operator_vodafone | ITU-T E.212 / Ofcom UK | 2025-01-15 |
+| 238 | Denmark | 23801=operator_tdc, 23802=operator_telenor, 23806=operator_three, 23820=operator_telia | ITU-T E.212 / DEA Denmark | 2025-01-15 |
+| 240 | Sweden | 24001=operator_telia, 24002=operator_three, 24004=operator_three, 24005=operator_telia, 24007=operator_tele2, 24008=operator_telenor | ITU-T E.212 / PTS Sweden | 2025-01-15 |
+| 242 | Norway | 24201=operator_telenor, 24202=operator_telia, 24205=operator_telia, 24206=operator_ice, 24207=operator_phonero, 24208=operator_telia, 24212=operator_telenor, 24214=operator_ice | ITU-T E.212 / Nkom Norway | 2025-01-15 |
+| 244 | Finland | 24403=operator_dna, 24405=operator_elisa, 24412=operator_dna, 24413=operator_dna, 24436=operator_telia, 24491=operator_telia | ITU-T E.212 / Traficom Finland | 2025-01-15 |
+| 246 | Lithuania | 24601=operator_telia, 24603=operator_tele2 | ITU-T E.212 / RRT Lithuania | 2025-01-15 |
+| 247 | Latvia | 24702=operator_tele2 | ITU-T E.212 / SPRK Latvia | 2025-01-15 |
+| 248 | Estonia | 24801=operator_telia, 24802=operator_elisa, 24803=operator_tele2 | ITU-T E.212 / TTJA Estonia | 2025-01-15 |
+| 250 | Russia | 25001=operator_mts, 25002=operator_megafon, 25004=operator_tele2, 25011=operator_yota, 25020=operator_tele2, 25027=operator_tattelecom, 25028=operator_beeline, 25039=operator_rostelecom, 25099=operator_beeline | ITU-T E.212 / Roskomnadzor Russia | 2025-01-15 |
+| 255 | Ukraine | 25501=operator_vodafone, 25502=operator_kyivstar, 25503=operator_kyivstar, 25506=operator_lifecell | ITU-T E.212 / NCCIR Ukraine | 2025-01-15 |
+| 257 | Belarus | 25701=operator_a1, 25702=operator_mts, 25704=operator_life_by | ITU-T E.212 / Ministry of Communications Belarus | 2025-01-15 |
+| 259 | Moldova | 25901=operator_orange, 25902=operator_moldcell, 25903=operator_orange | ITU-T E.212 / ANRCETI Moldova | 2025-01-15 |
+| 260 | Poland | 26001=operator_plus, 26002=operator_t_mobile, 26003=operator_orange, 26006=operator_play | ITU-T E.212 / UKE Poland | 2025-01-15 |
+| 262 | Germany | 26201=operator_telekom, 26202=operator_vodafone, 26203=operator_o2, 26204=operator_vodafone, 26205=operator_o2, 26206=operator_telekom, 26207=operator_o2, 26208=operator_o2, 26209=operator_vodafone, 26211=operator_o2, 26223=operator_oneandone | ITU-T E.212 / BNetzA Germany | 2025-01-15 |
+| 268 | Portugal | 26801=operator_vodafone, 26803=operator_orange, 26806=operator_orange | ITU-T E.212 / ANACOM Portugal | 2025-01-15 |
+| 270 | Malta | 27001=operator_orange, 27077=operator_orange | ITU-T E.212 / MCA Malta | 2025-01-15 |
+| 272 | Ireland | 27201=operator_vodafone, 27205=operator_three | ITU-T E.212 / ComReg Ireland | 2025-01-15 |
+| 276 | Albania | 27602=operator_vodafone | ITU-T E.212 / AKEP Albania | 2025-01-15 |
+| 280 | Cyprus | 28001=operator_vodafone | ITU-T E.212 / DEC Cyprus | 2025-01-15 |
+| 284 | Bulgaria | 28401=operator_a1, 28405=operator_yettel | ITU-T E.212 / CRC Bulgaria | 2025-01-15 |
+| 286 | Turkey | 28601=operator_turkcell, 28602=operator_vodafone, 28603=operator_turk_telekom, 28604=operator_turk_telekom | ITU-T E.212 / BTK Turkey | 2025-01-15 |
+| 293 | Slovenia | 29340=operator_a1, 29341=operator_telekom | ITU-T E.212 / AKOS Slovenia | 2025-01-15 |
+| 294 | Croatia | 29401=operator_telekom, 29402=operator_a1 | ITU-T E.212 / HAKOM Croatia | 2025-01-15 |
+| 297 | Montenegro | 29701=operator_telenor, 29702=operator_t_mobile | ITU-T E.212 / EKIP Montenegro | 2025-01-15 |
+| 310 | United States | 310004=operator_verizon, 310010=operator_verizon, 310012=operator_verizon, 310013=operator_verizon, 310030=operator_att, 310070=operator_att, 310080=operator_att, 310090=operator_att, 310120=operator_t_mobile, 310150=operator_att, 310160=operator_t_mobile, 310170=operator_att, 310200=operator_t_mobile, 310210=operator_t_mobile, 310220=operator_t_mobile, 310230=operator_t_mobile, 310240=operator_t_mobile, 310250=operator_t_mobile, 310260=operator_t_mobile, 310270=operator_t_mobile, 310280=operator_att, 310300=operator_t_mobile, 310310=operator_t_mobile, 310380=operator_att, 310410=operator_att, 310490=operator_t_mobile, 310530=operator_t_mobile, 310560=operator_att, 310640=operator_t_mobile, 310660=operator_t_mobile, 310680=operator_att, 310800=operator_t_mobile, 310890=operator_verizon, 310910=operator_verizon | ITU-T E.212 / FCC USA | 2025-01-15 |
+| 311 | United States | 311110=operator_verizon, 311180=operator_att, 311270=operator_verizon, 311271=operator_verizon, 311272=operator_verizon, 311273=operator_verizon, 311274=operator_verizon, 311275=operator_verizon, 311276=operator_verizon, 311277=operator_verizon, 311278=operator_verizon, 311279=operator_verizon, 311280=operator_verizon, 311281=operator_verizon, 311282=operator_verizon, 311283=operator_verizon, 311284=operator_verizon, 311285=operator_verizon, 311286=operator_verizon, 311287=operator_verizon, 311288=operator_verizon, 311289=operator_verizon, 311390=operator_verizon, 311480=operator_verizon, 311481=operator_verizon, 311482=operator_verizon, 311483=operator_verizon, 311484=operator_verizon, 311485=operator_verizon, 311486=operator_verizon, 311487=operator_verizon, 311488=operator_verizon, 311489=operator_verizon, 311660=operator_t_mobile, 311880=operator_t_mobile | ITU-T E.212 / FCC USA | 2025-01-15 |
+| 312 | United States | 312190=operator_t_mobile, 312250=operator_t_mobile, 312530=operator_t_mobile, 312670=operator_att, 312770=operator_verizon | ITU-T E.212 / FCC USA | 2025-01-15 |
+| 330 | Puerto Rico | 330110=operator_claro, 330120=operator_t_mobile | ITU-T E.212 / FCC Puerto Rico | 2025-01-15 |
+| 334 | Mexico | 334020=operator_telcel, 334030=operator_movistar, 334050=operator_att, 334090=operator_att | ITU-T E.212 / IFT Mexico | 2025-01-15 |
+| 401 | Kazakhstan | 40101=operator_beeline, 40177=operator_tele2 | ITU-T E.212 / MDTI Kazakhstan | 2025-01-15 |
+| 404 | India | 40401=operator_vi, 40402=operator_airtel, 40403=operator_airtel, 40405=operator_vi, 40410=operator_airtel, 40411=operator_vi, 40413=operator_vi, 40420=operator_vi, 40424=operator_vi, 40427=operator_vi, 40430=operator_vi, 40431=operator_airtel, 40434=operator_bsnl, 40438=operator_bsnl, 40440=operator_airtel, 40443=operator_vi, 40445=operator_airtel, 40446=operator_vi, 40449=operator_airtel, 40451=operator_bsnl, 40452=operator_bsnl, 40453=operator_bsnl, 40454=operator_bsnl, 40455=operator_bsnl, 40456=operator_bsnl, 40457=operator_bsnl, 40458=operator_bsnl, 40459=operator_bsnl, 40460=operator_vi, 40462=operator_bsnl, 40464=operator_bsnl, 40466=operator_bsnl, 40468=operator_bsnl, 40469=operator_bsnl, 40470=operator_airtel, 40471=operator_bsnl, 40472=operator_bsnl, 40473=operator_bsnl, 40474=operator_bsnl, 40475=operator_bsnl, 40476=operator_bsnl, 40477=operator_bsnl, 40480=operator_bsnl, 40481=operator_bsnl, 40484=operator_vi, 40486=operator_vi, 40488=operator_bsnl, 40490=operator_airtel, 40491=operator_airtel, 40492=operator_airtel, 40493=operator_airtel, 40494=operator_airtel, 40495=operator_airtel, 40496=operator_airtel, 40497=operator_airtel, 40498=operator_airtel | ITU-T E.212 / DoT India | 2025-01-15 |
+| 405 | India | 405001=operator_vi, 405002=operator_vi, 405003=operator_vi, 405004=operator_vi, 405005=operator_vi, 405006=operator_vi, 405007=operator_vi, 405008=operator_vi, 405009=operator_vi, 40510=operator_vi, 40511=operator_vi, 40512=operator_vi, 40513=operator_vi, 40514=operator_vi, 40515=operator_vi, 40516=operator_vi, 40517=operator_vi, 40518=operator_vi, 40519=operator_vi, 40520=operator_vi, 40551=operator_airtel, 40552=operator_airtel, 40553=operator_airtel, 40554=operator_airtel, 40555=operator_airtel, 40556=operator_airtel, 40566=operator_vi, 40567=operator_vi, 405840=operator_jio, 405841=operator_jio, 405842=operator_jio, 405843=operator_jio, 405844=operator_jio, 405845=operator_jio, 405846=operator_jio, 405847=operator_jio, 405848=operator_jio, 405849=operator_jio, 405850=operator_jio, 405851=operator_jio, 405852=operator_jio, 405853=operator_jio, 405854=operator_jio, 405855=operator_jio, 405856=operator_jio, 405857=operator_jio, 405858=operator_jio, 405859=operator_jio, 405860=operator_jio, 405861=operator_jio, 405862=operator_jio, 405863=operator_jio, 405864=operator_jio, 405865=operator_jio, 405866=operator_jio, 405867=operator_jio, 405868=operator_jio, 405869=operator_jio, 405870=operator_jio, 405871=operator_jio, 405872=operator_jio, 405873=operator_jio, 405874=operator_jio | ITU-T E.212 / DoT India | 2025-01-15 |
+| 410 | Pakistan | 41006=operator_telenor, 41007=operator_jazz | ITU-T E.212 / PTA Pakistan | 2025-01-15 |
+| 412 | Afghanistan | 41250=operator_etisalat | ITU-T E.212 / ATRA Afghanistan | 2025-01-15 |
+| 413 | Sri Lanka | 41305=operator_airtel | ITU-T E.212 / TRCSL Sri Lanka | 2025-01-15 |
+| 414 | Myanmar | 41405=operator_o2, 41406=operator_telenor, 41409=operator_mytel | ITU-T E.212 / MPT Myanmar | 2025-01-15 |
+| 416 | Jordan | 41601=operator_zain, 41677=operator_orange | ITU-T E.212 / TRC Jordan | 2025-01-15 |
+| 418 | Iraq | 41820=operator_zain, 41830=operator_zain | ITU-T E.212 / CMC Iraq | 2025-01-15 |
+| 419 | Kuwait | 41902=operator_zain, 41904=operator_stc | ITU-T E.212 / CITRA Kuwait | 2025-01-15 |
+| 420 | Saudi Arabia | 42001=operator_stc, 42003=operator_mobily, 42004=operator_zain, 42007=operator_stc | ITU-T E.212 / CITC Saudi Arabia | 2025-01-15 |
+| 424 | United Arab Emirates | 42402=operator_etisalat, 42403=operator_du | ITU-T E.212 / TDRA UAE | 2025-01-15 |
+| 426 | Bahrain | 42602=operator_zain, 42604=operator_stc | ITU-T E.212 / TRA Bahrain | 2025-01-15 |
+| 427 | Qatar | 42701=operator_vodafone, 42702=operator_vodafone | ITU-T E.212 / CRA Qatar | 2025-01-15 |
+| 429 | Nepal | 42901=operator_ntc, 42902=operator_ncell | ITU-T E.212 / NTA Nepal | 2025-01-15 |
+| 434 | Uzbekistan | 43404=operator_beeline | ITU-T E.212 / UZINFOCOM Uzbekistan | 2025-01-15 |
+| 440 | Japan | 44010=operator_ntt_docomo, 44011=operator_rakuten, 44020=operator_softbank, 44021=operator_ymobile, 44050=operator_kddi, 44051=operator_kddi, 44052=operator_au_kddi, 44053=operator_au_kddi, 44054=operator_au_kddi, 44055=operator_uq_mobile | ITU-T E.212 / MIC Japan | 2025-01-15 |
+| 450 | South Korea | 45002=operator_kt, 45004=operator_kt, 45006=operator_lg_uplus, 45008=operator_kt | ITU-T E.212 / MSIT South Korea | 2025-01-15 |
+| 452 | Vietnam | 45201=operator_mobifone, 45202=operator_vinaphone, 45204=operator_viettel | ITU-T E.212 / MIC Vietnam | 2025-01-15 |
+| 454 | Hong Kong | 45403=operator_three_hk, 45406=operator_smartone, 45407=operator_china_unicom, 45412=operator_china_mobile, 45419=operator_csl | ITU-T E.212 / OFCA Hong Kong | 2025-01-15 |
+| 455 | Macau | 45502=operator_china_telecom | ITU-T E.212 / CTT Macau | 2025-01-15 |
+| 456 | Cambodia | 45601=operator_cellcard, 45606=operator_smart_kh, 45618=operator_metfone | ITU-T E.212 / TRC Cambodia | 2025-01-15 |
+| 457 | Laos | 45701=operator_lao_telecom, 45703=operator_unitel | ITU-T E.212 / MPPT Laos | 2025-01-15 |
+| 460 | China | 46000=operator_china_mobile, 46001=operator_china_unicom, 46002=operator_china_mobile, 46003=operator_china_telecom, 46005=operator_china_telecom, 46006=operator_china_unicom, 46007=operator_china_mobile, 46008=operator_china_mobile, 46009=operator_china_unicom, 46011=operator_china_telecom | ITU-T E.212 / MIIT China | 2025-01-15 |
+| 466 | Taiwan | 46601=operator_fareastone, 46692=operator_cht, 46697=operator_taiwan_mobile | ITU-T E.212 / NCC Taiwan | 2025-01-15 |
+| 470 | Bangladesh | 47003=operator_banglalink, 47004=operator_teletalk, 47007=operator_airtel | ITU-T E.212 / BTRC Bangladesh | 2025-01-15 |
+| 502 | Malaysia | 50210=operator_celcomdigi, 50212=operator_maxis, 50213=operator_celcom, 50216=operator_celcomdigi, 50218=operator_u_mobile | ITU-T E.212 / MCMC Malaysia | 2025-01-15 |
+| 505 | Australia | 50501=operator_telstra, 50502=operator_optus, 50503=operator_vodafone, 50506=operator_vodafone_au, 50571=operator_telstra, 50572=operator_telstra | ITU-T E.212 / ACMA Australia | 2025-01-15 |
+| 510 | Indonesia | 51009=operator_smartfren, 51011=operator_xl_axiata, 51020=operator_telkomsel, 51021=operator_indosat, 51028=operator_smartfren, 51089=operator_tri_id | ITU-T E.212 / SDPPI Indonesia | 2025-01-15 |
+| 515 | Philippines | 51503=operator_smart, 51566=operator_dito | ITU-T E.212 / NTC Philippines | 2025-01-15 |
+| 520 | Thailand | 52001=operator_ais, 52003=operator_ais, 52004=operator_truemove, 52005=operator_dtac, 52018=operator_dtac | ITU-T E.212 / NBTC Thailand | 2025-01-15 |
+| 525 | Singapore | 52501=operator_singtel, 52502=operator_singtel, 52503=operator_m1, 52505=operator_starhub | ITU-T E.212 / IMDA Singapore | 2025-01-15 |
+| 528 | Brunei | 52802=operator_bmobile, 52811=operator_dst | ITU-T E.212 / AITI Brunei | 2025-01-15 |
+| 530 | New Zealand | 53001=operator_onenz, 53005=operator_spark, 53024=operator_2degrees | ITU-T E.212 / RSM New Zealand | 2025-01-15 |
+| 602 | Egypt | 60201=operator_orange, 60202=operator_vodafone, 60203=operator_etisalat | ITU-T E.212 / NTRA Egypt | 2025-01-15 |
+| 604 | Morocco | 60400=operator_orange | ITU-T E.212 / ANRT Morocco | 2025-01-15 |
+| 605 | Tunisia | 60501=operator_orange | ITU-T E.212 / INT Tunisia | 2025-01-15 |
+| 621 | Nigeria | 62120=operator_airtel | ITU-T E.212 / NCC Nigeria | 2025-01-15 |
+| 639 | Kenya | 63903=operator_airtel | ITU-T E.212 / CAK Kenya | 2025-01-15 |
+| 704 | Guatemala | 70401=operator_claro, 70403=operator_movistar | ITU-T E.212 / SIT Guatemala | 2025-01-15 |
+| 706 | El Salvador | 70601=operator_claro, 70604=operator_movistar | ITU-T E.212 / SIGET El Salvador | 2025-01-15 |
+| 708 | Honduras | 70801=operator_claro | ITU-T E.212 / CONATEL Honduras | 2025-01-15 |
+| 710 | Nicaragua | 71021=operator_claro, 71030=operator_movistar, 71073=operator_claro | ITU-T E.212 / TELCOR Nicaragua | 2025-01-15 |
+| 712 | Costa Rica | 71203=operator_claro, 71204=operator_movistar | ITU-T E.212 / SUTEL Costa Rica | 2025-01-15 |
+| 714 | Panama | 71402=operator_movistar, 71403=operator_claro, 71420=operator_movistar | ITU-T E.212 / ASEP Panama | 2025-01-15 |
+| 716 | Peru | 71606=operator_movistar, 71610=operator_claro | ITU-T E.212 / OSIPTEL Peru | 2025-01-15 |
+| 722 | Argentina | 72207=operator_movistar, 72231=operator_claro | ITU-T E.212 / ENACOM Argentina | 2025-01-15 |
+| 730 | Chile | 73002=operator_movistar, 73003=operator_claro | ITU-T E.212 / SUBTEL Chile | 2025-01-15 |
+| 732 | Colombia | 732101=operator_claro, 732103=operator_movistar, 732123=operator_movistar | ITU-T E.212 / CRC Colombia | 2025-01-15 |
+| 734 | Venezuela | 73404=operator_movistar | ITU-T E.212 / CONATEL Venezuela | 2025-01-15 |
+| 740 | Ecuador | 74000=operator_movistar, 74001=operator_claro | ITU-T E.212 / ARCOTEL Ecuador | 2025-01-15 |
+| 744 | Paraguay | 74402=operator_claro | ITU-T E.212 / CONATEL Paraguay | 2025-01-15 |
+| 748 | Uruguay | 74807=operator_movistar, 74810=operator_claro | ITU-T E.212 / URSEVI Uruguay | 2025-01-15 |
