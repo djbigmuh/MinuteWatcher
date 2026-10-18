@@ -187,3 +187,17 @@ To prevent deadlocks and ensure system liveness:
 
 External task files, instruction documents, and audit requirements must never be committed to the repository.
 
+## Release Signing
+
+- **Generating Key:** To generate a release key, run:
+  `keytool -genkeypair -v -keystore release.keystore -alias <alias> -keyalg RSA -keysize 4096 -validity 10000`
+- **Environment Variables:** Release signing requires three environment variables:
+    - `MINUTEWATCHER_STORE_PASSWORD`
+    - `MINUTEWATCHER_KEY_ALIAS`
+    - `MINUTEWATCHER_KEY_PASSWORD`
+- **Security Rule:** `release.keystore` and passwords must never be committed to version control. The key backup must be
+  safely stored by the project owner.
+- **Unsigned Build Fallback:** If `release.keystore` or any of the required environment variables are absent, the
+  release build produces an unsigned APK (`app-release-unsigned.apk`). No debug key fallback is used for release builds.
+
+

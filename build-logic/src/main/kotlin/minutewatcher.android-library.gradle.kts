@@ -1,5 +1,5 @@
 import com.android.build.api.dsl.LibraryExtension
-import com.example.minutewatcher.buildlogic.SdkVersions
+import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("com.android.library")

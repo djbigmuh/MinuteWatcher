@@ -1,4 +1,4 @@
-import com.example.minutewatcher.buildlogic.SdkVersions
+import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("minutewatcher.android-library")
@@ -9,7 +9,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.minutewatcher.core.domain"
+    namespace = "host.serv.djbigmuh.minutewatcher.core.domain"
 }
 
 dependencies {

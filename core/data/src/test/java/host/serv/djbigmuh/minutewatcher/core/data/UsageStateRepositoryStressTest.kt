@@ -1,0 +1,205 @@
+package host.serv.djbigmuh.minutewatcher.core.data
+
+import android.content.Context
+import host.serv.djbigmuh.minutewatcher.core.common.util.TimeProvider
+import host.serv.djbigmuh.minutewatcher.core.data.semantic.SemanticCapabilities
+import host.serv.djbigmuh.minutewatcher.core.data.semantic.SemanticVersion
+import host.serv.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier
+import host.serv.djbigmuh.minutewatcher.core.domain.RefreshResult
+import host.serv.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
+import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageRepository
+import host.serv.djbigmuh.minutewatcher.core.model.SchemaVersion
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.stub
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.seconds
+
+@RunWith(RobolectricTestRunner::class)
+@OptIn(ExperimentalCoroutinesApi::class)
+class UsageStateRepositoryStressTest {
+    private val context: Context = mock()
+    private val simIdentityRepository: SimIdentityRepository = mock()
+    private val simUsageRepository: SimUsageRepository = mock()
+    private val semanticCapabilities: SemanticCapabilities = mock()
+    private val semanticVersion: SemanticVersion = mock()
+    private val dataRefreshNotifier: DataRefreshNotifier = mock()
+    private val timeProvider: TimeProvider = mock()
+
+    private val refreshFlow =
+        MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(
+            replay = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    private val currentTime = AtomicInteger(1000)
+
+    @Before
+    fun setup() {
+        whenever(simIdentityRepository.observeResolvedActiveSims()).thenReturn(MutableStateFlow(emptyList()))
+        whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
+        whenever(semanticVersion.getVersion()).thenReturn(SchemaVersion(1, 0, 0))
+        whenever(semanticCapabilities.getCapabilities()).thenReturn(emptyList())
+        whenever(dataRefreshNotifier.refreshFlow).thenReturn(refreshFlow)
+
+        // Simulate time advancing on each call to ensure unique snapshots
+        whenever(timeProvider.now()).thenAnswer { currentTime.incrementAndGet().toLong() }
+
+        // Mock notifyRefresh to emit to the flow. Use tryEmit to avoid suspension in mock.
+        dataRefreshNotifier.stub {
+            on { notifyRefresh(any(), any()) } doAnswer {
+                val isManual = it.arguments[0] as Boolean
+                refreshFlow.tryEmit(DataRefreshNotifier.RefreshEvent(isManual = isManual))
+                Unit
+            }
+        }
+    }
+
+    @Test
+    fun `refresh stress test with 100 parallel calls`() =
+        runTest {
+            val deps =
+                UsageRepositoryDependencies(
+                    simIdentityRepository = simIdentityRepository,
+                    simUsageRepository = simUsageRepository,
+                    semanticCapabilities = semanticCapabilities,
+                    semanticVersion = semanticVersion,
+                    dataRefreshNotifier = dataRefreshNotifier,
+                    timeProvider = timeProvider,
+                )
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps = deps,
+                    scope = backgroundScope,
+                )
+
+            // Warm up: initial state
+            assertTrue(repository.observeSnapshot().value.timestamp == 0L)
+
+            // Act: 100 parallel calls
+            val results = mutableListOf<Deferred<RefreshResult>>()
+            repeat(100) {
+                results.add(
+                    async {
+                        repository.refresh()
+                    },
+                )
+            }
+
+            val completedResults = results.awaitAll()
+
+            // Assert: No deadlocks and all calls returned a result
+            assertTrue("Expected 100 results", completedResults.size == 100)
+
+            // Verify success or timeout (mostly success if logic is correct)
+            val successCount = completedResults.count { it is RefreshResult.Success }
+            val timeoutCount = completedResults.count { it is RefreshResult.Timeout }
+
+            assertTrue("Expected at least one success, but got $successCount", successCount > 0)
+            assertTrue("All calls should complete without deadlock", (successCount + timeoutCount) == 100)
+
+            // Verify notifyRefresh was called exactly 100 times
+            verify(dataRefreshNotifier, org.mockito.kotlin.times(100)).notifyRefresh(
+                isManual = eq(value = true),
+                suppressWidgetUpdate = any(),
+            )
+        }
+
+    @Test
+    fun `concurrent refresh calls all trigger notify`() =
+        runTest {
+            val deps =
+                UsageRepositoryDependencies(
+                    simIdentityRepository = simIdentityRepository,
+                    simUsageRepository = simUsageRepository,
+                    semanticCapabilities = semanticCapabilities,
+                    semanticVersion = semanticVersion,
+                    dataRefreshNotifier = dataRefreshNotifier,
+                    timeProvider = timeProvider,
+                )
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps = deps,
+                    scope = backgroundScope,
+                )
+
+            val results = mutableListOf<Deferred<RefreshResult>>()
+            repeat(10) {
+                results.add(async { repository.refresh() })
+            }
+
+            val completedResults = results.awaitAll()
+
+            // All should be successful
+            assertTrue(completedResults.all { it is RefreshResult.Success })
+
+            // notifyRefresh should be called for EACH call
+            verify(
+                dataRefreshNotifier,
+                org.mockito.kotlin.times(10),
+            ).notifyRefresh(isManual = eq(value = true), suppressWidgetUpdate = any())
+        }
+
+    @Test
+    fun `refresh does not share updates and triggers notify for each call`() =
+        runTest {
+            val deps =
+                UsageRepositoryDependencies(
+                    simIdentityRepository = simIdentityRepository,
+                    simUsageRepository = simUsageRepository,
+                    semanticCapabilities = semanticCapabilities,
+                    semanticVersion = semanticVersion,
+                    dataRefreshNotifier = dataRefreshNotifier,
+                    timeProvider = timeProvider,
+                )
+
+            val repository =
+                UsageStateRepositoryImpl(
+                    context = context,
+                    deps = deps,
+                    scope = backgroundScope,
+                )
+
+            val job1 = async { repository.refresh() }
+
+            // 2. Trigger another refresh
+            val job2 = async { repository.refresh() }
+
+            val result1 =
+                withTimeoutOrNull(30.seconds) { job1.await() }
+                    ?: throw AssertionError("Timed out waiting for job1")
+            val result2 =
+                withTimeoutOrNull(30.seconds) { job2.await() }
+                    ?: throw AssertionError("Timed out waiting for job2")
+
+            assertTrue(result1 is RefreshResult.Success)
+            assertTrue(result2 is RefreshResult.Success)
+
+            // notifyRefresh called for each job
+            verify(
+                dataRefreshNotifier,
+                org.mockito.kotlin.times(2),
+            ).notifyRefresh(isManual = eq(value = true), suppressWidgetUpdate = any())
+        }
+}

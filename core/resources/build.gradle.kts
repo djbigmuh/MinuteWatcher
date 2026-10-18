@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.minutewatcher.core.resources"
+    namespace = "host.serv.djbigmuh.minutewatcher.core.resources"
 
     testFixtures {
         enable = true

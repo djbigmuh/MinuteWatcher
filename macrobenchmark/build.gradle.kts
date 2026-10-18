@@ -1,4 +1,4 @@
-import com.example.minutewatcher.buildlogic.SdkVersions
+import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("minutewatcher.android-test")
@@ -9,7 +9,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.minutewatcher.macrobenchmark"
+    namespace = "host.serv.djbigmuh.minutewatcher.macrobenchmark"
 
     targetProjectPath = ":app"
 }

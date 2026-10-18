@@ -1,4 +1,4 @@
-import com.example.minutewatcher.buildlogic.SdkVersions
+import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("minutewatcher.android-library")
@@ -11,7 +11,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.minutewatcher.feature.semantic"
+    namespace = "host.serv.djbigmuh.minutewatcher.feature.semantic"
 
     defaultConfig {
         consumerProguardFiles("consumer-rules.pro")

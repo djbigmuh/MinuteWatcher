@@ -2,7 +2,7 @@ plugins {
     `kotlin-dsl`
 }
 
-group = "com.example.minutewatcher.buildlogic"
+group = "host.serv.djbigmuh.minutewatcher.buildlogic"
 
 // versionCatalogs is the modern accessor (Gradle 7.4+).
 // VersionCatalogsExtension is deprecated and will be removed in Gradle 10.

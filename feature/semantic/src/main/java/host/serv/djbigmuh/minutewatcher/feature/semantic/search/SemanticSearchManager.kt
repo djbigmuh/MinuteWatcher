@@ -1,0 +1,429 @@
+package host.serv.djbigmuh.minutewatcher.feature.semantic.search
+
+import androidx.annotation.VisibleForTesting
+import androidx.appsearch.app.AppSearchResult
+import androidx.appsearch.exceptions.AppSearchException
+import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
+import host.serv.djbigmuh.minutewatcher.core.common.di.IoDispatcher
+import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
+import host.serv.djbigmuh.minutewatcher.core.common.util.FlowObservationScope
+import host.serv.djbigmuh.minutewatcher.core.common.util.ObservationMode
+import host.serv.djbigmuh.minutewatcher.core.common.util.TimeProvider
+import host.serv.djbigmuh.minutewatcher.core.domain.TrackingStatusProvider
+import host.serv.djbigmuh.minutewatcher.core.model.Constants
+import host.serv.djbigmuh.minutewatcher.core.model.GlobalSnapshot
+import host.serv.djbigmuh.minutewatcher.core.model.SchemaVersion
+import host.serv.djbigmuh.minutewatcher.core.model.TrackingKey
+import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
+import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatusMachine
+import host.serv.djbigmuh.minutewatcher.core.model.util.SnapshotUtils
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
+
+/**
+ * SemanticSearchManager manages AppSearch indexing for usage data.
+ *
+ * This class acts as an orchestrator, delegating specific responsibilities to:
+ * - [AppSearchSessionManager] for session lifecycle management.
+ * - [SnapshotIndexer] for document indexing and stale data cleanup.
+ * - [AppSearchErrorHandler] for error classification and status management.
+ *
+ * Safe to call from any coroutine context.
+ */
+@Singleton
+class SemanticSearchManager
+@Inject
+constructor(
+    private val sessionManager: AppSearchSessionManager,
+    private val indexer: SnapshotIndexer,
+    @get:VisibleForTesting
+    internal val errorHandler: AppSearchErrorHandler,
+    @ApplicationScope private val scope: CoroutineScope,
+    @IoDispatcher
+    private val ioDispatcher: CoroutineDispatcher,
+    private val timeProvider: TimeProvider,
+) : TrackingStatusProvider {
+    override val key: TrackingKey = TrackingKey.APPSEARCH
+
+    private val statusMachine = TrackingStatusMachine()
+    override val status: StateFlow<TrackingStatus> = statusMachine.status
+
+    /**
+     * Updates the tracker status using canonical prioritized rules.
+     */
+    private fun transitionStatus(
+        newStatus: TrackingStatus,
+        force: Boolean = false,
+    ) {
+        statusMachine.transition(newStatus, force)
+    }
+
+    /**
+     * Cached content hash corresponding only to data that has been fully indexed,
+     * including successful cleanup of stale documents.
+     *
+     * On partial success (when stale document removal fails), this hash is NOT updated
+     * so that subsequent index attempts with the same snapshot content will retry indexing.
+     */
+    @VisibleForTesting
+    internal var lastSnapshotHash: Int? = null
+    private var lastSnapshotVersion: SchemaVersion? = null
+
+    /** Result of an indexing attempt. */
+    sealed interface IndexResult {
+        data object Success : IndexResult
+
+        data object PartialSuccess : IndexResult
+
+        data class ActualFailure(
+            val message: String? = null,
+        ) : IndexResult
+
+        data object MutexContention : IndexResult
+    }
+
+    private val observationScope =
+        FlowObservationScope<GlobalSnapshot>(scope, "SemanticSearchManager", ObservationMode.COMPLETE)
+
+    /** Current observation job, if any. */
+    @VisibleForTesting
+    internal val job: Job? get() = observationScope.currentJob
+
+    @Volatile
+    private var lastSnapshotFlow: StateFlow<GlobalSnapshot>? = null
+
+    private val initMutex = Mutex()
+
+    @VisibleForTesting
+    internal val indexMutex = Mutex()
+
+    @VisibleForTesting
+    internal val consecutiveMutexContention = AtomicInteger(0)
+
+    override suspend fun recover() {
+        initMutex.withLock {
+            val current = statusMachine.current
+            val isNotSupported =
+                current is TrackingStatus.Error &&
+                    current.type == TrackingStatus.ErrorType.NOT_SUPPORTED
+            if (isNotSupported) {
+                AppLogger.d("SemanticSearchManager: recover() skipped because status is NOT_SUPPORTED")
+            } else {
+                errorHandler.resetFailures()
+
+                val resetSuccess = resetIndexStateWithTimeout()
+                if (!resetSuccess) {
+                    AppLogger.e("SemanticSearchManager: recovery blocked by indexing mutex")
+                    transitionStatus(
+                        TrackingStatus.Error(
+                            TrackingStatus.ErrorType.DATABASE_ERROR,
+                            "Recovery blocked: indexing in progress or stuck",
+                        ),
+                    )
+                } else {
+                    val flow = lastSnapshotFlow
+                    if (flow == null) {
+                        AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
+                    } else {
+                        lastSnapshotFlow = null
+                        setupObservation(flow)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun resetIndexStateWithTimeout(): Boolean =
+        withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+            indexMutex.withLock {
+                lastSnapshotHash = null
+                lastSnapshotVersion = null
+                consecutiveMutexContention.set(0)
+            }
+            true
+        } ?: false
+
+    @OptIn(FlowPreview::class)
+    suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
+        initMutex.withLock {
+            val acquired =
+                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                    indexMutex.withLock {
+                        lastSnapshotHash = null
+                        lastSnapshotVersion = null
+                        try {
+                            indexer.cleanupStalePackageTypes(sessionManager) { newStatus ->
+                                transitionStatus(newStatus)
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("SemanticSearchManager: stale package types cleanup failed during init", e)
+                        }
+                    }
+                    true
+                } ?: false
+
+            if (!acquired) {
+                AppLogger.w(
+                    "SemanticSearchManager: initialization stale data cleanup blocked, proceeding with observation",
+                )
+            }
+
+            setupObservation(snapshotFlow)
+        }
+    }
+
+    @OptIn(FlowPreview::class)
+    private suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
+        if (isCurrentObservationActive(snapshotFlow)) return
+
+        lastSnapshotFlow = snapshotFlow
+        observationScope.observe(
+            snapshotFlow.debounce { if (it.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS },
+        ) { snapshot ->
+            processSnapshotInternal(snapshot)
+        }
+    }
+
+    private fun isCurrentObservationActive(snapshotFlow: StateFlow<GlobalSnapshot>): Boolean =
+        job?.isActive == true && (lastSnapshotFlow === snapshotFlow)
+
+    private suspend fun processSnapshotInternal(snapshot: GlobalSnapshot) {
+        try {
+            val result =
+                try {
+                    indexSnapshot(snapshot)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
+                    IndexResult.ActualFailure(e.message)
+                }
+
+            handleIndexResult(result)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLogger.e("SemanticSearchManager: error processing snapshot in collect", e)
+            transitionStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
+        }
+    }
+
+    private fun handleIndexResult(result: IndexResult) {
+        when (result) {
+            IndexResult.Success -> {
+                errorHandler.resetFailures()
+            }
+
+            IndexResult.MutexContention -> {
+                handleMutexContention()
+            }
+
+            else -> {
+                // Actual failure is already handled inside indexSnapshot update logic.
+            }
+        }
+    }
+
+    private fun handleMutexContention() {
+        val count = consecutiveMutexContention.get()
+        if (count < MUTEX_STUCK_THRESHOLD) {
+            AppLogger.d(
+                "SemanticSearchManager: indexing skipped due to indexing mutex contended (cycle $count)",
+            )
+        } else {
+            AppLogger.w(
+                "SemanticSearchManager: indexing consistently skipped due to indexing mutex contended " +
+                    "($count consecutive)",
+            )
+        }
+    }
+
+    internal suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
+        if (!indexMutex.tryLock()) {
+            val count = consecutiveMutexContention.incrementAndGet()
+
+            if (count >= MUTEX_STUCK_THRESHOLD) {
+                transitionStatus(
+                    TrackingStatus.Error(
+                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        "Indexing mutex stuck",
+                    ),
+                )
+            }
+            // We do not delay here to avoid blocking the observation collect path.
+            // Any further data changes or manual actions will trigger a new indexing attempt.
+            return IndexResult.MutexContention
+        }
+
+        try {
+            consecutiveMutexContention.set(0)
+
+            val result =
+                withTimeoutOrNull(Constants.Semantic.SEARCH_INDEX_TIMEOUT_MS.milliseconds) {
+                    performIndexSnapshotLocked(snapshot)
+                } ?: IndexResult.ActualFailure("Indexing timed out")
+
+            when (result) {
+                is IndexResult.ActualFailure -> {
+                    val nextStatus = errorHandler.handleIndexFailure(statusMachine.current, result.message)
+                    transitionStatus(nextStatus)
+                }
+
+                IndexResult.Success -> {
+                    errorHandler.resetFailures()
+                    transitionStatus(TrackingStatus.Ready(timeProvider.now()), force = true)
+                }
+
+                IndexResult.PartialSuccess -> {
+                    // Document writing succeeded, but deletion failed.
+                    // Status is already Error from updateStatus during deletion failure.
+                }
+
+                IndexResult.MutexContention -> {
+                    // Should not happen in performIndexSnapshotLocked
+                }
+            }
+            return result
+        } finally {
+            indexMutex.unlock()
+        }
+    }
+
+    private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): IndexResult {
+        val hasSims = snapshot.simSnapshots.isNotEmpty()
+        val currentHash = if (hasSims) SnapshotUtils.calculateContentHash(snapshot) else null
+
+        if (hasSims &&
+            (currentHash == lastSnapshotHash) &&
+            (snapshot.version == lastSnapshotVersion)
+        ) {
+            return IndexResult.Success
+        }
+
+        if (!sessionManager.ensureSession({ transitionStatus(it) })) {
+            resetLastSnapshotState()
+            return IndexResult.ActualFailure("Failed to ensure AppSearch session")
+        }
+
+        return try {
+            executeIndexingInternal(snapshot, currentHash)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: AppSearchException) {
+            if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
+                tryHandleSchemaMismatch(snapshot, currentHash)
+            } else {
+                AppLogger.e("AppSearch indexing failed", e)
+                resetLastSnapshotState()
+                IndexResult.ActualFailure(e.message)
+            }
+        } catch (e: Exception) {
+            AppLogger.e("AppSearch non-AppSearch error during indexing", e)
+            resetLastSnapshotState()
+            IndexResult.ActualFailure(e.message)
+        }
+    }
+
+    private suspend fun tryHandleSchemaMismatch(
+        snapshot: GlobalSnapshot,
+        currentHash: Int?,
+    ): IndexResult {
+        AppLogger.w("AppSearch schema mismatch, retrying with force override")
+        sessionManager.closeSession()
+        return if (sessionManager.ensureSession({ transitionStatus(it) }, forceOverride = true)) {
+            try {
+                executeIndexingInternal(snapshot, currentHash)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: AppSearchException) {
+                AppLogger.e("AppSearch indexing failed after schema reset (code=${e.resultCode})", e)
+                resetLastSnapshotState()
+                IndexResult.ActualFailure(e.message)
+            } catch (e: Exception) {
+                AppLogger.e("Unexpected error after schema reset", e)
+                resetLastSnapshotState()
+                IndexResult.ActualFailure(e.message)
+            }
+        } else {
+            IndexResult.ActualFailure("Failed to ensure AppSearch session after schema mismatch")
+        }
+    }
+
+    private suspend fun executeIndexingInternal(
+        snapshot: GlobalSnapshot,
+        currentHash: Int?,
+    ): IndexResult =
+        withContext(ioDispatcher) {
+            // Ensure the session is valid and active immediately before usage.
+            // sessionManager.ensureSession is synchronized internally.
+            if (!sessionManager.ensureSession({ transitionStatus(it) })) {
+                AppLogger.e("AppSearch session could not be ensured in executeIndexingInternal")
+                return@withContext IndexResult.ActualFailure("AppSearch session could not be ensured")
+            }
+
+            val currentSession =
+                sessionManager.session ?: run {
+                    AppLogger.e("AppSearch session is null in executeIndexingInternal, skipping")
+                    return@withContext IndexResult.ActualFailure("AppSearch session is null")
+                }
+
+            try {
+                val removeFailed =
+                    indexer.performIndexUpdate(currentSession, snapshot) { status ->
+                        transitionStatus(status)
+                    }
+                if (removeFailed) {
+                    IndexResult.PartialSuccess
+                } else {
+                    lastSnapshotHash = currentHash
+                    lastSnapshotVersion = snapshot.version
+                    IndexResult.Success
+                }
+            } catch (e: CancellationException) {
+                resetLastSnapshotState()
+                throw e
+            } catch (e: AppSearchException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("AppSearch indexing error", e)
+                resetLastSnapshotState()
+                IndexResult.ActualFailure(e.message)
+            }
+        }
+
+    private fun resetLastSnapshotState() {
+        lastSnapshotHash = null
+        lastSnapshotVersion = null
+    }
+
+    /**
+     * Performs an initial indexing of the given snapshot.
+     *
+     * This is a public wrapper for [indexSnapshot] intended for use during
+     * initialization (e.g. from WorkManager) where synchronous feedback is needed.
+     */
+    suspend fun indexInitialSnapshot(snapshot: GlobalSnapshot): IndexResult = indexSnapshot(snapshot)
+
+    companion object {
+        /**
+         * Number of consecutive indexing skips due to a busy [indexMutex]
+         * after which the indexing loop is considered stuck.
+         */
+        private const val MUTEX_STUCK_THRESHOLD = 2
+    }
+}

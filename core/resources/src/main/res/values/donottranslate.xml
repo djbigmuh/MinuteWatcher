@@ -29,9 +29,13 @@
     <string name="operator_china_telecom" translatable="false">China Telecom</string>
     <string name="operator_movistar" translatable="false">Movistar</string>
     <string name="operator_claro" translatable="false">Claro</string>
+    <string name="operator_telcel" translatable="false">Telcel</string>
+    <string name="operator_vivo" translatable="false">Vivo</string>
+    <string name="operator_algar" translatable="false">Algar</string>
     <string name="operator_airtel" translatable="false">Airtel</string>
     <string name="operator_jio" translatable="false">Jio</string>
     <string name="operator_vi" translatable="false">Vi</string>
+    <string name="operator_bsnl" translatable="false">BSNL</string>
     <string name="operator_stc" translatable="false">STC</string>
     <string name="operator_mobily" translatable="false">Mobily</string>
     <string name="operator_zain" translatable="false">Zain</string>
@@ -52,9 +56,22 @@
     <string name="operator_turk_telekom" translatable="false">Türk Telekom</string>
     <string name="operator_rostelecom" translatable="false">Rostelecom</string>
     <string name="operator_tattelecom" translatable="false">Tattelecom</string>
+    <string name="operator_kyivstar" translatable="false">Kyivstar</string>
+    <string name="operator_lifecell" translatable="false">lifecell</string>
+    <string name="operator_moldcell" translatable="false">Moldcell</string>
+    <string name="operator_life_by" translatable="false">life:)</string>
     <string name="operator_a1" translatable="false">A1</string>
     <string name="operator_three" translatable="false">Three</string>
     <string name="operator_base" translatable="false">BASE</string>
+    <string name="operator_free" translatable="false">Free</string>
+    <string name="operator_odido" translatable="false">Odido</string>
+    <string name="operator_magenta" translatable="false">Magenta</string>
+    <string name="operator_oneandone" translatable="false">1&amp;1</string>
+    <string name="operator_yettel" translatable="false">Yettel</string>
+    <string name="operator_iliad" translatable="false">Iliad</string>
+    <string name="operator_cosmote" translatable="false">Cosmote</string>
+    <string name="operator_rakuten" translatable="false">Rakuten Mobile</string>
+    <string name="operator_onenz" translatable="false">One NZ</string>
     <string name="operator_tdc" translatable="false">TDC</string>
     <string name="operator_ice" translatable="false">ice</string>
     <string name="operator_onecall" translatable="false">OneCall</string>
@@ -87,6 +104,13 @@
     <string name="operator_lebara" translatable="false">Lebara</string>
     <string name="operator_lycamobile" translatable="false">Lycamobile</string>
     <string name="operator_finetwork" translatable="false">finetwork</string>
+    <string name="operator_ais" translatable="false">AIS</string>
+    <string name="operator_truemove" translatable="false">TrueMove H</string>
+    <string name="operator_dtac" translatable="false">dtac</string>
+    <string name="operator_mobifone" translatable="false">MobiFone</string>
+    <string name="operator_vinaphone" translatable="false">VinaPhone</string>
+    <string name="operator_viettel" translatable="false">Viettel</string>
+    <string name="operator_celcomdigi" translatable="false">CelcomDigi</string>
     <string name="operator_generic" translatable="false">Operator %1$d</string>
     <string name="operator_with_mcc" translatable="false">Operator (%1$s)</string>
     <string name="tile_operator_value_format" translatable="false">%1$s: %2$s</string>

@@ -1,4 +1,4 @@
-import com.example.minutewatcher.buildlogic.SdkVersions
+import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("minutewatcher.android-library")
@@ -13,7 +13,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.minutewatcher.feature.main"
+    namespace = "host.serv.djbigmuh.minutewatcher.feature.main"
 
     buildFeatures {
         compose = true

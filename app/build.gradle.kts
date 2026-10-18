@@ -1,5 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
-import com.example.minutewatcher.buildlogic.SdkVersions
+import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("minutewatcher.android-application")
@@ -16,28 +16,42 @@ java {
 }
 
 configure<ApplicationExtension> {
-    namespace = "com.example.minutewatcher"
+    namespace = "host.serv.djbigmuh.minutewatcher"
 
     defaultConfig {
-        applicationId = "com.example.minutewatcher"
-        versionCode = 351
-        versionName = "3.5.1"
-        testInstrumentationRunner = "com.example.minutewatcher.HiltTestRunner"
+        applicationId = "host.serv.djbigmuh.minutewatcher"
+        versionCode = 400
+        versionName = "4.0.0"
+        testInstrumentationRunner = "host.serv.djbigmuh.minutewatcher.HiltTestRunner"
+    }
+
+    val keystoreFile = rootProject.file("release.keystore")
+    val envStorePassword = System.getenv("MINUTEWATCHER_STORE_PASSWORD")
+    val envKeyAlias = System.getenv("MINUTEWATCHER_KEY_ALIAS")
+    val envKeyPassword = System.getenv("MINUTEWATCHER_KEY_PASSWORD")
+
+    val hasReleaseSigning =
+        keystoreFile.exists() &&
+            !envStorePassword.isNullOrEmpty() &&
+            !envKeyAlias.isNullOrEmpty() &&
+            !envKeyPassword.isNullOrEmpty()
+
+    if (!hasReleaseSigning) {
+        val missingParams = mutableListOf<String>()
+        if (!keystoreFile.exists()) missingParams.add("release.keystore file")
+        if (envStorePassword.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_STORE_PASSWORD env var")
+        if (envKeyAlias.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_KEY_ALIAS env var")
+        if (envKeyPassword.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_KEY_PASSWORD env var")
+        logger.warn("Release signing is disabled due to missing parameters: ${missingParams.joinToString(", ")}")
     }
 
     signingConfigs {
-        create("release") {
-            val keystoreFile = rootProject.file("release.keystore")
-            if (keystoreFile.exists()) {
+        if (hasReleaseSigning) {
+            create("release") {
                 storeFile = keystoreFile
-                storePassword = System.getenv("MINUTEWATCHER_STORE_PASSWORD") ?: ""
-                keyAlias = System.getenv("MINUTEWATCHER_KEY_ALIAS") ?: ""
-                keyPassword = System.getenv("MINUTEWATCHER_KEY_PASSWORD") ?: ""
-            } else {
-                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
+                storePassword = envStorePassword
+                keyAlias = envKeyAlias
+                keyPassword = envKeyPassword
             }
         }
     }
@@ -46,7 +60,9 @@ configure<ApplicationExtension> {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

@@ -81,7 +81,7 @@
             android:permission="android.permission.DUMP"
             tools:ignore="ExportedReceiver">
             <intent-filter>
-                <action android:name="com.example.minutewatcher.benchmark.POPULATE_DATA" />
+                <action android:name="host.serv.djbigmuh.minutewatcher.benchmark.POPULATE_DATA" />
             </intent-filter>
         </receiver>
 
@@ -114,7 +114,7 @@
 
         <!-- Widget -->
         <receiver
-            android:name="com.example.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver"
+            android:name="host.serv.djbigmuh.minutewatcher.feature.widget.MinutesGlanceWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

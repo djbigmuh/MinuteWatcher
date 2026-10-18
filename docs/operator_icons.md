@@ -1,6 +1,6 @@
 # Operator brand assets — inventory
 
-Assets collected from Wikimedia (Commons / en.wikipedia.org / ru.wikipedia.org) for 68 operator icons.
+Assets collected from Wikimedia (Commons / en.wikipedia.org / ru.wikipedia.org) for 108 operator icons.
 
 | Operator key                | Brand            | Source file                                                                                                                                          | Host             | License       | Uploaded   | Project format        |
 |-----------------------------|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|---------------|------------|-----------------------|
@@ -28,12 +28,16 @@ Assets collected from Wikimedia (Commons / en.wikipedia.org / ru.wikipedia.org) 
 | `ic_operator_jio`           | Jio              | [Reliance Jio Logo.svg](https://commons.wikimedia.org/wiki/File:Reliance_Jio_Logo.svg)                                                               | commons          | Public domain | 2023-07-08 | vector XML (drawable) |
 | `ic_operator_kddi`          | KDDI             | [KDDI logos.svg](https://commons.wikimedia.org/wiki/File:KDDI_logos.svg)                                                                             | commons          | Public domain | 2009-09-23 | vector XML (drawable) |
 | `ic_operator_kpn`           | KPN              | [Logo kpn.svg](https://commons.wikimedia.org/wiki/File:Logo_kpn.svg)                                                                                 | commons          | Public domain | 2023-12-10 | vector XML (drawable) |
+| `ic_operator_kyivstar`      | Kyivstar         | [Kyivstar logo.svg](https://commons.wikimedia.org/wiki/File:Kyivstar_logo.svg)                                                                       | commons          | Public domain | 2024-01-01 | vector XML (drawable) |
+| `ic_operator_life_by`       | life:)           | [Life Belarus logo.svg](https://commons.wikimedia.org/wiki/File:Life_Belarus_logo.svg)                                                               | commons          | Public domain | 2024-01-01 | vector XML (drawable) |
+| `ic_operator_lifecell`      | lifecell         | [Lifecell logo.svg](https://commons.wikimedia.org/wiki/File:Lifecell_logo.svg)                                                                       | commons          | Public domain | 2024-01-01 | vector XML (drawable) |
 | `ic_operator_lycamobile`    | Lycamobile       | [Lycamobile logo.svg](https://commons.wikimedia.org/wiki/File:Lycamobile_logo.svg)                                                                   | commons          | Public domain | 2017-04-18 | vector XML (drawable) |
 | `ic_operator_m1`            | M1               | [M1 Singapore 2020.svg](https://commons.wikimedia.org/wiki/File:M1_Singapore_2020.svg)                                                               | commons          | Public domain | 2024-03-20 | vector XML (drawable) |
 | `ic_operator_maxis`         | Maxis            | [Maxis 2022 Wordmark.svg](https://commons.wikimedia.org/wiki/File:Maxis_2022_Wordmark.svg)                                                           | commons          | Public domain | 2024-10-08 | vector XML (drawable) |
 | `ic_operator_megafon`       | MegaFon          | [MegaFon logo Russian.svg](https://commons.wikimedia.org/wiki/File:MegaFon_logo_Russian.svg)                                                         | commons          | Public domain | 2022-05-21 | vector XML (drawable) |
 | `ic_operator_mgts`          | MGTS             | [Mgts logo'²³.svg](https://commons.wikimedia.org/wiki/File:Mgts_logo%27%C2%B2%C2%B3.svg)                                                             | commons          | Public domain | 2024-05-26 | vector XML (drawable) |
 | `ic_operator_mobily`        | Mobily           | [Mobily Logo.svg](https://commons.wikimedia.org/wiki/File:Mobily_Logo.svg)                                                                           | commons          | Public domain | 2024-01-25 | vector XML (drawable) |
+| `ic_operator_moldcell`      | Moldcell         | [Moldcell logo.svg](https://commons.wikimedia.org/wiki/File:Moldcell_logo.svg)                                                                       | commons          | Public domain | 2024-01-01 | vector XML (drawable) |
 | `ic_operator_movistar`      | Movistar         | [Movistar isotype 2025.png](https://en.wikipedia.org/wiki/File:Movistar_isotype_2025.png)                                                            | en.wikipedia.org | Public domain | 2026-01-10 | vector XML (drawable) |
 | `ic_operator_mts`           | MTS              | [Logo МТС (2023).svg](https://commons.wikimedia.org/wiki/File:Logo_%D0%9C%D0%A2%D0%A1_%282023%29.svg)                                                | commons          | Public domain | 2023-04-02 | vector XML (drawable) |
 | `ic_operator_ntt_docomo`    | NTT Docomo       | [NTT Docomo 2025.svg](https://commons.wikimedia.org/wiki/File:NTT_Docomo_2025.svg)                                                                   | commons          | Public domain | 2025-07-03 | vector XML (drawable) |
@@ -77,12 +81,12 @@ Assets collected from Wikimedia (Commons / en.wikipedia.org / ru.wikipedia.org) 
 
 - CC BY-SA 4.0: 4
 - Fair use: 6
-- Public domain: 58
+- Public domain: 62
 
 ## Normative asset compliance rules
 
 All operator vector icons in the repository (`ic_operator_*.xml`) are validated by unit tests
-in [OperatorIconAssetComplianceTest.kt](../core/resources/src/test/java/com/example/minutewatcher/core/resources/OperatorIconAssetComplianceTest.kt)
+in [OperatorIconAssetComplianceTest.kt](../core/resources/src/test/java/host/serv/djbigmuh/minutewatcher/core/resources/OperatorIconAssetComplianceTest.kt)
 against the following 13 normative rules:
 
 1. `viewportWidth` and `viewportHeight` must equal `48`.

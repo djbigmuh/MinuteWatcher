@@ -4,7 +4,7 @@
 
     <application>
         <service
-            android:name="com.example.minutewatcher.feature.semantic.appfunctions.MinuteWatcherAppFunctionService"
+            android:name="host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions.MinuteWatcherAppFunctionService"
             android:exported="true"
             android:permission="android.permission.BIND_APP_FUNCTION_SERVICE"
             tools:targetApi="36">
