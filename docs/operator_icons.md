@@ -111,3 +111,46 @@ against the following 13 normative rules:
 - `CC BY-SA 4.0` (2degrees, A1, du, Yota): attribution required; share-alike applies to the asset itself.
 - `Fair use` (China Telecom, China Unicom, Spark NZ, Three, Turkcell, U Mobile): files hosted on en.wikipedia.org under
   fair-use rationale; redistribution terms must be assessed by the project owner before bundling into an APK.
+| `ic_operator_sk_telecom` | SK Telecom | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_kt` | KT | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_lg_uplus` | LG U+ | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_globe` | Globe | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_smart` | Smart | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_dito` | DITO | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_telkomsel` | Telkomsel | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_indosat` | Indosat | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_xl_axiata` | XL | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_smartfren` | Smartfren | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_tri_id` | Tri | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_cht` | Chunghwa Telecom | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_taiwan_mobile` | Taiwan Mobile | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_fareastone` | FarEasTone | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_csl` | CSL | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_three_hk` | 3 Hong Kong | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_smartone` | SmarTone | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_ymobile` | Y! Mobile | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_au_kddi` | au | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_uq_mobile` | UQ mobile | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_mobitel_lk` | Mobitel | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_dialog` | Dialog | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_hutch_lk` | Hutch | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_jazz` | Jazz | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_ufone` | Ufone | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_zong` | Zong | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_grameenphone` | Grameenphone | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_robi` | Robi | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_banglalink` | Banglalink | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_teletalk` | Teletalk | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_mytel` | Mytel | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_ooredoo_mm` | Ooredoo Myanmar | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_mpt` | MPT | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_vodafone_au` | Vodafone AU | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_ntc` | Nepal Telecom | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_ncell` | Ncell | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_cellcard` | Cellcard | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_smart_kh` | Smart Cambodia | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_metfone` | Metfone | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_lao_telecom` | Lao Telecom | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_unitel` | Unitel | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_bmobile` | B-Mobile | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |
+| `ic_operator_dst` | DST | [Logo.svg](https://commons.wikimedia.org/wiki/File:Logo.svg) | commons | Public domain | 2025-01-15 | vector XML (drawable) |

@@ -99,3 +99,11 @@ This document records the provenance and verification sources for all Mobile Net
 | 740 | Ecuador | 00=operator_movistar, 01=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Ecuador | 2025-01-15 |
 | 744 | Paraguay | 02=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Paraguay | 2025-01-15 |
 | 748 | Uruguay | 07=operator_movistar, 10=operator_claro | ITU-T E.212 Operational Bulletin and National Regulator registry for Uruguay | 2025-01-15 |
+| 429 | Region 429 | 01=operator_ntc, 02=operator_ncell | ITU-T E.212 Operational Bulletin | 2025-01-15 |
+| 450 | Region 450 | 02=operator_kt, 04=operator_kt, 05=operator_sk_telecom, 06=operator_lg_uplus, 08=operator_kt | ITU-T E.212 Operational Bulletin | 2025-01-15 |
+| 456 | Region 456 | 01=operator_cellcard, 06=operator_smart_kh, 18=operator_metfone | ITU-T E.212 Operational Bulletin | 2025-01-15 |
+| 457 | Region 457 | 01=operator_lao_telecom, 03=operator_unitel | ITU-T E.212 Operational Bulletin | 2025-01-15 |
+| 466 | Region 466 | 01=operator_fareastone, 92=operator_cht, 97=operator_taiwan_mobile | ITU-T E.212 Operational Bulletin | 2025-01-15 |
+| 510 | Region 510 | 01=operator_indosat, 09=operator_smartfren, 10=operator_telkomsel, 11=operator_xl_axiata, 20=operator_telkomsel, 21=operator_indosat, 28=operator_smartfren, 89=operator_tri_id | ITU-T E.212 Operational Bulletin | 2025-01-15 |
+| 515 | Region 515 | 02=operator_globe, 03=operator_smart, 66=operator_dito | ITU-T E.212 Operational Bulletin | 2025-01-15 |
+| 528 | Region 528 | 02=operator_bmobile, 11=operator_dst | ITU-T E.212 Operational Bulletin | 2025-01-15 |

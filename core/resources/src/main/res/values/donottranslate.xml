@@ -125,4 +125,47 @@
     <string name="operator_sample" translatable="false">Operator 1</string>
     <string name="operator_ee" translatable="false">EE</string>
     <string name="about_author_email" translatable="false">dj.bigmuh@gmail.com</string>
+    <string name="operator_sk_telecom" translatable="false">SK Telecom</string>
+    <string name="operator_kt" translatable="false">KT</string>
+    <string name="operator_lg_uplus" translatable="false">LG U+</string>
+    <string name="operator_globe" translatable="false">Globe</string>
+    <string name="operator_smart" translatable="false">Smart</string>
+    <string name="operator_dito" translatable="false">DITO</string>
+    <string name="operator_telkomsel" translatable="false">Telkomsel</string>
+    <string name="operator_indosat" translatable="false">Indosat</string>
+    <string name="operator_xl_axiata" translatable="false">XL</string>
+    <string name="operator_smartfren" translatable="false">Smartfren</string>
+    <string name="operator_tri_id" translatable="false">Tri</string>
+    <string name="operator_cht" translatable="false">Chunghwa Telecom</string>
+    <string name="operator_taiwan_mobile" translatable="false">Taiwan Mobile</string>
+    <string name="operator_fareastone" translatable="false">FarEasTone</string>
+    <string name="operator_csl" translatable="false">CSL</string>
+    <string name="operator_three_hk" translatable="false">3 Hong Kong</string>
+    <string name="operator_smartone" translatable="false">SmarTone</string>
+    <string name="operator_ymobile" translatable="false">Y! Mobile</string>
+    <string name="operator_au_kddi" translatable="false">au</string>
+    <string name="operator_uq_mobile" translatable="false">UQ mobile</string>
+    <string name="operator_mobitel_lk" translatable="false">Mobitel</string>
+    <string name="operator_dialog" translatable="false">Dialog</string>
+    <string name="operator_hutch_lk" translatable="false">Hutch</string>
+    <string name="operator_jazz" translatable="false">Jazz</string>
+    <string name="operator_ufone" translatable="false">Ufone</string>
+    <string name="operator_zong" translatable="false">Zong</string>
+    <string name="operator_grameenphone" translatable="false">Grameenphone</string>
+    <string name="operator_robi" translatable="false">Robi</string>
+    <string name="operator_banglalink" translatable="false">Banglalink</string>
+    <string name="operator_teletalk" translatable="false">Teletalk</string>
+    <string name="operator_mytel" translatable="false">Mytel</string>
+    <string name="operator_ooredoo_mm" translatable="false">Ooredoo Myanmar</string>
+    <string name="operator_mpt" translatable="false">MPT</string>
+    <string name="operator_vodafone_au" translatable="false">Vodafone AU</string>
+    <string name="operator_ntc" translatable="false">Nepal Telecom</string>
+    <string name="operator_ncell" translatable="false">Ncell</string>
+    <string name="operator_cellcard" translatable="false">Cellcard</string>
+    <string name="operator_smart_kh" translatable="false">Smart Cambodia</string>
+    <string name="operator_metfone" translatable="false">Metfone</string>
+    <string name="operator_lao_telecom" translatable="false">Lao Telecom</string>
+    <string name="operator_unitel" translatable="false">Unitel</string>
+    <string name="operator_bmobile" translatable="false">B-Mobile</string>
+    <string name="operator_dst" translatable="false">DST</string>
 </resources>
