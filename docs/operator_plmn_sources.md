@@ -53,10 +53,10 @@
 | 401 | Kazakhstan | 40101=operator_beeline, 40177=operator_tele2 | ITU-T E.212 / MDTI Kazakhstan | 2025-01-15 |
 | 404 | India | 40401=operator_vi, 40402=operator_airtel, 40403=operator_airtel, 40405=operator_vi, 40410=operator_airtel, 40411=operator_vi, 40413=operator_vi, 40420=operator_vi, 40424=operator_vi, 40427=operator_vi, 40430=operator_vi, 40431=operator_airtel, 40434=operator_bsnl, 40438=operator_bsnl, 40440=operator_airtel, 40443=operator_vi, 40445=operator_airtel, 40446=operator_vi, 40449=operator_airtel, 40451=operator_bsnl, 40452=operator_bsnl, 40453=operator_bsnl, 40454=operator_bsnl, 40455=operator_bsnl, 40456=operator_bsnl, 40457=operator_bsnl, 40458=operator_bsnl, 40459=operator_bsnl, 40460=operator_vi, 40462=operator_bsnl, 40464=operator_bsnl, 40466=operator_bsnl, 40468=operator_bsnl, 40469=operator_bsnl, 40470=operator_airtel, 40471=operator_bsnl, 40472=operator_bsnl, 40473=operator_bsnl, 40474=operator_bsnl, 40475=operator_bsnl, 40476=operator_bsnl, 40477=operator_bsnl, 40480=operator_bsnl, 40481=operator_bsnl, 40484=operator_vi, 40486=operator_vi, 40488=operator_bsnl, 40490=operator_airtel, 40491=operator_airtel, 40492=operator_airtel, 40493=operator_airtel, 40494=operator_airtel, 40495=operator_airtel, 40496=operator_airtel, 40497=operator_airtel, 40498=operator_airtel | ITU-T E.212 / DoT India | 2025-01-15 |
 | 405 | India | 405001=operator_vi, 405002=operator_vi, 405003=operator_vi, 405004=operator_vi, 405005=operator_vi, 405006=operator_vi, 405007=operator_vi, 405008=operator_vi, 405009=operator_vi, 40510=operator_vi, 40511=operator_vi, 40512=operator_vi, 40513=operator_vi, 40514=operator_vi, 40515=operator_vi, 40516=operator_vi, 40517=operator_vi, 40518=operator_vi, 40519=operator_vi, 40520=operator_vi, 40551=operator_airtel, 40552=operator_airtel, 40553=operator_airtel, 40554=operator_airtel, 40555=operator_airtel, 40556=operator_airtel, 40566=operator_vi, 40567=operator_vi, 405840=operator_jio, 405841=operator_jio, 405842=operator_jio, 405843=operator_jio, 405844=operator_jio, 405845=operator_jio, 405846=operator_jio, 405847=operator_jio, 405848=operator_jio, 405849=operator_jio, 405850=operator_jio, 405851=operator_jio, 405852=operator_jio, 405853=operator_jio, 405854=operator_jio, 405855=operator_jio, 405856=operator_jio, 405857=operator_jio, 405858=operator_jio, 405859=operator_jio, 405860=operator_jio, 405861=operator_jio, 405862=operator_jio, 405863=operator_jio, 405864=operator_jio, 405865=operator_jio, 405866=operator_jio, 405867=operator_jio, 405868=operator_jio, 405869=operator_jio, 405870=operator_jio, 405871=operator_jio, 405872=operator_jio, 405873=operator_jio, 405874=operator_jio | ITU-T E.212 / DoT India | 2025-01-15 |
-| 410 | Pakistan | 41006=operator_telenor, 41007=operator_jazz | ITU-T E.212 / PTA Pakistan | 2025-01-15 |
+| 410 | Pakistan | 41001=operator_jazz, 41003=operator_ufone, 41004=operator_zong, 41006=operator_telenor, 41007=operator_jazz | ITU-T E.212 / PTA Pakistan | 2025-01-15 |
 | 412 | Afghanistan | 41250=operator_etisalat | ITU-T E.212 / ATRA Afghanistan | 2025-01-15 |
-| 413 | Sri Lanka | 41305=operator_airtel | ITU-T E.212 / TRCSL Sri Lanka | 2025-01-15 |
-| 414 | Myanmar | 41405=operator_o2, 41406=operator_telenor, 41409=operator_mytel | ITU-T E.212 / MPT Myanmar | 2025-01-15 |
+| 413 | Sri Lanka | 41301=operator_mobitel_lk, 41302=operator_dialog, 41305=operator_airtel, 41308=operator_hutch_lk | ITU-T E.212 / TRCSL Sri Lanka | 2025-01-15 |
+| 414 | Myanmar | 41401=operator_mpt, 41405=operator_ooredoo_mm, 41406=operator_telenor, 41409=operator_mytel | ITU-T E.212 / MPT Myanmar | 2025-01-15 |
 | 416 | Jordan | 41601=operator_zain, 41677=operator_orange | ITU-T E.212 / TRC Jordan | 2025-01-15 |
 | 418 | Iraq | 41820=operator_zain, 41830=operator_zain | ITU-T E.212 / CMC Iraq | 2025-01-15 |
 | 419 | Kuwait | 41902=operator_zain, 41904=operator_stc | ITU-T E.212 / CITRA Kuwait | 2025-01-15 |
@@ -67,19 +67,19 @@
 | 429 | Nepal | 42901=operator_ntc, 42902=operator_ncell | ITU-T E.212 / NTA Nepal | 2025-01-15 |
 | 434 | Uzbekistan | 43404=operator_beeline | ITU-T E.212 / UZINFOCOM Uzbekistan | 2025-01-15 |
 | 440 | Japan | 44010=operator_ntt_docomo, 44011=operator_rakuten, 44020=operator_softbank, 44021=operator_ymobile, 44050=operator_kddi, 44051=operator_kddi, 44052=operator_au_kddi, 44053=operator_au_kddi, 44054=operator_au_kddi, 44055=operator_uq_mobile | ITU-T E.212 / MIC Japan | 2025-01-15 |
-| 450 | South Korea | 45002=operator_kt, 45004=operator_kt, 45006=operator_lg_uplus, 45008=operator_kt | ITU-T E.212 / MSIT South Korea | 2025-01-15 |
+| 450 | South Korea | 45002=operator_kt, 45004=operator_kt, 45005=operator_sk_telecom, 45006=operator_lg_uplus, 45008=operator_kt | ITU-T E.212 / MSIT South Korea | 2025-01-15 |
 | 452 | Vietnam | 45201=operator_mobifone, 45202=operator_vinaphone, 45204=operator_viettel | ITU-T E.212 / MIC Vietnam | 2025-01-15 |
-| 454 | Hong Kong | 45403=operator_three_hk, 45406=operator_smartone, 45407=operator_china_unicom, 45412=operator_china_mobile, 45419=operator_csl | ITU-T E.212 / OFCA Hong Kong | 2025-01-15 |
+| 454 | Hong Kong | 45400=operator_csl, 45403=operator_three_hk, 45406=operator_smartone, 45407=operator_china_unicom, 45412=operator_china_mobile, 45419=operator_csl | ITU-T E.212 / OFCA Hong Kong | 2025-01-15 |
 | 455 | Macau | 45502=operator_china_telecom | ITU-T E.212 / CTT Macau | 2025-01-15 |
 | 456 | Cambodia | 45601=operator_cellcard, 45606=operator_smart_kh, 45618=operator_metfone | ITU-T E.212 / TRC Cambodia | 2025-01-15 |
 | 457 | Laos | 45701=operator_lao_telecom, 45703=operator_unitel | ITU-T E.212 / MPPT Laos | 2025-01-15 |
 | 460 | China | 46000=operator_china_mobile, 46001=operator_china_unicom, 46002=operator_china_mobile, 46003=operator_china_telecom, 46005=operator_china_telecom, 46006=operator_china_unicom, 46007=operator_china_mobile, 46008=operator_china_mobile, 46009=operator_china_unicom, 46011=operator_china_telecom | ITU-T E.212 / MIIT China | 2025-01-15 |
 | 466 | Taiwan | 46601=operator_fareastone, 46692=operator_cht, 46697=operator_taiwan_mobile | ITU-T E.212 / NCC Taiwan | 2025-01-15 |
-| 470 | Bangladesh | 47003=operator_banglalink, 47004=operator_teletalk, 47007=operator_airtel | ITU-T E.212 / BTRC Bangladesh | 2025-01-15 |
+| 470 | Bangladesh | 47001=operator_grameenphone, 47002=operator_robi, 47003=operator_banglalink, 47004=operator_teletalk, 47007=operator_airtel | ITU-T E.212 / BTRC Bangladesh | 2025-01-15 |
 | 502 | Malaysia | 50210=operator_celcomdigi, 50212=operator_maxis, 50213=operator_celcom, 50216=operator_celcomdigi, 50218=operator_u_mobile | ITU-T E.212 / MCMC Malaysia | 2025-01-15 |
-| 505 | Australia | 50501=operator_telstra, 50502=operator_optus, 50503=operator_vodafone, 50506=operator_vodafone_au, 50571=operator_telstra, 50572=operator_telstra | ITU-T E.212 / ACMA Australia | 2025-01-15 |
-| 510 | Indonesia | 51009=operator_smartfren, 51011=operator_xl_axiata, 51020=operator_telkomsel, 51021=operator_indosat, 51028=operator_smartfren, 51089=operator_tri_id | ITU-T E.212 / SDPPI Indonesia | 2025-01-15 |
-| 515 | Philippines | 51503=operator_smart, 51566=operator_dito | ITU-T E.212 / NTC Philippines | 2025-01-15 |
+| 505 | Australia | 50501=operator_telstra, 50502=operator_optus, 50503=operator_vodafone, 50506=operator_vodafone, 50571=operator_telstra, 50572=operator_telstra | ITU-T E.212 / ACMA Australia | 2025-01-15 |
+| 510 | Indonesia | 51001=operator_indosat, 51009=operator_smartfren, 51010=operator_telkomsel, 51011=operator_xl_axiata, 51020=operator_telkomsel, 51021=operator_indosat, 51028=operator_smartfren, 51089=operator_tri_id | ITU-T E.212 / SDPPI Indonesia | 2025-01-15 |
+| 515 | Philippines | 51502=operator_globe, 51503=operator_smart, 51566=operator_dito | ITU-T E.212 / NTC Philippines | 2025-01-15 |
 | 520 | Thailand | 52001=operator_ais, 52003=operator_ais, 52004=operator_truemove, 52005=operator_dtac, 52018=operator_dtac | ITU-T E.212 / NBTC Thailand | 2025-01-15 |
 | 525 | Singapore | 52501=operator_singtel, 52502=operator_singtel, 52503=operator_m1, 52505=operator_starhub | ITU-T E.212 / IMDA Singapore | 2025-01-15 |
 | 528 | Brunei | 52802=operator_bmobile, 52811=operator_dst | ITU-T E.212 / AITI Brunei | 2025-01-15 |
@@ -97,6 +97,7 @@
 | 714 | Panama | 71402=operator_movistar, 71403=operator_claro, 71420=operator_movistar | ITU-T E.212 / ASEP Panama | 2025-01-15 |
 | 716 | Peru | 71606=operator_movistar, 71610=operator_claro | ITU-T E.212 / OSIPTEL Peru | 2025-01-15 |
 | 722 | Argentina | 72207=operator_movistar, 72231=operator_claro | ITU-T E.212 / ENACOM Argentina | 2025-01-15 |
+| 724 | Brazil | 72402=operator_tim | ITU-T E.212 / ANATEL Brazil | 2025-01-15 |
 | 730 | Chile | 73002=operator_movistar, 73003=operator_claro | ITU-T E.212 / SUBTEL Chile | 2025-01-15 |
 | 732 | Colombia | 732101=operator_claro, 732103=operator_movistar, 732123=operator_movistar | ITU-T E.212 / CRC Colombia | 2025-01-15 |
 | 734 | Venezuela | 73404=operator_movistar | ITU-T E.212 / CONATEL Venezuela | 2025-01-15 |
