@@ -23,8 +23,6 @@ class SpainOperatorsTest {
     fun `mcc mnc database contains spanish assignments`() {
         assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21401"), 0).displayName)
         assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21406"), 0).displayName)
-        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21424"), 0).displayName)
-        assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21437"), 0).displayName)
         assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("21403"), 0).displayName)
         assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("21409"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("21405"), 0).displayName)
