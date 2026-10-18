@@ -115,9 +115,10 @@ private fun DayPickerContent(
         )
 
         Box(
-            modifier = Modifier
-                .height(200.dp)
-                .width(100.dp),
+            modifier =
+                Modifier
+                    .height(200.dp)
+                    .width(100.dp),
             contentAlignment = Alignment.Center,
         ) {
             SelectorHighlight()
@@ -139,9 +140,10 @@ private fun DayPickerContent(
 @Composable
 private fun SelectorHighlight() {
     Surface(
-        modifier = Modifier
-            .height(50.dp)
-            .fillMaxWidth(),
+        modifier =
+            Modifier
+                .height(50.dp)
+                .fillMaxWidth(),
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
         shape = MaterialTheme.shapes.medium,
     ) {}
@@ -162,9 +164,10 @@ private fun DayItem(
             } else {
                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             },
-        modifier = Modifier
-            .padding(vertical = 8.dp)
-            .fillMaxWidth(),
+        modifier =
+            Modifier
+                .padding(vertical = 8.dp)
+                .fillMaxWidth(),
         textAlign = TextAlign.Center,
         maxLines = 1,
         softWrap = false,
