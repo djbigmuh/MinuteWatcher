@@ -20,6 +20,7 @@ class IndiaOperatorsTest {
         assertEquals("Airtel", resolveDisplayName("40410"))
         assertEquals("Vi", resolveDisplayName("40401"))
         assertEquals("Vi", resolveDisplayName("40411"))
+        assertEquals("Vi", resolveDisplayName("40456"))
         assertEquals("Jio", resolveDisplayName("405840"))
         assertEquals("BSNL", resolveDisplayName("40434"))
         assertEquals("BSNL", resolveDisplayName("40451"))

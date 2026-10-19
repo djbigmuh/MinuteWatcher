@@ -249,7 +249,7 @@ object OperatorResolver {
         val match =
             tokenToResKey.entries
                 .filter { (token, _) ->
-                    operatorName.hasToken(token) || normalized.hasToken(token)
+                    normalized.hasToken(token)
                 }.maxWithOrNull(
                     compareBy<Map.Entry<String, String>> { (token, _) ->
                         token.split(" ").filter { it.isNotEmpty() }.size

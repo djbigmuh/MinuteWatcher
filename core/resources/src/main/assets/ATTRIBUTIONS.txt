@@ -1,114 +1,22 @@
 MinuteWatcher Operator Brand Assets Attributions
 
-Total icons: 108
-Brand vector assets are derived from official brand marks and media files hosted on Wikimedia Commons and Wikipedia under Public Domain, CC BY-SA, or Nominative Fair Use terms.
+Category A — CC0 brand glyphs (simple-icons 16.35.0, https://simple-icons.org, CC0-1.0):
+- ic_operator_airtel (slug: airtel)
+- ic_operator_att (slug: atandt)
+- ic_operator_jio (slug: jio)
+- ic_operator_movistar (slug: movistar)
+- ic_operator_o2 (slug: o2)
+- ic_operator_odido (slug: odido)
+- ic_operator_orange (slug: orange)
+- ic_operator_sunrise (slug: sunrise)
+- ic_operator_t_mobile (slug: deutschetelekom)
+- ic_operator_telekom (slug: deutschetelekom)
+- ic_operator_telenor (slug: telenor)
+- ic_operator_vodafone (slug: vodafone)
 
-Icons:
-- ic_operator_2degrees
-- ic_operator_a1
-- ic_operator_airtel
-- ic_operator_ais
-- ic_operator_algar
-- ic_operator_amena
-- ic_operator_att
-- ic_operator_base
-- ic_operator_beeline
-- ic_operator_bouygues
-- ic_operator_bsnl
-- ic_operator_celcom
-- ic_operator_celcomdigi
-- ic_operator_chilimobil
-- ic_operator_china_mobile
-- ic_operator_china_telecom
-- ic_operator_china_unicom
-- ic_operator_claro
-- ic_operator_cosmote
-- ic_operator_digi
-- ic_operator_dna
-- ic_operator_dtac
-- ic_operator_du
-- ic_operator_ee
-- ic_operator_elisa
-- ic_operator_etisalat
-- ic_operator_euskaltel
-- ic_operator_finetwork
-- ic_operator_fjordkraft
-- ic_operator_free
-- ic_operator_ice
-- ic_operator_iliad
-- ic_operator_jazztel
-- ic_operator_jio
-- ic_operator_kddi
-- ic_operator_kpn
-- ic_operator_kyivstar
-- ic_operator_lebara
-- ic_operator_life_by
-- ic_operator_lifecell
-- ic_operator_lowi
-- ic_operator_lycamobile
-- ic_operator_m1
-- ic_operator_magenta
-- ic_operator_masmovil
-- ic_operator_maxis
-- ic_operator_megafon
-- ic_operator_mgts
-- ic_operator_mobifone
-- ic_operator_mobily
-- ic_operator_moldcell
-- ic_operator_movistar
-- ic_operator_mts
-- ic_operator_mycall
-- ic_operator_ntt_docomo
-- ic_operator_o2
-- ic_operator_odido
-- ic_operator_oneandone
-- ic_operator_onecall
-- ic_operator_onenz
-- ic_operator_optus
-- ic_operator_orange
-- ic_operator_pepephone
-- ic_operator_phonero
-- ic_operator_play
-- ic_operator_plus
-- ic_operator_proximus
-- ic_operator_r
-- ic_operator_rakuten
-- ic_operator_rostelecom
-- ic_operator_salt
-- ic_operator_sfr
-- ic_operator_simyo
-- ic_operator_singtel
-- ic_operator_softbank
-- ic_operator_spark
-- ic_operator_starhub
-- ic_operator_stc
-- ic_operator_sunrise
-- ic_operator_swisscom
-- ic_operator_t_mobile
-- ic_operator_talkmore
-- ic_operator_tattelecom
-- ic_operator_tdc
-- ic_operator_telcel
-- ic_operator_tele2
-- ic_operator_telecable
-- ic_operator_telekom
-- ic_operator_telenor
-- ic_operator_telia
-- ic_operator_telstra
-- ic_operator_three
-- ic_operator_tim
-- ic_operator_truemove
-- ic_operator_turk_telekom
-- ic_operator_turkcell
-- ic_operator_u_mobile
-- ic_operator_verizon
-- ic_operator_vi
-- ic_operator_viettel
-- ic_operator_vinaphone
-- ic_operator_vivo
-- ic_operator_vodafone
-- ic_operator_windtre
-- ic_operator_yettel
-- ic_operator_yoigo
-- ic_operator_yota
-- ic_operator_zain
+Category B — original stylized marks:
+All other ic_operator_*.xml drawables are original project artwork (octagon plate plus
+brand-colored glyph). Initial glyph outlines are derived from Liberation Sans Bold,
+Copyright (c) Bitstream, Inc., licensed under the SIL Open Font License, Version 1.1.
+
+Trademarks are property of their respective owners; usage is nominative.

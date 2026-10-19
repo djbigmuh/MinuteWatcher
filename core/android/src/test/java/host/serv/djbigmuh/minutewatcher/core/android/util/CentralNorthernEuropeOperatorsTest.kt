@@ -22,6 +22,12 @@ class CentralNorthernEuropeOperatorsTest {
         assertEquals("operator_telia", resolvePlmn("24801"))
         assertEquals("operator_tele2", resolvePlmn("24603"))
         assertEquals("operator_tele2", resolvePlmn("24007"))
+
+        assertEquals("LMT", OperatorResolver.resolve(context, "", listOf("24701"), 0).displayName)
+        assertEquals("operator_lmt", OperatorResolver.getOperatorBrandKey("LMT"))
+
+        assertEquals("Síminn", OperatorResolver.resolve(context, "", listOf("27401"), 0).displayName)
+        assertEquals("operator_siminn", OperatorResolver.getOperatorBrandKey("Síminn"))
     }
 
     @Test
@@ -32,6 +38,8 @@ class CentralNorthernEuropeOperatorsTest {
         assertEquals(R.string.operator_oneandone, OperatorResolver.getOperatorResourceId("1und1") as Int)
         assertEquals(R.string.operator_oneandone, OperatorResolver.getOperatorResourceId("eins und eins") as Int)
         assertEquals(R.string.operator_yettel, OperatorResolver.getOperatorResourceId("yettel") as Int)
+        assertEquals(R.string.operator_lmt, OperatorResolver.getOperatorResourceId("lmt") as Int)
+        assertEquals(R.string.operator_siminn, OperatorResolver.getOperatorResourceId("siminn") as Int)
     }
 
     @Test
@@ -39,6 +47,8 @@ class CentralNorthernEuropeOperatorsTest {
         assertEquals(R.drawable.ic_operator_magenta, SimUtils.getOperatorIconResource("magenta"))
         assertEquals(R.drawable.ic_operator_oneandone, SimUtils.getOperatorIconResource("1&1"))
         assertEquals(R.drawable.ic_operator_yettel, SimUtils.getOperatorIconResource("yettel"))
+        assertEquals(R.drawable.ic_operator_lmt, SimUtils.getOperatorIconResource("lmt"))
+        assertEquals(R.drawable.ic_operator_siminn, SimUtils.getOperatorIconResource("siminn"))
     }
 
     private fun resolvePlmn(plmn: String): String? {

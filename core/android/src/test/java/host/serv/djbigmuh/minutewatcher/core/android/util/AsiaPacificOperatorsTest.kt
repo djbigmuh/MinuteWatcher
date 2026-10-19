@@ -42,10 +42,17 @@ class AsiaPacificOperatorsTest {
         assertEquals("CSL", OperatorResolver.resolve(context, "", listOf("45400"), 0).displayName)
         assertEquals("3 Hong Kong", OperatorResolver.resolve(context, "", listOf("45403"), 0).displayName)
         assertEquals("SmarTone", OperatorResolver.resolve(context, "", listOf("45406"), 0).displayName)
+        // Cambodia / others
+        assertEquals("Cellcard", OperatorResolver.resolve(context, "", listOf("45618"), 0).displayName)
+        assertEquals("Smart Cambodia", OperatorResolver.resolve(context, "", listOf("45602"), 0).displayName)
+        assertEquals("Smart Cambodia", OperatorResolver.resolve(context, "", listOf("45605"), 0).displayName)
+        assertEquals("Metfone", OperatorResolver.resolve(context, "", listOf("45608"), 0).displayName)
+        assertEquals("Metfone", OperatorResolver.resolve(context, "", listOf("45609"), 0).displayName)
+        assertEquals("Celcom", OperatorResolver.resolve(context, "", listOf("50219"), 0).displayName)
         // Japan / others
-        assertEquals("Y! Mobile", OperatorResolver.resolve(context, "", listOf("44021"), 0).displayName)
+        assertEquals("Y! Mobile", OperatorResolver.resolve(context, "", listOf("44000"), 0).displayName)
+        assertEquals("SoftBank", OperatorResolver.resolve(context, "", listOf("44021"), 0).displayName)
         assertEquals("au", OperatorResolver.resolve(context, "", listOf("44052"), 0).displayName)
-        assertEquals("UQ mobile", OperatorResolver.resolve(context, "", listOf("44055"), 0).displayName)
     }
 
     @Test

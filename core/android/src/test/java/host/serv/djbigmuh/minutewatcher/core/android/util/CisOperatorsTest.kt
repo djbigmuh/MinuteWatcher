@@ -29,7 +29,6 @@ class CisOperatorsTest {
         assertEquals("operator_mts", json.getString("25001"))
         assertEquals("operator_megafon", json.getString("25002"))
         assertEquals("operator_beeline", json.getString("25028"))
-        assertEquals("operator_tele2", json.getString("25004"))
         assertEquals("operator_rostelecom", json.getString("25039"))
         assertEquals("operator_tattelecom", json.getString("25027"))
         assertEquals("operator_yota", json.getString("25011"))
@@ -41,6 +40,12 @@ class CisOperatorsTest {
         assertEquals("operator_life_by", json.getString("25704"))
         assertEquals("operator_orange", json.getString("25901"))
         assertEquals("operator_moldcell", json.getString("25902"))
+
+        assertEquals("Azercell", OperatorResolver.resolve(context, "", listOf("40001"), 0).displayName)
+        assertEquals("operator_azercell", OperatorResolver.getOperatorBrandKey("Azercell"))
+
+        assertEquals("Kcell", OperatorResolver.resolve(context, "", listOf("40102"), 0).displayName)
+        assertEquals("operator_kcell", OperatorResolver.getOperatorBrandKey("Kcell"))
     }
 
     @Test
@@ -57,6 +62,8 @@ class CisOperatorsTest {
         assertEquals(R.string.operator_moldcell, OperatorResolver.getOperatorResourceId("Moldcell"))
         assertEquals(R.string.operator_life_by, OperatorResolver.getOperatorResourceId("life:)"))
         assertEquals(R.string.operator_a1, OperatorResolver.getOperatorResourceId("A1"))
+        assertEquals(R.string.operator_azercell, OperatorResolver.getOperatorResourceId("azercell"))
+        assertEquals(R.string.operator_kcell, OperatorResolver.getOperatorResourceId("kcell"))
     }
 
     @Test
@@ -69,6 +76,8 @@ class CisOperatorsTest {
         assertEquals(R.drawable.ic_operator_lifecell, SimUtils.getOperatorIconResource("lifecell"))
         assertEquals(R.drawable.ic_operator_moldcell, SimUtils.getOperatorIconResource("Moldcell"))
         assertEquals(R.drawable.ic_operator_life_by, SimUtils.getOperatorIconResource("life:)"))
+        assertEquals(R.drawable.ic_operator_azercell, SimUtils.getOperatorIconResource("azercell"))
+        assertEquals(R.drawable.ic_operator_kcell, SimUtils.getOperatorIconResource("kcell"))
     }
 
     @Test

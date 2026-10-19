@@ -24,35 +24,4 @@ The following table lists candidate brands under consideration for addition acro
 
 | Brand | Country | MCC | Priority |
 |---|---|---|---|
-| LG Uplus | South Korea | 450 | Medium |
-| SK Telecom | South Korea | 450 | High |
-| Dito | Philippines | 515 | Medium |
-| Smart | Philippines | 515 | High |
-| Telkomsel | Indonesia | 510 | High |
-| Indosat Ooredoo | Indonesia | 510 | Medium |
-| Chunghwa Telecom | Taiwan | 466 | High |
-| Taiwan Mobile | Taiwan | 466 | Medium |
-| Rogers | Canada | 302 | High |
-| Bell | Canada | 302 | High |
-| MTN | South Africa | 655 | High |
-| Vodacom | South Africa | 655 | High |
-| MTN | Nigeria | 621 | High |
-| Glo | Nigeria | 621 | Medium |
-| Safaricom | Kenya | 639 | High |
-| Maroc Telecom | Morocco | 604 | High |
-| Tunisie Telecom | Tunisia | 605 | High |
-| Mobilis | Algeria | 603 | High |
-| Etisalat | Egypt | 602 | High |
-| Azercell | Azerbaijan | 400 | High |
-| Kcell | Kazakhstan | 401 | High |
-| Eir | Ireland | 272 | Medium |
-| MEO | Portugal | 268 | High |
-| Vivacom | Bulgaria | 284 | High |
-| Vodafone | Greece | 202 | High |
-| A1 | Croatia | 294 | High |
-| Telekom Srbija | Serbia | 220 | High |
-| Telia | Lithuania | 246 | High |
-| LMT | Latvia | 247 | High |
 | Cellcom | Israel | 425 | High |
-| GO | Malta | 270 | Medium |
-| Siminn | Iceland | 274 | High |

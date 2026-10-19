@@ -31,13 +31,17 @@
     <string name="operator_claro" translatable="false">Claro</string>
     <string name="operator_telcel" translatable="false">Telcel</string>
     <string name="operator_vivo" translatable="false">Vivo</string>
+    <string name="operator_vodacom" translatable="false">Vodacom</string>
     <string name="operator_algar" translatable="false">Algar</string>
+    <string name="operator_azercell" translatable="false">Azercell</string>
     <string name="operator_airtel" translatable="false">Airtel</string>
     <string name="operator_jio" translatable="false">Jio</string>
     <string name="operator_vi" translatable="false">Vi</string>
+    <string name="operator_vivacom" translatable="false">Vivacom</string>
     <string name="operator_bsnl" translatable="false">BSNL</string>
     <string name="operator_stc" translatable="false">STC</string>
     <string name="operator_mobily" translatable="false">Mobily</string>
+    <string name="operator_mobilis" translatable="false">Mobilis</string>
     <string name="operator_zain" translatable="false">Zain</string>
     <string name="operator_etisalat" translatable="false">Etisalat</string>
     <string name="operator_du" translatable="false">du</string>
@@ -46,6 +50,7 @@
     <string name="operator_swisscom" translatable="false">Swisscom</string>
     <string name="operator_sunrise" translatable="false">Sunrise</string>
     <string name="operator_salt" translatable="false">Salt</string>
+    <string name="operator_safaricom" translatable="false">Safaricom</string>
     <string name="operator_telia" translatable="false">Telia</string>
     <string name="operator_telenor" translatable="false">Telenor</string>
     <string name="operator_elisa" translatable="false">Elisa</string>
@@ -54,7 +59,9 @@
     <string name="operator_play" translatable="false">Play</string>
     <string name="operator_turkcell" translatable="false">Turkcell</string>
     <string name="operator_turk_telekom" translatable="false">Türk Telekom</string>
+    <string name="operator_tunisie_telecom" translatable="false">Tunisie Telecom</string>
     <string name="operator_rostelecom" translatable="false">Rostelecom</string>
+    <string name="operator_rogers" translatable="false">Rogers</string>
     <string name="operator_tattelecom" translatable="false">Tattelecom</string>
     <string name="operator_kyivstar" translatable="false">Kyivstar</string>
     <string name="operator_lifecell" translatable="false">lifecell</string>
@@ -63,9 +70,11 @@
     <string name="operator_a1" translatable="false">A1</string>
     <string name="operator_three" translatable="false">Three</string>
     <string name="operator_base" translatable="false">BASE</string>
+    <string name="operator_bell" translatable="false">Bell</string>
     <string name="operator_free" translatable="false">Free</string>
     <string name="operator_odido" translatable="false">Odido</string>
     <string name="operator_magenta" translatable="false">Magenta</string>
+    <string name="operator_maroc_telecom" translatable="false">Maroc Telecom</string>
     <string name="operator_oneandone" translatable="false">1&amp;1</string>
     <string name="operator_yettel" translatable="false">Yettel</string>
     <string name="operator_iliad" translatable="false">Iliad</string>
@@ -96,11 +105,13 @@
     <string name="operator_telecable" translatable="false">Telecable</string>
     <string name="operator_r" translatable="false">R</string>
     <string name="operator_simyo" translatable="false">simyo</string>
+    <string name="operator_siminn" translatable="false">Síminn</string>
     <string name="operator_jazztel" translatable="false">jazztel</string>
     <string name="operator_amena" translatable="false">amena</string>
     <string name="operator_masmovil" translatable="false">MásMóvil</string>
     <string name="operator_pepephone" translatable="false">pepephone</string>
     <string name="operator_lowi" translatable="false">lowi</string>
+    <string name="operator_lmt" translatable="false">LMT</string>
     <string name="operator_lebara" translatable="false">Lebara</string>
     <string name="operator_lycamobile" translatable="false">Lycamobile</string>
     <string name="operator_finetwork" translatable="false">finetwork</string>
@@ -124,11 +135,15 @@
     <string name="value_placeholder" translatable="false">—</string>
     <string name="operator_sample" translatable="false">Operator 1</string>
     <string name="operator_ee" translatable="false">EE</string>
+    <string name="operator_eir" translatable="false">Eir</string>
     <string name="about_author_email" translatable="false">dj.bigmuh@gmail.com</string>
     <string name="operator_sk_telecom" translatable="false">SK Telecom</string>
     <string name="operator_kt" translatable="false">KT</string>
+    <string name="operator_kcell" translatable="false">Kcell</string>
     <string name="operator_lg_uplus" translatable="false">LG U+</string>
     <string name="operator_globe" translatable="false">Globe</string>
+    <string name="operator_go" translatable="false">GO</string>
+    <string name="operator_glo" translatable="false">Glo</string>
     <string name="operator_smart" translatable="false">Smart</string>
     <string name="operator_dito" translatable="false">DITO</string>
     <string name="operator_telkomsel" translatable="false">Telkomsel</string>
@@ -158,12 +173,14 @@
     <string name="operator_mytel" translatable="false">Mytel</string>
     <string name="operator_ooredoo_mm" translatable="false">Ooredoo Myanmar</string>
     <string name="operator_mpt" translatable="false">MPT</string>
+    <string name="operator_mtn" translatable="false">MTN</string>
     <string name="operator_vodafone_au" translatable="false">Vodafone AU</string>
     <string name="operator_ntc" translatable="false">Nepal Telecom</string>
     <string name="operator_ncell" translatable="false">Ncell</string>
     <string name="operator_cellcard" translatable="false">Cellcard</string>
     <string name="operator_smart_kh" translatable="false">Smart Cambodia</string>
     <string name="operator_metfone" translatable="false">Metfone</string>
+    <string name="operator_meo" translatable="false">MEO</string>
     <string name="operator_lao_telecom" translatable="false">Lao Telecom</string>
     <string name="operator_unitel" translatable="false">Unitel</string>
     <string name="operator_bmobile" translatable="false">B-Mobile</string>

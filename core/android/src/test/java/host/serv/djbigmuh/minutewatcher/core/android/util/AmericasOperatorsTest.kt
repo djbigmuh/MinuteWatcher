@@ -25,6 +25,30 @@ class AmericasOperatorsTest {
         assertEquals("operator_vivo", resolvePlmn("72406"))
         assertEquals("operator_claro", resolvePlmn("72405"))
         assertEquals("operator_algar", resolvePlmn("72432"))
+
+        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("708001"), 0).displayName)
+        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("722010"), 0).displayName)
+        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("722070"), 0).displayName)
+        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("722310"), 0).displayName)
+        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("722320"), 0).displayName)
+        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("722330"), 0).displayName)
+        assertEquals("TIM", OperatorResolver.resolve(context, "", listOf("72403"), 0).displayName)
+        assertEquals("TIM", OperatorResolver.resolve(context, "", listOf("72404"), 0).displayName)
+        assertEquals("Vivo", OperatorResolver.resolve(context, "", listOf("72410"), 0).displayName)
+        assertEquals("Vivo", OperatorResolver.resolve(context, "", listOf("72411"), 0).displayName)
+        assertEquals("Vivo", OperatorResolver.resolve(context, "", listOf("72423"), 0).displayName)
+        assertEquals("Algar", OperatorResolver.resolve(context, "", listOf("72433"), 0).displayName)
+        assertEquals("Algar", OperatorResolver.resolve(context, "", listOf("72434"), 0).displayName)
+        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("72438"), 0).displayName)
+        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("732001"), 0).displayName)
+
+        assertEquals("Rogers", OperatorResolver.resolve(context, "", listOf("302320"), 0).displayName)
+        assertEquals("Rogers", OperatorResolver.resolve(context, "", listOf("302720"), 0).displayName)
+        assertEquals("operator_rogers", OperatorResolver.getOperatorBrandKey("Rogers"))
+
+        assertEquals("Bell", OperatorResolver.resolve(context, "", listOf("302610"), 0).displayName)
+        assertEquals("Bell", OperatorResolver.resolve(context, "", listOf("302690"), 0).displayName)
+        assertEquals("operator_bell", OperatorResolver.getOperatorBrandKey("Bell"))
     }
 
     @Test
@@ -49,6 +73,8 @@ class AmericasOperatorsTest {
         assertEquals(R.drawable.ic_operator_telcel, SimUtils.getOperatorIconResource("telcel"))
         assertEquals(R.drawable.ic_operator_vivo, SimUtils.getOperatorIconResource("vivo"))
         assertEquals(R.drawable.ic_operator_algar, SimUtils.getOperatorIconResource("algar"))
+        assertEquals(R.drawable.ic_operator_rogers, SimUtils.getOperatorIconResource("rogers"))
+        assertEquals(R.drawable.ic_operator_bell, SimUtils.getOperatorIconResource("bell"))
     }
 
     private fun resolvePlmn(plmn: String): String? {

@@ -160,6 +160,23 @@ object SimUtils {
             R.string.operator_unitel to R.drawable.ic_operator_unitel,
             R.string.operator_bmobile to R.drawable.ic_operator_bmobile,
             R.string.operator_dst to R.drawable.ic_operator_dst,
+            R.string.operator_rogers to R.drawable.ic_operator_rogers,
+            R.string.operator_bell to R.drawable.ic_operator_bell,
+            R.string.operator_meo to R.drawable.ic_operator_meo,
+            R.string.operator_vivacom to R.drawable.ic_operator_vivacom,
+            R.string.operator_lmt to R.drawable.ic_operator_lmt,
+            R.string.operator_eir to R.drawable.ic_operator_eir,
+            R.string.operator_siminn to R.drawable.ic_operator_siminn,
+            R.string.operator_go to R.drawable.ic_operator_go,
+            R.string.operator_maroc_telecom to R.drawable.ic_operator_maroc_telecom,
+            R.string.operator_tunisie_telecom to R.drawable.ic_operator_tunisie_telecom,
+            R.string.operator_mobilis to R.drawable.ic_operator_mobilis,
+            R.string.operator_azercell to R.drawable.ic_operator_azercell,
+            R.string.operator_kcell to R.drawable.ic_operator_kcell,
+            R.string.operator_mtn to R.drawable.ic_operator_mtn,
+            R.string.operator_vodacom to R.drawable.ic_operator_vodacom,
+            R.string.operator_safaricom to R.drawable.ic_operator_safaricom,
+            R.string.operator_glo to R.drawable.ic_operator_glo,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {
