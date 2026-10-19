@@ -7,6 +7,9 @@ Thank you for your interest in contributing to MinuteWatcher! To maintain high c
 - The Detekt/KSP toolchain is highly sensitive to the JDK version. Higher versions (like **JDK 25**) must not be present in the system `PATH`.
 - Set your JDK path locally via the `JAVA_HOME` environment variable or in your user-level
   `~/.gradle/gradle.properties` (using `org.gradle.java.home`). Do not commit this setting to the project repository.
+- Machine-specific JVM properties (including `-Duser.home` overrides when Windows profile paths contain non-ASCII
+  characters or spaces) must be placed solely in user-level `%USERPROFILE%\.gradle\gradle.properties`. Machine-specific
+  properties in the project `gradle.properties` file are strictly prohibited.
 
 ### SDK Location on Windows (local.properties)
 

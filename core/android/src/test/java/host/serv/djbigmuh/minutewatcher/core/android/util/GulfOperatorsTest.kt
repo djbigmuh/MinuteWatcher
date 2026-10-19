@@ -19,6 +19,16 @@ class GulfOperatorsTest {
         assertEquals("Mobily", resolveDisplayName("42003"))
         assertEquals("Etisalat", resolveDisplayName("42402"))
         assertEquals("du", resolveDisplayName("42403"))
+
+        assertEquals("Cellcom", resolveDisplayName("42502"))
+        assertEquals("Partner", resolveDisplayName("42501"))
+        assertEquals("Pelephone", resolveDisplayName("42503"))
+        assertEquals("Hot Mobile", resolveDisplayName("42507"))
+        assertEquals("WE", resolveDisplayName("60204"))
+        assertEquals("Ooredoo", resolveDisplayName("41903"))
+        assertEquals("Ooredoo", resolveDisplayName("42701"))
+        assertEquals("Ooredoo", resolveDisplayName("60303"))
+        assertEquals("Ooredoo", resolveDisplayName("41405"))
     }
 
     @Test

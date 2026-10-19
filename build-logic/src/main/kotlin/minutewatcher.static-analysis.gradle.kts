@@ -15,7 +15,6 @@ extensions.configure<DetektExtension>("detekt") {
 }
 
 configure<KtlintExtension> {
-    android.set(true)
     ignoreFailures.set(false)
     reporters {
         reporter(ReporterType.PLAIN)

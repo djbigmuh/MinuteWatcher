@@ -26,7 +26,7 @@ class SouthernEuropeTurkeyOperatorsTest {
         assertEquals("GO", OperatorResolver.resolve(context, "", listOf("27821"), 0).displayName)
         assertEquals("operator_go", OperatorResolver.getOperatorBrandKey("GO"))
 
-        assertEquals("A1", OperatorResolver.resolve(context, "", listOf("22001"), 0).displayName)
+        assertEquals("Yettel", OperatorResolver.resolve(context, "", listOf("22001"), 0).displayName)
         assertEquals("MTS", OperatorResolver.resolve(context, "", listOf("22003"), 0).displayName)
         assertEquals("A1", OperatorResolver.resolve(context, "", listOf("22005"), 0).displayName)
         assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("27801"), 0).displayName)

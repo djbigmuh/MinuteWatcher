@@ -46,10 +46,10 @@ object AppLocaleContexts {
         val key = CacheKey(appContext, localeTag)
 
         return cache.computeIfAbsent(key) {
-            val configuration = Configuration(context.resources.configuration)
+            val configuration = Configuration(appContext.resources.configuration)
             configuration.setLocale(firstLocale)
             configuration.setLayoutDirection(firstLocale)
-            context.createConfigurationContext(configuration)
+            appContext.createConfigurationContext(configuration)
         }
     }
 

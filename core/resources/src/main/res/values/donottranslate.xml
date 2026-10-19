@@ -171,10 +171,39 @@
     <string name="operator_banglalink" translatable="false">Banglalink</string>
     <string name="operator_teletalk" translatable="false">Teletalk</string>
     <string name="operator_mytel" translatable="false">Mytel</string>
-    <string name="operator_ooredoo_mm" translatable="false">Ooredoo Myanmar</string>
+    <string name="operator_ooredoo" translatable="false">Ooredoo</string>
+    <string name="operator_cellcom" translatable="false">Cellcom</string>
+    <string name="operator_partner" translatable="false">Partner</string>
+    <string name="operator_pelephone" translatable="false">Pelephone</string>
+    <string name="operator_hot_mobile" translatable="false">Hot Mobile</string>
+    <string name="operator_telus" translatable="false">TELUS</string>
+    <string name="operator_we" translatable="false">WE</string>
+    <string name="operator_tigo" translatable="false">Tigo</string>
+    <string name="operator_entel" translatable="false">Entel</string>
+    <string name="operator_personal" translatable="false">Personal</string>
+    <string name="operator_cellc" translatable="false">Cell C</string>
+    <string name="operator_batelco" translatable="false">Batelco</string>
+    <string name="operator_umniah" translatable="false">Umniah</string>
+    <string name="operator_asiacell" translatable="false">Asiacell</string>
+    <string name="operator_korek" translatable="false">Korek</string>
+    <string name="operator_awcc" translatable="false">AWCC</string>
+    <string name="operator_roshan" translatable="false">Roshan</string>
+    <string name="operator_ucell" translatable="false">Ucell</string>
+    <string name="operator_magti" translatable="false">Magti</string>
+    <string name="operator_inwi" translatable="false">inwi</string>
+    <string name="operator_djezzy" translatable="false">Djezzy</string>
+    <string name="operator_9mobile" translatable="false">9mobile</string>
+    <string name="operator_nova" translatable="false">Nova</string>
+    <string name="operator_wom" translatable="false">WOM</string>
+    <string name="operator_bitel" translatable="false">Bitel</string>
+    <string name="operator_digitel" translatable="false">Digitel</string>
+    <string name="operator_movilnet" translatable="false">Movilnet</string>
+    <string name="operator_cnt" translatable="false">CNT</string>
+    <string name="operator_viva_bo" translatable="false">Viva</string>
+    <string name="operator_cubacel" translatable="false">Cubacel</string>
+    <string name="operator_digicel" translatable="false">Digicel</string>
     <string name="operator_mpt" translatable="false">MPT</string>
     <string name="operator_mtn" translatable="false">MTN</string>
-    <string name="operator_vodafone_au" translatable="false">Vodafone AU</string>
     <string name="operator_ntc" translatable="false">Nepal Telecom</string>
     <string name="operator_ncell" translatable="false">Ncell</string>
     <string name="operator_cellcard" translatable="false">Cellcard</string>

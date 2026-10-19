@@ -19,8 +19,12 @@ class EastAsiaOperatorsTest {
         assertEquals("China Unicom", resolveDisplayName("46001"))
         assertEquals("China Telecom", resolveDisplayName("46011"))
         assertEquals("NTT Docomo", resolveDisplayName("44010"))
+        assertEquals("NTT Docomo", resolveDisplayName("44030"))
         assertEquals("SoftBank", resolveDisplayName("44020"))
+        assertEquals("SoftBank", resolveDisplayName("44004"))
+        assertEquals("SoftBank", resolveDisplayName("44006"))
         assertEquals("KDDI", resolveDisplayName("44050"))
+        assertEquals("KDDI", resolveDisplayName("44055"))
         assertEquals("Rakuten Mobile", resolveDisplayName("44011"))
     }
 

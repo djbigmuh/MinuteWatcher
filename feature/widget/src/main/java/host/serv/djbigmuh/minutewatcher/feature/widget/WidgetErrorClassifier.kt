@@ -60,7 +60,11 @@ constructor() {
         var current: Throwable? = e
         var depth = 0
         val visited = mutableSetOf<Throwable>()
-        while (current != null && depth < MAX_CAUSE_DEPTH && visited.add(current)) {
+        while (
+            current != null &&
+            depth < MAX_CAUSE_DEPTH &&
+            visited.add(current)
+        ) {
             if (type.isInstance(current)) return true
             current = current.cause
             depth++

@@ -122,7 +122,13 @@ object OperatorResolver {
         val trimmedName = operatorName.trim()
         if (isValidSpecificName(trimmedName)) {
             val brandKey = getOperatorBrandKey(trimmedName)
-            return ResolutionResult(trimmedName, brandKey)
+            if (brandKey != null) {
+                return ResolutionResult(trimmedName, brandKey)
+            }
+            val localizedContext = AppLocaleContexts.forAppLocale(context)
+            val database = loadDb(localizedContext)
+            val resKey = findInDatabase(database, candidates)
+            return ResolutionResult(trimmedName, resKey)
         }
 
         val localizedContext = AppLocaleContexts.forAppLocale(context)
@@ -133,7 +139,7 @@ object OperatorResolver {
             if (resKey != null) {
                 val displayName =
                     resolveFromDbKey(localizedContext, resKey)
-                        ?: fallbackResolution(localizedContext, candidates.firstOrNull().orEmpty(), simSlot)
+                        ?: fallbackResolution(localizedContext, displayCandidate(candidates), simSlot)
                 ResolutionResult(displayName, resKey)
             } else {
                 logUnknownCandidates(candidates)
@@ -141,8 +147,11 @@ object OperatorResolver {
             }
 
         return resolved
-            ?: ResolutionResult(fallbackResolution(localizedContext, candidates.firstOrNull().orEmpty(), simSlot), null)
+            ?: ResolutionResult(fallbackResolution(localizedContext, displayCandidate(candidates), simSlot), null)
     }
+
+    private fun displayCandidate(candidates: List<String>): String =
+        candidates.firstOrNull { it.isNotEmpty() && it != "00000" }.orEmpty()
 
     private fun findInDatabase(
         database: Map<String, String>,

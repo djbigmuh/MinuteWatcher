@@ -2,6 +2,7 @@ package host.serv.djbigmuh.minutewatcher.core.android.util
 
 import android.app.LocaleManager
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
@@ -13,6 +14,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.util.Locale
 
@@ -89,5 +94,50 @@ class AppLocaleContextsTest {
 
         assertEquals("es", currentLocale.language)
         assertEquals("Tarjetas SIM no encontradas", localizedContext.getString(R.string.no_sim_found))
+    }
+
+    @Test
+    fun `forAppLocale caches localized context and returns same instance`() {
+        val russianLocale = Locale.forLanguageTag("ru")
+        setAppLocale(LocaleListCompat.create(russianLocale))
+
+        val localized1 = AppLocaleContexts.forAppLocale(context)
+        val localized2 = AppLocaleContexts.forAppLocale(context)
+
+        org.junit.Assert.assertSame(localized1, localized2)
+    }
+
+    @Test
+    fun `forAppLocale uses application context for creating configuration context`() {
+        val russianLocale = Locale.forLanguageTag("ru")
+        setAppLocale(LocaleListCompat.create(russianLocale))
+
+        val mockAppCtx: Context = mock()
+        val mockBaseCtx: Context = mock()
+        val mockConfigCtx: Context = mock()
+
+        doReturn(
+            context.getSystemService(LocaleManager::class.java),
+        ).whenever(mockBaseCtx).getSystemService(eq(LocaleManager::class.java))
+        doReturn(
+            context.getSystemService(LocaleManager::class.java),
+        ).whenever(mockAppCtx).getSystemService(eq(LocaleManager::class.java))
+        doReturn(mockAppCtx).whenever(mockBaseCtx).applicationContext
+        doReturn(context.resources).whenever(mockAppCtx).resources
+        doReturn(
+            mockConfigCtx,
+        ).whenever(mockAppCtx).createConfigurationContext(org.mockito.ArgumentMatchers.any(Configuration::class.java))
+
+        val result = AppLocaleContexts.forAppLocale(mockBaseCtx)
+        assertEquals(mockConfigCtx, result)
+        org.mockito.kotlin
+            .verify(
+                mockAppCtx,
+            ).createConfigurationContext(org.mockito.ArgumentMatchers.any(Configuration::class.java))
+        org.mockito.kotlin
+            .verify(
+                mockBaseCtx,
+                org.mockito.kotlin.never(),
+            ).createConfigurationContext(org.mockito.ArgumentMatchers.any(Configuration::class.java))
     }
 }

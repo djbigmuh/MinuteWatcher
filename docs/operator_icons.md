@@ -36,7 +36,7 @@ identify operators by brand color and initials under nominative use.
 
 Icons that already contained recognizable brand-colored artwork prior to normalization are retained unchanged (for
 example `ic_operator_verizon`, `ic_operator_rakuten`,
-`ic_operator_magenta`, `ic_operator_yettel`, `ic_operator_yoigo`, `ic_operator_vi`).
+`ic_operator_magenta`, `ic_operator_yettel`, `ic_operator_yoigo`).
 
 ## License summary
 
@@ -49,6 +49,20 @@ example `ic_operator_verizon`, `ic_operator_rakuten`,
 - Trademark rights remain with their owners; icons are used for nominative operator identification.
 - Brand colors are adjusted where required to satisfy the contrast rule of the compliance test (WCAG 2.1 ratio >= 3.0
   against white, gray and dark backgrounds).
+
+## Uniqueness rules
+
+1. Normalized contents of icon files for different brands are unique.
+2. Normalized glyph geometry for different brands is unique, except documented shared corporate mark groups.
+3. A brand marker cannot be a solid rectangle or rectangular ring.
+4. Rules are enforced by `OperatorIconUniquenessTest`; pending normalization registry must shrink and eventually be
+   removed.
+
+## Shared corporate marks
+
+- **Deutsche Telekom Group**: `ic_operator_t_mobile`, `ic_operator_telekom`, `ic_operator_magenta` share the corporate
+  T-Mobile/Telekom glyph mark.
+- **Turkcell Group**: `ic_operator_life_by`, `ic_operator_lifecell` share the corporate life:) / lifecell smiley mark.
 
 ## Normative asset compliance rules
 

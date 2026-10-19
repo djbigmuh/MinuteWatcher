@@ -49,6 +49,18 @@ class AmericasOperatorsTest {
         assertEquals("Bell", OperatorResolver.resolve(context, "", listOf("302610"), 0).displayName)
         assertEquals("Bell", OperatorResolver.resolve(context, "", listOf("302690"), 0).displayName)
         assertEquals("operator_bell", OperatorResolver.getOperatorBrandKey("Bell"))
+
+        assertEquals("TELUS", OperatorResolver.resolve(context, "", listOf("302220"), 0).displayName)
+        assertEquals("operator_telus", OperatorResolver.getOperatorBrandKey("TELUS"))
+
+        assertEquals("Tigo", OperatorResolver.resolve(context, "", listOf("732103"), 0).displayName)
+        assertEquals("operator_tigo", OperatorResolver.getOperatorBrandKey("Tigo"))
+
+        assertEquals("Entel", OperatorResolver.resolve(context, "", listOf("73001"), 0).displayName)
+        assertEquals("operator_entel", OperatorResolver.getOperatorBrandKey("Entel"))
+
+        assertEquals("Personal", OperatorResolver.resolve(context, "", listOf("722340"), 0).displayName)
+        assertEquals("operator_personal", OperatorResolver.getOperatorBrandKey("Personal"))
     }
 
     @Test

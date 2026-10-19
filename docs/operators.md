@@ -5,7 +5,9 @@ The set of supported operator brands is determined by the keys defined in `Opera
 
 ## Adding a Brand
 To add a new operator brand to the application, the following seven artifacts must be provided and updated:
-1. **String Resource**: Add string resource definition in `core/resources/src/main/res/values/strings.xml` and translations.
+
+1. **String Resource**: Add string resource definition in `core/resources/src/main/res/values/donottranslate.xml` with
+   `translatable="false"` (brand names are not translated).
 2. **Vector Icon**: Add vector drawable icon in `core/resources/src/main/res/drawable/ic_operator_<brand>.xml`.
 3. **Search Tokens**: Configure search tokens in `OperatorBrandDatabase`.
 4. **Brand Map Entry**: Add mapping in `OperatorBrandDatabase.operatorResourceMap`.
@@ -24,4 +26,3 @@ The following table lists candidate brands under consideration for addition acro
 
 | Brand | Country | MCC | Priority |
 |---|---|---|---|
-| Cellcom | Israel | 425 | High |

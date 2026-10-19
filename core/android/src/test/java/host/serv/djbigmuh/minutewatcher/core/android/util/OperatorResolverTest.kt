@@ -421,4 +421,42 @@ class OperatorResolverTest {
         val result = OperatorResolver.resolve(context, "", listOf("25003"), 0)
         org.junit.Assert.assertNotEquals("MGTS", result.displayName)
     }
+
+    @Test
+    fun `resolve with specific name and matching plmn in db returns brandKey`() {
+        val result = OperatorResolver.resolve(context, "3", listOf("23205"), 0)
+        assertEquals("3", result.displayName)
+        assertEquals("operator_three", result.brandKey)
+    }
+
+    @Test
+    fun `resolve with specific name and absent plmn in db returns null brandKey`() {
+        val result = OperatorResolver.resolve(context, "UnknownCarrier XYZ", listOf("99999"), 0)
+        assertEquals("UnknownCarrier XYZ", result.displayName)
+        assertNull(result.brandKey)
+    }
+
+    @Test
+    fun `resolve name token priority over db plmn`() {
+        val result = OperatorResolver.resolve(context, "MTS", listOf("21407"), 0)
+        assertEquals("MTS", result.displayName)
+        assertEquals("operator_mts", result.brandKey)
+    }
+
+    @Test
+    fun `resolve empty name and invalid candidates returns generic name without MCC`() {
+        val result = OperatorResolver.resolve(context, "", listOf("00000"), 0)
+        org.junit.Assert.assertFalse(result.displayName.contains("MCC:"))
+    }
+
+    @Test
+    fun `resolve empty name skips invalid candidate and uses valid second candidate`() {
+        val result = OperatorResolver.resolve(context, "", listOf("00000", "99999"), 0)
+        assertEquals("Operator with mcc MCC:999 MNC:99", result.displayName)
+    }
+
+    @Test
+    fun `simutils get operator icon resource for operator three`() {
+        assertEquals(R.drawable.ic_operator_three, SimUtils.getOperatorIconResource("Three"))
+    }
 }
