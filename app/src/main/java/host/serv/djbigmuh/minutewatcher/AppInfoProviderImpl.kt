@@ -6,11 +6,11 @@ import javax.inject.Singleton
 
 @Singleton
 class AppInfoProviderImpl
-@Inject
-constructor() : AppInfoProvider {
-    override val versionName: String
-        get() = BuildConfig.VERSION_NAME
+    @Inject
+    constructor() : AppInfoProvider {
+        override val versionName: String
+            get() = BuildConfig.VERSION_NAME
 
-    override val code: Int
-        get() = BuildConfig.VERSION_CODE
-}
+        override val code: Int
+            get() = BuildConfig.VERSION_CODE
+    }

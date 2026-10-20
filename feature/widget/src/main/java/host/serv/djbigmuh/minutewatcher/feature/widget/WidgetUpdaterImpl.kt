@@ -44,347 +44,347 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @Singleton
 class WidgetUpdaterImpl
-@Inject
-constructor(
-    @param:ApplicationContext private val context: Context,
-    private val appSettingsRepository: AppSettingsRepository,
-    private val renderer: WidgetRenderer,
-    private val retryManager: WidgetUpdateRetryManager,
-    private val limitManager: WidgetLimitManager,
-    private val errorClassifier: WidgetErrorClassifier,
-    @param:ApplicationScope private val scope: CoroutineScope,
-) : WidgetUpdater {
-    private val coalescingMutex = Mutex()
-    private val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
-    private var pendingPass: CompletableDeferred<WidgetUpdateResult>? = null
-    private var rerunRequested: Boolean = false
+    @Inject
+    constructor(
+        @param:ApplicationContext private val context: Context,
+        private val appSettingsRepository: AppSettingsRepository,
+        private val renderer: WidgetRenderer,
+        private val retryManager: WidgetUpdateRetryManager,
+        private val limitManager: WidgetLimitManager,
+        private val errorClassifier: WidgetErrorClassifier,
+        @param:ApplicationScope private val scope: CoroutineScope,
+    ) : WidgetUpdater {
+        private val coalescingMutex = Mutex()
+        private val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+        private var pendingPass: CompletableDeferred<WidgetUpdateResult>? = null
+        private var rerunRequested: Boolean = false
 
-    /**
-     * Tracks whether a LimitExceeded error has been handled within the CURRENT update call.
-     * This prevents redundant flag updates and infinite retry loops if SIMPLIFIED mode also fails.
-     * Reset at the beginning of each update process, on [recover], or when a FULL update succeeds.
-     */
-    private val limitExceededHandled = AtomicBoolean(false)
+        /**
+         * Tracks whether a LimitExceeded error has been handled within the CURRENT update call.
+         * This prevents redundant flag updates and infinite retry loops if SIMPLIFIED mode also fails.
+         * Reset at the beginning of each update process, on [recover], or when a FULL update succeeds.
+         */
+        private val limitExceededHandled = AtomicBoolean(false)
 
-    /**
-     * Triggers an update for all application widgets.
-     *
-     * This operation is typically bounded by a timeout (e.g., WIDGET_UPDATE_TIMEOUT_MS).
-     * Supports coalescing: if an update is already in progress, the caller will join it.
-     *
-     * @return [WidgetUpdateResult] indicating the outcome of the update.
-     * @throws CancellationException if the coroutine scope is cancelled.
-     */
-    override suspend fun updateAll(): WidgetUpdateResult {
-        val (deferred, isCoalesced) =
-            coalescingMutex.withLock {
-                val active = activeUpdate.get()
-                val tailScheduled = pendingPass != null
-                if (active == null && !tailScheduled) {
-                    val new = CompletableDeferred<WidgetUpdateResult>()
-                    activeUpdate.set(new)
-                    new to false
+        /**
+         * Triggers an update for all application widgets.
+         *
+         * This operation is typically bounded by a timeout (e.g., WIDGET_UPDATE_TIMEOUT_MS).
+         * Supports coalescing: if an update is already in progress, the caller will join it.
+         *
+         * @return [WidgetUpdateResult] indicating the outcome of the update.
+         * @throws CancellationException if the coroutine scope is cancelled.
+         */
+        override suspend fun updateAll(): WidgetUpdateResult {
+            val (deferred, isCoalesced) =
+                coalescingMutex.withLock {
+                    val active = activeUpdate.get()
+                    val tailScheduled = pendingPass != null
+                    if (active == null && !tailScheduled) {
+                        val new = CompletableDeferred<WidgetUpdateResult>()
+                        activeUpdate.set(new)
+                        new to false
+                    } else {
+                        rerunRequested = true
+                        val tailDef = pendingPass ?: CompletableDeferred<WidgetUpdateResult>().also { pendingPass = it }
+                        tailDef to true
+                    }
+                }
+
+            val result =
+                if (isCoalesced) {
+                    deferred.await()
                 } else {
-                    rerunRequested = true
-                    val tailDef = pendingPass ?: CompletableDeferred<WidgetUpdateResult>().also { pendingPass = it }
-                    tailDef to true
+                    startNewUpdate(deferred)
+                }
+
+            return result
+        }
+
+        private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
+            try {
+                val res =
+                    withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
+                        executeUpdateProcess()
+                    } ?: transientFailure(wasCoalesced = false)
+                deferred.complete(res)
+                return res
+            } catch (e: CancellationException) {
+                deferred.complete(transientFailure(wasCoalesced = false))
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("WidgetUpdater: update failed", e)
+                val failure = terminalFailure(wasCoalesced = false)
+                deferred.complete(failure)
+                return failure
+            } finally {
+                withContext(NonCancellable) {
+                    scheduleNextTailPass(deferred)
                 }
             }
+        }
 
-        val result =
-            if (isCoalesced) {
-                deferred.await()
-            } else {
-                startNewUpdate(deferred)
+        private suspend fun runTailPass(tailDeferred: CompletableDeferred<WidgetUpdateResult>) {
+            var completed = false
+            try {
+                val finalRes = executeTailUpdate()
+                tailDeferred.complete(finalRes)
+                completed = true
+            } catch (_: CancellationException) {
+                AppLogger.d("WidgetUpdater: tail pass cancelled")
+                tailDeferred.complete(transientFailure(wasCoalesced = true))
+                completed = true
+            } catch (e: Exception) {
+                AppLogger.e("WidgetUpdater: tail pass failed", e)
+                tailDeferred.complete(transientFailure(wasCoalesced = true))
+                completed = true
+            } finally {
+                handleTailFinally(tailDeferred, completed)
             }
+        }
 
-        return result
-    }
-
-    private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
-        try {
+        private suspend fun executeTailUpdate(): WidgetUpdateResult {
             val res =
                 withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
                     executeUpdateProcess()
-                } ?: transientFailure(wasCoalesced = false)
-            deferred.complete(res)
-            return res
-        } catch (e: CancellationException) {
-            deferred.complete(transientFailure(wasCoalesced = false))
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("WidgetUpdater: update failed", e)
-            val failure = terminalFailure(wasCoalesced = false)
-            deferred.complete(failure)
-            return failure
-        } finally {
+                } ?: transientFailure(wasCoalesced = true)
+            return when (res) {
+                is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
+                is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
+            }
+        }
+
+        private suspend fun handleTailFinally(
+            tailDeferred: CompletableDeferred<WidgetUpdateResult>,
+            completed: Boolean,
+        ) {
             withContext(NonCancellable) {
-                scheduleNextTailPass(deferred)
+                if (!completed && !tailDeferred.isCompleted) {
+                    tailDeferred.complete(transientFailure(wasCoalesced = true))
+                }
+                scheduleNextTailPass(tailDeferred)
             }
         }
-    }
 
-    private suspend fun runTailPass(tailDeferred: CompletableDeferred<WidgetUpdateResult>) {
-        var completed = false
-        try {
-            val finalRes = executeTailUpdate()
-            tailDeferred.complete(finalRes)
-            completed = true
-        } catch (_: CancellationException) {
-            AppLogger.d("WidgetUpdater: tail pass cancelled")
-            tailDeferred.complete(transientFailure(wasCoalesced = true))
-            completed = true
-        } catch (e: Exception) {
-            AppLogger.e("WidgetUpdater: tail pass failed", e)
-            tailDeferred.complete(transientFailure(wasCoalesced = true))
-            completed = true
-        } finally {
-            handleTailFinally(tailDeferred, completed)
-        }
-    }
-
-    private suspend fun executeTailUpdate(): WidgetUpdateResult {
-        val res =
-            withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
-                executeUpdateProcess()
-            } ?: transientFailure(wasCoalesced = true)
-        return when (res) {
-            is WidgetUpdateResult.Success -> res.copy(wasCoalesced = true)
-            is WidgetUpdateResult.Failure -> res.copy(wasCoalesced = true)
-        }
-    }
-
-    private suspend fun handleTailFinally(
-        tailDeferred: CompletableDeferred<WidgetUpdateResult>,
-        completed: Boolean,
-    ) {
-        withContext(NonCancellable) {
-            if (!completed && !tailDeferred.isCompleted) {
-                tailDeferred.complete(transientFailure(wasCoalesced = true))
-            }
-            scheduleNextTailPass(tailDeferred)
-        }
-    }
-
-    /**
-     * Consumes the pending tail pass registered under [coalescingMutex] and schedules
-     * its execution, or clears [activeUpdate] held by [owner] when no tail pass is pending.
-     *
-     * Must be invoked from a NonCancellable context.
-     */
-    private suspend fun scheduleNextTailPass(owner: CompletableDeferred<WidgetUpdateResult>) {
-        val nextTail =
-            coalescingMutex.withLock {
-                if (rerunRequested) {
-                    rerunRequested = false
-                    val d = pendingPass
-                    pendingPass = null
-                    if (d != null) {
-                        activeUpdate.set(d)
+        /**
+         * Consumes the pending tail pass registered under [coalescingMutex] and schedules
+         * its execution, or clears [activeUpdate] held by [owner] when no tail pass is pending.
+         *
+         * Must be invoked from a NonCancellable context.
+         */
+        private suspend fun scheduleNextTailPass(owner: CompletableDeferred<WidgetUpdateResult>) {
+            val nextTail =
+                coalescingMutex.withLock {
+                    if (rerunRequested) {
+                        rerunRequested = false
+                        val d = pendingPass
+                        pendingPass = null
+                        if (d != null) {
+                            activeUpdate.set(d)
+                        } else {
+                            activeUpdate.compareAndSet(owner, null)
+                        }
+                        d
                     } else {
                         activeUpdate.compareAndSet(owner, null)
+                        null
                     }
-                    d
-                } else {
-                    activeUpdate.compareAndSet(owner, null)
-                    null
+                }
+            if (nextTail != null) {
+                scope.launch(start = CoroutineStart.ATOMIC) {
+                    runTailPass(nextTail)
                 }
             }
-        if (nextTail != null) {
-            scope.launch(start = CoroutineStart.ATOMIC) {
-                runTailPass(nextTail)
-            }
         }
-    }
 
-    private fun transientFailure(wasCoalesced: Boolean): WidgetUpdateResult.Failure =
-        WidgetUpdateResult.Failure(
-            wasCoalesced = wasCoalesced,
-            isRetryable = true,
-            reason = WidgetUpdateResult.FailureReason.TRANSIENT,
-        )
+        private fun transientFailure(wasCoalesced: Boolean): WidgetUpdateResult.Failure =
+            WidgetUpdateResult.Failure(
+                wasCoalesced = wasCoalesced,
+                isRetryable = true,
+                reason = WidgetUpdateResult.FailureReason.TRANSIENT,
+            )
 
-    private fun terminalFailure(wasCoalesced: Boolean): WidgetUpdateResult.Failure =
-        WidgetUpdateResult.Failure(
-            wasCoalesced = wasCoalesced,
-            isRetryable = false,
-            reason = WidgetUpdateResult.FailureReason.TERMINAL,
-        )
+        private fun terminalFailure(wasCoalesced: Boolean): WidgetUpdateResult.Failure =
+            WidgetUpdateResult.Failure(
+                wasCoalesced = wasCoalesced,
+                isRetryable = false,
+                reason = WidgetUpdateResult.FailureReason.TERMINAL,
+            )
 
-    private suspend fun executeUpdateProcess(): WidgetUpdateResult =
-        try {
-            limitExceededHandled.set(false)
-            var lastOutcome: UpdateOutcome? = null
-            val success =
-                retryManager.updateWithRetry { attempt ->
-                    val outcome =
-                        try {
-                            performSingleUpdate(attempt)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("WidgetUpdater: attempt $attempt threw exception", e)
-                            UpdateOutcome.Retry
-                        }
-
-                    when (outcome) {
-                        is UpdateOutcome.LimitExceeded -> {
-                            if (outcome.wasFull && limitExceededHandled.compareAndSet(false, true)) {
-                                limitManager.setWidgetLimitExceeded(value = true)
-                                // Retry to switch to SIMPLIFIED mode in the next iteration
+        private suspend fun executeUpdateProcess(): WidgetUpdateResult =
+            try {
+                limitExceededHandled.set(false)
+                var lastOutcome: UpdateOutcome? = null
+                val success =
+                    retryManager.updateWithRetry { attempt ->
+                        val outcome =
+                            try {
+                                performSingleUpdate(attempt)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                AppLogger.e("WidgetUpdater: attempt $attempt threw exception", e)
                                 UpdateOutcome.Retry
-                            } else {
+                            }
+
+                        when (outcome) {
+                            is UpdateOutcome.LimitExceeded -> {
+                                if (outcome.wasFull && limitExceededHandled.compareAndSet(false, true)) {
+                                    limitManager.setWidgetLimitExceeded(value = true)
+                                    // Retry to switch to SIMPLIFIED mode in the next iteration
+                                    UpdateOutcome.Retry
+                                } else {
+                                    lastOutcome = outcome
+                                    UpdateOutcome.Stop
+                                }
+                            }
+
+                            else -> {
                                 lastOutcome = outcome
-                                UpdateOutcome.Stop
+                                outcome
                             }
                         }
-
-                        else -> {
-                            lastOutcome = outcome
-                            outcome
-                        }
                     }
-                }
 
-            if (success) {
-                WidgetUpdateResult.Success(wasCoalesced = false)
-            } else {
-                createFailureResult(lastOutcome)
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("WidgetUpdater: update process failed", e)
-            terminalFailure(wasCoalesced = false)
-        }
-
-    private fun createFailureResult(lastOutcome: UpdateOutcome?): WidgetUpdateResult {
-        val isRetryable = lastOutcome == UpdateOutcome.Retry || lastOutcome == null
-        val reason =
-            when (lastOutcome) {
-                is UpdateOutcome.LimitExceeded -> WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED
-                else ->
-                    if (isRetryable) {
-                        WidgetUpdateResult.FailureReason.TRANSIENT
-                    } else {
-                        WidgetUpdateResult.FailureReason.TERMINAL
-                    }
-            }
-        return WidgetUpdateResult.Failure(
-            wasCoalesced = false,
-            isRetryable = isRetryable,
-            reason = reason,
-        )
-    }
-
-    private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
-        val isFirstAttempt = attempt == 1
-        val mode = resolveRenderMode(isFirstAttempt)
-
-        AppLogger.d("WidgetUpdater: performing update in mode $mode (attempt $attempt)")
-        return when (mode) {
-            RenderMode.PROBE ->
-                handleUpdateResult(
-                    limitManager.performProbeUpdate(context) { ctx, _ ->
-                        safeUpdateInternal(ctx, isFullAttempt = true, isProbe = true)
-                    },
-                )
-
-            RenderMode.SIMPLIFIED ->
-                handleUpdateResult(
-                    safeUpdateInternal(
-                        context,
-                        isFullAttempt = false,
-                        isProbe = false,
-                    ),
-                )
-
-            RenderMode.FULL ->
-                handleUpdateResult(
-                    safeUpdateInternal(
-                        context,
-                        isFullAttempt = true,
-                        isProbe = false,
-                    ),
-                )
-        }
-    }
-
-    private suspend fun resolveRenderMode(isFirstAttempt: Boolean): RenderMode {
-        val isExceeded =
-            limitManager.isLimitExceeded() ?: run {
-                val settings =
-                    appSettingsRepository
-                        .getAppSettings()
-                        .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
-                if (settings == null) {
-                    AppLogger.w("WidgetUpdater: settings timeout in resolveRenderMode, defaulting to FULL")
-                    return RenderMode.FULL
-                }
-                val value = settings.widgetLimitExceeded
-                limitManager.updateCache(value)
-                value
-            }
-
-        return if (isExceeded) {
-            if (isFirstAttempt) {
-                limitManager.incrementUpdateCounter()
-            }
-            if (isFirstAttempt && limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
-        } else {
-            limitManager.resetCounter()
-            RenderMode.FULL
-        }
-    }
-
-    private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
-        when (result) {
-            is UpdateResult.Success -> {
-                if (result.wasFull) {
-                    limitManager.setWidgetLimitExceeded(value = false)
-                    limitExceededHandled.set(false)
-                }
-                UpdateOutcome.Success
-            }
-
-            is UpdateResult.LimitExceeded -> {
-                UpdateOutcome.LimitExceeded(wasFull = result.wasFull)
-            }
-
-            is UpdateResult.GenericFailure -> {
-                if (result.isRetryable) {
-                    UpdateOutcome.Retry
+                if (success) {
+                    WidgetUpdateResult.Success(wasCoalesced = false)
                 } else {
-                    AppLogger.e("Widget update: terminal failure encountered, stopping retries.")
-                    UpdateOutcome.Stop
+                    createFailureResult(lastOutcome)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("WidgetUpdater: update process failed", e)
+                terminalFailure(wasCoalesced = false)
+            }
+
+        private fun createFailureResult(lastOutcome: UpdateOutcome?): WidgetUpdateResult {
+            val isRetryable = lastOutcome == UpdateOutcome.Retry || lastOutcome == null
+            val reason =
+                when (lastOutcome) {
+                    is UpdateOutcome.LimitExceeded -> WidgetUpdateResult.FailureReason.LIMIT_EXCEEDED
+                    else ->
+                        if (isRetryable) {
+                            WidgetUpdateResult.FailureReason.TRANSIENT
+                        } else {
+                            WidgetUpdateResult.FailureReason.TERMINAL
+                        }
+                }
+            return WidgetUpdateResult.Failure(
+                wasCoalesced = false,
+                isRetryable = isRetryable,
+                reason = reason,
+            )
+        }
+
+        private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
+            val isFirstAttempt = attempt == 1
+            val mode = resolveRenderMode(isFirstAttempt)
+
+            AppLogger.d("WidgetUpdater: performing update in mode $mode (attempt $attempt)")
+            return when (mode) {
+                RenderMode.PROBE ->
+                    handleUpdateResult(
+                        limitManager.performProbeUpdate(context) { ctx, _ ->
+                            safeUpdateInternal(ctx, isFullAttempt = true, isProbe = true)
+                        },
+                    )
+
+                RenderMode.SIMPLIFIED ->
+                    handleUpdateResult(
+                        safeUpdateInternal(
+                            context,
+                            isFullAttempt = false,
+                            isProbe = false,
+                        ),
+                    )
+
+                RenderMode.FULL ->
+                    handleUpdateResult(
+                        safeUpdateInternal(
+                            context,
+                            isFullAttempt = true,
+                            isProbe = false,
+                        ),
+                    )
             }
         }
 
-    private suspend fun safeUpdateInternal(
-        context: Context,
-        isFullAttempt: Boolean,
-        isProbe: Boolean,
-    ): UpdateResult =
-        try {
-            renderer.renderAll(context, forceFull = isFullAttempt || isProbe)
-            UpdateResult.Success(wasFull = isFullAttempt)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            errorClassifier.classifyUpdateError(e, isFullAttempt)
+        private suspend fun resolveRenderMode(isFirstAttempt: Boolean): RenderMode {
+            val isExceeded =
+                limitManager.isLimitExceeded() ?: run {
+                    val settings =
+                        appSettingsRepository
+                            .getAppSettings()
+                            .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+                    if (settings == null) {
+                        AppLogger.w("WidgetUpdater: settings timeout in resolveRenderMode, defaulting to FULL")
+                        return RenderMode.FULL
+                    }
+                    val value = settings.widgetLimitExceeded
+                    limitManager.updateCache(value)
+                    value
+                }
+
+            return if (isExceeded) {
+                if (isFirstAttempt) {
+                    limitManager.incrementUpdateCounter()
+                }
+                if (isFirstAttempt && limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
+            } else {
+                limitManager.resetCounter()
+                RenderMode.FULL
+            }
         }
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    internal fun isRemoteViewsLimitException(e: Throwable): Boolean = errorClassifier.isRemoteViewsLimitException(e)
+        private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
+            when (result) {
+                is UpdateResult.Success -> {
+                    if (result.wasFull) {
+                        limitManager.setWidgetLimitExceeded(value = false)
+                        limitExceededHandled.set(false)
+                    }
+                    UpdateOutcome.Success
+                }
 
-    override suspend fun recover() {
-        limitExceededHandled.set(false)
-    }
+                is UpdateResult.LimitExceeded -> {
+                    UpdateOutcome.LimitExceeded(wasFull = result.wasFull)
+                }
 
-    private enum class RenderMode {
-        FULL,
-        SIMPLIFIED,
-        PROBE,
+                is UpdateResult.GenericFailure -> {
+                    if (result.isRetryable) {
+                        UpdateOutcome.Retry
+                    } else {
+                        AppLogger.e("Widget update: terminal failure encountered, stopping retries.")
+                        UpdateOutcome.Stop
+                    }
+                }
+            }
+
+        private suspend fun safeUpdateInternal(
+            context: Context,
+            isFullAttempt: Boolean,
+            isProbe: Boolean,
+        ): UpdateResult =
+            try {
+                renderer.renderAll(context, forceFull = isFullAttempt || isProbe)
+                UpdateResult.Success(wasFull = isFullAttempt)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                errorClassifier.classifyUpdateError(e, isFullAttempt)
+            }
+
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun isRemoteViewsLimitException(e: Throwable): Boolean = errorClassifier.isRemoteViewsLimitException(e)
+
+        override suspend fun recover() {
+            limitExceededHandled.set(false)
+        }
+
+        private enum class RenderMode {
+            FULL,
+            SIMPLIFIED,
+            PROBE,
+        }
     }
-}

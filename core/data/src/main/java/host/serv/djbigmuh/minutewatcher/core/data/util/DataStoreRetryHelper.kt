@@ -41,63 +41,63 @@ internal class DataStoreWriteTimeoutException(
  */
 @Singleton
 class DataStoreRetryHelper
-@Inject
-constructor() {
-    private class Emission<T>(
-        val value: T,
-    )
+    @Inject
+    constructor() {
+        private class Emission<T>(
+            val value: T,
+        )
 
-    /**
-     * Reads from DataStore with retries on failure or timeout.
-     *
-     * @param label A label for logging purposes.
-     * @param attempts Number of retry attempts.
-     * @param retryDelayMs Initial delay between retries.
-     * @param attemptTimeoutMillis Timeout for each read attempt.
-     * @param reader Lambda that returns a Flow to read from.
-     * @return Result containing the value or the last exception.
-     */
-    suspend fun <T> readWithRetry(
-        label: String,
-        attempts: Int = DEFAULT_RETRY_ATTEMPTS,
-        retryDelayMs: Long = DEFAULT_RETRY_DELAY_MS,
-        attemptTimeoutMillis: Long = Constants.Flow.RETRY_READ_ATTEMPT_TIMEOUT_MS,
-        reader: () -> Flow<T>,
-    ): Result<T> {
-        var lastException: Exception? = null
-        var currentDelay = retryDelayMs
+        /**
+         * Reads from DataStore with retries on failure or timeout.
+         *
+         * @param label A label for logging purposes.
+         * @param attempts Number of retry attempts.
+         * @param retryDelayMs Initial delay between retries.
+         * @param attemptTimeoutMillis Timeout for each read attempt.
+         * @param reader Lambda that returns a Flow to read from.
+         * @return Result containing the value or the last exception.
+         */
+        suspend fun <T> readWithRetry(
+            label: String,
+            attempts: Int = DEFAULT_RETRY_ATTEMPTS,
+            retryDelayMs: Long = DEFAULT_RETRY_DELAY_MS,
+            attemptTimeoutMillis: Long = Constants.Flow.RETRY_READ_ATTEMPT_TIMEOUT_MS,
+            reader: () -> Flow<T>,
+        ): Result<T> {
+            var lastException: Exception? = null
+            var currentDelay = retryDelayMs
 
-        for (attempt in 1..attempts) {
-            try {
-                val emission =
-                    withTimeoutOrNull(attemptTimeoutMillis.milliseconds) {
-                        reader().map { Emission(it) }.firstOrNull()
+            for (attempt in 1..attempts) {
+                try {
+                    val emission =
+                        withTimeoutOrNull(attemptTimeoutMillis.milliseconds) {
+                            reader().map { Emission(it) }.firstOrNull()
+                        }
+                    if (emission != null) {
+                        return Result.success(emission.value)
+                    } else {
+                        lastException = DataStoreReadTimeoutException(label)
                     }
-                if (emission != null) {
-                    return Result.success(emission.value)
-                } else {
-                    lastException = DataStoreReadTimeoutException(label)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    lastException = e
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                lastException = e
-            }
 
-            if (attempt < attempts) {
-                AppLogger.w(
-                    "DataStore read retry ($label): attempt $attempt/$attempts failed. " +
-                        "Retrying in ${currentDelay}ms",
-                )
-                delay(currentDelay.milliseconds)
-                currentDelay *= 2
+                if (attempt < attempts) {
+                    AppLogger.w(
+                        "DataStore read retry ($label): attempt $attempt/$attempts failed. " +
+                            "Retrying in ${currentDelay}ms",
+                    )
+                    delay(currentDelay.milliseconds)
+                    currentDelay *= 2
+                }
             }
+            return Result.failure(lastException ?: DataStoreReadTimeoutException(label))
         }
-        return Result.failure(lastException ?: DataStoreReadTimeoutException(label))
-    }
 
-    companion object {
-        const val DEFAULT_RETRY_ATTEMPTS = 3
-        const val DEFAULT_RETRY_DELAY_MS = 500L
+        companion object {
+            const val DEFAULT_RETRY_ATTEMPTS = 3
+            const val DEFAULT_RETRY_DELAY_MS = 500L
+        }
     }
-}

@@ -16,39 +16,39 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 @Singleton
 class SettingsUseCase
-@Inject
-constructor(
-    private val appSettingsRepository: AppSettingsRepository,
-) {
-    /**
-     * Flow of the current application theme.
-     */
-    val appTheme: Flow<AppTheme> = appSettingsRepository.observeAppSettings().map { it.theme }
+    @Inject
+    constructor(
+        private val appSettingsRepository: AppSettingsRepository,
+    ) {
+        /**
+         * Flow of the current application theme.
+         */
+        val appTheme: Flow<AppTheme> = appSettingsRepository.observeAppSettings().map { it.theme }
 
-    /**
-     * Flow of the current application language code.
-     */
-    val appLanguage: Flow<String?> = appSettingsRepository.observeAppSettings().map { it.language }
+        /**
+         * Flow of the current application language code.
+         */
+        val appLanguage: Flow<String?> = appSettingsRepository.observeAppSettings().map { it.language }
 
-    /**
-     * Sets the application theme.
-     *
-     * @param theme The new theme to apply.
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun setTheme(theme: AppTheme) {
-        appSettingsRepository.updateAppSettings { it.copy(theme = theme) }
+        /**
+         * Sets the application theme.
+         *
+         * @param theme The new theme to apply.
+         * @throws IOException if storage access fails.
+         * @throws CancellationException if the coroutine is cancelled.
+         */
+        suspend fun setTheme(theme: AppTheme) {
+            appSettingsRepository.updateAppSettings { it.copy(theme = theme) }
+        }
+
+        /**
+         * Sets the application language.
+         *
+         * @param language The new language code to apply.
+         * @throws IOException if storage access fails.
+         * @throws CancellationException if the coroutine is cancelled.
+         */
+        suspend fun setLanguage(language: String?) {
+            appSettingsRepository.updateAppSettings { it.copy(language = language) }
+        }
     }
-
-    /**
-     * Sets the application language.
-     *
-     * @param language The new language code to apply.
-     * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
-     */
-    suspend fun setLanguage(language: String?) {
-        appSettingsRepository.updateAppSettings { it.copy(language = language) }
-    }
-}

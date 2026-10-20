@@ -16,41 +16,41 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @Singleton
 class WidgetUpdateRetryManager
-@Inject
-constructor() {
-    suspend fun updateWithRetry(updateBlock: suspend (Int) -> UpdateOutcome): Boolean {
-        var currentDelay = Constants.Widget.RETRY_BACKOFF_MS
-        var success = false
-        var shouldStop = false
+    @Inject
+    constructor() {
+        suspend fun updateWithRetry(updateBlock: suspend (Int) -> UpdateOutcome): Boolean {
+            var currentDelay = Constants.Widget.RETRY_BACKOFF_MS
+            var success = false
+            var shouldStop = false
 
-        var attempt = 1
-        while ((attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS) && !success && !shouldStop) {
-            val outcome =
-                try {
-                    updateBlock(attempt)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("WidgetUpdateRetryManager: attempt $attempt failed with exception", e)
-                    UpdateOutcome.Retry
-                }
+            var attempt = 1
+            while ((attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS) && !success && !shouldStop) {
+                val outcome =
+                    try {
+                        updateBlock(attempt)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("WidgetUpdateRetryManager: attempt $attempt failed with exception", e)
+                        UpdateOutcome.Retry
+                    }
 
-            when (outcome) {
-                is UpdateOutcome.Success -> success = true
-                is UpdateOutcome.LimitExceeded, is UpdateOutcome.Stop -> shouldStop = true
-                is UpdateOutcome.Retry -> {
-                    if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
-                        delay(currentDelay.milliseconds)
-                        currentDelay =
-                            min(
-                                Constants.Widget.MAX_RETRY_DELAY_MS,
-                                currentDelay * 2,
-                            )
+                when (outcome) {
+                    is UpdateOutcome.Success -> success = true
+                    is UpdateOutcome.LimitExceeded, is UpdateOutcome.Stop -> shouldStop = true
+                    is UpdateOutcome.Retry -> {
+                        if (attempt < Constants.Widget.MAX_UPDATE_ATTEMPTS) {
+                            delay(currentDelay.milliseconds)
+                            currentDelay =
+                                min(
+                                    Constants.Widget.MAX_RETRY_DELAY_MS,
+                                    currentDelay * 2,
+                                )
+                        }
                     }
                 }
+                attempt++
             }
-            attempt++
+            return success
         }
-        return success
     }
-}

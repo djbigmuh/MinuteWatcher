@@ -16,8 +16,7 @@ internal class AdjustmentInputState(
     initialText: String,
     val isMinutes: Boolean = true,
 ) {
-    var text by
-    mutableStateOf(
+    var text by mutableStateOf(
         TextFieldValue(
             text = initialText,
             selection =

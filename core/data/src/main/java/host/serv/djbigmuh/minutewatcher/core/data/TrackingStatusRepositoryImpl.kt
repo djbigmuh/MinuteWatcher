@@ -19,40 +19,40 @@ import javax.inject.Singleton
  */
 @Singleton
 class TrackingStatusRepositoryImpl
-@Inject
-constructor(
-    private val statusProviders: Set<@JvmSuppressWildcards TrackingStatusProvider>,
-) : TrackingStatusRepository {
-    /**
-     * Triggers recovery for the tracker associated with the given key.
-     *
-     * Safe to call from any coroutine context.
-     * @throws java.io.IOException if recovery fails.
-     */
-    override suspend fun recoverTracking(key: TrackingKey) {
-        val provider = statusProviders.find { it.key == key }
-        if (provider != null) {
-            provider.recover()
-        } else {
-            AppLogger.e("TrackingStatusRepository: No provider found for key $key. DI configuration error?")
-        }
-    }
-
-    /**
-     * Returns a flow of a map containing tracking statuses for all providers.
-     *
-     * Safe to call from any coroutine context.
-     */
-    override fun observeTrackingStatus(): Flow<Map<TrackingKey, TrackingStatus>> {
-        if (statusProviders.isEmpty()) {
-            return flowOf(emptyMap())
-        }
-        val flows =
-            statusProviders.map { provider ->
-                provider.status.map { status -> provider.key to status }
+    @Inject
+    constructor(
+        private val statusProviders: Set<@JvmSuppressWildcards TrackingStatusProvider>,
+    ) : TrackingStatusRepository {
+        /**
+         * Triggers recovery for the tracker associated with the given key.
+         *
+         * Safe to call from any coroutine context.
+         * @throws java.io.IOException if recovery fails.
+         */
+        override suspend fun recoverTracking(key: TrackingKey) {
+            val provider = statusProviders.find { it.key == key }
+            if (provider != null) {
+                provider.recover()
+            } else {
+                AppLogger.e("TrackingStatusRepository: No provider found for key $key. DI configuration error?")
             }
-        return combine(flows) { pairs ->
-            pairs.toMap()
+        }
+
+        /**
+         * Returns a flow of a map containing tracking statuses for all providers.
+         *
+         * Safe to call from any coroutine context.
+         */
+        override fun observeTrackingStatus(): Flow<Map<TrackingKey, TrackingStatus>> {
+            if (statusProviders.isEmpty()) {
+                return flowOf(emptyMap())
+            }
+            val flows =
+                statusProviders.map { provider ->
+                    provider.status.map { status -> provider.key to status }
+                }
+            return combine(flows) { pairs ->
+                pairs.toMap()
+            }
         }
     }
-}

@@ -197,8 +197,7 @@ internal class SimLimitState(
         return currentNormalized == initialTrafficNormalized
     }
 
-    var minutesText by
-    mutableStateOf(
+    var minutesText by mutableStateOf(
         TextFieldValue(
             text = currentMinutesText,
             selection =
@@ -209,8 +208,7 @@ internal class SimLimitState(
                 },
         ),
     )
-    var trafficText by
-    mutableStateOf(
+    var trafficText by mutableStateOf(
         TextFieldValue(
             text = currentTrafficText,
             selection =

@@ -12,15 +12,15 @@ import javax.inject.Singleton
 
 @Singleton
 class UsageWorkerDependencies
-@Inject
-constructor(
-    val simNotificationFlagsRepository: SimNotificationFlagsRepository,
-    val appSettingsRepository: AppSettingsRepository,
-    val autoResetUseCase: AutoResetUseCase,
-    val trafficTracker: TrafficTracker,
-    val notificationHelper: NotificationHelper,
-    val dataChangeNotifier: DataChangeNotifier,
-    val usageStateRepository: UsageStateRepository,
-    val usageUseCase: UsageUseCase,
-    val timeProvider: TimeProvider,
-)
+    @Inject
+    constructor(
+        val simNotificationFlagsRepository: SimNotificationFlagsRepository,
+        val appSettingsRepository: AppSettingsRepository,
+        val autoResetUseCase: AutoResetUseCase,
+        val trafficTracker: TrafficTracker,
+        val notificationHelper: NotificationHelper,
+        val dataChangeNotifier: DataChangeNotifier,
+        val usageStateRepository: UsageStateRepository,
+        val usageUseCase: UsageUseCase,
+        val timeProvider: TimeProvider,
+    )

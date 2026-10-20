@@ -14,10 +14,10 @@ import javax.inject.Singleton
  */
 @Singleton
 class SimDiscoveryDependencies
-@Inject
-constructor(
-    @ApplicationContext val context: Context,
-    val subscriptionManager: SubscriptionManager?,
-    val permissionManager: PermissionManager,
-    val permissionStateNotifier: PermissionStateNotifier,
-)
+    @Inject
+    constructor(
+        @ApplicationContext val context: Context,
+        val subscriptionManager: SubscriptionManager?,
+        val permissionManager: PermissionManager,
+        val permissionStateNotifier: PermissionStateNotifier,
+    )

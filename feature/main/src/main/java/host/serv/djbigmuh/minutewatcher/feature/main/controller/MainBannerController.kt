@@ -52,199 +52,199 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 @Singleton
 class MainBannerController
-@Inject
-constructor(
-    trackingStatusRepository: Lazy<TrackingStatusRepository>,
-    permissionRepository: PermissionRepository,
-    appSettingsRepository: AppSettingsRepository,
-    seedRepository: SimIdentitySeedRepository,
-    @ApplicationScope private val scope: CoroutineScope,
-) {
-    private val appSearchRetryCount = MutableStateFlow(value = 0)
-    private val appSearchBannerDismissed = MutableStateFlow(value = false)
+    @Inject
+    constructor(
+        trackingStatusRepository: Lazy<TrackingStatusRepository>,
+        permissionRepository: PermissionRepository,
+        appSettingsRepository: AppSettingsRepository,
+        seedRepository: SimIdentitySeedRepository,
+        @ApplicationScope private val scope: CoroutineScope,
+    ) {
+        private val appSearchRetryCount = MutableStateFlow(value = 0)
+        private val appSearchBannerDismissed = MutableStateFlow(value = false)
 
-    /**
-     * Increments the app search retry count.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    fun incrementAppSearchRetry() {
-        appSearchRetryCount.update { it + 1 }
-    }
-
-    /**
-     * Dismisses the app search error banner.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    fun dismissAppSearch() {
-        appSearchBannerDismissed.value = true
-    }
-
-    @Volatile
-    private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
-    private val consecutiveRestartCount = AtomicInteger(0)
-
-    private val isObservationStarted = AtomicBoolean(false)
-    private val observationScope =
-        FlowObservationScope<Map<TrackingKey, TrackingStatus>>(scope, "MainBannerController")
-
-    val trackingStatus: StateFlow<Map<TrackingKey, TrackingStatus>> by lazy {
-        trackingStatusRepository
-            .get()
-            .observeTrackingStatus()
-            .stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue = emptyMap(),
-            )
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val trackingBannerState: StateFlow<TrackingBannerState> by lazy {
-        combine(
-            trackingStatus,
-            permissionRepository.phoneStatePermissionGranted,
-            permissionRepository.usageStatsPermissionGranted,
-            permissionRepository.notificationPermissionGranted,
-            combine(
-                appSearchRetryCount,
-                appSearchBannerDismissed,
-                appSettingsRepository.observeAppSettings(),
-                seedRepository.isEphemeralSeedActive,
-            ) { retry, dismissed, settings, ephemeralActive ->
-                BannerFlags(retry, dismissed, settings, ephemeralActive)
-            },
-        ) { statusMap, phone, usage, notifications, flags ->
-            BannerInputs(
-                statusMap = statusMap,
-                phoneGranted = phone,
-                usageGranted = usage,
-                notificationsGranted = notifications,
-                retry = flags.retry,
-                dismissed = flags.dismissed,
-                settings = flags.settings,
-                ephemeralActive = flags.ephemeralActive,
-            )
-        }.map { data ->
-            TrackingBannerMapper.mapToBannerState(
-                statusMap = data.statusMap,
-                phoneGranted = data.phoneGranted,
-                usageGranted = data.usageGranted,
-                notificationsGranted = data.notificationsGranted,
-                settings = data.settings,
-                appSearchRetryCount = data.retry,
-                appSearchBannerDismissed = data.dismissed,
-                isStorageDegraded = data.ephemeralActive,
-            )
-        }.distinctUntilChanged()
-            .stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue = TrackingBannerState(),
-            )
-    }
-
-    private data class BannerFlags(
-        val retry: Int,
-        val dismissed: Boolean,
-        val settings: AppSettings,
-        val ephemeralActive: Boolean,
-    )
-
-    private data class BannerInputs(
-        val statusMap: Map<TrackingKey, TrackingStatus>,
-        val phoneGranted: Boolean,
-        val usageGranted: Boolean,
-        val notificationsGranted: Boolean,
-        val retry: Int,
-        val dismissed: Boolean,
-        val settings: AppSettings,
-        val ephemeralActive: Boolean,
-    )
-
-    init {
-        ensureObservationStarted()
-    }
-
-    private fun ensureObservationStarted() {
-        if (isObservationStarted.get()) return
-        scope.launch {
-            if (isObservationStarted.compareAndSet(false, true)) {
-                try {
-                    setupObservation()
-                } catch (e: CancellationException) {
-                    isObservationStarted.set(false)
-                    throw e
-                } catch (e: Exception) {
-                    isObservationStarted.set(false)
-                    AppLogger.e("MainBannerController: Failed to setup observation", e)
-                }
-            }
+        /**
+         * Increments the app search retry count.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        fun incrementAppSearchRetry() {
+            appSearchRetryCount.update { it + 1 }
         }
-    }
 
-    private suspend fun setupObservation() {
-        val job =
-            observationScope.observe(trackingStatus) { statusMap ->
-                currentCoroutineContext().ensureActive()
-                consecutiveRestartCount.set(0)
+        /**
+         * Dismisses the app search error banner.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        fun dismissAppSearch() {
+            appSearchBannerDismissed.value = true
+        }
 
-                val appsearch = statusMap[TrackingKey.APPSEARCH]
-                val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
-                if (currentErrorType != lastAppSearchErrorType) {
-                    lastAppSearchErrorType = currentErrorType
-                    appSearchRetryCount.value = 0
-                    appSearchBannerDismissed.value = false
-                    if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
-                        AppLogger.w("MainBannerController: AppSearch not supported on this device")
+        @Volatile
+        private var lastAppSearchErrorType: TrackingStatus.ErrorType? = null
+        private val consecutiveRestartCount = AtomicInteger(0)
+
+        private val isObservationStarted = AtomicBoolean(false)
+        private val observationScope =
+            FlowObservationScope<Map<TrackingKey, TrackingStatus>>(scope, "MainBannerController")
+
+        val trackingStatus: StateFlow<Map<TrackingKey, TrackingStatus>> by lazy {
+            trackingStatusRepository
+                .get()
+                .observeTrackingStatus()
+                .stateIn(
+                    scope = scope,
+                    started = SharingStarted.Eagerly,
+                    initialValue = emptyMap(),
+                )
+        }
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        val trackingBannerState: StateFlow<TrackingBannerState> by lazy {
+            combine(
+                trackingStatus,
+                permissionRepository.phoneStatePermissionGranted,
+                permissionRepository.usageStatsPermissionGranted,
+                permissionRepository.notificationPermissionGranted,
+                combine(
+                    appSearchRetryCount,
+                    appSearchBannerDismissed,
+                    appSettingsRepository.observeAppSettings(),
+                    seedRepository.isEphemeralSeedActive,
+                ) { retry, dismissed, settings, ephemeralActive ->
+                    BannerFlags(retry, dismissed, settings, ephemeralActive)
+                },
+            ) { statusMap, phone, usage, notifications, flags ->
+                BannerInputs(
+                    statusMap = statusMap,
+                    phoneGranted = phone,
+                    usageGranted = usage,
+                    notificationsGranted = notifications,
+                    retry = flags.retry,
+                    dismissed = flags.dismissed,
+                    settings = flags.settings,
+                    ephemeralActive = flags.ephemeralActive,
+                )
+            }.map { data ->
+                TrackingBannerMapper.mapToBannerState(
+                    statusMap = data.statusMap,
+                    phoneGranted = data.phoneGranted,
+                    usageGranted = data.usageGranted,
+                    notificationsGranted = data.notificationsGranted,
+                    settings = data.settings,
+                    appSearchRetryCount = data.retry,
+                    appSearchBannerDismissed = data.dismissed,
+                    isStorageDegraded = data.ephemeralActive,
+                )
+            }.distinctUntilChanged()
+                .stateIn(
+                    scope = scope,
+                    started = SharingStarted.Eagerly,
+                    initialValue = TrackingBannerState(),
+                )
+        }
+
+        private data class BannerFlags(
+            val retry: Int,
+            val dismissed: Boolean,
+            val settings: AppSettings,
+            val ephemeralActive: Boolean,
+        )
+
+        private data class BannerInputs(
+            val statusMap: Map<TrackingKey, TrackingStatus>,
+            val phoneGranted: Boolean,
+            val usageGranted: Boolean,
+            val notificationsGranted: Boolean,
+            val retry: Int,
+            val dismissed: Boolean,
+            val settings: AppSettings,
+            val ephemeralActive: Boolean,
+        )
+
+        init {
+            ensureObservationStarted()
+        }
+
+        private fun ensureObservationStarted() {
+            if (isObservationStarted.get()) return
+            scope.launch {
+                if (isObservationStarted.compareAndSet(false, true)) {
+                    try {
+                        setupObservation()
+                    } catch (e: CancellationException) {
+                        isObservationStarted.set(false)
+                        throw e
+                    } catch (e: Exception) {
+                        isObservationStarted.set(false)
+                        AppLogger.e("MainBannerController: Failed to setup observation", e)
                     }
                 }
             }
+        }
 
-        job.invokeOnCompletion { cause ->
-            if ((cause != null) && cause !is CancellationException) {
-                AppLogger.e("MainBannerController: Banner observation failed", cause)
-                isObservationStarted.set(false)
-                handleObservationFailure(cause)
+        private suspend fun setupObservation() {
+            val job =
+                observationScope.observe(trackingStatus) { statusMap ->
+                    currentCoroutineContext().ensureActive()
+                    consecutiveRestartCount.set(0)
+
+                    val appsearch = statusMap[TrackingKey.APPSEARCH]
+                    val currentErrorType = (appsearch as? TrackingStatus.Error)?.type
+                    if (currentErrorType != lastAppSearchErrorType) {
+                        lastAppSearchErrorType = currentErrorType
+                        appSearchRetryCount.value = 0
+                        appSearchBannerDismissed.value = false
+                        if (currentErrorType == TrackingStatus.ErrorType.NOT_SUPPORTED) {
+                            AppLogger.w("MainBannerController: AppSearch not supported on this device")
+                        }
+                    }
+                }
+
+            job.invokeOnCompletion { cause ->
+                if ((cause != null) && cause !is CancellationException) {
+                    AppLogger.e("MainBannerController: Banner observation failed", cause)
+                    isObservationStarted.set(false)
+                    handleObservationFailure(cause)
+                }
+            }
+        }
+
+        private fun handleObservationFailure(cause: Throwable) {
+            val count = consecutiveRestartCount.incrementAndGet()
+            val delayMs = calculateRestartDelay(count)
+            if (delayMs == null) {
+                AppLogger.e(
+                    "MainBannerController: Banner observation failed $count consecutive times. " +
+                        "Stopping observation restarts.",
+                    cause,
+                )
+                return
+            }
+
+            AppLogger.w(
+                "MainBannerController: Banner observation failed (attempt $count/$MAX_RESTART_ATTEMPTS), " +
+                    "scheduling restart in ${delayMs}ms",
+                cause,
+            )
+
+            scope.launch {
+                delay(delayMs.milliseconds)
+                ensureObservationStarted()
+            }
+        }
+
+        internal companion object {
+            const val MAX_RESTART_ATTEMPTS = 5
+            const val MAX_RESTART_DELAY_MS = 30_000L
+            private const val MAX_BACKOFF_EXPONENT = MAX_RESTART_ATTEMPTS - 1
+
+            internal fun calculateRestartDelay(attempt: Int): Long? {
+                if (attempt > MAX_RESTART_ATTEMPTS) return null
+                val exponent = (attempt - 1).coerceAtMost(MAX_BACKOFF_EXPONENT)
+                val delayMs = Constants.Flow.RETRY_DELAY_MS * (1L shl exponent)
+                return delayMs.coerceAtMost(MAX_RESTART_DELAY_MS)
             }
         }
     }
-
-    private fun handleObservationFailure(cause: Throwable) {
-        val count = consecutiveRestartCount.incrementAndGet()
-        val delayMs = calculateRestartDelay(count)
-        if (delayMs == null) {
-            AppLogger.e(
-                "MainBannerController: Banner observation failed $count consecutive times. " +
-                    "Stopping observation restarts.",
-                cause,
-            )
-            return
-        }
-
-        AppLogger.w(
-            "MainBannerController: Banner observation failed (attempt $count/$MAX_RESTART_ATTEMPTS), " +
-                "scheduling restart in ${delayMs}ms",
-            cause,
-        )
-
-        scope.launch {
-            delay(delayMs.milliseconds)
-            ensureObservationStarted()
-        }
-    }
-
-    internal companion object {
-        const val MAX_RESTART_ATTEMPTS = 5
-        const val MAX_RESTART_DELAY_MS = 30_000L
-        private const val MAX_BACKOFF_EXPONENT = MAX_RESTART_ATTEMPTS - 1
-
-        internal fun calculateRestartDelay(attempt: Int): Long? {
-            if (attempt > MAX_RESTART_ATTEMPTS) return null
-            val exponent = (attempt - 1).coerceAtMost(MAX_BACKOFF_EXPONENT)
-            val delayMs = Constants.Flow.RETRY_DELAY_MS * (1L shl exponent)
-            return delayMs.coerceAtMost(MAX_RESTART_DELAY_MS)
-        }
-    }
-}

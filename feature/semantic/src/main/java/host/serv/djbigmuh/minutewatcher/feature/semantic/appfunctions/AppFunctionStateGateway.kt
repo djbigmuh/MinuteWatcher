@@ -18,26 +18,26 @@ interface AppFunctionStateGateway {
 
 @Singleton
 internal class PlatformAppFunctionStateGateway
-@Inject
-constructor(
-    @ApplicationContext private val context: Context,
-) : AppFunctionStateGateway {
-    @RequiresApi(Build.VERSION_CODES.BAKLAVA)
-    override suspend fun setAppFunctionEnabled(
-        functionId: String,
-        enabled: Boolean,
-    ) {
-        val manager = AppFunctionManager.getInstance(context)
-        if (manager == null) {
-            AppLogger.w("PlatformAppFunctionStateGateway: AppFunctionManager is null")
-            return
-        }
-        val state =
-            if (enabled) {
-                AppFunctionManager.APP_FUNCTION_STATE_ENABLED
-            } else {
-                AppFunctionManager.APP_FUNCTION_STATE_DISABLED
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) : AppFunctionStateGateway {
+        @RequiresApi(Build.VERSION_CODES.BAKLAVA)
+        override suspend fun setAppFunctionEnabled(
+            functionId: String,
+            enabled: Boolean,
+        ) {
+            val manager = AppFunctionManager.getInstance(context)
+            if (manager == null) {
+                AppLogger.w("PlatformAppFunctionStateGateway: AppFunctionManager is null")
+                return
             }
-        manager.setAppFunctionEnabled(functionId, state)
+            val state =
+                if (enabled) {
+                    AppFunctionManager.APP_FUNCTION_STATE_ENABLED
+                } else {
+                    AppFunctionManager.APP_FUNCTION_STATE_DISABLED
+                }
+            manager.setAppFunctionEnabled(functionId, state)
+        }
     }
-}

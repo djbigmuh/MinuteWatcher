@@ -15,36 +15,36 @@ import javax.inject.Singleton
  */
 @Singleton
 class PermissionStateNotifierImpl
-@Inject
-constructor() : PermissionStateNotifier {
-    // PermissionStateNotifier is responsible ONLY for observing permission state changes
-    // and emitting UI events. All permission checks are delegated to PermissionManager
-    // to avoid duplication and ensure consistency.
+    @Inject
+    constructor() : PermissionStateNotifier {
+        // PermissionStateNotifier is responsible ONLY for observing permission state changes
+        // and emitting UI events. All permission checks are delegated to PermissionManager
+        // to avoid duplication and ensure consistency.
 
-    private val _changes =
-        MutableSharedFlow<Unit>(
-            replay = 1,
-            extraBufferCapacity = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+        private val _changes =
+            MutableSharedFlow<Unit>(
+                replay = 1,
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
 
-    /**
-     * Flow of permission change events.
-     *
-     * Safe to call from any coroutine context.
-     */
-    override val changes: Flow<Unit> = _changes.asSharedFlow()
+        /**
+         * Flow of permission change events.
+         *
+         * Safe to call from any coroutine context.
+         */
+        override val changes: Flow<Unit> = _changes.asSharedFlow()
 
-    init {
-        notifyChanged()
+        init {
+            notifyChanged()
+        }
+
+        /**
+         * Notifies subscribers that a permission state has changed.
+         *
+         * Safe to call from any coroutine context.
+         */
+        override fun notifyChanged() {
+            _changes.tryEmit(Unit)
+        }
     }
-
-    /**
-     * Notifies subscribers that a permission state has changed.
-     *
-     * Safe to call from any coroutine context.
-     */
-    override fun notifyChanged() {
-        _changes.tryEmit(Unit)
-    }
-}

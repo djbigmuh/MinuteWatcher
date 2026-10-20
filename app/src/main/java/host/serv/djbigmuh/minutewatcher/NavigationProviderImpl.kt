@@ -6,7 +6,7 @@ import javax.inject.Singleton
 
 @Singleton
 class NavigationProviderImpl
-@Inject
-constructor() : NavigationProvider {
-    override val mainActivityClassName: String = MainActivity::class.java.name
-}
+    @Inject
+    constructor() : NavigationProvider {
+        override val mainActivityClassName: String = MainActivity::class.java.name
+    }

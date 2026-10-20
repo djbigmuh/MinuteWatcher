@@ -12,19 +12,19 @@ import javax.inject.Singleton
 
 @Singleton
 class WidgetDataChangeDispatcher
-@Inject
-constructor(
-    private val dataChangeNotifier: DataChangeNotifier,
-    @ApplicationScope private val applicationScope: CoroutineScope,
-) {
-    fun notifyDataChanged(reason: String): Job =
-        applicationScope.launch {
-            try {
-                dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("WidgetDataChangeDispatcher: Failed to notify data change on $reason", e)
+    @Inject
+    constructor(
+        private val dataChangeNotifier: DataChangeNotifier,
+        @ApplicationScope private val applicationScope: CoroutineScope,
+    ) {
+        fun notifyDataChanged(reason: String): Job =
+            applicationScope.launch {
+                try {
+                    dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("WidgetDataChangeDispatcher: Failed to notify data change on $reason", e)
+                }
             }
-        }
-}
+    }

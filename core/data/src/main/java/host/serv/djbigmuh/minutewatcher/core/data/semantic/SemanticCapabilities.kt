@@ -17,26 +17,26 @@ import javax.inject.Singleton
  */
 @Singleton
 class SemanticCapabilities
-@Inject
-constructor(
-    @ApplicationContext private val context: Context,
-    private val permissionManager: PermissionManager,
-) {
-    fun getCapabilities(): List<AppCapability> {
-        val telephonySupported = permissionManager.isTelephonySupported()
-        val multiSimSupported = context.packageManager.hasSystemFeature(FEATURE_TELEPHONY_MULTISIM)
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+        private val permissionManager: PermissionManager,
+    ) {
+        fun getCapabilities(): List<AppCapability> {
+            val telephonySupported = permissionManager.isTelephonySupported()
+            val multiSimSupported = context.packageManager.hasSystemFeature(FEATURE_TELEPHONY_MULTISIM)
 
-        return listOf(
-            AppCapability("MINUTES_TRACKING", telephonySupported, "Support for voice calls tracking"),
-            AppCapability("DATA_TRACKING", telephonySupported, "Support for mobile data usage tracking"),
-            AppCapability("DUAL_SIM", multiSimSupported, "Support for multiple SIM cards"),
-            AppCapability("APP_SEARCH", true, "System search indexing via AppSearch"),
-            AppCapability("DYNAMIC_SHORTCUTS", true, "Dynamic shortcuts with usage info"),
-            AppCapability("QUICK_SETTINGS_TILE", true, "Quick Settings Tile for rapid check"),
-        )
-    }
+            return listOf(
+                AppCapability("MINUTES_TRACKING", telephonySupported, "Support for voice calls tracking"),
+                AppCapability("DATA_TRACKING", telephonySupported, "Support for mobile data usage tracking"),
+                AppCapability("DUAL_SIM", multiSimSupported, "Support for multiple SIM cards"),
+                AppCapability("APP_SEARCH", true, "System search indexing via AppSearch"),
+                AppCapability("DYNAMIC_SHORTCUTS", true, "Dynamic shortcuts with usage info"),
+                AppCapability("QUICK_SETTINGS_TILE", true, "Quick Settings Tile for rapid check"),
+            )
+        }
 
-    private companion object {
-        private const val FEATURE_TELEPHONY_MULTISIM = "android.hardware.telephony.multisim"
+        private companion object {
+            private const val FEATURE_TELEPHONY_MULTISIM = "android.hardware.telephony.multisim"
+        }
     }
-}

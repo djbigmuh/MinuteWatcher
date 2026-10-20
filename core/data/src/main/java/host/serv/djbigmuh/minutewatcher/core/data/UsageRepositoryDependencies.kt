@@ -15,12 +15,12 @@ import javax.inject.Singleton
  */
 @Singleton
 class UsageRepositoryDependencies
-@Inject
-constructor(
-    val simIdentityRepository: SimIdentityRepository,
-    val simUsageRepository: SimUsageRepository,
-    val semanticCapabilities: SemanticCapabilities,
-    val semanticVersion: SemanticVersion,
-    val dataRefreshNotifier: DataRefreshNotifier,
-    val timeProvider: TimeProvider,
-)
+    @Inject
+    constructor(
+        val simIdentityRepository: SimIdentityRepository,
+        val simUsageRepository: SimUsageRepository,
+        val semanticCapabilities: SemanticCapabilities,
+        val semanticVersion: SemanticVersion,
+        val dataRefreshNotifier: DataRefreshNotifier,
+        val timeProvider: TimeProvider,
+    )

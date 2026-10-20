@@ -14,11 +14,11 @@ interface TimeProvider {
 
 @Singleton
 class SystemTimeProvider
-@Inject
-constructor() : TimeProvider {
-    override fun now(): Long = System.currentTimeMillis()
+    @Inject
+    constructor() : TimeProvider {
+        override fun now(): Long = System.currentTimeMillis()
 
-    override fun elapsedRealtime(): Long = SystemClock.elapsedRealtime()
+        override fun elapsedRealtime(): Long = SystemClock.elapsedRealtime()
 
-    override fun uptimeMillis(): Long = SystemClock.uptimeMillis()
-}
+        override fun uptimeMillis(): Long = SystemClock.uptimeMillis()
+    }

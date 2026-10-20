@@ -17,12 +17,12 @@ import javax.inject.Inject
  * @property widgetObservationRecovery Lazy reference to coordinator for recovery.
  */
 internal class MainViewModelControllers
-@Inject
-constructor(
-    val banner: MainBannerController,
-    val refresh: MainSimRefreshController,
-    val settings: MainSettingsController,
-    val simData: MainSimDataController,
-    val resume: MainResumeController,
-    val widgetObservationRecovery: Lazy<WidgetUpdateCoordinator>,
-)
+    @Inject
+    constructor(
+        val banner: MainBannerController,
+        val refresh: MainSimRefreshController,
+        val settings: MainSettingsController,
+        val simData: MainSimDataController,
+        val resume: MainResumeController,
+        val widgetObservationRecovery: Lazy<WidgetUpdateCoordinator>,
+    )

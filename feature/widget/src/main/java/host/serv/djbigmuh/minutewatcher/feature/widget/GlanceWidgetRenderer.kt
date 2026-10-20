@@ -8,12 +8,12 @@ import javax.inject.Inject
 // Manual creation of WidgetUpdaterImpl with a different renderer is forbidden:
 // this would lead to divergence in widget rendering implementations.
 class GlanceWidgetRenderer
-@Inject
-constructor() : WidgetRenderer {
-    override suspend fun renderAll(
-        context: Context,
-        forceFull: Boolean,
-    ) {
-        MinutesGlanceWidget(forceFullRender = forceFull).updateAll(context)
+    @Inject
+    constructor() : WidgetRenderer {
+        override suspend fun renderAll(
+            context: Context,
+            forceFull: Boolean,
+        ) {
+            MinutesGlanceWidget(forceFullRender = forceFull).updateAll(context)
+        }
     }
-}

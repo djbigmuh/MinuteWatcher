@@ -6,7 +6,7 @@ import javax.inject.Singleton
 
 @Singleton
 class SemanticVersion
-@Inject
-constructor() {
-    fun getVersion(): SchemaVersion = SchemaVersion(1, 0, 0)
-}
+    @Inject
+    constructor() {
+        fun getVersion(): SchemaVersion = SchemaVersion(1, 0, 0)
+    }

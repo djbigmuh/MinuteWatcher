@@ -28,35 +28,35 @@ import javax.inject.Singleton
  */
 @Singleton
 class SimIdentityRepositoryImpl
-@Inject
-internal constructor(
-    @get:VisibleForTesting
-    internal val observer: SimIdentityObserver,
-    private val resolver: SimIdentityResolver,
-    private val persistence: SimIdentityPersistence,
-) : SimIdentityRepository {
-    private val activeSimsMutex = Mutex()
+    @Inject
+    internal constructor(
+        @get:VisibleForTesting
+        internal val observer: SimIdentityObserver,
+        private val resolver: SimIdentityResolver,
+        private val persistence: SimIdentityPersistence,
+    ) : SimIdentityRepository {
+        private val activeSimsMutex = Mutex()
 
-    override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
+        override suspend fun getIdentity(slot: Int): String = getSimIdentity(slot).stableId
 
-    override suspend fun getSimIdentity(slot: Int): SimIdentity =
-        resolver.getSimIdentity(
-            slot = slot,
-            activeSimsCache = observer.activeSimsCache,
-            seedFlow = observer.seedFlow,
-            activeSimsMutex = activeSimsMutex,
-        )
+        override suspend fun getSimIdentity(slot: Int): SimIdentity =
+            resolver.getSimIdentity(
+                slot = slot,
+                activeSimsCache = observer.activeSimsCache,
+                seedFlow = observer.seedFlow,
+                activeSimsMutex = activeSimsMutex,
+            )
 
-    override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = observer.activeSimsCache
+        override fun observeActiveSims(): Flow<List<ActiveSimInfo>> = observer.activeSimsCache
 
-    override fun observeResolvedActiveSims(): StateFlow<List<ActiveSimInfo>?> = observer.resolvedActiveSimsCache
+        override fun observeResolvedActiveSims(): StateFlow<List<ActiveSimInfo>?> = observer.resolvedActiveSimsCache
 
-    override fun getActiveIdentities(): Flow<List<String>> =
-        observeActiveSims().map { sims -> sims.map { it.identity.stableId } }.distinctUntilChanged()
+        override fun getActiveIdentities(): Flow<List<String>> =
+            observeActiveSims().map { sims -> sims.map { it.identity.stableId } }.distinctUntilChanged()
 
-    override suspend fun setSimOperator(
-        identity: String,
-        name: String,
-        brandKey: String?,
-    ) = persistence.setSimOperator(identity, name, brandKey)
-}
+        override suspend fun setSimOperator(
+            identity: String,
+            name: String,
+            brandKey: String?,
+        ) = persistence.setSimOperator(identity, name, brandKey)
+    }

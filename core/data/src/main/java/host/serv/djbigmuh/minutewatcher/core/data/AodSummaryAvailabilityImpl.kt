@@ -15,13 +15,13 @@ import javax.inject.Singleton
  */
 @Singleton
 class AodSummaryAvailabilityImpl
-@Inject
-constructor(
-    private val notificationHelper: NotificationHelper,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-) : AodSummaryAvailability {
-    override suspend fun isAodSummaryAvailable(): Boolean =
-        withContext(ioDispatcher) {
-            notificationHelper.isAodSummaryAvailable()
-        }
-}
+    @Inject
+    constructor(
+        private val notificationHelper: NotificationHelper,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    ) : AodSummaryAvailability {
+        override suspend fun isAodSummaryAvailable(): Boolean =
+            withContext(ioDispatcher) {
+                notificationHelper.isAodSummaryAvailable()
+            }
+    }

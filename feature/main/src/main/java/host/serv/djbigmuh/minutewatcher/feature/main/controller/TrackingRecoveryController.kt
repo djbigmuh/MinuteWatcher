@@ -14,52 +14,52 @@ import javax.inject.Inject
  * @property trackingStatusRepository Repository for managing tracking status and recovery.
  */
 class TrackingRecoveryController
-@Inject
-constructor(
-    private val trackingStatusRepository: TrackingStatusRepository,
-) {
-    /**
-     * Retries app search tracking recovery.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    suspend fun retryAppSearch() {
-        trackingStatusRepository.recoverTracking(TrackingKey.APPSEARCH)
-    }
+    @Inject
+    constructor(
+        private val trackingStatusRepository: TrackingStatusRepository,
+    ) {
+        /**
+         * Retries app search tracking recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        suspend fun retryAppSearch() {
+            trackingStatusRepository.recoverTracking(TrackingKey.APPSEARCH)
+        }
 
-    /**
-     * Retries call tracking recovery.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    suspend fun retryCalls() {
-        trackingStatusRepository.recoverTracking(TrackingKey.CALLS)
-    }
+        /**
+         * Retries call tracking recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        suspend fun retryCalls() {
+            trackingStatusRepository.recoverTracking(TrackingKey.CALLS)
+        }
 
-    /**
-     * Retries shortcut creation recovery.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    suspend fun retryShortcuts() {
-        trackingStatusRepository.recoverTracking(TrackingKey.SHORTCUTS)
-    }
+        /**
+         * Retries shortcut creation recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        suspend fun retryShortcuts() {
+            trackingStatusRepository.recoverTracking(TrackingKey.SHORTCUTS)
+        }
 
-    /**
-     * Retries traffic tracking recovery.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    suspend fun retryTraffic() {
-        trackingStatusRepository.recoverTracking(TrackingKey.TRAFFIC)
-    }
+        /**
+         * Retries traffic tracking recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        suspend fun retryTraffic() {
+            trackingStatusRepository.recoverTracking(TrackingKey.TRAFFIC)
+        }
 
-    /**
-     * Retries SIM discovery recovery.
-     *
-     * **Thread Safety:** Safe to call from any coroutine context.
-     */
-    suspend fun retrySimDiscovery() {
-        trackingStatusRepository.recoverTracking(TrackingKey.SIM_DISCOVERY)
+        /**
+         * Retries SIM discovery recovery.
+         *
+         * **Thread Safety:** Safe to call from any coroutine context.
+         */
+        suspend fun retrySimDiscovery() {
+            trackingStatusRepository.recoverTracking(TrackingKey.SIM_DISCOVERY)
+        }
     }
-}

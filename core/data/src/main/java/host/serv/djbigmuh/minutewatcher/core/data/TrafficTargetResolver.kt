@@ -15,84 +15,84 @@ import javax.inject.Singleton
  */
 @Singleton
 class TrafficTargetResolver
-@Inject
-constructor(
-    private val permissionManager: PermissionManager,
-) {
-    sealed interface TargetResult {
-        data class Success(
-            val target: TargetInfo,
-        ) : TargetResult
+    @Inject
+    constructor(
+        private val permissionManager: PermissionManager,
+    ) {
+        sealed interface TargetResult {
+            data class Success(
+                val target: TargetInfo,
+            ) : TargetResult
 
-        data object NoActiveSims : TargetResult
+            data object NoActiveSims : TargetResult
 
-        /**
-         * No default data SIM is selected in the system (e.g., mobile data is off).
-         * This is a normal state, not a firmware error.
-         */
-        data object NoDefaultData : TargetResult
+            /**
+             * No default data SIM is selected in the system (e.g., mobile data is off).
+             * This is a normal state, not a firmware error.
+             */
+            data object NoDefaultData : TargetResult
 
-        /**
-         * Input data was obtained at different points in time and is mutually inconsistent.
-         * This is a transient state that is re-evaluated on the next active SIMs flow emission.
-         */
-        data object StaleInput : TargetResult
+            /**
+             * Input data was obtained at different points in time and is mutually inconsistent.
+             * This is a transient state that is re-evaluated on the next active SIMs flow emission.
+             */
+            data object StaleInput : TargetResult
 
-        /**
-         * Target SIM resolution failed due to an error unrelated to input staleness.
-         */
-        data class Failed(
-            val message: String?,
-        ) : TargetResult
-    }
-
-    fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
-        if (activeSims.isEmpty()) {
-            AppLogger.d("TrafficTargetResolver: No active SIMs provided")
-            return TargetResult.NoActiveSims
+            /**
+             * Target SIM resolution failed due to an error unrelated to input staleness.
+             */
+            data class Failed(
+                val message: String?,
+            ) : TargetResult
         }
 
-        return try {
-            val currentDataSubId =
-                try {
-                    permissionManager.getDefaultDataSubscriptionId()
-                } catch (e: Exception) {
-                    AppLogger.e("Error getting default data SIM", e)
-                    -1
+        fun resolve(activeSims: List<ActiveSimInfo>): TargetResult {
+            if (activeSims.isEmpty()) {
+                AppLogger.d("TrafficTargetResolver: No active SIMs provided")
+                return TargetResult.NoActiveSims
+            }
+
+            return try {
+                val currentDataSubId =
+                    try {
+                        permissionManager.getDefaultDataSubscriptionId()
+                    } catch (e: Exception) {
+                        AppLogger.e("Error getting default data SIM", e)
+                        -1
+                    }
+
+                if (currentDataSubId == -1) {
+                    val simClaimsDefault = activeSims.any { it.isDefaultData }
+                    return if (simClaimsDefault) {
+                        AppLogger.w(
+                            "TrafficTargetResolver: Stale input - " +
+                                "system says no default sub, but a SIM claims default status.",
+                        )
+                        TargetResult.StaleInput
+                    } else {
+                        AppLogger.d("TrafficTargetResolver: No default data SIM selected (likely data off)")
+                        TargetResult.NoDefaultData
+                    }
                 }
 
-            if (currentDataSubId == -1) {
-                val simClaimsDefault = activeSims.any { it.isDefaultData }
-                return if (simClaimsDefault) {
-                    AppLogger.w(
-                        "TrafficTargetResolver: Stale input - " +
-                            "system says no default sub, but a SIM claims default status.",
-                    )
-                    TargetResult.StaleInput
-                } else {
-                    AppLogger.d("TrafficTargetResolver: No default data SIM selected (likely data off)")
-                    TargetResult.NoDefaultData
+                val targetSim = activeSims.find { it.subscriptionId == currentDataSubId }?.slotIndex ?: -1
+
+                if (targetSim == -1) {
+                    AppLogger.w("TrafficTargetResolver: Stale input - subId $currentDataSubId not found in active SIMs")
+                    return TargetResult.StaleInput
                 }
+
+                if (targetSim !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                    val message = "simSlotIndex $targetSim out of supported range"
+                    AppLogger.e("TrafficTargetResolver: $message")
+                    return TargetResult.Failed(message)
+                }
+
+                AppLogger.d("TrafficTargetResolver: Resolved target SIM to slot $targetSim (subId $currentDataSubId)")
+                TargetResult.Success(TargetInfo(targetSim, currentDataSubId))
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTargetResolver: Unexpected error during resolution", e)
+                TargetResult.Failed(e.message)
             }
-
-            val targetSim = activeSims.find { it.subscriptionId == currentDataSubId }?.slotIndex ?: -1
-
-            if (targetSim == -1) {
-                AppLogger.w("TrafficTargetResolver: Stale input - subId $currentDataSubId not found in active SIMs")
-                return TargetResult.StaleInput
-            }
-
-            if (targetSim !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                val message = "simSlotIndex $targetSim out of supported range"
-                AppLogger.e("TrafficTargetResolver: $message")
-                return TargetResult.Failed(message)
-            }
-
-            AppLogger.d("TrafficTargetResolver: Resolved target SIM to slot $targetSim (subId $currentDataSubId)")
-            TargetResult.Success(TargetInfo(targetSim, currentDataSubId))
-        } catch (e: Exception) {
-            AppLogger.e("TrafficTargetResolver: Unexpected error during resolution", e)
-            TargetResult.Failed(e.message)
         }
     }
-}

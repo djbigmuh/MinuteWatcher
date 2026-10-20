@@ -16,17 +16,17 @@ import javax.inject.Singleton
 // of InitialSetupWorker constructor while preserving testability and separation of concerns.
 @Suppress("LongParameterList")
 class InitialSetupWorkerDependencies
-@Inject
-constructor(
-    val callTracker: CallTracker,
-    val trafficTracker: TrafficTracker,
-    val simIdentityRepository: SimIdentityRepository,
-    val migrationFlagsRepository: MigrationFlagsRepository,
-    val usageStateRepository: UsageStateRepository,
-    val autoResetUseCase: AutoResetUseCase,
-    val usageUseCase: UsageUseCase,
-    val migrationService: IdentityMigrationService,
-    val dataChangeNotifier: DataChangeNotifier,
-    val workScheduler: WorkScheduler,
-    val permissionManager: PermissionManager,
-)
+    @Inject
+    constructor(
+        val callTracker: CallTracker,
+        val trafficTracker: TrafficTracker,
+        val simIdentityRepository: SimIdentityRepository,
+        val migrationFlagsRepository: MigrationFlagsRepository,
+        val usageStateRepository: UsageStateRepository,
+        val autoResetUseCase: AutoResetUseCase,
+        val usageUseCase: UsageUseCase,
+        val migrationService: IdentityMigrationService,
+        val dataChangeNotifier: DataChangeNotifier,
+        val workScheduler: WorkScheduler,
+        val permissionManager: PermissionManager,
+    )

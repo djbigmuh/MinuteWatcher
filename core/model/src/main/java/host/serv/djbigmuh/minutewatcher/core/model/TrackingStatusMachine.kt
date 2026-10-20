@@ -70,10 +70,10 @@ fun TrackingStatus.ErrorType.isSticky(): Boolean =
     when (this) {
         TrackingStatus.ErrorType.PERMISSION_MISSING,
         TrackingStatus.ErrorType.DATABASE_ERROR,
-            -> true
+        -> true
 
         TrackingStatus.ErrorType.UNKNOWN,
         TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION,
         TrackingStatus.ErrorType.NOT_SUPPORTED,
-            -> false
+        -> false
     }

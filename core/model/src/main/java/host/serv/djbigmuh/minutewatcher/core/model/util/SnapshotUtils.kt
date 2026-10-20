@@ -51,7 +51,7 @@ object SnapshotUtils {
                                         entity.sourceType,
                                     )
                                 }
-                        )
+                    )
                 }
 
         result = HASH_MULTIPLIER * result + content.hashCode()

@@ -50,64 +50,64 @@ interface AppSearchSessionWrapper : AutoCloseable {
 
 @Singleton
 internal class AppSearchWrapperImpl
-@Inject
-constructor() : AppSearchWrapper {
-    @VisibleForTesting
-    internal fun isPlatformBackend(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    @Inject
+    constructor() : AppSearchWrapper {
+        @VisibleForTesting
+        internal fun isPlatformBackend(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
-    override suspend fun createSearchSession(
-        context: Context,
-        databaseName: String,
-    ): AppSearchSessionWrapper =
-        if (isPlatformBackend()) {
-            createPlatformSearchSession(context, databaseName)
-        } else {
-            createLocalSearchSession(context, databaseName)
+        override suspend fun createSearchSession(
+            context: Context,
+            databaseName: String,
+        ): AppSearchSessionWrapper =
+            if (isPlatformBackend()) {
+                createPlatformSearchSession(context, databaseName)
+            } else {
+                createLocalSearchSession(context, databaseName)
+            }
+
+        @RequiresApi(Build.VERSION_CODES.S)
+        private suspend fun createPlatformSearchSession(
+            context: Context,
+            databaseName: String,
+        ): AppSearchSessionWrapper {
+            val future =
+                PlatformStorage.createSearchSessionAsync(
+                    PlatformStorage.SearchContext.Builder(context, databaseName).build(),
+                )
+            return AppSearchSessionWrapperImpl(future.await())
         }
 
-    @RequiresApi(Build.VERSION_CODES.S)
-    private suspend fun createPlatformSearchSession(
-        context: Context,
-        databaseName: String,
-    ): AppSearchSessionWrapper {
-        val future =
-            PlatformStorage.createSearchSessionAsync(
-                PlatformStorage.SearchContext.Builder(context, databaseName).build(),
-            )
-        return AppSearchSessionWrapperImpl(future.await())
+        private suspend fun createLocalSearchSession(
+            context: Context,
+            databaseName: String,
+        ): AppSearchSessionWrapper {
+            val future =
+                LocalStorage.createSearchSessionAsync(
+                    LocalStorage.SearchContext.Builder(context, databaseName).build(),
+                )
+            return AppSearchSessionWrapperImpl(future.await())
+        }
+
+        override fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest =
+            SetSchemaRequest
+                .Builder()
+                .setForceOverride(forceOverride)
+                .addDocumentClasses(UsageDocument::class.java)
+                .setDocumentClassDisplayedBySystem(UsageDocument::class.java, true)
+                .build()
+
+        override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
+            PutDocumentsRequest
+                .Builder()
+                .addDocuments(documents)
+                .build()
+
+        override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
+            RemoveByDocumentIdRequest
+                .Builder(NAMESPACE)
+                .addIds(ids)
+                .build()
     }
-
-    private suspend fun createLocalSearchSession(
-        context: Context,
-        databaseName: String,
-    ): AppSearchSessionWrapper {
-        val future =
-            LocalStorage.createSearchSessionAsync(
-                LocalStorage.SearchContext.Builder(context, databaseName).build(),
-            )
-        return AppSearchSessionWrapperImpl(future.await())
-    }
-
-    override fun createSchemaRequest(forceOverride: Boolean): SetSchemaRequest =
-        SetSchemaRequest
-            .Builder()
-            .setForceOverride(forceOverride)
-            .addDocumentClasses(UsageDocument::class.java)
-            .setDocumentClassDisplayedBySystem(UsageDocument::class.java, true)
-            .build()
-
-    override fun createPutRequest(documents: List<UsageDocument>): PutDocumentsRequest =
-        PutDocumentsRequest
-            .Builder()
-            .addDocuments(documents)
-            .build()
-
-    override fun createRemoveRequest(ids: Set<String>): RemoveByDocumentIdRequest =
-        RemoveByDocumentIdRequest
-            .Builder(NAMESPACE)
-            .addIds(ids)
-            .build()
-}
 
 internal class AppSearchSessionWrapperImpl(
     private val session: AppSearchSession,

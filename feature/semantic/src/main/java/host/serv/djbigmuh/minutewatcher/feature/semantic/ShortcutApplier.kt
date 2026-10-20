@@ -29,30 +29,30 @@ interface ShortcutApplier {
  */
 @Singleton
 class SystemShortcutApplier
-@Inject
-constructor() : ShortcutApplier {
-    override fun apply(
-        context: Context,
-        shortcuts: List<ShortcutInfoCompat>,
-    ) {
-        try {
-            val result =
-                if (shortcuts.isNotEmpty()) {
-                    ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
-                } else {
-                    ShortcutManagerCompat.removeAllDynamicShortcuts(context)
-                    true
+    @Inject
+    constructor() : ShortcutApplier {
+        override fun apply(
+            context: Context,
+            shortcuts: List<ShortcutInfoCompat>,
+        ) {
+            try {
+                val result =
+                    if (shortcuts.isNotEmpty()) {
+                        ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
+                    } else {
+                        ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+                        true
+                    }
+                if (!result) {
+                    val message = "System rejected dynamic shortcuts update"
+                    AppLogger.e(message)
+                    throw IllegalStateException(message)
                 }
-            if (!result) {
-                val message = "System rejected dynamic shortcuts update"
-                AppLogger.e(message)
-                throw IllegalStateException(message)
+            } catch (e: Exception) {
+                if (e !is IllegalStateException) {
+                    AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
+                }
+                throw e
             }
-        } catch (e: Exception) {
-            if (e !is IllegalStateException) {
-                AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
-            }
-            throw e
         }
     }
-}

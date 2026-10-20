@@ -53,33 +53,33 @@ internal fun parseNetworkStatsBytes(
 
 @Singleton
 class RealNetworkStatsProvider
-@Inject
-constructor(
-    @ApplicationContext context: Context,
-) : NetworkStatsProvider {
-    private val networkStatsManager =
-        context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+    ) : NetworkStatsProvider {
+        private val networkStatsManager =
+            context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
 
-    override fun queryMobileBytes(
-        startTime: Long,
-        endTime: Long,
-    ): StatsResult {
-        val manager = networkStatsManager ?: return StatsResult.Unavailable
+        override fun queryMobileBytes(
+            startTime: Long,
+            endTime: Long,
+        ): StatsResult {
+            val manager = networkStatsManager ?: return StatsResult.Unavailable
 
-        return try {
-            val bucket =
-                manager.querySummaryForDevice(
-                    NetworkCapabilities.TRANSPORT_CELLULAR,
-                    null,
-                    startTime,
-                    endTime,
-                )
-            parseNetworkStatsBytes(bucket.rxBytes, bucket.txBytes)
-        } catch (e: SecurityException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("Error querying NetworkStatsManager", e)
-            StatsResult.Error(e)
+            return try {
+                val bucket =
+                    manager.querySummaryForDevice(
+                        NetworkCapabilities.TRANSPORT_CELLULAR,
+                        null,
+                        startTime,
+                        endTime,
+                    )
+                parseNetworkStatsBytes(bucket.rxBytes, bucket.txBytes)
+            } catch (e: SecurityException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Error querying NetworkStatsManager", e)
+                StatsResult.Error(e)
+            }
         }
     }
-}

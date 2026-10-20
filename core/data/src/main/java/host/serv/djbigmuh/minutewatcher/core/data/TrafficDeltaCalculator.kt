@@ -14,93 +14,93 @@ import javax.inject.Singleton
  */
 @Singleton
 class TrafficDeltaCalculator
-@Inject
-constructor(
-    private val simUsageResetRepository: SimUsageResetRepository,
-) {
-    suspend fun updateTrafficBaselineAndUsage(
-        targetIdentity: String,
-        currentBytes: Long,
-        lastTotalBytes: Long,
-        target: TargetInfo,
-        expectedLastResetDate: Long,
-    ): Boolean {
-        try {
-            if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
-                val applied =
-                    simUsageResetRepository.setLastTotalBytes(
-                        targetIdentity,
-                        currentBytes,
-                        expectedLastResetDate,
-                    )
-                if (applied) {
-                    AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
-                } else {
-                    AppLogger.d(
-                        "TrafficDeltaCalculator: baseline reset write skipped " +
-                            "due to window mismatch for $targetIdentity",
-                    )
-                }
-                return applied
-            } else {
-                return handleTrafficDelta(
-                    targetIdentity,
-                    currentBytes,
-                    lastTotalBytes,
-                    target.slot,
-                    expectedLastResetDate,
-                )
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e(
-                "TrafficDeltaCalculator: Critical error updating baseline/usage for $targetIdentity",
-                e,
-            )
-            throw e
-        }
-    }
-
-    private suspend fun handleTrafficDelta(
-        identity: String,
-        currentBytes: Long,
-        lastTotalBytes: Long,
-        slot: Int,
-        expectedLastResetDate: Long,
-    ): Boolean {
-        try {
-            val deltaBytes = currentBytes - lastTotalBytes
-            if (deltaBytes > 0L) {
-                val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
-                if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
+    @Inject
+    constructor(
+        private val simUsageResetRepository: SimUsageResetRepository,
+    ) {
+        suspend fun updateTrafficBaselineAndUsage(
+            targetIdentity: String,
+            currentBytes: Long,
+            lastTotalBytes: Long,
+            target: TargetInfo,
+            expectedLastResetDate: Long,
+        ): Boolean {
+            try {
+                if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
                     val applied =
-                        simUsageResetRepository.incrementTrafficAndSetBaseline(
-                            identity,
-                            deltaMB,
+                        simUsageResetRepository.setLastTotalBytes(
+                            targetIdentity,
                             currentBytes,
                             expectedLastResetDate,
                         )
                     if (applied) {
-                        AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
+                        AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
                     } else {
                         AppLogger.d(
-                            "TrafficDeltaCalculator: increment traffic write skipped " +
-                                "due to window mismatch for $identity",
+                            "TrafficDeltaCalculator: baseline reset write skipped " +
+                                "due to window mismatch for $targetIdentity",
                         )
                     }
                     return applied
+                } else {
+                    return handleTrafficDelta(
+                        targetIdentity,
+                        currentBytes,
+                        lastTotalBytes,
+                        target.slot,
+                        expectedLastResetDate,
+                    )
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e(
+                    "TrafficDeltaCalculator: Critical error updating baseline/usage for $targetIdentity",
+                    e,
+                )
+                throw e
             }
-            return true
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e(
-                "TrafficDeltaCalculator: Error calculating/persisting delta for $identity",
-                e,
-            )
-            throw e
+        }
+
+        private suspend fun handleTrafficDelta(
+            identity: String,
+            currentBytes: Long,
+            lastTotalBytes: Long,
+            slot: Int,
+            expectedLastResetDate: Long,
+        ): Boolean {
+            try {
+                val deltaBytes = currentBytes - lastTotalBytes
+                if (deltaBytes > 0L) {
+                    val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
+                    if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
+                        val applied =
+                            simUsageResetRepository.incrementTrafficAndSetBaseline(
+                                identity,
+                                deltaMB,
+                                currentBytes,
+                                expectedLastResetDate,
+                            )
+                        if (applied) {
+                            AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")
+                        } else {
+                            AppLogger.d(
+                                "TrafficDeltaCalculator: increment traffic write skipped " +
+                                    "due to window mismatch for $identity",
+                            )
+                        }
+                        return applied
+                    }
+                }
+                return true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e(
+                    "TrafficDeltaCalculator: Error calculating/persisting delta for $identity",
+                    e,
+                )
+                throw e
+            }
         }
     }
-}

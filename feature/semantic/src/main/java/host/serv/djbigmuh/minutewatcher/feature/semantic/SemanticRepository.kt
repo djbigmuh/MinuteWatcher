@@ -8,9 +8,9 @@ import javax.inject.Singleton
 
 @Singleton
 class SemanticRepository
-@Inject
-constructor(
-    usageStateRepository: UsageStateRepository,
-) {
-    val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
-}
+    @Inject
+    constructor(
+        usageStateRepository: UsageStateRepository,
+    ) {
+        val snapshot: StateFlow<GlobalSnapshot> = usageStateRepository.observeSnapshot()
+    }

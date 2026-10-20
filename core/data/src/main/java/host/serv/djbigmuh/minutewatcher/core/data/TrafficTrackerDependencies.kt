@@ -22,18 +22,18 @@ import javax.inject.Singleton
 // of TrafficTracker constructor while preserving testability and separation of concerns.
 @Suppress("LongParameterList")
 class TrafficTrackerDependencies
-@Inject
-constructor(
-    val simIdentityRepository: SimIdentityRepository,
-    val simUsageRepository: SimUsageRepository,
-    val simUsageResetRepository: SimUsageResetRepository,
-    val permissionManager: PermissionManager,
-    val baselineManager: TrafficBaselineManager,
-    val deltaCalculator: TrafficDeltaCalculator,
-    val simChangeHandler: TrafficSimChangeHandler,
-    val targetResolver: TrafficTargetResolver,
-    val permissionChecker: TrafficPermissionChecker,
-    val permissionStateNotifier: PermissionStateNotifier,
-    val dataChangeNotifier: DataChangeNotifier,
-    val timeProvider: TimeProvider,
-)
+    @Inject
+    constructor(
+        val simIdentityRepository: SimIdentityRepository,
+        val simUsageRepository: SimUsageRepository,
+        val simUsageResetRepository: SimUsageResetRepository,
+        val permissionManager: PermissionManager,
+        val baselineManager: TrafficBaselineManager,
+        val deltaCalculator: TrafficDeltaCalculator,
+        val simChangeHandler: TrafficSimChangeHandler,
+        val targetResolver: TrafficTargetResolver,
+        val permissionChecker: TrafficPermissionChecker,
+        val permissionStateNotifier: PermissionStateNotifier,
+        val dataChangeNotifier: DataChangeNotifier,
+        val timeProvider: TimeProvider,
+    )

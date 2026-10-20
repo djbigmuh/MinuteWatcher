@@ -16,36 +16,36 @@ import javax.inject.Singleton
  */
 @Singleton
 class DataRefreshNotifierImpl
-@Inject
-constructor() : DataRefreshNotifier {
-    private val lastEventId = AtomicLong(0)
+    @Inject
+    constructor() : DataRefreshNotifier {
+        private val lastEventId = AtomicLong(0)
 
-    private val _refreshFlow =
-        MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(
-            replay = 1,
-            extraBufferCapacity = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        ).apply { tryEmit(DataRefreshNotifier.RefreshEvent(eventId = lastEventId.incrementAndGet())) }
+        private val _refreshFlow =
+            MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(
+                replay = 1,
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            ).apply { tryEmit(DataRefreshNotifier.RefreshEvent(eventId = lastEventId.incrementAndGet())) }
 
-    override val refreshFlow = _refreshFlow.asSharedFlow()
+        override val refreshFlow = _refreshFlow.asSharedFlow()
 
-    /**
-     * Notifies subscribers of a data refresh event.
-     *
-     * @param isManual True if the refresh was triggered by the user.
-     * @param suppressWidgetUpdate True if widget update should be skipped.
-     * Safe to call from any coroutine context.
-     */
-    override suspend fun notifyRefresh(
-        isManual: Boolean,
-        suppressWidgetUpdate: Boolean,
-    ) {
-        _refreshFlow.emit(
-            DataRefreshNotifier.RefreshEvent(
-                isManual = isManual,
-                suppressWidgetUpdate = suppressWidgetUpdate,
-                eventId = lastEventId.incrementAndGet(),
-            ),
-        )
+        /**
+         * Notifies subscribers of a data refresh event.
+         *
+         * @param isManual True if the refresh was triggered by the user.
+         * @param suppressWidgetUpdate True if widget update should be skipped.
+         * Safe to call from any coroutine context.
+         */
+        override suspend fun notifyRefresh(
+            isManual: Boolean,
+            suppressWidgetUpdate: Boolean,
+        ) {
+            _refreshFlow.emit(
+                DataRefreshNotifier.RefreshEvent(
+                    isManual = isManual,
+                    suppressWidgetUpdate = suppressWidgetUpdate,
+                    eventId = lastEventId.incrementAndGet(),
+                ),
+            )
+        }
     }
-}

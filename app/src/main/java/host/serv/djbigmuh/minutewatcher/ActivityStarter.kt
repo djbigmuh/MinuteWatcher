@@ -14,12 +14,12 @@ interface ActivityStarter {
 
 @Singleton
 class ContextActivityStarter
-@Inject
-constructor() : ActivityStarter {
-    override fun startActivity(
-        context: Context,
-        intent: Intent,
-    ) {
-        context.startActivity(intent)
+    @Inject
+    constructor() : ActivityStarter {
+        override fun startActivity(
+            context: Context,
+            intent: Intent,
+        ) {
+            context.startActivity(intent)
+        }
     }
-}
