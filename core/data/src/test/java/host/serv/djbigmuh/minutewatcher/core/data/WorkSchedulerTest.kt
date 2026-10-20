@@ -96,4 +96,20 @@ class WorkSchedulerTest {
         assertEquals(1, workInfos.size)
         assertEquals(WorkInfo.State.ENQUEUED, workInfos[0].state)
     }
+
+    @Test
+    fun `schedulePeriodicUsageCheck updates work with update policy and preserves single work`() {
+        workScheduler.schedulePeriodicUsageCheck().result.get()
+
+        val workInfos = workManager.getWorkInfosForUniqueWork(WorkScheduler.USAGE_CHECK_WORK_NAME).get()
+        assertEquals(1, workInfos.size)
+        val firstWorkId = workInfos[0].id
+
+        workScheduler.schedulePeriodicUsageCheck().result.get()
+
+        val updatedWorkInfos = workManager.getWorkInfosForUniqueWork(WorkScheduler.USAGE_CHECK_WORK_NAME).get()
+        val activeWorks = updatedWorkInfos.filter { it.state == WorkInfo.State.ENQUEUED }
+        assertEquals(1, activeWorks.size)
+        assertEquals(firstWorkId, activeWorks[0].id)
+    }
 }

@@ -68,7 +68,9 @@ class WorkScheduler
         /**
          * Schedules periodic usage check work (hourly).
          *
-         * Requires non-low battery constraint.
+         * Requires non-low battery constraint. When re-enqueued, work specification
+         * is updated while existing schedule is preserved; if no work is scheduled,
+         * normal enqueuing occurs.
          * @return [Operation] that can be used to track the progress of the enqueuing operation.
          * Safe to call from any coroutine context.
          */
@@ -90,7 +92,7 @@ class WorkScheduler
 
             return WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 USAGE_CHECK_WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.UPDATE,
                 workRequest,
             )
         }
