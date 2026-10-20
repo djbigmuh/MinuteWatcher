@@ -218,4 +218,9 @@
     <string name="operator_antel" translatable="false">Antel</string>
     <string name="operator_fido" translatable="false">Fido</string>
     <string name="operator_freedom" translatable="false">Freedom</string>
+    <string name="operator_bite" translatable="false">bite</string>
+    <string name="operator_bakcell" translatable="false">Bakcell</string>
+    <string name="operator_nar" translatable="false">Nar</string>
+    <string name="operator_geocell" translatable="false">Geocell</string>
+    <string name="operator_altel" translatable="false">Altel</string>
 </resources>

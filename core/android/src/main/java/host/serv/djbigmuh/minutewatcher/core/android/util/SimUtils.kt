@@ -210,6 +210,11 @@ object SimUtils {
             R.string.operator_antel to R.drawable.ic_operator_antel,
             R.string.operator_fido to R.drawable.ic_operator_fido,
             R.string.operator_freedom to R.drawable.ic_operator_freedom,
+            R.string.operator_bite to R.drawable.ic_operator_bite,
+            R.string.operator_bakcell to R.drawable.ic_operator_bakcell,
+            R.string.operator_nar to R.drawable.ic_operator_nar,
+            R.string.operator_geocell to R.drawable.ic_operator_geocell,
+            R.string.operator_altel to R.drawable.ic_operator_altel,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {

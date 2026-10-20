@@ -80,6 +80,11 @@ class CisOperatorsTest {
         assertEquals(R.drawable.ic_operator_life_by, SimUtils.getOperatorIconResource("life:)"))
         assertEquals(R.drawable.ic_operator_azercell, SimUtils.getOperatorIconResource("azercell"))
         assertEquals(R.drawable.ic_operator_kcell, SimUtils.getOperatorIconResource("kcell"))
+        assertEquals(R.drawable.ic_operator_bite, SimUtils.getOperatorIconResource("Bite"))
+        assertEquals(R.drawable.ic_operator_bakcell, SimUtils.getOperatorIconResource("Bakcell"))
+        assertEquals(R.drawable.ic_operator_nar, SimUtils.getOperatorIconResource("Nar"))
+        assertEquals(R.drawable.ic_operator_geocell, SimUtils.getOperatorIconResource("Geocell"))
+        assertEquals(R.drawable.ic_operator_altel, SimUtils.getOperatorIconResource("Altel"))
     }
 
     @Test
