@@ -171,4 +171,6 @@
     <string name="aod_summary_no_limits_note">표시할 내용 없음: 최소 한 개의 SIM 카드에 통화 시간 또는 데이터 한도를 설정하세요. 요약에는 한도가 있는 SIM만 표시됩니다.</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">통신사 %1$d</string>
+    <string name="operator_with_mcc">통신사(%1$s)</string>
 </resources>

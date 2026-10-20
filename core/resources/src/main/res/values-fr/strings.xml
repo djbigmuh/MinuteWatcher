@@ -184,4 +184,6 @@
     <string name="aod_summary_no_limits_note">Rien a afficher : definissez une limite de minutes ou de donnees pour au moins une carte SIM - le resume affiche uniquement les SIM avec des limites.</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">Opérateur %1$d</string>
+    <string name="operator_with_mcc">Opérateur (%1$s)</string>
 </resources>

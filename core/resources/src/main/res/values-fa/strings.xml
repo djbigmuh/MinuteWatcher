@@ -173,4 +173,6 @@
     <string name="aod_summary_no_limits_note">چیزی برای نمایش وجود ندارد: حد دقیقه یا داده را برای حداقل یک سیم‌کارت تعیین کنید - خلاصه فقط سیم‌کارت‌های دارای حد را نشان می‌دهد.</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">اپراتور %1$d</string>
+    <string name="operator_with_mcc">اپراتور (%1$s)</string>
 </resources>

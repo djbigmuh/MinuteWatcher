@@ -122,8 +122,6 @@
     <string name="operator_vinaphone" translatable="false">VinaPhone</string>
     <string name="operator_viettel" translatable="false">Viettel</string>
     <string name="operator_celcomdigi" translatable="false">CelcomDigi</string>
-    <string name="operator_generic" translatable="false">Operator %1$d</string>
-    <string name="operator_with_mcc" translatable="false">Operator (%1$s)</string>
     <string name="tile_operator_value_format" translatable="false">%1$s: %2$s</string>
     <string name="traffic_remaining_with_limit_format" translatable="false">%1$s / %2$s %3$s</string>
     <string name="traffic_value_with_unit_format" translatable="false">%1$s %2$s</string>

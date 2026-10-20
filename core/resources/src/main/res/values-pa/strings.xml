@@ -173,4 +173,6 @@
     <string name="aod_summary_no_limits_note">ਕوئੀ ਵੀ ਚੀਜ਼ ਪ੍ਰਦਰਸ਼ਤ ਕਰਨ ਲਈ ਨਹੀਂ ਹੈ: ਘੱਟੋ-ਘੱਟ ਇੱਕ SIM ਕਾਰਡ ਲਈ ਮਿੰਟ ਜਾਂ ਡੇਟਾ ਸੀਮਾ ਸੈੱਟ ਕਰੋ - ਸਾਰਿਰ ਸਿਰਫ਼ ਸੀਮਾ ਵਾਲੇ SIM ਦਿਖਾਉਂਦਾ ਹੈ.</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">ਓਪਰੇਟਰ %1$d</string>
+    <string name="operator_with_mcc">ਓਪਰੇਟਰ (%1$s)</string>
 </resources>

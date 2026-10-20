@@ -180,4 +180,6 @@
     <string name="aod_summary_no_limits_note">没有可显示的内容：至少为一张 SIM 卡设置通话时长或流量限制 - 摘要仅显示设有限制的 SIM 卡。</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">运营商 %1$d</string>
+    <string name="operator_with_mcc">运营商（%1$s）</string>
 </resources>

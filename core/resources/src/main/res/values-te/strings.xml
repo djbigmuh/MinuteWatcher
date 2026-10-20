@@ -173,4 +173,6 @@
     <string name="aod_summary_no_limits_note">చూపించడానికి ఏమీ లేదు: కనీసం ఒక SIM కార్డ్ కోసం నిమిషాలు లేదా డేటా పరిమితిని సెట్ చేయండి - సారాంశం పరిమితులు ఉన్న SIMలను మాత్రమే చూపుతుంది.</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">ఆపరేటర్ %1$d</string>
+    <string name="operator_with_mcc">ఆపరేటర్ (%1$s)</string>
 </resources>

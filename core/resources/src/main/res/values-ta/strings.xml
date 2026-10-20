@@ -173,4 +173,6 @@
     <string name="aod_summary_no_limits_note">காண்பிக்க ஒன்றுமில்லை: குறைந்தபட்சம் ஒரு SIM கார்டுக்கு நிமிடங்கள் அல்லது தரவு வரம்பை அமைக்கவும் - சுருக்கம் வரம்புகள் உள்ள SIM-களை மட்டுமே காட்டும்.</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">ஆபரேட்டர் %1$d</string>
+    <string name="operator_with_mcc">ஆபரேட்டர் (%1$s)</string>
 </resources>

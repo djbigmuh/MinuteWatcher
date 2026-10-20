@@ -178,4 +178,6 @@
     <string name="aod_summary_no_limits_note">প্রদর্শন করার মত কিছু নেই: অন্তত একটি সিম কার্ডের জন্য মিনিট বা ডেটার সীমা সেট করুন - সারাংশে শুধুমাত্র সীমা সহ সিমগুলো দেখানো হয়。</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">অপারেটর %1$d</string>
+    <string name="operator_with_mcc">অপারেটর (%1$s)</string>
 </resources>

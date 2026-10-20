@@ -173,4 +173,6 @@
     <string name="aod_summary_no_limits_note">Görüntülenecek öğe yok: En az bir SIM kart için dakika veya veri sınırı belirleyin - özet yalnızca sınırları olan SIM kartlarını gösterir.</string>
     <string name="adjustment_mark">*</string>
     <string name="adjustment_label_format">%1$s: %2$s%3$s %4$s</string>
+    <string name="operator_generic">Operatör %1$d</string>
+    <string name="operator_with_mcc">Operatör (%1$s)</string>
 </resources>
