@@ -41,6 +41,7 @@ class CisOperatorsTest {
         assertEquals("operator_life_by", json.getString("25704"))
         assertEquals("operator_orange", json.getString("25901"))
         assertEquals("operator_moldcell", json.getString("25902"))
+        assertEquals("operator_beeline", json.getString("28204"))
 
         assertEquals("Azercell", OperatorResolver.resolve(context, "", listOf("40001"), 0).displayName)
         assertEquals("operator_azercell", OperatorResolver.getOperatorBrandKey("Azercell"))

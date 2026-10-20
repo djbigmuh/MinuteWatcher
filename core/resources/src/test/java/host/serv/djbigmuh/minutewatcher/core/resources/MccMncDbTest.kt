@@ -20,6 +20,7 @@ class MccMncDbTest {
             setOf(
                 "334",
                 "405",
+                "714",
             )
 
         /**
