@@ -81,6 +81,6 @@ against the following 13 normative rules:
 9. Center of graphic bounding box must be centered at `(24, 24) +/- 4`.
 10. All path coordinates must fit strictly within `[0, 48] x [0, 48]`.
 11. Total file size must not exceed 24 KB.
-12. All filled paths must specify `android:fillType="evenOdd"`.
+12. A filled path must specify `android:fillType="evenOdd"` when its `android:pathData` contains two or more closed subpaths and the bounding rectangle of one closed subpath is strictly contained within the bounding rectangle of another closed subpath. Paths without nested closed subpaths are not required to declare `fillType`. The requirement is enforced by `OperatorIconAssetComplianceTest`.
 13. Icon must pass automated contrast validation (WCAG 2.1 contrast ratio >= 3.0 on backgrounds `#FFFFFFFF`,
     `#FF808080`, and `#FF141218` for at least 2% of rasterized pixels at 96x96 resolution).
