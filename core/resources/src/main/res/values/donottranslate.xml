@@ -214,4 +214,8 @@
     <string name="operator_unitel" translatable="false">Unitel</string>
     <string name="operator_bmobile" translatable="false">B-Mobile</string>
     <string name="operator_dst" translatable="false">DST</string>
+    <string name="operator_kolbi" translatable="false">Kölbi</string>
+    <string name="operator_antel" translatable="false">Antel</string>
+    <string name="operator_fido" translatable="false">Fido</string>
+    <string name="operator_freedom" translatable="false">Freedom</string>
 </resources>

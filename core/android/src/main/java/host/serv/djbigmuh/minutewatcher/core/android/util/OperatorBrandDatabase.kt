@@ -202,6 +202,10 @@ object OperatorBrandDatabase {
             "operator_unitel" to R.string.operator_unitel,
             "operator_bmobile" to R.string.operator_bmobile,
             "operator_dst" to R.string.operator_dst,
+            "operator_kolbi" to R.string.operator_kolbi,
+            "operator_antel" to R.string.operator_antel,
+            "operator_fido" to R.string.operator_fido,
+            "operator_freedom" to R.string.operator_freedom,
         )
 
     val tokenToResKey =
@@ -228,6 +232,16 @@ object OperatorBrandDatabase {
             "mobilis" to "operator_mobilis",
             "azercell" to "operator_azercell",
             "kcell" to "operator_kcell",
+            "kolbi" to "operator_kolbi",
+            "kolbi ice" to "operator_kolbi",
+            "ice costa rica" to "operator_kolbi",
+            "instituto costarricense de electricidad" to "operator_kolbi",
+            "antel" to "operator_antel",
+            "administracion nacional de telecomunicaciones" to "operator_antel",
+            "fido" to "operator_fido",
+            "fido mobile" to "operator_fido",
+            "freedom" to "operator_freedom",
+            "freedom mobile" to "operator_freedom",
             "mtn" to "operator_mtn",
             "vodacom" to "operator_vodacom",
             "safaricom" to "operator_safaricom",

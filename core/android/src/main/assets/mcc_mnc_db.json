@@ -183,6 +183,8 @@
     "302221": "operator_telus",
     "302222": "operator_telus",
     "302320": "operator_rogers",
+    "302370": "operator_fido",
+    "302490": "operator_freedom",
     "302610": "operator_bell",
     "302690": "operator_bell",
     "302720": "operator_rogers",
@@ -539,6 +541,8 @@
     "71021": "operator_claro",
     "71030": "operator_movistar",
     "71073": "operator_claro",
+    "71201": "operator_kolbi",
+    "71202": "operator_kolbi",
     "71203": "operator_claro",
     "71204": "operator_movistar",
     "71402": "operator_movistar",
@@ -589,6 +593,8 @@
     "74402": "operator_claro",
     "74404": "operator_tigo",
     "74405": "operator_personal",
+    "74800": "operator_antel",
+    "74801": "operator_antel",
     "74807": "operator_movistar",
     "74810": "operator_claro"
 }

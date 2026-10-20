@@ -72,6 +72,17 @@ class AmericasOperatorsTest {
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("714020"), 0).displayName)
         assertEquals("Entel", OperatorResolver.resolve(context, "", listOf("73602"), 0).displayName)
         assertEquals("Tigo", OperatorResolver.resolve(context, "", listOf("74404"), 0).displayName)
+
+        assertEquals("Kölbi", OperatorResolver.resolve(context, "", listOf("71201"), 0).displayName)
+        assertEquals("Kölbi", OperatorResolver.resolve(context, "", listOf("71202"), 0).displayName)
+        assertEquals("Antel", OperatorResolver.resolve(context, "", listOf("74800"), 0).displayName)
+        assertEquals("Antel", OperatorResolver.resolve(context, "", listOf("74801"), 0).displayName)
+        assertEquals("Fido", OperatorResolver.resolve(context, "", listOf("302370"), 0).displayName)
+        assertEquals("Freedom", OperatorResolver.resolve(context, "", listOf("302490"), 0).displayName)
+        assertEquals("operator_kolbi", OperatorResolver.getOperatorBrandKey("Kolbi"))
+        assertEquals("operator_fido", OperatorResolver.getOperatorBrandKey("Fido"))
+        assertEquals("operator_freedom", OperatorResolver.getOperatorBrandKey("Freedom Mobile"))
+        assertEquals("operator_antel", OperatorResolver.getOperatorBrandKey("Antel"))
     }
 
     @Test
@@ -89,6 +100,10 @@ class AmericasOperatorsTest {
         assertEquals(R.string.operator_vivo, OperatorResolver.getOperatorResourceId("vivo brasil") as Int)
         assertEquals(R.string.operator_algar, OperatorResolver.getOperatorResourceId("algar") as Int)
         assertEquals(R.string.operator_algar, OperatorResolver.getOperatorResourceId("algar telecom") as Int)
+        assertEquals(R.string.operator_kolbi, OperatorResolver.getOperatorResourceId("kolbi") as Int)
+        assertEquals(R.string.operator_antel, OperatorResolver.getOperatorResourceId("antel") as Int)
+        assertEquals(R.string.operator_fido, OperatorResolver.getOperatorResourceId("fido") as Int)
+        assertEquals(R.string.operator_freedom, OperatorResolver.getOperatorResourceId("freedom") as Int)
     }
 
     @Test
@@ -98,6 +113,10 @@ class AmericasOperatorsTest {
         assertEquals(R.drawable.ic_operator_algar, SimUtils.getOperatorIconResource("algar"))
         assertEquals(R.drawable.ic_operator_rogers, SimUtils.getOperatorIconResource("rogers"))
         assertEquals(R.drawable.ic_operator_bell, SimUtils.getOperatorIconResource("bell"))
+        assertEquals(R.drawable.ic_operator_kolbi, SimUtils.getOperatorIconResource("kolbi"))
+        assertEquals(R.drawable.ic_operator_antel, SimUtils.getOperatorIconResource("antel"))
+        assertEquals(R.drawable.ic_operator_fido, SimUtils.getOperatorIconResource("fido"))
+        assertEquals(R.drawable.ic_operator_freedom, SimUtils.getOperatorIconResource("freedom"))
     }
 
     private fun resolvePlmn(plmn: String): String? {
