@@ -78,7 +78,7 @@ class MccMncDbTest {
         validateEntries(plmns, jsonObj, operatorResKeys, mccToMncLens, mccToMncs, failures)
         validateMncLengthUniformity(mccToMncLens, failures)
         validateConsecutiveSequences(mccToMncs, failures)
-        validateProvenanceDocumentation(mccToMncLens, failures)
+        validateProvenanceDocumentation(jsonObj, failures)
 
         if (failures.isNotEmpty()) {
             fail("MCC-MNC DB validation failures:\n" + failures.joinToString("\n"))
@@ -154,28 +154,122 @@ class MccMncDbTest {
     }
 
     private fun validateProvenanceDocumentation(
-        mccToMncLens: Map<String, Set<Int>>,
+        jsonObj: JSONObject,
         failures: MutableList<String>,
     ) {
+        val sourcesFile = findSourcesFile()
+        if (sourcesFile == null || !sourcesFile.exists()) {
+            failures.add("docs/operator_plmn_sources.md does not exist")
+            return
+        }
+
+        val jsonMap = parseJsonMap(jsonObj)
+        val docMap = parseDocMap(sourcesFile)
+        compareMaps(jsonMap, docMap, failures)
+    }
+
+    private fun findSourcesFile(): File? {
         var curr: File? = File(System.getProperty("user.dir") ?: ".")
-        var sourcesFile: File? = null
         while (curr != null) {
             val candidate = File(curr, "docs/operator_plmn_sources.md")
             if (candidate.exists()) {
-                sourcesFile = candidate
-                break
+                return candidate
             }
             curr = curr.parentFile
         }
+        return null
+    }
 
-        if (sourcesFile == null || !sourcesFile.exists()) {
-            failures.add("docs/operator_plmn_sources.md does not exist")
-        } else {
-            val sourcesText = sourcesFile.readText()
-            for (mcc in mccToMncLens.keys) {
-                if (!sourcesText.contains(mcc)) {
-                    failures.add("MCC $mcc present in mcc_mnc_db.json is missing in docs/operator_plmn_sources.md")
+    private fun parseJsonMap(jsonObj: JSONObject): Map<String, Map<String, String>> {
+        val jsonMap = mutableMapOf<String, MutableMap<String, String>>()
+        val keysIterator = jsonObj.keys()
+        while (keysIterator.hasNext()) {
+            val plmn = keysIterator.next()
+            val brand = jsonObj.getString(plmn)
+            val mcc = plmn.substring(0, 3)
+            jsonMap.getOrPut(mcc) { mutableMapOf() }[plmn] = brand
+        }
+        return jsonMap
+    }
+
+    private fun parseDocMap(sourcesFile: File): Map<String, Map<String, String>> {
+        val docMap = mutableMapOf<String, MutableMap<String, String>>()
+        val pairRegex = Regex("""(\d{5,6})\s*=\s*(operator_[a-z0-9_]+)""")
+
+        sourcesFile.forEachLine { line ->
+            if (line.startsWith("|")) {
+                parseDocLine(line, pairRegex, docMap)
+            }
+        }
+        return docMap
+    }
+
+    private fun parseDocLine(
+        line: String,
+        pairRegex: Regex,
+        docMap: MutableMap<String, MutableMap<String, String>>,
+    ) {
+        val parts = line.split("|").map { it.trim() }
+        if (parts.size >= 4) {
+            val mccCandidate = parts[1]
+            if (mccCandidate.length == 3 && mccCandidate.all { it.isDigit() }) {
+                val plmnCell = parts[3]
+                val pairs = docMap.getOrPut(mccCandidate) { mutableMapOf() }
+                pairRegex.findAll(plmnCell).forEach { match ->
+                    val plmn = match.groupValues[1]
+                    val brand = match.groupValues[2]
+                    pairs[plmn] = brand
                 }
+            }
+        }
+    }
+
+    private fun compareMaps(
+        jsonMap: Map<String, Map<String, String>>,
+        docMap: Map<String, Map<String, String>>,
+        failures: MutableList<String>,
+    ) {
+        val allMccs = jsonMap.keys + docMap.keys
+        for (mcc in allMccs.sorted()) {
+            val jsonPairs = jsonMap[mcc]
+            val docPairs = docMap[mcc]
+
+            if (jsonPairs != null && docPairs == null) {
+                failures.add("MCC $mcc is present in JSON but missing in documentation table")
+            } else if (jsonPairs == null && docPairs != null) {
+                failures.add("MCC $mcc is present in documentation table but missing in JSON")
+            } else if (jsonPairs != null && docPairs != null) {
+                comparePlmnPairs(mcc, jsonPairs, docPairs, failures)
+            }
+        }
+    }
+
+    private fun comparePlmnPairs(
+        mcc: String,
+        jsonPairs: Map<String, String>,
+        docPairs: Map<String, String>,
+        failures: MutableList<String>,
+    ) {
+        val allPlmns = jsonPairs.keys + docPairs.keys
+        for (plmn in allPlmns.sorted()) {
+            val jsonBrand = jsonPairs[plmn]
+            val docBrand = docPairs[plmn]
+
+            if (jsonBrand != null && docBrand == null) {
+                failures.add(
+                    "PLMN $plmn=$jsonBrand is present in JSON but missing in " +
+                        "documentation row for MCC $mcc",
+                )
+            } else if (jsonBrand == null && docBrand != null) {
+                failures.add(
+                    "PLMN $plmn=$docBrand is present in documentation row for " +
+                        "MCC $mcc but missing in JSON",
+                )
+            } else if (jsonBrand != docBrand) {
+                failures.add(
+                    "PLMN $plmn brand mismatch for MCC $mcc: " +
+                        "JSON has '$jsonBrand', documentation has '$docBrand'",
+                )
             }
         }
     }
