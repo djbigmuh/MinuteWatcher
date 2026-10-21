@@ -33,7 +33,7 @@ class OperatorIconAssetComplianceTest {
     private val temporaryExceptions: Map<String, Set<Int>> = emptyMap()
 
     @Test
-    fun `validate operator icons asset compliance items 1 to 13`() {
+    fun `validate operator icons asset compliance items 1 to 15`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val resDir = getResDir()
         val drawableDir = File(resDir, "drawable")
@@ -88,6 +88,8 @@ class OperatorIconAssetComplianceTest {
         validateColors(resName, doc, itemFailures)
         validateFileAndPathSizes(resName, doc, xmlFile, itemFailures)
         validateEvenOdd(resName, doc, itemFailures)
+        validateNamespaces(resName, doc, itemFailures)
+        validateGradientColors(resName, doc, itemFailures)
 
         val contrastError = checkRenderingContrast(context, resId, resName)
         if (contrastError != null) {
@@ -516,6 +518,74 @@ class OperatorIconAssetComplianceTest {
         val dir = File(prop)
         require(dir.exists()) { "Core resources directory does not exist at $prop" }
         return dir
+    }
+
+    private fun validateNamespaces(
+        resName: String,
+        doc: Document,
+        failures: MutableList<Pair<Int, String>>,
+    ) {
+        val allElements = doc.getElementsByTagName("*")
+        for (i in 0 until allElements.length) {
+            val elem = allElements.item(i) as Element
+            val attrs = elem.attributes
+            for (j in 0 until attrs.length) {
+                val attr = attrs.item(j)
+                val attrName = attr.nodeName
+                if (attrName.startsWith("xmlns:")) {
+                    val prefix = attrName.substring(6)
+                    val uri = attr.nodeValue
+                    when (prefix) {
+                        "android" -> {
+                            if (uri != ANDROID_NS) {
+                                failures.add(
+                                    14 to "$resName item 14 failed: namespace prefix '$prefix' has invalid URI '$uri'",
+                                )
+                            }
+                        }
+                        "aapt" -> {
+                            if (uri != "http://schemas.android.com/aapt") {
+                                failures.add(
+                                    14 to "$resName item 14 failed: namespace prefix '$prefix' has invalid URI '$uri'",
+                                )
+                            }
+                        }
+                        else -> {
+                            failures.add(
+                                14 to "$resName item 14 failed: unauthorized namespace prefix '$prefix' with URI '$uri'",
+                            )
+                        }
+                    }
+                } else if (attrName == "xmlns") {
+                    val uri = attr.nodeValue
+                    failures.add(
+                        14 to "$resName item 14 failed: default namespace prefix 'xmlns' with URI '$uri' is not allowed",
+                    )
+                }
+            }
+        }
+    }
+
+    private fun validateGradientColors(
+        resName: String,
+        doc: Document,
+        failures: MutableList<Pair<Int, String>>,
+    ) {
+        val hex8Pattern = Regex("^#[0-9A-Fa-f]{8}$")
+        val gradients = doc.getElementsByTagName("gradient")
+        for (i in 0 until gradients.length) {
+            val gradient = gradients.item(i) as Element
+            val items = gradient.getElementsByTagName("item")
+            for (j in 0 until items.length) {
+                val item = items.item(j) as Element
+                val colorAttr = getAndroidAttr(item, "color")
+                if (!hex8Pattern.matches(colorAttr)) {
+                    failures.add(
+                        15 to "$resName item 15 failed: gradient item color '$colorAttr' is not 8-hex",
+                    )
+                }
+            }
+        }
     }
 
     companion object {
