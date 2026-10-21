@@ -1,6 +1,6 @@
 MinuteWatcher Operator Brand Assets Attributions
 
-Category A — CC0 brand glyphs (simple-icons 16.35.0, https://simple-icons.org, CC0-1.0):
+Category A — CC0 brand glyphs (simple-icons 11.x, https://simple-icons.org, CC0-1.0):
 - ic_operator_airtel (slug: airtel)
 - ic_operator_att (slug: atandt)
 - ic_operator_jio (slug: jio)

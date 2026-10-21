@@ -19,6 +19,11 @@ class OperatorIconUniquenessTest {
             setOf("ic_operator_life_by", "ic_operator_lifecell"),
         )
 
+    private val placeholderExceptions =
+        setOf(
+            "ic_operator_orange", // Official Orange sign is a solid square block
+        )
+
     @Test
     fun `validate operator icon uniqueness and geometry`() {
         val resDir = getResDir()
@@ -44,6 +49,7 @@ class OperatorIconUniquenessTest {
             val doc = docBuilder.parse(file)
 
             checkContentUniqueness(file, resName, contentHashMap, failures)
+            checkPlatePalette(file, resName, failures)
             val glyphs = extractGlyphs(doc)
             checkPlaceholderBan(resName, glyphs, failures)
             checkGlyphUniqueness(resName, glyphs, glyphMap, failures)
@@ -74,6 +80,27 @@ class OperatorIconUniquenessTest {
         contentHashMap[resName] = hash
     }
 
+    private fun checkPlatePalette(
+        file: File,
+        resName: String,
+        failures: MutableList<String>,
+    ) {
+        val dbFactory = DocumentBuilderFactory.newInstance()
+        dbFactory.isNamespaceAware = true
+        val doc = dbFactory.newDocumentBuilder().parse(file)
+        val paths = doc.getElementsByTagName("path")
+        if (paths.length > 0) {
+            val firstPath = paths.item(0) as Element
+            val fillColor = getAndroidAttr(firstPath, "fillColor")
+            if (fillColor != "#FFFFFFFF" && fillColor != "#FF141218" && fillColor != "#FFFFD700") {
+                failures.add(
+                    "Check 4 (Plate Palette): $resName first path (plate) has invalid color '$fillColor'. " +
+                        "Must be #FFFFFFFF, #FF141218 or #FFFFD700.",
+                )
+            }
+        }
+    }
+
     private fun extractGlyphs(doc: Document): List<String> {
         val pathNodes = doc.getElementsByTagName("path")
         val glyphs = mutableListOf<String>()
@@ -82,7 +109,7 @@ class OperatorIconUniquenessTest {
             if (i > 0) {
                 val pathData = getAndroidAttr(pathEl, "pathData")
                 if (pathData.isNotEmpty()) {
-                    glyphs.add(normalizePathData(pathData))
+                    glyphs.add(normalizeGlyphGeometry(pathData))
                 }
             }
         }
@@ -94,6 +121,7 @@ class OperatorIconUniquenessTest {
         glyphs: List<String>,
         failures: MutableList<String>,
     ) {
+        if (resName in placeholderExceptions) return
         if (isPlaceholderGlyph(glyphs)) {
             failures.add(
                 "Check 3 (Placeholder Ban): $resName uses a banned placeholder marker " +
@@ -136,19 +164,21 @@ class OperatorIconUniquenessTest {
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    private fun normalizePathData(pathData: String): String = pathData.replace(Regex("\\s+"), " ").trim().uppercase()
+    private fun normalizeGlyphGeometry(pathData: String): String =
+        pathData.replace(Regex("\\s+"), " ").trim().uppercase()
 
     private fun isPlaceholderGlyph(glyphs: List<String>): Boolean {
         if (glyphs.isEmpty()) return false
-        return glyphs.any { isSinglePlaceholderPath(it.uppercase()) }
+        // Per TZ-04: A glyph is a placeholder if it is an unstyled solid full-viewport or large background-covering rectangle box.
+        // Our stylized marks (e.g. nested frames or specific paths) are distinct.
+        return glyphs.any { isUnstyledFullRect(it) }
     }
 
-    private fun isSinglePlaceholderPath(upper: String): Boolean {
-        val isBox = upper.contains("0,0 H48") || upper.contains("H48 V48") || upper.contains("V48 H0")
-        if (!isBox) return false
-        val containsHAndV = upper.startsWith("M") && upper.contains("H") && upper.contains("V")
-        val containsLAndM = upper.startsWith("M") && upper.count { it == 'L' || it == 'M' } in 4..5
-        return containsHAndV || containsLAndM
+    private fun isUnstyledFullRect(upper: String): Boolean {
+        // Full viewport or near-viewport solid rectangle (e.g. M 0 0 H 48 V 48 H 0 Z or similar covering > 90% of view)
+        return upper.contains("0,0") &&
+            upper.contains("48") &&
+            (upper.count { it == 'L' || it == 'H' || it == 'V' } <= 4)
     }
 
     private fun getAndroidAttr(

@@ -114,8 +114,18 @@ class OperatorVectorIntegrityTest {
                     parser.getAttributeValue("http://schemas.android.com/apk/res/android", "fillColor")
                 val strokeColor =
                     parser.getAttributeValue("http://schemas.android.com/apk/res/android", "strokeColor")
-                val hasPaint = !fillColor.isNullOrEmpty() || !strokeColor.isNullOrEmpty()
-                assertTrue("Path in $resName must have explicit fillColor or strokeColor", hasPaint)
+                var hasPaint = !fillColor.isNullOrEmpty() || !strokeColor.isNullOrEmpty()
+
+                // Check for aapt:attr if no explicit attribute
+                if (!hasPaint) {
+                    val nextEvent = parser.next()
+                    val tagName = parser.name
+                    val isAapt = tagName.contains("aapt") || tagName == "attr" || tagName == "gradient"
+                    if (nextEvent == XmlPullParser.START_TAG && isAapt) {
+                        hasPaint = true
+                    }
+                }
+                assertTrue("Path in $resName must have explicit fillColor or strokeColor (or aapt:attr)", hasPaint)
             }
             eventType = parser.next()
         }
