@@ -18,12 +18,21 @@ class IndiaOperatorsTest {
     fun `test India PLMN database mappings`() {
         assertEquals("Airtel", resolveDisplayName("40402"))
         assertEquals("Airtel", resolveDisplayName("40410"))
+        assertEquals("Airtel", resolveDisplayName("40416"))
         assertEquals("Vi", resolveDisplayName("40401"))
+        assertEquals("Vi", resolveDisplayName("40407"))
         assertEquals("Vi", resolveDisplayName("40411"))
+        assertEquals("Vi", resolveDisplayName("40415"))
         assertEquals("Vi", resolveDisplayName("40456"))
+        assertEquals("Vi", resolveDisplayName("40488"))
+        assertEquals("Vi", resolveDisplayName("405750"))
+        assertEquals("Vi", resolveDisplayName("405756"))
+        assertEquals("Vi", resolveDisplayName("405845"))
+        assertEquals("Vi", resolveDisplayName("405908"))
         assertEquals("Jio", resolveDisplayName("405840"))
         assertEquals("BSNL", resolveDisplayName("40434"))
         assertEquals("BSNL", resolveDisplayName("40451"))
+        assertEquals("BSNL", resolveDisplayName("40479"))
     }
 
     @Test

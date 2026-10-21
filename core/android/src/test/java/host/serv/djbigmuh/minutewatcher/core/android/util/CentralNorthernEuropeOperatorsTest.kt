@@ -19,6 +19,8 @@ class CentralNorthernEuropeOperatorsTest {
         assertEquals("1&1", resolveDisplayName("26223"))
         assertEquals("Magenta", resolveDisplayName("23203"))
         assertEquals("Yettel", resolveDisplayName("21601"))
+        assertEquals("Digi", resolveDisplayName("21603"))
+        assertEquals("bite", resolveDisplayName("24705"))
         assertEquals("operator_telia", resolvePlmn("24801"))
         assertEquals("operator_tele2", resolvePlmn("24603"))
         assertEquals("operator_tele2", resolvePlmn("24007"))

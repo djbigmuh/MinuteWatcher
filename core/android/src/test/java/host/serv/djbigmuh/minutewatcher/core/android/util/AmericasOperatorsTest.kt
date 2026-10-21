@@ -26,6 +26,12 @@ class AmericasOperatorsTest {
         assertEquals("operator_claro", resolvePlmn("72405"))
         assertEquals("operator_algar", resolvePlmn("72432"))
 
+        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("338070"), 0).displayName)
+        assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("342750"), 0).displayName)
+        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("37002"), 0).displayName)
+        assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("37004"), 0).displayName)
+        assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("37413"), 0).displayName)
+        assertEquals("WOM", OperatorResolver.resolve(context, "", listOf("732360"), 0).displayName)
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("708001"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("722010"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("722070"), 0).displayName)
