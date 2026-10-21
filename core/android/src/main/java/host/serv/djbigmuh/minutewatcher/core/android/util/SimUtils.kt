@@ -189,6 +189,13 @@ object SimUtils {
             R.string.operator_unitel to R.drawable.ic_operator_unitel,
             R.string.operator_bmobile to R.drawable.ic_operator_bmobile,
             R.string.operator_dst to R.drawable.ic_operator_dst,
+            R.string.operator_one to R.drawable.ic_operator_one,
+            R.string.operator_mtel to R.drawable.ic_operator_mtel,
+            R.string.operator_bh_telecom to R.drawable.ic_operator_bh_telecom,
+            R.string.operator_ht_eronet to R.drawable.ic_operator_ht_eronet,
+            R.string.operator_vala to R.drawable.ic_operator_vala,
+            R.string.operator_ipko to R.drawable.ic_operator_ipko,
+
             R.string.operator_nos to R.drawable.ic_operator_nos,
             R.string.operator_fastweb to R.drawable.ic_operator_fastweb,
             R.string.operator_postemobile to R.drawable.ic_operator_postemobile,
@@ -224,7 +231,7 @@ object SimUtils {
             R.string.operator_bite to R.drawable.ic_operator_bite,
             R.string.operator_bakcell to R.drawable.ic_operator_bakcell,
             R.string.operator_nar to R.drawable.ic_operator_nar,
-            R.string.operator_geocell to R.drawable.ic_operator_geocell,
+            R.string.operator_silknet to R.drawable.ic_operator_silknet,
             R.string.operator_altel to R.drawable.ic_operator_altel,
         )
 

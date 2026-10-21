@@ -219,7 +219,7 @@
     <string name="operator_bite" translatable="false">bite</string>
     <string name="operator_bakcell" translatable="false">Bakcell</string>
     <string name="operator_nar" translatable="false">Nar</string>
-    <string name="operator_geocell" translatable="false">Geocell</string>
+    <string name="operator_silknet" translatable="false">Silknet</string>
     <string name="operator_altel" translatable="false">Altel</string>
     <string name="operator_nos" translatable="false">NOS</string>
     <string name="operator_fastweb" translatable="false">Fastweb</string>
@@ -231,4 +231,10 @@
     <string name="operator_4ka" translatable="false">4ka</string>
     <string name="operator_epic_cy" translatable="false">epic</string>
     <string name="operator_cyta" translatable="false">Cytamobile-Vodafone</string>
+    <string name="operator_one" translatable="false">One</string>
+    <string name="operator_mtel" translatable="false">m:tel</string>
+    <string name="operator_bh_telecom" translatable="false">BH Telecom</string>
+    <string name="operator_ht_eronet" translatable="false">HT Eronet</string>
+    <string name="operator_vala" translatable="false">Vala</string>
+    <string name="operator_ipko" translatable="false">IPKO</string>
 </resources>

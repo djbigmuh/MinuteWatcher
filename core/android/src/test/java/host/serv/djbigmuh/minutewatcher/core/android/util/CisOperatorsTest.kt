@@ -43,6 +43,7 @@ class CisOperatorsTest {
         assertEquals("operator_moldcell", json.getString("25902"))
         assertEquals("operator_beeline", json.getString("28204"))
         assertEquals("operator_beeline", json.getString("43701"))
+        assertEquals("Silknet", OperatorResolver.resolve(context, "", listOf("28201"), 0).displayName)
 
         assertEquals("Azercell", OperatorResolver.resolve(context, "", listOf("40001"), 0).displayName)
         assertEquals("operator_azercell", OperatorResolver.getOperatorBrandKey("Azercell"))
@@ -84,7 +85,7 @@ class CisOperatorsTest {
         assertEquals(R.drawable.ic_operator_bite, SimUtils.getOperatorIconResource("Bite"))
         assertEquals(R.drawable.ic_operator_bakcell, SimUtils.getOperatorIconResource("Bakcell"))
         assertEquals(R.drawable.ic_operator_nar, SimUtils.getOperatorIconResource("Nar"))
-        assertEquals(R.drawable.ic_operator_geocell, SimUtils.getOperatorIconResource("Geocell"))
+        assertEquals(R.drawable.ic_operator_silknet, SimUtils.getOperatorIconResource("Silknet"))
         assertEquals(R.drawable.ic_operator_altel, SimUtils.getOperatorIconResource("Altel"))
     }
 
