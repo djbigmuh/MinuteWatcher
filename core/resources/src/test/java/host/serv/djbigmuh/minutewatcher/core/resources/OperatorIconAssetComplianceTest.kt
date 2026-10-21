@@ -25,15 +25,8 @@ import kotlin.math.pow
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class OperatorIconAssetComplianceTest {
-    /**
-     * Temporary exceptions map mapping resName to set of item numbers that are known to fail
-     * in existing legacy assets before subsequent normalization tasks clean them up.
-     * This set must become empty once all operator icon normalization tasks are complete.
-     */
-    private val temporaryExceptions: Map<String, Set<Int>> = emptyMap()
-
     @Test
-    fun `validate operator icons asset compliance items 1 to 15`() {
+    fun `validate operator icons asset compliance items 1 to 16`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val resDir = getResDir()
         val drawableDir = File(resDir, "drawable")
@@ -56,13 +49,7 @@ class OperatorIconAssetComplianceTest {
             val doc = docBuilder.parse(xmlFile)
             val resFailures = validateIcon(context, resId, resName, xmlFile, doc)
 
-            val knownItemExceptions = temporaryExceptions[resName] ?: emptySet()
-
-            for ((itemNum, failureMsg) in resFailures) {
-                if (itemNum in knownItemExceptions) {
-                    // Allowed temporary exception for legacy icon until subsequent normalization tasks
-                    continue
-                }
+            for ((_, failureMsg) in resFailures) {
                 failures.add(failureMsg)
             }
         }
@@ -90,6 +77,7 @@ class OperatorIconAssetComplianceTest {
         validateEvenOdd(resName, doc, itemFailures)
         validateNamespaces(resName, doc, itemFailures)
         validateGradientColors(resName, doc, itemFailures)
+        validatePathCoordinatePrecision(resName, doc, itemFailures)
 
         val contrastError = checkRenderingContrast(context, resId, resName)
         if (contrastError != null) {
@@ -584,6 +572,25 @@ class OperatorIconAssetComplianceTest {
                         15 to "$resName item 15 failed: gradient item color '$colorAttr' is not 8-hex",
                     )
                 }
+            }
+        }
+    }
+
+    private fun validatePathCoordinatePrecision(
+        resName: String,
+        doc: Document,
+        failures: MutableList<Pair<Int, String>>,
+    ) {
+        val precisionPattern = Regex("""\d+\.\d{3,}""")
+        val paths = doc.getElementsByTagName("path")
+        for (i in 0 until paths.length) {
+            val pathElem = paths.item(i) as Element
+            val pathData = getAndroidAttr(pathElem, "pathData")
+            for (match in precisionPattern.findAll(pathData)) {
+                val literal = match.value
+                failures.add(
+                    16 to "$resName item 16 failed: path $i pathData coordinate '$literal' has more than 2 decimal places",
+                )
             }
         }
     }

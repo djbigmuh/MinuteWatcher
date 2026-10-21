@@ -55,8 +55,7 @@ example `ic_operator_verizon`, `ic_operator_rakuten`,
 1. Normalized contents of icon files for different brands are unique.
 2. Normalized glyph geometry for different brands is unique, except documented shared corporate mark groups.
 3. A brand marker cannot be a solid rectangle or rectangular ring.
-4. Rules are enforced by `OperatorIconUniquenessTest`; pending normalization registry must shrink and eventually be
-   removed.
+4. Rules are enforced by `OperatorIconUniquenessTest`.
 
 ## Shared corporate marks
 
