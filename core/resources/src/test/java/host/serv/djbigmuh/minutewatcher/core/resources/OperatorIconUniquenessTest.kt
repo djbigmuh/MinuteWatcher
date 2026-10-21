@@ -167,18 +167,130 @@ class OperatorIconUniquenessTest {
     private fun normalizeGlyphGeometry(pathData: String): String =
         pathData.replace(Regex("\\s+"), " ").trim().uppercase()
 
+    /**
+     * Checks if any glyph in the list is a banned placeholder marker composed solely
+     * of axis-aligned rectangles (solid rectangle or rectangular ring).
+     */
     private fun isPlaceholderGlyph(glyphs: List<String>): Boolean {
         if (glyphs.isEmpty()) return false
-        // Per TZ-04: A glyph is a placeholder if it is an unstyled solid full-viewport or large background-covering rectangle box.
-        // Our stylized marks (e.g. nested frames or specific paths) are distinct.
-        return glyphs.any { isUnstyledFullRect(it) }
+        return glyphs.any { isAxisAlignedRectangleGlyph(it) }
     }
 
-    private fun isUnstyledFullRect(upper: String): Boolean {
-        // Full viewport or near-viewport solid rectangle (e.g. M 0 0 H 48 V 48 H 0 Z or similar covering > 90% of view)
-        return upper.contains("0,0") &&
-            upper.contains("48") &&
-            (upper.count { it == 'L' || it == 'H' || it == 'V' } <= 4)
+    private fun isAxisAlignedRectangleGlyph(pathData: String): Boolean {
+        val subpaths = splitIntoSubpaths(pathData)
+        if (subpaths.isEmpty()) return false
+        return subpaths.all { isAxisAlignedRectangleSubpath(it) }
+    }
+
+    private fun splitIntoSubpaths(pathData: String): List<String> {
+        val regex = Regex("""(?=[MmsScCqQtTaAhHvVzZ])""")
+        val tokens = pathData.split(regex).map { it.trim() }.filter { it.isNotEmpty() }
+        val subpaths = mutableListOf<String>()
+        var currentSubpath = StringBuilder()
+
+        for (token in tokens) {
+            val cmd = token[0]
+            if ((cmd == 'M' || cmd == 'm') && currentSubpath.isNotEmpty()) {
+                subpaths.add(currentSubpath.toString().trim())
+                currentSubpath = StringBuilder()
+            }
+            currentSubpath.append(" ").append(token)
+        }
+        if (currentSubpath.isNotEmpty()) {
+            subpaths.add(currentSubpath.toString().trim())
+        }
+        return subpaths
+    }
+
+    private fun isAxisAlignedRectangleSubpath(subpath: String): Boolean {
+        val commandRegex = Regex("""([MmsScCqQtTaAhHvVzZ])|([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)""")
+        val matches = commandRegex.findAll(subpath).map { it.value }.toList()
+        if (matches.isEmpty()) return false
+
+        var curX = 0f
+        var curY = 0f
+        var startX = 0f
+        var startY = 0f
+        var currentCmd = ' '
+
+        val vertices = mutableListOf<Pair<Float, Float>>()
+
+        fun roundCoord(v: Float): Float = Math.round(v * 100f) / 100f
+
+        var idx = 0
+        while (idx < matches.size) {
+            val token = matches[idx]
+            if (token.length == 1 && token[0].isLetter()) {
+                currentCmd = token[0]
+                idx++
+                if (currentCmd == 'Z' || currentCmd == 'z') {
+                    curX = startX
+                    curY = startY
+                }
+            } else {
+                when (currentCmd) {
+                    'M', 'm' -> {
+                        val dx = token.toFloatOrNull() ?: return false
+                        val dy = matches.getOrNull(idx + 1)?.toFloatOrNull() ?: return false
+                        idx += 2
+                        if (currentCmd == 'M') {
+                            curX = dx
+                            curY = dy
+                        } else {
+                            curX += dx
+                            curY += dy
+                        }
+                        startX = curX
+                        startY = curY
+                        vertices.add(roundCoord(curX) to roundCoord(curY))
+                        currentCmd = if (currentCmd == 'M') 'L' else 'l'
+                    }
+                    'L', 'l' -> {
+                        val dx = token.toFloatOrNull() ?: return false
+                        val dy = matches.getOrNull(idx + 1)?.toFloatOrNull() ?: return false
+                        idx += 2
+                        if (currentCmd == 'L') {
+                            curX = dx
+                            curY = dy
+                        } else {
+                            curX += dx
+                            curY += dy
+                        }
+                        vertices.add(roundCoord(curX) to roundCoord(curY))
+                    }
+                    'H', 'h' -> {
+                        val v = token.toFloatOrNull() ?: return false
+                        idx++
+                        if (currentCmd == 'H') curX = v else curX += v
+                        vertices.add(roundCoord(curX) to roundCoord(curY))
+                    }
+                    'V', 'v' -> {
+                        val v = token.toFloatOrNull() ?: return false
+                        idx++
+                        if (currentCmd == 'V') curY = v else curY += v
+                        vertices.add(roundCoord(curX) to roundCoord(curY))
+                    }
+                    else -> return false
+                }
+            }
+        }
+
+        val distinct = mutableListOf<Pair<Float, Float>>()
+        for (v in vertices) {
+            if (distinct.isEmpty() || distinct.last() != v) {
+                distinct.add(v)
+            }
+        }
+        if (distinct.size > 1 && distinct.first() == distinct.last()) {
+            distinct.removeAt(distinct.size - 1)
+        }
+
+        if (distinct.size != 4) return false
+
+        val xVals = distinct.map { it.first }.toSet()
+        val yVals = distinct.map { it.second }.toSet()
+
+        return xVals.size == 2 && yVals.size == 2
     }
 
     private fun getAndroidAttr(

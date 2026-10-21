@@ -8,7 +8,7 @@
         android:fillColor="#FFFFFFFF"
         android:pathData="M 2.5 13 L 2.5 35 L 13 45.5 L 35 45.5 L 45.5 35 L 45.5 13 L 35 2.5 L 13 2.5 Z" />
     <path
-        android:fillColor="#FF009A48"
         android:fillType="evenOdd"
-        android:pathData="M 17 13 H 22 V 35 H 17 Z M 22 22 H 30 V 31 H 22 Z" />
+        android:fillColor="#FF0044AA"
+        android:pathData="M 10 18 H 18 C 21 18 22 19.5 22 21 C 22 22 21 23 19.5 23.5 C 21.5 24 23 25 23 27 C 23 29 21 30 18 30 H 10 Z M 13 20 V 23 H 17 C 18.5 23 19 22.5 19 21.5 C 19 20.5 18.5 20 17 20 Z M 13 25 V 28 H 17.5 C 19 28 20 27.5 20 26.5 C 20 25.5 19 25 17.5 25 Z M 25 18 H 28 V 30 H 25 Z M 30 18 H 38 V 21 H 35 V 30 H 33 V 21 H 30 Z M 40 18 H 45 V 21 H 42 V 23.5 H 45 V 26.5 H 42 V 30 H 45 V 33 H 40 Z" />
 </vector>
