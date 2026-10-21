@@ -14,7 +14,18 @@ class SubSaharanAfricaOperatorsTest {
 
     @Test
     fun `test Sub-Saharan Africa PLMN database mappings`() {
-        assertEquals("Ooredoo", OperatorResolver.resolve(context, "", listOf("60503"), 0).displayName)
+        assertEquals("Telecel", OperatorResolver.resolve(context, "", listOf("62002"), 0).displayName)
+        assertEquals("AirtelTigo", OperatorResolver.resolve(context, "", listOf("62003"), 0).displayName)
+        assertEquals("Yas", OperatorResolver.resolve(context, "", listOf("64002"), 0).displayName)
+        assertEquals("Moov", OperatorResolver.resolve(context, "", listOf("61202"), 0).displayName)
+        assertEquals("Expresso", OperatorResolver.resolve(context, "", listOf("60803"), 0).displayName)
+        assertEquals("Ethio Telecom", OperatorResolver.resolve(context, "", listOf("63601"), 0).displayName)
+        assertEquals("Econet", OperatorResolver.resolve(context, "", listOf("64804"), 0).displayName)
+        assertEquals("NetOne", OperatorResolver.resolve(context, "", listOf("64801"), 0).displayName)
+        assertEquals("Unitel", OperatorResolver.resolve(context, "", listOf("63102"), 0).displayName)
+        assertEquals("Movicel", OperatorResolver.resolve(context, "", listOf("63104"), 0).displayName)
+        assertEquals("Mascom", OperatorResolver.resolve(context, "", listOf("65201"), 0).displayName)
+        assertEquals("MTC", OperatorResolver.resolve(context, "", listOf("64901"), 0).displayName)
         assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("60801"), 0).displayName)
         assertEquals("Free", OperatorResolver.resolve(context, "", listOf("60802"), 0).displayName)
         assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("61101"), 0).displayName)
@@ -35,7 +46,7 @@ class SubSaharanAfricaOperatorsTest {
         assertEquals("MTN", OperatorResolver.resolve(context, "", listOf("63510"), 0).displayName)
         assertEquals("Airtel", OperatorResolver.resolve(context, "", listOf("63513"), 0).displayName)
         assertEquals("Safaricom", OperatorResolver.resolve(context, "", listOf("63602"), 0).displayName)
-        assertEquals("Tigo", OperatorResolver.resolve(context, "", listOf("64002"), 0).displayName)
+        assertEquals("Yas", OperatorResolver.resolve(context, "", listOf("64002"), 0).displayName)
         assertEquals("Vodacom", OperatorResolver.resolve(context, "", listOf("64004"), 0).displayName)
         assertEquals("Airtel", OperatorResolver.resolve(context, "", listOf("64005"), 0).displayName)
         assertEquals("Airtel", OperatorResolver.resolve(context, "", listOf("64101"), 0).displayName)

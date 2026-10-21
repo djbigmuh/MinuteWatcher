@@ -245,4 +245,16 @@
     <string name="operator_bmobile_tt" translatable="false">bmobile</string>
     <string name="operator_mas_movil" translatable="false">+Móvil</string>
     <string name="operator_altice" translatable="false">Altice</string>
+    <string name="operator_telecel" translatable="false">Telecel</string>
+    <string name="operator_airteltigo" translatable="false">AirtelTigo</string>
+    <string name="operator_yas" translatable="false">Yas</string>
+    <string name="operator_moov" translatable="false">Moov</string>
+    <string name="operator_expresso" translatable="false">Expresso</string>
+    <string name="operator_ethio_telecom" translatable="false">Ethio Telecom</string>
+    <string name="operator_econet" translatable="false">Econet</string>
+    <string name="operator_netone" translatable="false">NetOne</string>
+    <string name="operator_unitel_ao" translatable="false">Unitel</string>
+    <string name="operator_movicel" translatable="false">Movicel</string>
+    <string name="operator_mascom" translatable="false">Mascom</string>
+    <string name="operator_mtc_na" translatable="false">MTC</string>
 </resources>

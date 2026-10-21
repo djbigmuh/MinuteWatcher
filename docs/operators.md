@@ -27,11 +27,9 @@ The following table lists candidate brands under consideration for addition acro
 | Brand | Country | MCC | Priority |
 |---|---|---|---|
 | ATOM | Myanmar | 414 | High |
-| Telecel | Ghana | 620 | Medium |
 | Nova | Greece | 202 | Low |
 | VOX | Paraguay | 744 | Low |
 | RED | El Salvador | 706 | Low |
-| Unitel | Angola | 631 | Low |
 | Econet | Zimbabwe | 648 | Low |
 | Telkom | South Africa | 655 | Low |
 | Zantel | Tanzania | 640 | Low |
