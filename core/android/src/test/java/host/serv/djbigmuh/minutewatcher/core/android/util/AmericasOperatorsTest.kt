@@ -16,6 +16,14 @@ class AmericasOperatorsTest {
     @Test
     fun `test Americas PLMN database mappings`() {
         assertEquals("operator_att", resolvePlmn("310410"))
+        assertEquals("Vidéotron", OperatorResolver.resolve(context, "", listOf("302500"), 0).displayName)
+        assertEquals("SaskTel", OperatorResolver.resolve(context, "", listOf("302780"), 0).displayName)
+        assertEquals("Eastlink", OperatorResolver.resolve(context, "", listOf("302270"), 0).displayName)
+        assertEquals("US Cellular", OperatorResolver.resolve(context, "", listOf("311580"), 0).displayName)
+        assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("338020"), 0).displayName)
+        assertEquals("bmobile", OperatorResolver.resolve(context, "", listOf("37412"), 0).displayName)
+        assertEquals("+Móvil", OperatorResolver.resolve(context, "", listOf("71401"), 0).displayName)
+        assertEquals("Altice", OperatorResolver.resolve(context, "", listOf("37001"), 0).displayName)
         assertEquals("operator_t_mobile", resolvePlmn("310260"))
         assertEquals("operator_verizon", resolvePlmn("311480"))
         assertEquals("operator_att", resolvePlmn("310150"))
@@ -29,7 +37,7 @@ class AmericasOperatorsTest {
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("338070"), 0).displayName)
         assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("342750"), 0).displayName)
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("37002"), 0).displayName)
-        assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("37004"), 0).displayName)
+        assertEquals("Altice", OperatorResolver.resolve(context, "", listOf("37004"), 0).displayName)
         assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("37413"), 0).displayName)
         assertEquals("WOM", OperatorResolver.resolve(context, "", listOf("732360"), 0).displayName)
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("708001"), 0).displayName)

@@ -40,19 +40,19 @@ class SpainOperatorsTest {
 
     @Test
     fun `spanish brand tokens resolve to brand string resources`() {
-        assertEquals(R.string.operator_yoigo, OperatorResolver.getOperatorResourceId("Yoigo") as Int)
-        assertEquals(R.string.operator_euskaltel, OperatorResolver.getOperatorResourceId("EUSKALTEL") as Int)
-        assertEquals(R.string.operator_telecable, OperatorResolver.getOperatorResourceId("Telecable") as Int)
-        assertEquals(R.string.operator_simyo, OperatorResolver.getOperatorResourceId("simyo") as Int)
-        assertEquals(R.string.operator_jazztel, OperatorResolver.getOperatorResourceId("Jazztel") as Int)
-        assertEquals(R.string.operator_amena, OperatorResolver.getOperatorResourceId("amena") as Int)
-        assertEquals(R.string.operator_masmovil, OperatorResolver.getOperatorResourceId("MásMóvil") as Int)
-        assertEquals(R.string.operator_masmovil, OperatorResolver.getOperatorResourceId("MAS MOVIL") as Int)
-        assertEquals(R.string.operator_pepephone, OperatorResolver.getOperatorResourceId("pepephone") as Int)
-        assertEquals(R.string.operator_lowi, OperatorResolver.getOperatorResourceId("Lowi") as Int)
-        assertEquals(R.string.operator_lebara, OperatorResolver.getOperatorResourceId("Lebara") as Int)
-        assertEquals(R.string.operator_lycamobile, OperatorResolver.getOperatorResourceId("Lycamobile") as Int)
-        assertEquals(R.string.operator_finetwork, OperatorResolver.getOperatorResourceId("finetwork") as Int)
+        assertEquals("operator_yoigo", OperatorResolver.getOperatorBrandKey("Yoigo"))
+        assertEquals("operator_euskaltel", OperatorResolver.getOperatorBrandKey("EUSKALTEL"))
+        assertEquals("operator_telecable", OperatorResolver.getOperatorBrandKey("Telecable"))
+        assertEquals("operator_simyo", OperatorResolver.getOperatorBrandKey("simyo"))
+        assertEquals("operator_jazztel", OperatorResolver.getOperatorBrandKey("Jazztel"))
+        assertEquals("operator_amena", OperatorResolver.getOperatorBrandKey("amena"))
+        assertEquals("operator_masmovil", OperatorResolver.getOperatorBrandKey("MásMóvil"))
+        assertEquals("operator_mas_movil", OperatorResolver.getOperatorBrandKey("MAS MOVIL"))
+        assertEquals("operator_pepephone", OperatorResolver.getOperatorBrandKey("pepephone"))
+        assertEquals("operator_lowi", OperatorResolver.getOperatorBrandKey("Lowi"))
+        assertEquals("operator_lebara", OperatorResolver.getOperatorBrandKey("Lebara"))
+        assertEquals("operator_lycamobile", OperatorResolver.getOperatorBrandKey("Lycamobile"))
+        assertEquals("operator_finetwork", OperatorResolver.getOperatorBrandKey("finetwork"))
     }
 
     @Test

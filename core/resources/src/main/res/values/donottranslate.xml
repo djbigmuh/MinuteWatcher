@@ -237,4 +237,12 @@
     <string name="operator_ht_eronet" translatable="false">HT Eronet</string>
     <string name="operator_vala" translatable="false">Vala</string>
     <string name="operator_ipko" translatable="false">IPKO</string>
+    <string name="operator_videotron" translatable="false">Vidéotron</string>
+    <string name="operator_sasktel" translatable="false">SaskTel</string>
+    <string name="operator_eastlink" translatable="false">Eastlink</string>
+    <string name="operator_us_cellular" translatable="false">US Cellular</string>
+    <string name="operator_flow" translatable="false">Flow</string>
+    <string name="operator_bmobile_tt" translatable="false">bmobile</string>
+    <string name="operator_mas_movil" translatable="false">+Móvil</string>
+    <string name="operator_altice" translatable="false">Altice</string>
 </resources>
