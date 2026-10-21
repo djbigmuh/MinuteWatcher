@@ -16,6 +16,8 @@ class SouthernEuropeTurkeyOperatorsTest {
     @Test
     fun `test Southern Europe and Turkey PLMN database mappings`() {
         assertEquals("TIM", resolveDisplayName("22201"))
+        assertEquals("Fastweb", resolveDisplayName("22208"))
+        assertEquals("PosteMobile", resolveDisplayName("22233"))
         assertEquals("Vodafone", resolveDisplayName("22206"))
         assertEquals("Digi", resolveDisplayName("22236"))
         assertEquals("WindTre", resolveDisplayName("22237"))

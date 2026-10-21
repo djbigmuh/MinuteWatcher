@@ -221,4 +221,14 @@
     <string name="operator_nar" translatable="false">Nar</string>
     <string name="operator_geocell" translatable="false">Geocell</string>
     <string name="operator_altel" translatable="false">Altel</string>
+    <string name="operator_nos" translatable="false">NOS</string>
+    <string name="operator_fastweb" translatable="false">Fastweb</string>
+    <string name="operator_postemobile" translatable="false">PosteMobile</string>
+    <string name="operator_telemach" translatable="false">Telemach</string>
+    <string name="operator_sky_mobile" translatable="false">Sky Mobile</string>
+    <string name="operator_post_lu" translatable="false">POST Luxembourg</string>
+    <string name="operator_tango_lu" translatable="false">Tango</string>
+    <string name="operator_4ka" translatable="false">4ka</string>
+    <string name="operator_epic_cy" translatable="false">epic</string>
+    <string name="operator_cyta" translatable="false">Cytamobile-Vodafone</string>
 </resources>

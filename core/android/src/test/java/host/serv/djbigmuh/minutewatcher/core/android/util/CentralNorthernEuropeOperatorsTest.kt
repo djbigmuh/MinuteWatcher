@@ -16,6 +16,9 @@ class CentralNorthernEuropeOperatorsTest {
     @Test
     fun `test Central and Northern Europe PLMN database mappings`() {
         assertEquals("Telekom", resolveDisplayName("26201"))
+        assertEquals("Telemach", resolveDisplayName("21902"))
+        assertEquals("Telemach", resolveDisplayName("29370"))
+        assertEquals("4ka", resolveDisplayName("23103"))
         assertEquals("1&1", resolveDisplayName("26223"))
         assertEquals("Magenta", resolveDisplayName("23203"))
         assertEquals("Yettel", resolveDisplayName("21601"))
