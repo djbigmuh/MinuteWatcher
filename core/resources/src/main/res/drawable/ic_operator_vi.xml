@@ -13,7 +13,7 @@
         android:pathData="M 8 8 L 40 8 L 40 40 L 8 40 Z" />
     <path
         android:fillType="evenOdd"
-        android:pathData="M 8 8 L 40 8 L 40 40 L 8 40 Z">
+        android:pathData="M 12 18 L 18 30 H 22 L 28 18 H 24 L 20 26 L 16 18 Z M 31 22 H 34 V 30 H 31 Z M 31 17 H 34 V 20 H 31 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="radial"
