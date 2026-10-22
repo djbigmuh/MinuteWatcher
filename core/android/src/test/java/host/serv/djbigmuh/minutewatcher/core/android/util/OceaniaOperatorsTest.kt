@@ -21,6 +21,9 @@ class OceaniaOperatorsTest {
         assertEquals("One NZ", resolveDisplayName("53001"))
         assertEquals("Spark", resolveDisplayName("53005"))
         assertEquals("2degrees", resolveDisplayName("53024"))
+        assertEquals("B-Mobile", resolveDisplayName("53701"))
+        assertEquals("Digicel", resolveDisplayName("53703"))
+        assertEquals("Digicel", resolveDisplayName("54105"))
     }
 
     @Test
