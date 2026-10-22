@@ -299,4 +299,7 @@
     <string name="operator_g_mobile" translatable="false">G-Mobile</string>
     <string name="operator_vietnamobile" translatable="false">Vietnamobile</string>
     <string name="operator_viva_dr" translatable="false">Viva</string>
+    <string name="operator_nova_gr" translatable="false">Nova</string>
+    <string name="operator_vox" translatable="false">VOX</string>
+    <string name="operator_red" translatable="false">RED</string>
 </resources>

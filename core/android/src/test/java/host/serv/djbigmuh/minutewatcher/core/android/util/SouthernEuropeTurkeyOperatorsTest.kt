@@ -38,6 +38,9 @@ class SouthernEuropeTurkeyOperatorsTest {
         assertEquals("A1", resolveDisplayName("29403"))
         assertEquals("Iliad", resolveDisplayName("22250"))
         assertEquals("Cosmote", resolveDisplayName("20201"))
+        assertEquals("Nova", OperatorResolver.resolve(context, "", listOf("20209"), 0).displayName)
+        assertEquals("Nova", OperatorResolver.resolve(context, "", listOf("20210"), 0).displayName)
+        assertEquals("operator_nova_gr", OperatorResolver.getOperatorBrandKey("Nova Greece"))
         assertEquals("Turkcell", resolveDisplayName("28601"))
 
         assertEquals("Vivacom", OperatorResolver.resolve(context, "", listOf("28403"), 0).displayName)

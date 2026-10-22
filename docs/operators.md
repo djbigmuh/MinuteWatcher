@@ -22,12 +22,4 @@ Virtual network operators (MVNOs) typically share the PLMN of their host mobile 
 When a network is encountered whose MCC/MNC is absent from `mcc_mnc_db.json` or whose brand is unmapped, the application falls back to displaying the subscription network name or the MCC/MNC identifier string, using the generic `ic_unknown` icon.
 
 ## Candidate Brands
-The following table lists candidate brands under consideration for addition across specified regions, categorized by MCC:
-
-| Brand | Country | MCC | Priority |
-|---|---|---|---|
-| Nova | Greece | 202 | Low |
-| VOX | Paraguay | 744 | Low |
-| RED | El Salvador | 706 | Low |
-| Econet | Zimbabwe | 648 | Low |
-| Zantel | Tanzania | 640 | Low |
+No candidate brands at this time.

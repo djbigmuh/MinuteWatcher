@@ -311,6 +311,11 @@ internal object OperatorBrandTokens {
         mapOf(
             "nova iceland" to "operator_nova",
             "nova.is" to "operator_nova",
+            "nova greece" to "operator_nova_gr",
+            "vox" to "operator_vox",
+            "vox paraguay" to "operator_vox",
+            "hola paraguay" to "operator_vox",
+            "intelfon" to "operator_red",
             "wom" to "operator_wom",
             "bitel" to "operator_bitel",
             "digitel" to "operator_digitel",
