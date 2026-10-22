@@ -18,8 +18,6 @@ class MccMncDbTest {
          */
         private val MIXED_MNC_LENGTH_MCCS =
             setOf(
-                "334",
-                "368",
                 "405",
                 "714",
             )

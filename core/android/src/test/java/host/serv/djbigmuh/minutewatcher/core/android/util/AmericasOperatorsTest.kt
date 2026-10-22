@@ -34,10 +34,15 @@ class AmericasOperatorsTest {
         assertEquals("operator_claro", resolvePlmn("72405"))
         assertEquals("operator_algar", resolvePlmn("72432"))
 
-        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("338070"), 0).displayName)
         assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("342750"), 0).displayName)
+        assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("346050"), 0).displayName)
+        assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("346140"), 0).displayName)
+        assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("348170"), 0).displayName)
+        assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("348770"), 0).displayName)
+        assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("352030"), 0).displayName)
+        assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("352110"), 0).displayName)
+        assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("354860"), 0).displayName)
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("37002"), 0).displayName)
-        assertEquals("Altice", OperatorResolver.resolve(context, "", listOf("37004"), 0).displayName)
         assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("37413"), 0).displayName)
         assertEquals("WOM", OperatorResolver.resolve(context, "", listOf("732360"), 0).displayName)
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("708001"), 0).displayName)
@@ -104,6 +109,10 @@ class AmericasOperatorsTest {
         assertEquals("Operator (MCC:311 MNC:001)", resolveFallback("311001"))
         assertEquals("Operator (MCC:312 MNC:060)", resolveFallback("312060"))
         assertEquals("Operator (MCC:316 MNC:041)", resolveFallback("316041"))
+        assertEquals("Operator (MCC:338 MNC:070)", resolveFallback("338070"))
+        assertEquals("Operator (MCC:348 MNC:110)", resolveFallback("348110"))
+        assertEquals("Operator (MCC:354 MNC:110)", resolveFallback("354110"))
+        assertEquals("Operator (MCC:368 MNC:110)", resolveFallback("368110"))
     }
 
     @Test
