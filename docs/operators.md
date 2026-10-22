@@ -31,7 +31,6 @@ The following table lists candidate brands under consideration for addition acro
 | VOX | Paraguay | 744 | Low |
 | RED | El Salvador | 706 | Low |
 | Econet | Zimbabwe | 648 | Low |
-| Telkom | South Africa | 655 | Low |
 | Zantel | Tanzania | 640 | Low |
 | VivaCell-MTS | Armenia | 283 | Low |
 | Ucom | Armenia | 283 | Low |

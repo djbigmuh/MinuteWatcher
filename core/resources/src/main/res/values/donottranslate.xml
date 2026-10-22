@@ -257,4 +257,18 @@
     <string name="operator_movicel" translatable="false">Movicel</string>
     <string name="operator_mascom" translatable="false">Mascom</string>
     <string name="operator_mtc_na" translatable="false">MTC</string>
+    <string name="operator_tnm" translatable="false">TNM</string>
+    <string name="operator_mcel" translatable="false">mCel</string>
+    <string name="operator_movitel" translatable="false">Movitel</string>
+    <string name="operator_telma" translatable="false">Telma</string>
+    <string name="operator_halotel" translatable="false">Halotel</string>
+    <string name="operator_sudani" translatable="false">Sudani</string>
+    <string name="operator_libyana" translatable="false">Libyana</string>
+    <string name="operator_al_madar" translatable="false">Al Madar</string>
+    <string name="operator_myt" translatable="false">my.t</string>
+    <string name="operator_emtel" translatable="false">Emtel</string>
+    <string name="operator_telkom_za" translatable="false">Telkom</string>
+    <string name="operator_rain" translatable="false">rain</string>
+    <string name="operator_btc_bw" translatable="false">BTC</string>
+    <string name="operator_zantel" translatable="false">Zantel</string>
 </resources>
