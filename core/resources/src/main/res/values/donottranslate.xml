@@ -291,4 +291,11 @@
     <string name="operator_o_kg" translatable="false">O!</string>
     <string name="operator_uzmobile" translatable="false">Uzmobile</string>
     <string name="operator_dhiraagu" translatable="false">Dhiraagu</string>
+    <string name="operator_china_broadnet" translatable="false">China Broadnet</string>
+    <string name="operator_ctm" translatable="false">CTM</string>
+    <string name="operator_unitel_mn" translatable="false">Unitel</string>
+    <string name="operator_mobicom" translatable="false">Mobicom</string>
+    <string name="operator_skytel_mn" translatable="false">Skytel</string>
+    <string name="operator_g_mobile" translatable="false">G-Mobile</string>
+    <string name="operator_vietnamobile" translatable="false">Vietnamobile</string>
 </resources>

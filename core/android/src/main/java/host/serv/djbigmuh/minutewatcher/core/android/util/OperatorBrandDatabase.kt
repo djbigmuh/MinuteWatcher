@@ -202,6 +202,14 @@ object OperatorBrandDatabase {
             "operator_unitel" to R.string.operator_unitel,
             "operator_bmobile" to R.string.operator_bmobile,
             "operator_dst" to R.string.operator_dst,
+            "operator_china_broadnet" to R.string.operator_china_broadnet,
+            "operator_ctm" to R.string.operator_ctm,
+            "operator_unitel_mn" to R.string.operator_unitel_mn,
+            "operator_mobicom" to R.string.operator_mobicom,
+            "operator_skytel_mn" to R.string.operator_skytel_mn,
+            "operator_g_mobile" to R.string.operator_g_mobile,
+            "operator_vietnamobile" to R.string.operator_vietnamobile,
+
             "operator_e_and" to R.string.operator_e_and,
             "operator_omantel" to R.string.operator_omantel,
             "operator_atom" to R.string.operator_atom,
@@ -620,6 +628,17 @@ object OperatorBrandDatabase {
             "bmobile" to "operator_bmobile",
             "dst comcentre" to "operator_dst",
             "dst" to "operator_dst",
+            "ctm" to "operator_ctm",
+            "unitel mongolia" to "operator_unitel_mn",
+
+            "china broadnet" to "operator_china_broadnet",
+            "broadnet" to "operator_china_broadnet",
+            "mobicom" to "operator_mobicom",
+            "skytel" to "operator_skytel_mn",
+            "g-mobile" to "operator_g_mobile",
+            "g mobile" to "operator_g_mobile",
+            "vietnamobile" to "operator_vietnamobile",
+
             "touch mobile" to "operator_touch",
             "kg o" to "operator_o_kg",
 
