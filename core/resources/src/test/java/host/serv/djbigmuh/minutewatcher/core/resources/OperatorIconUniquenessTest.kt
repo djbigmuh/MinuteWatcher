@@ -202,9 +202,144 @@ class OperatorIconUniquenessTest {
         return subpaths
     }
 
+    /**
+     * Determines whether a SVG pathData subpath represents an axis-aligned rectangle.
+     *
+     * @param subpath SVG pathData string snippet representing a single subpath.
+     * @return `true` if the subpath parses into an axis-aligned rectangle with 4 vertices.
+     */
     private fun isAxisAlignedRectangleSubpath(subpath: String): Boolean {
-        val vertices = parseSubpathVertices(subpath) ?: return false
+        val tokens = tokenizeSubpath(subpath)
+        val rawVertices = extractSubpathVertices(tokens) ?: return false
+        val normalizedVertices = normalizeVertices(rawVertices) ?: return false
+        return isAxisAlignedRectangle(normalizedVertices)
+    }
 
+    /**
+     * Tokenizes a subpath string into command letters and numeric tokens.
+     *
+     * @param subpath SVG pathData snippet.
+     * @return List of command letter tokens and numeric coordinate tokens.
+     */
+    private fun tokenizeSubpath(subpath: String): List<String> {
+        val commandRegex = Regex("""([MmsScCqQtTaAhHvVzZ])|([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)""")
+        return commandRegex.findAll(subpath).map { it.value }.toList()
+    }
+
+    /**
+     * State container for SVG path traversal cursor position and active command.
+     */
+    private data class PathCursor(
+        val x: Float = 0f,
+        val y: Float = 0f,
+        val startX: Float = 0f,
+        val startY: Float = 0f,
+        val currentCmd: Char = ' ',
+    )
+
+    /**
+     * Result of executing a single path command step.
+     */
+    private data class StepResult(
+        val newIdx: Int,
+        val cursor: PathCursor,
+    )
+
+    /**
+     * Traverses subpath tokens and extracts rounded 2D vertex coordinates.
+     *
+     * Supports line drawing commands: M/m, L/l, H/h, V/v, Z/z. Unsupported curve
+     * commands return `null`.
+     *
+     * @param tokens Tokenized subpath string.
+     * @return List of rounded vertex pairs or `null` if subpath contains non-rectangular commands.
+     */
+    private fun extractSubpathVertices(tokens: List<String>): List<Pair<Float, Float>>? {
+        if (tokens.isEmpty()) return null
+        var cursor = PathCursor()
+        val vertices = mutableListOf<Pair<Float, Float>>()
+        var idx = 0
+
+        while (idx < tokens.size) {
+            val token = tokens[idx]
+            if (token.length == 1 && token[0].isLetter()) {
+                val cmd = token[0]
+                idx++
+                if (cmd == 'Z' || cmd == 'z') {
+                    cursor = cursor.copy(x = cursor.startX, y = cursor.startY, currentCmd = cmd)
+                } else {
+                    cursor = cursor.copy(currentCmd = cmd)
+                }
+            } else {
+                val step = executeCommandStep(tokens, idx, cursor) ?: return null
+                idx = step.newIdx
+                cursor = step.cursor
+                vertices.add(roundCoord(cursor.x) to roundCoord(cursor.y))
+            }
+        }
+        return vertices
+    }
+
+    private fun roundCoord(value: Float): Float = Math.round(value * 100f) / 100f
+
+    /**
+     * Executes a single command token using the current active command letter.
+     *
+     * @param tokens Subpath token list.
+     * @param idx Current index in token list.
+     * @param cursor Current path cursor state.
+     * @return Updated index and cursor state, or `null` if command is invalid or unsupported.
+     */
+    private fun executeCommandStep(
+        tokens: List<String>,
+        idx: Int,
+        cursor: PathCursor,
+    ): StepResult? {
+        val nextVal = tokens[idx].toFloatOrNull() ?: return null
+        return when (cursor.currentCmd) {
+            'M', 'm', 'L', 'l' -> handleMoveOrLine(tokens, idx, cursor, nextVal)
+            'H' -> StepResult(idx + 1, cursor.copy(x = nextVal))
+            'h' -> StepResult(idx + 1, cursor.copy(x = cursor.x + nextVal))
+            'V' -> StepResult(idx + 1, cursor.copy(y = nextVal))
+            'v' -> StepResult(idx + 1, cursor.copy(y = cursor.y + nextVal))
+            else -> null
+        }
+    }
+
+    private fun handleMoveOrLine(
+        tokens: List<String>,
+        idx: Int,
+        cursor: PathCursor,
+        nextVal: Float,
+    ): StepResult? {
+        val dy = tokens.getOrNull(idx + 1)?.toFloatOrNull() ?: return null
+        val isAbs = cursor.currentCmd == 'M' || cursor.currentCmd == 'L'
+        val isMove = cursor.currentCmd == 'M' || cursor.currentCmd == 'm'
+        val newX = if (isAbs) nextVal else cursor.x + nextVal
+        val newY = if (isAbs) dy else cursor.y + dy
+        val nextCmd = if (isMove) (if (isAbs) 'L' else 'l') else cursor.currentCmd
+        val startX = if (isMove) newX else cursor.startX
+        val startY = if (isMove) newY else cursor.startY
+        return StepResult(
+            newIdx = idx + 2,
+            cursor =
+                PathCursor(
+                    x = newX,
+                    y = newY,
+                    startX = startX,
+                    startY = startY,
+                    currentCmd = nextCmd,
+                ),
+        )
+    }
+
+    /**
+     * Normalizes vertex sequence by removing adjacent duplicates and closing vertex.
+     *
+     * @param vertices Raw extracted subpath vertices.
+     * @return List of exactly 4 distinct corner vertices, or `null` if count is not 4.
+     */
+    private fun normalizeVertices(vertices: List<Pair<Float, Float>>): List<Pair<Float, Float>>? {
         val distinct = mutableListOf<Pair<Float, Float>>()
         for (v in vertices) {
             if (distinct.isEmpty() || distinct.last() != v) {
@@ -214,84 +349,20 @@ class OperatorIconUniquenessTest {
         if (distinct.size > 1 && distinct.first() == distinct.last()) {
             distinct.removeAt(distinct.size - 1)
         }
+        return if (distinct.size == 4) distinct else null
+    }
 
-        if (distinct.size != 4) return false
-
-        val xVals = distinct.map { it.first }.toSet()
-        val yVals = distinct.map { it.second }.toSet()
-
+    /**
+     * Checks if 4 normalized corner vertices form an axis-aligned rectangle.
+     *
+     * @param corners Exactly 4 normalized vertices.
+     * @return `true` if vertices contain exactly 2 distinct X coordinates and 2 distinct Y coordinates.
+     */
+    private fun isAxisAlignedRectangle(corners: List<Pair<Float, Float>>): Boolean {
+        val xVals = corners.map { it.first }.toSet()
+        val yVals = corners.map { it.second }.toSet()
         return xVals.size == 2 && yVals.size == 2
     }
-
-    private fun parseSubpathVertices(subpath: String): List<Pair<Float, Float>>? {
-        val commandRegex = Regex("""([MmsScCqQtTaAhHvVzZ])|([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)""")
-        val matches = commandRegex.findAll(subpath).map { it.value }.toList()
-        if (matches.isEmpty()) return null
-
-        var curX = 0f
-        var curY = 0f
-        var startX = 0f
-        var startY = 0f
-        var currentCmd = ' '
-
-        val vertices = mutableListOf<Pair<Float, Float>>()
-
-        var idx = 0
-        while (idx < matches.size) {
-            val token = matches[idx]
-            if (token.length == 1 && token[0].isLetter()) {
-                currentCmd = token[0]
-                idx++
-                if (currentCmd == 'Z' || currentCmd == 'z') {
-                    curX = startX
-                    curY = startY
-                }
-            } else {
-                val nextVal = token.toFloatOrNull() ?: return null
-                val result = processCommandToken(currentCmd, nextVal, matches, idx, curX, curY) ?: return null
-                idx = result.newIdx
-                curX = result.newX
-                curY = result.newY
-                if (currentCmd == 'M' || currentCmd == 'm') {
-                    startX = curX
-                    startY = curY
-                    currentCmd = if (currentCmd == 'M') 'L' else 'l'
-                }
-                vertices.add(Math.round(curX * 100f) / 100f to Math.round(curY * 100f) / 100f)
-            }
-        }
-        return vertices
-    }
-
-    private data class CommandResult(
-        val newIdx: Int,
-        val newX: Float,
-        val newY: Float,
-    )
-
-    private fun processCommandToken(
-        cmd: Char,
-        nextVal: Float,
-        matches: List<String>,
-        idx: Int,
-        curX: Float,
-        curY: Float,
-    ): CommandResult? =
-        when (cmd) {
-            'M', 'L' -> {
-                val dy = matches.getOrNull(idx + 1)?.toFloatOrNull() ?: return null
-                CommandResult(idx + 2, nextVal, dy)
-            }
-            'm', 'l' -> {
-                val dy = matches.getOrNull(idx + 1)?.toFloatOrNull() ?: return null
-                CommandResult(idx + 2, curX + nextVal, curY + dy)
-            }
-            'H' -> CommandResult(idx + 1, nextVal, curY)
-            'h' -> CommandResult(idx + 1, curX + nextVal, curY)
-            'V' -> CommandResult(idx + 1, curX, nextVal)
-            'v' -> CommandResult(idx + 1, curX, curY + nextVal)
-            else -> null
-        }
 
     private fun getAndroidAttr(
         element: Element,
