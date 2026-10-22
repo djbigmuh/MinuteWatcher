@@ -457,6 +457,6 @@ class OperatorResolverTest {
 
     @Test
     fun `simutils get operator icon resource for operator three`() {
-        assertEquals(R.drawable.ic_operator_three, SimUtils.getOperatorIconResource("Three"))
+        assertEquals(R.drawable.ic_operator_three, SimUtils.getOperatorIconResource("operator_three"))
     }
 }

@@ -203,77 +203,7 @@ class OperatorIconUniquenessTest {
     }
 
     private fun isAxisAlignedRectangleSubpath(subpath: String): Boolean {
-        val commandRegex = Regex("""([MmsScCqQtTaAhHvVzZ])|([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)""")
-        val matches = commandRegex.findAll(subpath).map { it.value }.toList()
-        if (matches.isEmpty()) return false
-
-        var curX = 0f
-        var curY = 0f
-        var startX = 0f
-        var startY = 0f
-        var currentCmd = ' '
-
-        val vertices = mutableListOf<Pair<Float, Float>>()
-
-        fun roundCoord(v: Float): Float = Math.round(v * 100f) / 100f
-
-        var idx = 0
-        while (idx < matches.size) {
-            val token = matches[idx]
-            if (token.length == 1 && token[0].isLetter()) {
-                currentCmd = token[0]
-                idx++
-                if (currentCmd == 'Z' || currentCmd == 'z') {
-                    curX = startX
-                    curY = startY
-                }
-            } else {
-                when (currentCmd) {
-                    'M', 'm' -> {
-                        val dx = token.toFloatOrNull() ?: return false
-                        val dy = matches.getOrNull(idx + 1)?.toFloatOrNull() ?: return false
-                        idx += 2
-                        if (currentCmd == 'M') {
-                            curX = dx
-                            curY = dy
-                        } else {
-                            curX += dx
-                            curY += dy
-                        }
-                        startX = curX
-                        startY = curY
-                        vertices.add(roundCoord(curX) to roundCoord(curY))
-                        currentCmd = if (currentCmd == 'M') 'L' else 'l'
-                    }
-                    'L', 'l' -> {
-                        val dx = token.toFloatOrNull() ?: return false
-                        val dy = matches.getOrNull(idx + 1)?.toFloatOrNull() ?: return false
-                        idx += 2
-                        if (currentCmd == 'L') {
-                            curX = dx
-                            curY = dy
-                        } else {
-                            curX += dx
-                            curY += dy
-                        }
-                        vertices.add(roundCoord(curX) to roundCoord(curY))
-                    }
-                    'H', 'h' -> {
-                        val v = token.toFloatOrNull() ?: return false
-                        idx++
-                        if (currentCmd == 'H') curX = v else curX += v
-                        vertices.add(roundCoord(curX) to roundCoord(curY))
-                    }
-                    'V', 'v' -> {
-                        val v = token.toFloatOrNull() ?: return false
-                        idx++
-                        if (currentCmd == 'V') curY = v else curY += v
-                        vertices.add(roundCoord(curX) to roundCoord(curY))
-                    }
-                    else -> return false
-                }
-            }
-        }
+        val vertices = parseSubpathVertices(subpath) ?: return false
 
         val distinct = mutableListOf<Pair<Float, Float>>()
         for (v in vertices) {
@@ -292,6 +222,76 @@ class OperatorIconUniquenessTest {
 
         return xVals.size == 2 && yVals.size == 2
     }
+
+    private fun parseSubpathVertices(subpath: String): List<Pair<Float, Float>>? {
+        val commandRegex = Regex("""([MmsScCqQtTaAhHvVzZ])|([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)""")
+        val matches = commandRegex.findAll(subpath).map { it.value }.toList()
+        if (matches.isEmpty()) return null
+
+        var curX = 0f
+        var curY = 0f
+        var startX = 0f
+        var startY = 0f
+        var currentCmd = ' '
+
+        val vertices = mutableListOf<Pair<Float, Float>>()
+
+        var idx = 0
+        while (idx < matches.size) {
+            val token = matches[idx]
+            if (token.length == 1 && token[0].isLetter()) {
+                currentCmd = token[0]
+                idx++
+                if (currentCmd == 'Z' || currentCmd == 'z') {
+                    curX = startX
+                    curY = startY
+                }
+            } else {
+                val nextVal = token.toFloatOrNull() ?: return null
+                val result = processCommandToken(currentCmd, nextVal, matches, idx, curX, curY) ?: return null
+                idx = result.newIdx
+                curX = result.newX
+                curY = result.newY
+                if (currentCmd == 'M' || currentCmd == 'm') {
+                    startX = curX
+                    startY = curY
+                    currentCmd = if (currentCmd == 'M') 'L' else 'l'
+                }
+                vertices.add(Math.round(curX * 100f) / 100f to Math.round(curY * 100f) / 100f)
+            }
+        }
+        return vertices
+    }
+
+    private data class CommandResult(
+        val newIdx: Int,
+        val newX: Float,
+        val newY: Float,
+    )
+
+    private fun processCommandToken(
+        cmd: Char,
+        nextVal: Float,
+        matches: List<String>,
+        idx: Int,
+        curX: Float,
+        curY: Float,
+    ): CommandResult? =
+        when (cmd) {
+            'M', 'L' -> {
+                val dy = matches.getOrNull(idx + 1)?.toFloatOrNull() ?: return null
+                CommandResult(idx + 2, nextVal, dy)
+            }
+            'm', 'l' -> {
+                val dy = matches.getOrNull(idx + 1)?.toFloatOrNull() ?: return null
+                CommandResult(idx + 2, curX + nextVal, curY + dy)
+            }
+            'H' -> CommandResult(idx + 1, nextVal, curY)
+            'h' -> CommandResult(idx + 1, curX + nextVal, curY)
+            'V' -> CommandResult(idx + 1, curX, nextVal)
+            'v' -> CommandResult(idx + 1, curX, curY + nextVal)
+            else -> null
+        }
 
     private fun getAndroidAttr(
         element: Element,

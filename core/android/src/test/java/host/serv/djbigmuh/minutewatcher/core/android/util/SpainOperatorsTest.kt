@@ -47,7 +47,7 @@ class SpainOperatorsTest {
         assertEquals("operator_jazztel", OperatorResolver.getOperatorBrandKey("Jazztel"))
         assertEquals("operator_amena", OperatorResolver.getOperatorBrandKey("amena"))
         assertEquals("operator_masmovil", OperatorResolver.getOperatorBrandKey("MásMóvil"))
-        assertEquals("operator_mas_movil", OperatorResolver.getOperatorBrandKey("MAS MOVIL"))
+        assertEquals("operator_masmovil", OperatorResolver.getOperatorBrandKey("MAS MOVIL"))
         assertEquals("operator_pepephone", OperatorResolver.getOperatorBrandKey("pepephone"))
         assertEquals("operator_lowi", OperatorResolver.getOperatorBrandKey("Lowi"))
         assertEquals("operator_lebara", OperatorResolver.getOperatorBrandKey("Lebara"))

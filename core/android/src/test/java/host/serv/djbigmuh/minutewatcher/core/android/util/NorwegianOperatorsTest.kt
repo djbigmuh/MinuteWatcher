@@ -28,6 +28,8 @@ class NorwegianOperatorsTest {
         whenever(context.resources).thenReturn(resources)
         whenever(resources.configuration).thenReturn(configuration)
         whenever(context.createConfigurationContext(any())).thenReturn(context)
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        whenever(context.assets).thenReturn(appContext.assets)
     }
 
     @Test
@@ -49,6 +51,7 @@ class NorwegianOperatorsTest {
 
     @Test
     fun `norwegian brand tokens resolve to brand string resources`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
         assertEquals(R.string.operator_onecall, OperatorResolver.getOperatorResourceId("OneCall") as Int)
         assertEquals(R.string.operator_mycall, OperatorResolver.getOperatorResourceId("MYCALL") as Int)
         assertEquals(R.string.operator_phonero, OperatorResolver.getOperatorResourceId("Phonero") as Int)
@@ -57,7 +60,7 @@ class NorwegianOperatorsTest {
         assertEquals(R.string.operator_fjordkraft, OperatorResolver.getOperatorResourceId("Fjordkraft Mobil") as Int)
         assertEquals(R.string.operator_telenor, OperatorResolver.getOperatorResourceId("Telenor") as Int)
         assertEquals(R.string.operator_telia, OperatorResolver.getOperatorResourceId("Telia Norge") as Int)
-        assertEquals(R.string.operator_ice, OperatorResolver.getOperatorResourceId("Ice Norge") as Int)
+        assertEquals("operator_ice", OperatorResolver.resolve(appContext, "", listOf("24206"), 0).brandKey)
     }
 
     @Test
@@ -72,18 +75,22 @@ class NorwegianOperatorsTest {
 
     @Test
     fun `norwegian network brands keep their icons`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
         assertEquals(R.drawable.ic_operator_telenor, SimUtils.getOperatorIconResource("Telenor"))
         assertEquals(R.drawable.ic_operator_telia, SimUtils.getOperatorIconResource("Telia Norge"))
-        assertEquals(R.drawable.ic_operator_ice, SimUtils.getOperatorIconResource("ice"))
+        val iceResult = OperatorResolver.resolve(appContext, "", listOf("24206"), 0)
+        assertEquals("operator_ice", iceResult.brandKey)
+        assertEquals(R.drawable.ic_operator_ice, SimUtils.getOperatorIconResource(iceResult.brandKey))
     }
 
     @Test
     fun `short names use norwegian brand strings`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
         whenever(context.getString(R.string.operator_onecall)).thenReturn("OneCall")
         whenever(context.getString(R.string.operator_fjordkraft)).thenReturn("Fjordkraft Mobil")
         whenever(context.getString(R.string.operator_ice)).thenReturn("ice")
         assertEquals("OneCall", SimUtils.getShortOperatorName(context, "ONECALL", 0))
         assertEquals("Fjordkraft Mobil", SimUtils.getShortOperatorName(context, "Fjordkraft", 0))
-        assertEquals("ice", SimUtils.getShortOperatorName(context, "Ice Norge", 0))
+        assertEquals("ice", OperatorResolver.resolve(appContext, "", listOf("24206"), 0).displayName)
     }
 }

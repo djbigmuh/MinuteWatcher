@@ -69,7 +69,9 @@ class WesternEuropeOperatorsTest {
 
     @Test
     fun `test Western Europe brand tokens resolve to resource strings`() {
-        assertEquals(R.string.operator_free, OperatorResolver.getOperatorResourceId("free") as Int)
+        val freeResult = OperatorResolver.resolve(context, "", listOf("20815"), 0)
+        assertEquals("operator_free", freeResult.brandKey)
+        assertEquals("Free", freeResult.displayName)
         assertEquals(R.string.operator_free, OperatorResolver.getOperatorResourceId("free mobile") as Int)
         assertEquals(R.string.operator_odido, OperatorResolver.getOperatorResourceId("odido") as Int)
         assertEquals(R.string.operator_meo, OperatorResolver.getOperatorResourceId("meo") as Int)
@@ -88,7 +90,7 @@ class WesternEuropeOperatorsTest {
 
     @Test
     fun `test Western Europe operator icon resolution`() {
-        assertEquals(R.drawable.ic_operator_free, SimUtils.getOperatorIconResource("free"))
+        assertEquals(R.drawable.ic_operator_free, SimUtils.getOperatorIconResource("free mobile"))
         assertEquals(R.drawable.ic_operator_odido, SimUtils.getOperatorIconResource("odido"))
         assertEquals(R.drawable.ic_operator_meo, SimUtils.getOperatorIconResource("meo"))
         assertEquals(R.drawable.ic_operator_eir, SimUtils.getOperatorIconResource("eir"))

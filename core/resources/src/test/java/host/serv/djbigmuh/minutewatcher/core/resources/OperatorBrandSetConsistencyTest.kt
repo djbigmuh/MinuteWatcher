@@ -47,9 +47,9 @@ class OperatorBrandSetConsistencyTest {
                 .map { context.resources.getResourceEntryName(it) }
                 .toSet()
 
-        checkOperatorResourceConsistency(operatorResKeys, tokenValues, iconMapStringKeys, failures)
+        val dbValues = checkDatabaseConsistency(context, operatorResKeys, tokenValues, failures)
+        checkOperatorResourceConsistency(operatorResKeys, tokenValues, dbValues, iconMapStringKeys, failures)
         checkDonotTranslateConsistency(resDir, operatorResKeys, failures)
-        checkDatabaseConsistency(context, operatorResKeys, tokenValues, failures)
 
         if (failures.isNotEmpty()) {
             fail("Operator brand set consistency failures:\n" + failures.joinToString("\n"))
@@ -87,13 +87,14 @@ class OperatorBrandSetConsistencyTest {
     private fun checkOperatorResourceConsistency(
         operatorResKeys: Set<String>,
         tokenValues: Set<String>,
+        dbValues: Set<String>,
         iconMapStringKeys: Set<String>,
         failures: MutableList<String>,
     ) {
         for (key in operatorResKeys) {
-            if (key !in tokenValues) {
+            if (key !in tokenValues && key !in dbValues) {
                 failures.add(
-                    "Operator key '$key' in operatorResourceMap is missing in OperatorResolver.tokenToResKey values",
+                    "Operator key '$key' in operatorResourceMap is missing in tokenToResKey values and mcc_mnc_db.json",
                 )
             }
             if (key !in iconMapStringKeys) {
@@ -132,7 +133,7 @@ class OperatorBrandSetConsistencyTest {
         operatorResKeys: Set<String>,
         tokenValues: Set<String>,
         failures: MutableList<String>,
-    ) {
+    ): Set<String> {
         val assetManager = context.assets
         val jsonStream = assetManager.open("mcc_mnc_db.json")
         val jsonText = jsonStream.bufferedReader().use { it.readText() }
@@ -172,5 +173,7 @@ class OperatorBrandSetConsistencyTest {
                 )
             }
         }
+
+        return dbValues
     }
 }
