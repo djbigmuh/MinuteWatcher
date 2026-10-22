@@ -190,6 +190,7 @@ object OperatorBrandDatabase {
             "operator_movilnet" to R.string.operator_movilnet,
             "operator_cnt" to R.string.operator_cnt,
             "operator_viva_bo" to R.string.operator_viva_bo,
+            "operator_viva_dr" to R.string.operator_viva_dr,
             "operator_cubacel" to R.string.operator_cubacel,
             "operator_digicel" to R.string.operator_digicel,
             "operator_mpt" to R.string.operator_mpt,

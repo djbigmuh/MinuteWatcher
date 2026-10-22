@@ -83,6 +83,8 @@ internal object OperatorBrandTokens {
             "windtre" to "operator_windtre",
             "movistar" to "operator_movistar",
             "claro" to "operator_claro",
+            "viva dr" to "operator_viva_dr",
+            "trilogy dominicana" to "operator_viva_dr",
             "telcel" to "operator_telcel",
             "vivo" to "operator_vivo",
             "telefonica vivo" to "operator_vivo",

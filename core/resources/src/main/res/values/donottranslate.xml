@@ -298,4 +298,5 @@
     <string name="operator_skytel_mn" translatable="false">Skytel</string>
     <string name="operator_g_mobile" translatable="false">G-Mobile</string>
     <string name="operator_vietnamobile" translatable="false">Vietnamobile</string>
+    <string name="operator_viva_dr" translatable="false">Viva</string>
 </resources>

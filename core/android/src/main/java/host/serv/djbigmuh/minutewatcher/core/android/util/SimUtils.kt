@@ -177,6 +177,7 @@ object SimUtils {
             R.string.operator_movilnet to R.drawable.ic_operator_movilnet,
             R.string.operator_cnt to R.drawable.ic_operator_cnt,
             R.string.operator_viva_bo to R.drawable.ic_operator_viva_bo,
+            R.string.operator_viva_dr to R.drawable.ic_operator_viva_dr,
             R.string.operator_cubacel to R.drawable.ic_operator_cubacel,
             R.string.operator_digicel to R.drawable.ic_operator_digicel,
             R.string.operator_mpt to R.drawable.ic_operator_mpt,

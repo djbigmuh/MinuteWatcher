@@ -43,6 +43,8 @@ class AmericasOperatorsTest {
         assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("352110"), 0).displayName)
         assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("354860"), 0).displayName)
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("37002"), 0).displayName)
+        assertEquals("Viva", OperatorResolver.resolve(context, "", listOf("37004"), 0).displayName)
+        assertEquals("operator_viva_dr", resolvePlmn("37004"))
         assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("37413"), 0).displayName)
         assertEquals("WOM", OperatorResolver.resolve(context, "", listOf("732360"), 0).displayName)
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("708001"), 0).displayName)
@@ -102,6 +104,8 @@ class AmericasOperatorsTest {
         assertEquals("operator_fido", OperatorResolver.getOperatorBrandKey("Fido"))
         assertEquals("operator_freedom", OperatorResolver.getOperatorBrandKey("Freedom Mobile"))
         assertEquals("operator_antel", OperatorResolver.getOperatorBrandKey("Antel"))
+        assertEquals("operator_viva_dr", OperatorResolver.getOperatorBrandKey("Viva DR"))
+        assertEquals(R.drawable.ic_operator_viva_dr, SimUtils.getOperatorIconResource("operator_viva_dr"))
     }
 
     @Test
