@@ -533,7 +533,8 @@ class OperatorIconAssetComplianceTest {
                 validateNamespaceAttr(resName, attrName, attr.nodeValue, failures)
             } else if (attrName == "xmlns") {
                 failures.add(
-                    14 to "$resName item 14 failed: default namespace prefix 'xmlns' with URI '${attr.nodeValue}' is not allowed",
+                    14 to
+                        "$resName item 14 failed: default namespace prefix 'xmlns' with URI '${attr.nodeValue}' is not allowed",
                 )
             }
         }
