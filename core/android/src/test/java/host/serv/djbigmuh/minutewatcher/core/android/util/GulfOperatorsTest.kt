@@ -17,7 +17,7 @@ class GulfOperatorsTest {
     fun `test Gulf PLMN database mappings`() {
         assertEquals("STC", resolveDisplayName("42001"))
         assertEquals("Mobily", resolveDisplayName("42003"))
-        assertEquals("Etisalat", resolveDisplayName("42402"))
+        assertEquals("e&", resolveDisplayName("42402"))
         assertEquals("du", resolveDisplayName("42403"))
 
         assertEquals("Cellcom", resolveDisplayName("42502"))
@@ -36,7 +36,7 @@ class GulfOperatorsTest {
 
     @Test
     fun `test e& brand token resolves to Etisalat resource string`() {
-        assertEquals(R.string.operator_etisalat, OperatorResolver.getOperatorResourceId("e&") as Int)
+        assertEquals("operator_e_and", OperatorResolver.getOperatorBrandKey("e&"))
     }
 
     private fun resolveDisplayName(plmn: String): String {

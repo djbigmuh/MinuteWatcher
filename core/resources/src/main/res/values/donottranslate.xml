@@ -271,4 +271,24 @@
     <string name="operator_rain" translatable="false">rain</string>
     <string name="operator_btc_bw" translatable="false">BTC</string>
     <string name="operator_zantel" translatable="false">Zantel</string>
+    <string name="operator_e_and" translatable="false">e&amp;</string>
+    <string name="operator_omantel" translatable="false">Omantel</string>
+    <string name="operator_atom" translatable="false">ATOM</string>
+    <string name="operator_viva" translatable="false">Viva</string>
+    <string name="operator_team" translatable="false">Team</string>
+    <string name="operator_ucom" translatable="false">Ucom</string>
+    <string name="operator_jawwal" translatable="false">Jawwal</string>
+    <string name="operator_alfa_lb" translatable="false">Alfa</string>
+    <string name="operator_touch" translatable="false">touch</string>
+    <string name="operator_syriatel" translatable="false">Syriatel</string>
+    <string name="operator_mci" translatable="false">MCI</string>
+    <string name="operator_irancell" translatable="false">Irancell</string>
+    <string name="operator_rightel" translatable="false">Rightel</string>
+    <string name="operator_tcell" translatable="false">Tcell</string>
+    <string name="operator_babilon" translatable="false">Babilon</string>
+    <string name="operator_zet_mobile" translatable="false">ZET Mobile</string>
+    <string name="operator_megacom" translatable="false">MegaCom</string>
+    <string name="operator_o_kg" translatable="false">O!</string>
+    <string name="operator_uzmobile" translatable="false">Uzmobile</string>
+    <string name="operator_dhiraagu" translatable="false">Dhiraagu</string>
 </resources>
