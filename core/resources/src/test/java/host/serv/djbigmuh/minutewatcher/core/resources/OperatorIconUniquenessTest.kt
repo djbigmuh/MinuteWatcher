@@ -32,7 +32,7 @@ class OperatorIconUniquenessTest {
 
         val iconFiles =
             drawableDir.listFiles { _, name ->
-                name.startsWith("ic_operator_") && name.endsWith(".xml")
+                (name.startsWith("ic_operator_") || name == "ic_unknown.xml") && name.endsWith(".xml")
             } ?: emptyArray()
         assertTrue("Operator icon files must not be empty", iconFiles.isNotEmpty())
 
