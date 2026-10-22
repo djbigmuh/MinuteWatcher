@@ -196,7 +196,6 @@ object SimUtils {
             R.string.operator_skytel_mn to R.drawable.ic_operator_skytel_mn,
             R.string.operator_g_mobile to R.drawable.ic_operator_g_mobile,
             R.string.operator_vietnamobile to R.drawable.ic_operator_vietnamobile,
-
             R.string.operator_e_and to R.drawable.ic_operator_e_and,
             R.string.operator_omantel to R.drawable.ic_operator_omantel,
             R.string.operator_atom to R.drawable.ic_operator_atom,
@@ -217,7 +216,6 @@ object SimUtils {
             R.string.operator_o_kg to R.drawable.ic_operator_o_kg,
             R.string.operator_uzmobile to R.drawable.ic_operator_uzmobile,
             R.string.operator_dhiraagu to R.drawable.ic_operator_dhiraagu,
-
             R.string.operator_tnm to R.drawable.ic_operator_tnm,
             R.string.operator_mcel to R.drawable.ic_operator_mcel,
             R.string.operator_movitel to R.drawable.ic_operator_movitel,
@@ -232,7 +230,6 @@ object SimUtils {
             R.string.operator_rain to R.drawable.ic_operator_rain,
             R.string.operator_btc_bw to R.drawable.ic_operator_btc_bw,
             R.string.operator_zantel to R.drawable.ic_operator_zantel,
-
             R.string.operator_telecel to R.drawable.ic_operator_telecel,
             R.string.operator_airteltigo to R.drawable.ic_operator_airteltigo,
             R.string.operator_yas to R.drawable.ic_operator_yas,
@@ -245,7 +242,6 @@ object SimUtils {
             R.string.operator_movicel to R.drawable.ic_operator_movicel,
             R.string.operator_mascom to R.drawable.ic_operator_mascom,
             R.string.operator_mtc_na to R.drawable.ic_operator_mtc_na,
-
             R.string.operator_videotron to R.drawable.ic_operator_videotron,
             R.string.operator_sasktel to R.drawable.ic_operator_sasktel,
             R.string.operator_eastlink to R.drawable.ic_operator_eastlink,
@@ -254,14 +250,12 @@ object SimUtils {
             R.string.operator_bmobile_tt to R.drawable.ic_operator_bmobile_tt,
             R.string.operator_mas_movil to R.drawable.ic_operator_mas_movil,
             R.string.operator_altice to R.drawable.ic_operator_altice,
-
             R.string.operator_one to R.drawable.ic_operator_one,
             R.string.operator_mtel to R.drawable.ic_operator_mtel,
             R.string.operator_bh_telecom to R.drawable.ic_operator_bh_telecom,
             R.string.operator_ht_eronet to R.drawable.ic_operator_ht_eronet,
             R.string.operator_vala to R.drawable.ic_operator_vala,
             R.string.operator_ipko to R.drawable.ic_operator_ipko,
-
             R.string.operator_nos to R.drawable.ic_operator_nos,
             R.string.operator_fastweb to R.drawable.ic_operator_fastweb,
             R.string.operator_postemobile to R.drawable.ic_operator_postemobile,
@@ -272,7 +266,6 @@ object SimUtils {
             R.string.operator_4ka to R.drawable.ic_operator_4ka,
             R.string.operator_epic_cy to R.drawable.ic_operator_epic_cy,
             R.string.operator_cyta to R.drawable.ic_operator_cyta,
-
             R.string.operator_rogers to R.drawable.ic_operator_rogers,
             R.string.operator_bell to R.drawable.ic_operator_bell,
             R.string.operator_meo to R.drawable.ic_operator_meo,

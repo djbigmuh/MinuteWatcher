@@ -2,7 +2,6 @@ package host.serv.djbigmuh.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import host.serv.djbigmuh.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

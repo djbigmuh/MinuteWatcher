@@ -209,7 +209,6 @@ object OperatorBrandDatabase {
             "operator_skytel_mn" to R.string.operator_skytel_mn,
             "operator_g_mobile" to R.string.operator_g_mobile,
             "operator_vietnamobile" to R.string.operator_vietnamobile,
-
             "operator_e_and" to R.string.operator_e_and,
             "operator_omantel" to R.string.operator_omantel,
             "operator_atom" to R.string.operator_atom,
@@ -230,7 +229,6 @@ object OperatorBrandDatabase {
             "operator_o_kg" to R.string.operator_o_kg,
             "operator_uzmobile" to R.string.operator_uzmobile,
             "operator_dhiraagu" to R.string.operator_dhiraagu,
-
             "operator_tnm" to R.string.operator_tnm,
             "operator_mcel" to R.string.operator_mcel,
             "operator_movitel" to R.string.operator_movitel,
@@ -245,7 +243,6 @@ object OperatorBrandDatabase {
             "operator_rain" to R.string.operator_rain,
             "operator_btc_bw" to R.string.operator_btc_bw,
             "operator_zantel" to R.string.operator_zantel,
-
             "operator_telecel" to R.string.operator_telecel,
             "operator_airteltigo" to R.string.operator_airteltigo,
             "operator_yas" to R.string.operator_yas,
@@ -258,7 +255,6 @@ object OperatorBrandDatabase {
             "operator_movicel" to R.string.operator_movicel,
             "operator_mascom" to R.string.operator_mascom,
             "operator_mtc_na" to R.string.operator_mtc_na,
-
             "operator_videotron" to R.string.operator_videotron,
             "operator_sasktel" to R.string.operator_sasktel,
             "operator_eastlink" to R.string.operator_eastlink,
@@ -267,14 +263,12 @@ object OperatorBrandDatabase {
             "operator_bmobile_tt" to R.string.operator_bmobile_tt,
             "operator_mas_movil" to R.string.operator_mas_movil,
             "operator_altice" to R.string.operator_altice,
-
             "operator_one" to R.string.operator_one,
             "operator_mtel" to R.string.operator_mtel,
             "operator_bh_telecom" to R.string.operator_bh_telecom,
             "operator_ht_eronet" to R.string.operator_ht_eronet,
             "operator_vala" to R.string.operator_vala,
             "operator_ipko" to R.string.operator_ipko,
-
             "operator_nos" to R.string.operator_nos,
             "operator_fastweb" to R.string.operator_fastweb,
             "operator_postemobile" to R.string.operator_postemobile,
@@ -285,7 +279,6 @@ object OperatorBrandDatabase {
             "operator_4ka" to R.string.operator_4ka,
             "operator_epic_cy" to R.string.operator_epic_cy,
             "operator_cyta" to R.string.operator_cyta,
-
             "operator_kolbi" to R.string.operator_kolbi,
             "operator_antel" to R.string.operator_antel,
             "operator_fido" to R.string.operator_fido,
@@ -630,7 +623,6 @@ object OperatorBrandDatabase {
             "dst" to "operator_dst",
             "ctm" to "operator_ctm",
             "unitel mongolia" to "operator_unitel_mn",
-
             "china broadnet" to "operator_china_broadnet",
             "broadnet" to "operator_china_broadnet",
             "mobicom" to "operator_mobicom",
@@ -638,10 +630,8 @@ object OperatorBrandDatabase {
             "g-mobile" to "operator_g_mobile",
             "g mobile" to "operator_g_mobile",
             "vietnamobile" to "operator_vietnamobile",
-
             "touch mobile" to "operator_touch",
             "kg o" to "operator_o_kg",
-
             "e&" to "operator_e_and",
             "e& egypt" to "operator_e_and",
             "omantel" to "operator_omantel",
@@ -668,10 +658,8 @@ object OperatorBrandDatabase {
             "megacom" to "operator_megacom",
             "uzmobile" to "operator_uzmobile",
             "dhiraagu" to "operator_dhiraagu",
-
             "myt" to "operator_myt",
             "btc" to "operator_btc_bw",
-
             "tnm" to "operator_tnm",
             "mcel" to "operator_mcel",
             "movitel" to "operator_movitel",
@@ -685,9 +673,7 @@ object OperatorBrandDatabase {
             "telkom" to "operator_telkom_za",
             "rain" to "operator_rain",
             "zantel" to "operator_zantel",
-
             "unitel angola" to "operator_unitel_ao",
-
             "telecel" to "operator_telecel",
             "airteltigo" to "operator_airteltigo",
             "airtel tigo" to "operator_airteltigo",
@@ -702,13 +688,11 @@ object OperatorBrandDatabase {
             "movicel" to "operator_movicel",
             "mascom" to "operator_mascom",
             "mtc" to "operator_mtc_na",
-
             "bmobile" to "operator_bmobile_tt",
             "mas movil" to "operator_mas_movil",
             "masmovil" to "operator_mas_movil",
             "movil" to "operator_mas_movil",
             "+movil" to "operator_mas_movil",
-
             "videotron" to "operator_videotron",
             "sasktel" to "operator_sasktel",
             "eastlink" to "operator_eastlink",
@@ -716,7 +700,6 @@ object OperatorBrandDatabase {
             "united states cellular" to "operator_us_cellular",
             "flow" to "operator_flow",
             "altice" to "operator_altice",
-
             "one" to "operator_one",
             "one albania" to "operator_one",
             "one montenegro" to "operator_one",
@@ -729,7 +712,6 @@ object OperatorBrandDatabase {
             "eronet" to "operator_ht_eronet",
             "vala" to "operator_vala",
             "ipko" to "operator_ipko",
-
             "nos" to "operator_nos",
             "fastweb" to "operator_fastweb",
             "postemobile" to "operator_postemobile",
@@ -745,6 +727,5 @@ object OperatorBrandDatabase {
             "cyta" to "operator_cyta",
             "cytamobile" to "operator_cyta",
             "cytamobile-vodafone" to "operator_cyta",
-
         )
 }

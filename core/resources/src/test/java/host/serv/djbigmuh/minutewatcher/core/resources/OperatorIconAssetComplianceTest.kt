@@ -516,40 +516,49 @@ class OperatorIconAssetComplianceTest {
         val allElements = doc.getElementsByTagName("*")
         for (i in 0 until allElements.length) {
             val elem = allElements.item(i) as Element
-            val attrs = elem.attributes
-            for (j in 0 until attrs.length) {
-                val attr = attrs.item(j)
-                val attrName = attr.nodeName
-                if (attrName.startsWith("xmlns:")) {
-                    val prefix = attrName.substring(6)
-                    val uri = attr.nodeValue
-                    when (prefix) {
-                        "android" -> {
-                            if (uri != ANDROID_NS) {
-                                failures.add(
-                                    14 to "$resName item 14 failed: namespace prefix '$prefix' has invalid URI '$uri'",
-                                )
-                            }
-                        }
-                        "aapt" -> {
-                            if (uri != "http://schemas.android.com/aapt") {
-                                failures.add(
-                                    14 to "$resName item 14 failed: namespace prefix '$prefix' has invalid URI '$uri'",
-                                )
-                            }
-                        }
-                        else -> {
-                            failures.add(
-                                14 to "$resName item 14 failed: unauthorized namespace prefix '$prefix' with URI '$uri'",
-                            )
-                        }
-                    }
-                } else if (attrName == "xmlns") {
-                    val uri = attr.nodeValue
-                    failures.add(
-                        14 to "$resName item 14 failed: default namespace prefix 'xmlns' with URI '$uri' is not allowed",
-                    )
+            validateElementNamespaces(resName, elem, failures)
+        }
+    }
+
+    private fun validateElementNamespaces(
+        resName: String,
+        elem: Element,
+        failures: MutableList<Pair<Int, String>>,
+    ) {
+        val attrs = elem.attributes
+        for (j in 0 until attrs.length) {
+            val attr = attrs.item(j)
+            val attrName = attr.nodeName
+            if (attrName.startsWith("xmlns:")) {
+                validateNamespaceAttr(resName, attrName, attr.nodeValue, failures)
+            } else if (attrName == "xmlns") {
+                failures.add(
+                    14 to "$resName item 14 failed: default namespace prefix 'xmlns' with URI '${attr.nodeValue}' is not allowed",
+                )
+            }
+        }
+    }
+
+    private fun validateNamespaceAttr(
+        resName: String,
+        attrName: String,
+        uri: String,
+        failures: MutableList<Pair<Int, String>>,
+    ) {
+        val prefix = attrName.substring(6)
+        when (prefix) {
+            "android" -> {
+                if (uri != ANDROID_NS) {
+                    failures.add(14 to "$resName item 14 failed: namespace prefix '$prefix' has invalid URI '$uri'")
                 }
+            }
+            "aapt" -> {
+                if (uri != "http://schemas.android.com/aapt") {
+                    failures.add(14 to "$resName item 14 failed: namespace prefix '$prefix' has invalid URI '$uri'")
+                }
+            }
+            else -> {
+                failures.add(14 to "$resName item 14 failed: unauthorized namespace prefix '$prefix' with URI '$uri'")
             }
         }
     }
@@ -589,7 +598,8 @@ class OperatorIconAssetComplianceTest {
             for (match in precisionPattern.findAll(pathData)) {
                 val literal = match.value
                 failures.add(
-                    16 to "$resName item 16 failed: path $i pathData coordinate '$literal' has more than 2 decimal places",
+                    16 to
+                        "$resName item 16 failed: path $i pathData coordinate '$literal' has more than 2 decimal places",
                 )
             }
         }
