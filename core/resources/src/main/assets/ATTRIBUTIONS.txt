@@ -1,6 +1,6 @@
 MinuteWatcher Operator Brand Assets Attributions
 
-Category A — CC0 brand glyphs (simple-icons 11.x, https://simple-icons.org, CC0-1.0):
+Category A — CC0 brand glyphs (simple-icons 16.35.0, https://simple-icons.org, CC0-1.0):
 - ic_operator_airtel (slug: airtel)
 - ic_operator_att (slug: atandt)
 - ic_operator_jio (slug: jio)
@@ -18,5 +18,17 @@ Category B — original stylized marks:
 All other ic_operator_*.xml drawables are original project artwork (octagon plate plus
 brand-colored glyph). Initial glyph outlines are derived from Liberation Sans Bold,
 Copyright (c) Bitstream, Inc., licensed under the SIL Open Font License, Version 1.1.
+
+Category C — retained legacy marks:
+Icons that already contained recognizable brand-colored artwork prior to normalization are retained unchanged (for example ic_operator_verizon, ic_operator_rakuten, ic_operator_magenta, ic_operator_yettel, ic_operator_yoigo).
+
+Shared corporate marks:
+- Deutsche Telekom Group: ic_operator_t_mobile, ic_operator_telekom, ic_operator_magenta
+- Turkcell Group: ic_operator_life_by, ic_operator_lifecell
+
+License summary:
+- CC0-1.0: 12 glyph sources (Category A).
+- SIL Open Font License 1.1: Liberation Sans Bold (glyph outlines, Category B).
+- Original artwork: Category B and Category C.
 
 Trademarks are property of their respective owners; usage is nominative.
