@@ -110,5 +110,17 @@ class SubSaharanAfricaOperatorsTest {
 
         val res61001 = OperatorResolver.resolve(context, "", listOf("61001"), 0)
         assertEquals("operator_moov", res61001.brandKey)
+
+        assertEquals("operator_telkom_ke", OperatorResolver.resolve(context, "", listOf("63907"), 0).brandKey)
+        assertEquals("operator_nexttel", OperatorResolver.resolve(context, "", listOf("62404"), 0).brandKey)
+        assertEquals("operator_africell_cd", OperatorResolver.resolve(context, "", listOf("63090"), 0).brandKey)
+        assertEquals("operator_africell_ao", OperatorResolver.resolve(context, "", listOf("63105"), 0).brandKey)
+        assertEquals("operator_cellcom_gn", OperatorResolver.resolve(context, "", listOf("61105"), 0).brandKey)
+        assertEquals("operator_togocel", OperatorResolver.resolve(context, "", listOf("61501"), 0).brandKey)
+        assertEquals("operator_celtiis", OperatorResolver.resolve(context, "", listOf("61604"), 0).brandKey)
+        assertEquals("operator_telecel_cf", OperatorResolver.resolve(context, "", listOf("62302"), 0).brandKey)
+        assertEquals("operator_utl", OperatorResolver.resolve(context, "", listOf("64111"), 0).brandKey)
+        assertEquals("operator_telesom", OperatorResolver.resolve(context, "", listOf("63701"), 0).brandKey)
+        assertEquals("operator_airtel", OperatorResolver.resolve(context, "", listOf("63514"), 0).brandKey)
     }
 }

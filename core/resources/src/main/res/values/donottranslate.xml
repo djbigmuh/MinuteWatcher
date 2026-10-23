@@ -381,4 +381,14 @@
     <string name="operator_pncc" translatable="false">PNCC</string>
     <string name="operator_ttc" translatable="false">TTC</string>
     <string name="operator_nta" translatable="false">NTA</string>
+    <string name="operator_telkom_ke" translatable="false">Telkom Kenya</string>
+    <string name="operator_nexttel" translatable="false">Nexttel</string>
+    <string name="operator_africell_cd" translatable="false">Africell</string>
+    <string name="operator_africell_ao" translatable="false">Africell</string>
+    <string name="operator_cellcom_gn" translatable="false">Cellcom</string>
+    <string name="operator_togocel" translatable="false">Togocel</string>
+    <string name="operator_celtiis" translatable="false">Celtiis</string>
+    <string name="operator_telecel_cf" translatable="false">Telecel</string>
+    <string name="operator_utl" translatable="false">UTL</string>
+    <string name="operator_telesom" translatable="false">Telesom</string>
 </resources>

@@ -365,3 +365,13 @@ operator_fsm_telecom	FSM Telecom	B		#0055A5	FSM
 operator_pncc	PNCC	B		#0055A5	PNCC
 operator_ttc	TTC	B		#0055A5	TTC
 operator_nta	NTA	B		#0055A5	NTA
+operator_telkom_ke	Telkom Kenya	B		#C44000	TELKE
+operator_nexttel	Nexttel	B		#00A859	NEXT
+operator_africell_cd	Africell	B		#E60000	AFRCD
+operator_africell_ao	Africell	B		#E60000	AFRAO
+operator_cellcom_gn	Cellcom	B		#CC0000	CELGN
+operator_togocel	Togocel	B		#0055A5	TOGO
+operator_celtiis	Celtiis	B		#00AA55	CELT
+operator_telecel_cf	Telecel	B		#00A859	TELCF
+operator_utl	UTL	B		#0055A5	UTL
+operator_telesom	Telesom	B		#0055A5	TSOM
