@@ -2,6 +2,7 @@ package host.serv.djbigmuh.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import host.serv.djbigmuh.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,5 +74,15 @@ class SubSaharanAfricaOperatorsTest {
         val res61404 = OperatorResolver.resolve(context, "", listOf("61404"), 0)
         assertEquals("Orange", res61404.displayName)
         assertEquals("operator_orange", res61404.brandKey)
+
+        val res61905 = OperatorResolver.resolve(context, "", listOf("61905"), 0)
+        assertEquals(context.getString(R.string.operator_africell_sl), res61905.displayName)
+        assertEquals("operator_africell_sl", res61905.brandKey)
+
+        val res61905Named = OperatorResolver.resolve(context, "Africell", listOf("61905"), 0)
+        assertEquals("operator_africell_sl", res61905Named.brandKey)
+
+        val res61907 = OperatorResolver.resolve(context, "", listOf("61907"), 0)
+        assertEquals("operator_qcell_sl", res61907.brandKey)
     }
 }
