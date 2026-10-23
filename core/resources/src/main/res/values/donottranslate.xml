@@ -21,6 +21,7 @@
     <string name="operator_sfr" translatable="false">SFR</string>
     <string name="operator_bouygues" translatable="false">Bouygues</string>
     <string name="operator_telekom" translatable="false">Telekom</string>
+    <string name="operator_telekom_si" translatable="false">Telekom Slovenije</string>
     <string name="operator_ntt_docomo" translatable="false">NTT Docomo</string>
     <string name="operator_softbank" translatable="false">SoftBank</string>
     <string name="operator_kddi" translatable="false">KDDI</string>

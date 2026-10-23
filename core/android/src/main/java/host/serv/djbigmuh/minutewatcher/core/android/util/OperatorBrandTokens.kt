@@ -73,6 +73,7 @@ internal object OperatorBrandTokens {
             "vodafone" to "operator_vodafone",
             "t-mobile" to "operator_t_mobile",
             "telekom" to "operator_telekom",
+            "telekom slovenije" to "operator_telekom_si",
             "orange" to "operator_orange",
             "o2" to "operator_o2",
             "at&t" to "operator_att",

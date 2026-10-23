@@ -26,6 +26,7 @@ object SimUtils {
             R.string.operator_sfr to R.drawable.ic_operator_sfr,
             R.string.operator_bouygues to R.drawable.ic_operator_bouygues,
             R.string.operator_telekom to R.drawable.ic_operator_telekom,
+            R.string.operator_telekom_si to R.drawable.ic_operator_telekom_si,
             R.string.operator_ntt_docomo to R.drawable.ic_operator_ntt_docomo,
             R.string.operator_softbank to R.drawable.ic_operator_softbank,
             R.string.operator_kddi to R.drawable.ic_operator_kddi,

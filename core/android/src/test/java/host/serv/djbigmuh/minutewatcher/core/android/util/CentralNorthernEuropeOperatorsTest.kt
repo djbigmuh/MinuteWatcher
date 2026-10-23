@@ -65,6 +65,20 @@ class CentralNorthernEuropeOperatorsTest {
     }
 
     @Test
+    fun `test Telekom Slovenije brand mappings`() {
+        val res29341 = OperatorResolver.resolve(context, "", listOf("29341"), 0)
+        assertEquals(context.getString(R.string.operator_telekom_si), res29341.displayName)
+        assertEquals("operator_telekom_si", res29341.brandKey)
+
+        val res29341Named = OperatorResolver.resolve(context, "Telekom Slovenije", emptyList(), 0)
+        assertEquals("operator_telekom_si", res29341Named.brandKey)
+
+        assertEquals("operator_a1", resolvePlmn("29340"))
+        assertEquals("operator_telemach", resolvePlmn("29370"))
+        assertEquals("operator_telekom", resolvePlmn("26201"))
+    }
+
+    @Test
     fun `test Central and Northern Europe brand tokens resolve to resource strings`() {
         assertEquals(R.string.operator_magenta, OperatorResolver.getOperatorResourceId("magenta") as Int)
         assertEquals(R.string.operator_magenta, OperatorResolver.getOperatorResourceId("magenta telekom") as Int)

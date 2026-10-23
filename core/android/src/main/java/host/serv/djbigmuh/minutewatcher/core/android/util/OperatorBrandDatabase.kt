@@ -22,6 +22,7 @@ object OperatorBrandDatabase {
             "operator_sfr" to R.string.operator_sfr,
             "operator_bouygues" to R.string.operator_bouygues,
             "operator_telekom" to R.string.operator_telekom,
+            "operator_telekom_si" to R.string.operator_telekom_si,
             "operator_ntt_docomo" to R.string.operator_ntt_docomo,
             "operator_softbank" to R.string.operator_softbank,
             "operator_kddi" to R.string.operator_kddi,
