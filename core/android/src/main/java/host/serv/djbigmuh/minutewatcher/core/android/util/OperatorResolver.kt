@@ -68,7 +68,8 @@ object OperatorResolver {
                 loadAttempts >= MAX_DB_LOAD_ATTEMPTS -> emptyMap()
                 else -> {
                     loadAttempts++
-                    val loaded = loadDbInternal(context)
+                    val appContext = context.applicationContext ?: context
+                    val loaded = loadDbInternal(appContext)
                     if (loadAttempts >= MAX_DB_LOAD_ATTEMPTS && loaded.isEmpty()) {
                         AppLogger.e(
                             "OperatorResolver: MCC/MNC database failed to load after $MAX_DB_LOAD_ATTEMPTS attempts",
@@ -125,14 +126,13 @@ object OperatorResolver {
             if (brandKey != null) {
                 return ResolutionResult(trimmedName, brandKey)
             }
-            val localizedContext = AppLocaleContexts.forAppLocale(context)
-            val database = loadDb(localizedContext)
+            val database = loadDb(context)
             val resKey = findInDatabase(database, candidates)
             return ResolutionResult(trimmedName, resKey)
         }
 
         val localizedContext = AppLocaleContexts.forAppLocale(context)
-        val database = loadDb(localizedContext)
+        val database = loadDb(context)
         val resKey = findInDatabase(database, candidates)
 
         val resolved =

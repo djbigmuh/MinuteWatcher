@@ -31,6 +31,7 @@ class GulfOperatorsTest {
         assertEquals("Ooredoo", resolveDisplayName("60303"))
         assertEquals("Ooredoo", resolveDisplayName("41405"))
         assertEquals("MTN", resolveDisplayName("41702"))
+        assertEquals("operator_vodafone", OperatorResolver.resolve(context, "", listOf("42206"), 0).brandKey)
     }
 
     @Test

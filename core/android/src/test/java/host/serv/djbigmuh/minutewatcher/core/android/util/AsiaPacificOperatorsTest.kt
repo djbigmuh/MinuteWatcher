@@ -58,6 +58,18 @@ class AsiaPacificOperatorsTest {
         assertEquals("Ooredoo", OperatorResolver.resolve(context, "", listOf("47202"), 0).displayName)
         assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("54201"), 0).displayName)
         assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("54202"), 0).displayName)
+
+        assertEquals("operator_simba", OperatorResolver.resolve(context, "", listOf("52510"), 0).brandKey)
+        assertEquals("operator_unifi", OperatorResolver.resolve(context, "", listOf("502153"), 0).brandKey)
+        assertEquals("operator_nt", OperatorResolver.resolve(context, "", listOf("52015"), 0).brandKey)
+        assertEquals("operator_gmobile", OperatorResolver.resolve(context, "", listOf("45207"), 0).brandKey)
+        assertEquals("operator_itel", OperatorResolver.resolve(context, "", listOf("45208"), 0).brandKey)
+        assertEquals("operator_three_mo", OperatorResolver.resolve(context, "", listOf("45503"), 0).brandKey)
+        assertEquals("operator_bmobile_bt", OperatorResolver.resolve(context, "", listOf("40211"), 0).brandKey)
+        assertEquals("operator_tashicell", OperatorResolver.resolve(context, "", listOf("40277"), 0).brandKey)
+        assertEquals("operator_seatel", OperatorResolver.resolve(context, "", listOf("45611"), 0).brandKey)
+        assertEquals("operator_etl", OperatorResolver.resolve(context, "", listOf("45702"), 0).brandKey)
+        assertEquals("operator_smartcell", OperatorResolver.resolve(context, "", listOf("42904"), 0).brandKey)
         // Japan / others
         assertEquals("Y! Mobile", OperatorResolver.resolve(context, "", listOf("44000"), 0).displayName)
         assertEquals("SoftBank", OperatorResolver.resolve(context, "", listOf("44021"), 0).displayName)

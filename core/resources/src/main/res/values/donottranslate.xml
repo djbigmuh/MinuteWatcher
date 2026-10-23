@@ -359,4 +359,15 @@
     <string name="operator_tm_cell" translatable="false">TM Cell</string>
     <string name="operator_africell_sl" translatable="false">Africell</string>
     <string name="operator_qcell_sl" translatable="false">QCell</string>
+    <string name="operator_simba" translatable="false">Simba</string>
+    <string name="operator_unifi" translatable="false">unifi</string>
+    <string name="operator_nt" translatable="false">NT</string>
+    <string name="operator_gmobile" translatable="false">Gmobile</string>
+    <string name="operator_itel" translatable="false">iTel</string>
+    <string name="operator_three_mo" translatable="false">3</string>
+    <string name="operator_bmobile_bt" translatable="false">B-Mobile</string>
+    <string name="operator_tashicell" translatable="false">TashiCell</string>
+    <string name="operator_seatel" translatable="false">SEATEL</string>
+    <string name="operator_etl" translatable="false">ETL</string>
+    <string name="operator_smartcell" translatable="false">SmartCell</string>
 </resources>

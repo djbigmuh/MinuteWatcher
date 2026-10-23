@@ -343,3 +343,14 @@ operator_qcell_sl	QCell	B		#0055A5	QSL
 operator_mobiuz	Mobiuz	B		#CC0000	MOBIUZ
 operator_salt_li	Salt	B		#1D23D1	SALT LI
 operator_telekom_si	Telekom Slovenije	B		#0055A5	TSLOV
+operator_simba	Simba	B		#00A859	SIMBA
+operator_unifi	unifi	B		#FF5500	UNIFI
+operator_nt	NT	B		#0055A5	NT
+operator_gmobile	Gmobile	B		#E60000	GMOBIL
+operator_itel	iTel	B		#E60000	ITEL
+operator_three_mo	3	B		#141218	3MO
+operator_bmobile_bt	B-Mobile	B		#0055A5	BMOB
+operator_tashicell	TashiCell	B		#008000	TASHI
+operator_seatel	SEATEL	B		#CC0000	SEATEL
+operator_etl	ETL	B		#0055A5	ETL
+operator_smartcell	SmartCell	B		#00AA55	SCELL
