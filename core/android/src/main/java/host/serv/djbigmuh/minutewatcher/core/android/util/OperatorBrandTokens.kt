@@ -179,7 +179,6 @@ internal object OperatorBrandTokens {
             "djibouti telecom" to "operator_djibouti_telecom",
             "djibouti telecom" to "operator_djibouti_telecom",
             "smart burundi" to "operator_smart_bi",
-            "onatel burundi" to "operator_smart_bi",
             "lumitel" to "operator_lumitel",
             "lumitel" to "operator_lumitel",
             "eswatini mobile" to "operator_eswatini_mobile",

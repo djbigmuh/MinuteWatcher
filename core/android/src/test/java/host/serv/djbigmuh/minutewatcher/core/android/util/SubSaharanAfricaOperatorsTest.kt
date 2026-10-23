@@ -84,5 +84,18 @@ class SubSaharanAfricaOperatorsTest {
 
         val res61907 = OperatorResolver.resolve(context, "", listOf("61907"), 0)
         assertEquals("operator_qcell_sl", res61907.brandKey)
+
+        val res64201 = OperatorResolver.resolve(context, "", listOf("64201"), 0)
+        assertEquals("operator_econet", res64201.brandKey)
+
+        val res64207 = OperatorResolver.resolve(context, "", listOf("64207"), 0)
+        assertEquals("operator_smart_bi", res64207.brandKey)
+
+        val res64208 = OperatorResolver.resolve(context, "", listOf("64208"), 0)
+        assertEquals(context.getString(R.string.operator_lumitel), res64208.displayName)
+        assertEquals("operator_lumitel", res64208.brandKey)
+
+        val res64282 = OperatorResolver.resolve(context, "", listOf("64282"), 0)
+        assertEquals("operator_econet", res64282.brandKey)
     }
 }
