@@ -35,7 +35,7 @@ class SubSaharanAfricaOperatorsTest {
         assertEquals("MTN", OperatorResolver.resolve(context, "", listOf("62001"), 0).displayName)
         assertEquals("MTN", OperatorResolver.resolve(context, "", listOf("62401"), 0).displayName)
         assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("62402"), 0).displayName)
-        assertEquals("Airtel", OperatorResolver.resolve(context, "", listOf("62804"), 0).displayName)
+        assertEquals("Airtel", OperatorResolver.resolve(context, "", listOf("62803"), 0).displayName)
         assertEquals("Airtel", OperatorResolver.resolve(context, "", listOf("62901"), 0).displayName)
         assertEquals("MTN", OperatorResolver.resolve(context, "", listOf("62910"), 0).displayName)
         assertEquals("Vodacom", OperatorResolver.resolve(context, "", listOf("63001"), 0).displayName)

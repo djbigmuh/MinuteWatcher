@@ -49,7 +49,7 @@ class AsiaPacificOperatorsTest {
         assertEquals("Metfone", OperatorResolver.resolve(context, "", listOf("45608"), 0).displayName)
         assertEquals("Metfone", OperatorResolver.resolve(context, "", listOf("45609"), 0).displayName)
         assertEquals("Celcom", OperatorResolver.resolve(context, "", listOf("50219"), 0).displayName)
-        assertEquals("Maxis", OperatorResolver.resolve(context, "", listOf("50210"), 0).displayName)
+        assertEquals("Digi", OperatorResolver.resolve(context, "", listOf("50210"), 0).displayName)
         assertEquals("Maxis", OperatorResolver.resolve(context, "", listOf("50217"), 0).displayName)
         assertEquals("Hutch", OperatorResolver.resolve(context, "", listOf("41303"), 0).displayName)
         assertEquals("SmarTone", OperatorResolver.resolve(context, "", listOf("45500"), 0).displayName)

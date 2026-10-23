@@ -14,24 +14,237 @@ import java.io.File
 class MccMncDbTest {
     private companion object {
         /**
-         * MCCs where ITU-T E.212 / national numbering plans allow mixed MNC lengths (2 and 3 digits).
+         * Allowed MNC lengths per MCC as per ITU-T E.212 and national numbering plan specs.
          */
-        private val MIXED_MNC_LENGTH_MCCS =
-            setOf(
-                "405",
-                "714",
+        private val MCC_TO_ALLOWED_MNC_LENGTHS: Map<String, Set<Int>> =
+            mapOf(
+                "202" to setOf(2),
+                "204" to setOf(2),
+                "206" to setOf(2),
+                "208" to setOf(2),
+                "212" to setOf(2),
+                "213" to setOf(2),
+                "214" to setOf(2),
+                "216" to setOf(2),
+                "218" to setOf(2),
+                "219" to setOf(2),
+                "220" to setOf(2),
+                "221" to setOf(2),
+                "222" to setOf(2),
+                "226" to setOf(2),
+                "228" to setOf(2),
+                "230" to setOf(2),
+                "231" to setOf(2),
+                "232" to setOf(2),
+                "234" to setOf(2),
+                "238" to setOf(2),
+                "240" to setOf(2),
+                "242" to setOf(2),
+                "244" to setOf(2),
+                "246" to setOf(2),
+                "247" to setOf(2),
+                "248" to setOf(2),
+                "250" to setOf(2),
+                "255" to setOf(2),
+                "257" to setOf(2),
+                "259" to setOf(2),
+                "260" to setOf(2),
+                "262" to setOf(2),
+                "266" to setOf(2),
+                "268" to setOf(2),
+                "270" to setOf(2),
+                "272" to setOf(2),
+                "274" to setOf(2),
+                "276" to setOf(2),
+                "278" to setOf(2),
+                "280" to setOf(2),
+                "282" to setOf(2),
+                "283" to setOf(2),
+                "284" to setOf(2),
+                "286" to setOf(2),
+                "288" to setOf(2),
+                "290" to setOf(2),
+                "292" to setOf(2),
+                "293" to setOf(2),
+                "294" to setOf(2),
+                "295" to setOf(2),
+                "297" to setOf(2),
+                "302" to setOf(3),
+                "310" to setOf(3),
+                "311" to setOf(3),
+                "312" to setOf(3),
+                "330" to setOf(3),
+                "334" to setOf(3),
+                "338" to setOf(3),
+                "342" to setOf(3),
+                "344" to setOf(3),
+                "346" to setOf(3),
+                "348" to setOf(3),
+                "352" to setOf(3),
+                "354" to setOf(3),
+                "358" to setOf(3),
+                "360" to setOf(3),
+                "363" to setOf(2),
+                "365" to setOf(3),
+                "366" to setOf(3),
+                "368" to setOf(2),
+                "370" to setOf(2),
+                "372" to setOf(2),
+                "374" to setOf(2),
+                "376" to setOf(3),
+                "400" to setOf(2),
+                "401" to setOf(2),
+                "402" to setOf(2),
+                "404" to setOf(2),
+                "405" to setOf(2, 3),
+                "410" to setOf(2),
+                "412" to setOf(2),
+                "413" to setOf(2),
+                "414" to setOf(2),
+                "415" to setOf(2),
+                "416" to setOf(2),
+                "417" to setOf(2),
+                "418" to setOf(2),
+                "419" to setOf(2),
+                "420" to setOf(2),
+                "421" to setOf(2),
+                "422" to setOf(2),
+                "424" to setOf(2),
+                "425" to setOf(2),
+                "426" to setOf(2),
+                "427" to setOf(2),
+                "428" to setOf(2),
+                "429" to setOf(2),
+                "430" to setOf(2),
+                "431" to setOf(2),
+                "432" to setOf(2),
+                "434" to setOf(2),
+                "436" to setOf(2),
+                "437" to setOf(2),
+                "438" to setOf(2),
+                "440" to setOf(2),
+                "450" to setOf(2),
+                "452" to setOf(2),
+                "454" to setOf(2),
+                "455" to setOf(2),
+                "456" to setOf(2),
+                "457" to setOf(2),
+                "460" to setOf(2),
+                "466" to setOf(2),
+                "470" to setOf(2),
+                "472" to setOf(2),
+                "502" to setOf(2, 3),
+                "505" to setOf(2),
+                "510" to setOf(2),
+                "514" to setOf(2),
+                "515" to setOf(2),
+                "520" to setOf(2),
+                "525" to setOf(2),
+                "528" to setOf(2),
+                "530" to setOf(2),
+                "537" to setOf(2),
+                "539" to setOf(2),
+                "540" to setOf(2),
+                "541" to setOf(2),
+                "542" to setOf(2),
+                "543" to setOf(2),
+                "544" to setOf(2),
+                "545" to setOf(2),
+                "546" to setOf(2),
+                "547" to setOf(2),
+                "548" to setOf(2),
+                "549" to setOf(2),
+                "550" to setOf(2),
+                "552" to setOf(2),
+                "553" to setOf(2),
+                "555" to setOf(2),
+                "602" to setOf(2),
+                "603" to setOf(2),
+                "604" to setOf(2),
+                "605" to setOf(2),
+                "606" to setOf(2),
+                "607" to setOf(2),
+                "608" to setOf(2),
+                "609" to setOf(2),
+                "610" to setOf(2),
+                "611" to setOf(2),
+                "612" to setOf(2),
+                "613" to setOf(2),
+                "614" to setOf(2),
+                "615" to setOf(2),
+                "616" to setOf(2),
+                "617" to setOf(2),
+                "618" to setOf(2),
+                "619" to setOf(2),
+                "620" to setOf(2),
+                "621" to setOf(2),
+                "622" to setOf(2),
+                "623" to setOf(2),
+                "624" to setOf(2),
+                "625" to setOf(2),
+                "626" to setOf(2),
+                "627" to setOf(2),
+                "628" to setOf(2),
+                "629" to setOf(2),
+                "630" to setOf(2),
+                "631" to setOf(2),
+                "632" to setOf(2),
+                "633" to setOf(2),
+                "634" to setOf(2),
+                "635" to setOf(2),
+                "636" to setOf(2),
+                "637" to setOf(2),
+                "638" to setOf(2),
+                "639" to setOf(2),
+                "640" to setOf(2),
+                "641" to setOf(2),
+                "642" to setOf(2),
+                "643" to setOf(2),
+                "645" to setOf(2),
+                "646" to setOf(2),
+                "647" to setOf(2),
+                "648" to setOf(2),
+                "649" to setOf(2),
+                "650" to setOf(2),
+                "651" to setOf(2),
+                "652" to setOf(2),
+                "653" to setOf(2),
+                "654" to setOf(2),
+                "655" to setOf(2),
+                "657" to setOf(2),
+                "659" to setOf(2),
+                "704" to setOf(2),
+                "706" to setOf(2),
+                "708" to setOf(3),
+                "710" to setOf(2),
+                "712" to setOf(2),
+                "714" to setOf(2, 3),
+                "716" to setOf(2),
+                "722" to setOf(3),
+                "724" to setOf(2),
+                "730" to setOf(2),
+                "732" to setOf(3),
+                "734" to setOf(2),
+                "736" to setOf(2),
+                "740" to setOf(2),
+                "744" to setOf(2),
+                "748" to setOf(2),
             )
 
         /**
-         * Whitelisted MCCs allowed to have consecutive MNC numerical sequences > 6 due to historical blocks (e.g. US, India, Latin America).
+         * Whitelisted MCCs allowed to have consecutive MNC numerical sequences > 6 due to historical blocks.
          */
         private val CONSECUTIVE_MNC_WHITELIST =
             setOf(
                 "214",
+                "231",
+                "232",
                 "262",
                 "311",
                 "404",
                 "405",
+                "454",
+                "502",
                 "704",
                 "706",
                 "708",
@@ -76,7 +289,8 @@ class MccMncDbTest {
         val mccToMncs = mutableMapOf<String, MutableList<Int>>()
 
         validateEntries(plmns, jsonObj, operatorResKeys, mccToMncLens, mccToMncs, failures)
-        validateMncLengthUniformity(mccToMncLens, failures)
+        validateMncLengthsAgainstTable(mccToMncLens, failures)
+        validateNoZeroPaddedDuplicates(plmns, failures)
         validateConsecutiveSequences(mccToMncs, failures)
         validateProvenanceDocumentation(jsonObj, failures)
 
@@ -118,13 +332,44 @@ class MccMncDbTest {
         }
     }
 
-    private fun validateMncLengthUniformity(
+    private fun validateMncLengthsAgainstTable(
         mccToMncLens: Map<String, Set<Int>>,
         failures: MutableList<String>,
     ) {
         for ((mcc, lens) in mccToMncLens) {
-            if (lens.size > 1 && mcc !in MIXED_MNC_LENGTH_MCCS) {
-                failures.add("MCC $mcc has mixed MNC lengths ($lens) but is not in MIXED_MNC_LENGTH_MCCS whitelist")
+            val allowedLens = MCC_TO_ALLOWED_MNC_LENGTHS[mcc]
+            if (allowedLens == null) {
+                failures.add("MCC $mcc is missing in MCC_TO_ALLOWED_MNC_LENGTHS table")
+            } else {
+                for (len in lens) {
+                    if (len !in allowedLens) {
+                        failures.add("MCC $mcc has MNC length $len which is not in allowed lengths $allowedLens")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun validateNoZeroPaddedDuplicates(
+        plmns: List<String>,
+        failures: MutableList<String>,
+    ) {
+        val plmnSet = plmns.toSet()
+        for (plmn in plmns) {
+            val mcc = plmn.substring(0, 3)
+            val mncStr = plmn.substring(3)
+
+            // Check 2-digit vs 3-digit zero padding ambiguity (e.g. 70801 vs 708001)
+            if (mncStr.length == 2 && mncStr.startsWith("0")) {
+                val padded3 = mcc + "0" + mncStr
+                if (padded3 in plmnSet) {
+                    failures.add("Zero-padded duplicate pair found: $plmn and $padded3")
+                }
+            } else if (mncStr.length == 3 && mncStr.startsWith("0")) {
+                val unpadded2 = mcc + mncStr.substring(1)
+                if (unpadded2 in plmnSet) {
+                    failures.add("Zero-padded duplicate pair found: $plmn and $unpadded2")
+                }
             }
         }
     }
@@ -235,9 +480,9 @@ class MccMncDbTest {
             val docPairs = docMap[mcc]
 
             if (jsonPairs != null && docPairs == null) {
-                failures.add("MCC $mcc is present in JSON but missing in documentation table")
+                failures.add("MCC $mcc is present in database (JSON) but missing in docs/operator_plmn_sources.md")
             } else if (jsonPairs == null && docPairs != null) {
-                failures.add("MCC $mcc is present in documentation table but missing in JSON")
+                failures.add("MCC $mcc is present in docs/operator_plmn_sources.md but missing in database (JSON)")
             } else if (jsonPairs != null && docPairs != null) {
                 comparePlmnPairs(mcc, jsonPairs, docPairs, failures)
             }

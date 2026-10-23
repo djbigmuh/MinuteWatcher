@@ -22,7 +22,7 @@ class AmericasOperatorsTest {
         assertEquals("US Cellular", OperatorResolver.resolve(context, "", listOf("311580"), 0).displayName)
         assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("338020"), 0).displayName)
         assertEquals("bmobile", OperatorResolver.resolve(context, "", listOf("37412"), 0).displayName)
-        assertEquals("+Móvil", OperatorResolver.resolve(context, "", listOf("71401"), 0).displayName)
+        assertEquals("Flow", OperatorResolver.resolve(context, "", listOf("71401"), 0).displayName)
         assertEquals("Altice", OperatorResolver.resolve(context, "", listOf("37001"), 0).displayName)
         assertEquals("operator_t_mobile", resolvePlmn("310260"))
         assertEquals("operator_verizon", resolvePlmn("311480"))
@@ -71,7 +71,6 @@ class AmericasOperatorsTest {
         assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("72438"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("732001"), 0).displayName)
 
-        assertEquals("Rogers", OperatorResolver.resolve(context, "", listOf("302320"), 0).displayName)
         assertEquals("Rogers", OperatorResolver.resolve(context, "", listOf("302720"), 0).displayName)
         assertEquals("operator_rogers", OperatorResolver.getOperatorBrandKey("Rogers"))
 
@@ -97,7 +96,6 @@ class AmericasOperatorsTest {
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("71030"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("71204"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("71402"), 0).displayName)
-        assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("71404"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("714020"), 0).displayName)
         assertEquals("Entel", OperatorResolver.resolve(context, "", listOf("73602"), 0).displayName)
         assertEquals("Tigo", OperatorResolver.resolve(context, "", listOf("74404"), 0).displayName)

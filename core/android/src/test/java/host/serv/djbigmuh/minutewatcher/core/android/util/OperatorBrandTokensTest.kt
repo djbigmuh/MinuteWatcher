@@ -68,11 +68,11 @@ class OperatorBrandTokensTest {
         val bmobileBrunei = OperatorResolver.resolve(context, "bmobile", listOf("52802"), 0)
         assertEquals("operator_bmobile", bmobileBrunei.brandKey)
 
-        val masMovilPanama = OperatorResolver.resolve(context, "+Móvil", listOf("71401"), 0)
-        assertEquals("operator_mas_movil", masMovilPanama.brandKey)
+        val flowPanama = OperatorResolver.resolve(context, "Flow", listOf("71401"), 0)
+        assertEquals("operator_flow", flowPanama.brandKey)
 
-        val masMovilPanamaNoName = OperatorResolver.resolve(context, "", listOf("71401"), 0)
-        assertEquals("+Móvil", masMovilPanamaNoName.displayName)
+        val flowPanamaNoName = OperatorResolver.resolve(context, "", listOf("71401"), 0)
+        assertEquals("Flow", flowPanamaNoName.displayName)
 
         val iceKolbi = OperatorResolver.resolve(context, "ICE", listOf("71201"), 0)
         assertEquals("operator_kolbi", iceKolbi.brandKey)

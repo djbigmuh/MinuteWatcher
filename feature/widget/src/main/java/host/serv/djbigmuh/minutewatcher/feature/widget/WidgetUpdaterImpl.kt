@@ -130,10 +130,11 @@ class WidgetUpdaterImpl
                 val finalRes = executeTailUpdate()
                 tailDeferred.complete(finalRes)
                 completed = true
-            } catch (_: CancellationException) {
+            } catch (e: CancellationException) {
                 AppLogger.d("WidgetUpdater: tail pass cancelled")
                 tailDeferred.complete(transientFailure(wasCoalesced = true))
                 completed = true
+                throw e
             } catch (e: Exception) {
                 AppLogger.e("WidgetUpdater: tail pass failed", e)
                 tailDeferred.complete(transientFailure(wasCoalesced = true))

@@ -1,207 +1,342 @@
-brand_key	display_name	markets	official_brand_name	brand_color_original	brand_color_adjusted	plate	glyph_source	glyph_spec	source_url	retrieved	status
-operator_mts	MTS	Global	MTS	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_megafon	MegaFon	Global	MegaFon	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_beeline	Beeline	Global	Beeline	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_tele2	Tele2	Global	Tele2	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mgts	MGTS	Global	MGTS	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_yota	Yota	Global	Yota	FF0055A5	FF0055A5	white	initials:Y	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_vodafone	Vodafone	Global	Vodafone	FFE60000	FFE60000	white	simple-icons:vodafone	vector	https://web.vodafone.com.eg	2026-10-20	verified
-operator_t_mobile	T-Mobile	Global	T-Mobile	FFE20074	FFE20074	white	simple-icons:deutschetelekom	vector	https://tmap.t-mobile.com/portals/pro74u7a/EXTBrandPortal	2026-10-20	verified
-operator_orange	Orange	Global	Orange	FFFF7900	FFFF7900	white	simple-icons:orange	vector	https://brand.orange.com	2026-10-20	verified
-operator_o2	O2	Global	O2	FF0050FF	FF0050FF	white	simple-icons:o2	vector	https://www.telefonica.de/presse/fotos/logos.html	2026-10-20	verified
-operator_att	AT&T	Global	AT&T	FF000000	FF000000	white	simple-icons:atandt	vector	https://simpleicons.org/?q=atandt	2026-10-20	verified
-operator_verizon	Verizon	Global	Verizon	FFCD040B	FFCD040B	white	simple-icons:verizon	vector	https://www.verizondigitalmedia.com/about/logo-usage/	2026-10-20	verified
-operator_tim	TIM	Global	TIM	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_windtre	WindTre	Global	WindTre	FF0055A5	FF0055A5	white	initials:W	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_sfr	SFR	Global	SFR	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_bouygues	Bouygues	Global	Bouygues	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_telekom	Telekom	Global	Telekom	FFE20074	FFE20074	white	simple-icons:deutschetelekom	vector	https://tmap.t-mobile.com/portals/pro74u7a/EXTBrandPortal	2026-10-20	verified
-operator_ntt_docomo	NTT Docomo	Global	NTT Docomo	FF0055A5	FF0055A5	white	initials:ND	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_softbank	SoftBank	Global	SoftBank	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_kddi	KDDI	Global	KDDI	FF0055A5	FF0055A5	white	initials:K	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_china_mobile	China Mobile	Global	China Mobile	FF0055A5	FF0055A5	white	initials:CM	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_china_unicom	China Unicom	Global	China Unicom	FF0055A5	FF0055A5	white	initials:CU	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_china_telecom	China Telecom	Global	China Telecom	FF0055A5	FF0055A5	white	initials:CT	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_jio	Jio	Global	Jio	FF0A2885	FF0A2885	white	simple-icons:jio	vector	https://commons.wikimedia.org/wiki/File:Reliance_Jio_Logo.svg	2026-10-20	verified
-operator_airtel	Airtel	Global	Airtel	FFE40000	FFE40000	white	simple-icons:airtel	vector	https://www.airtel.in/logo-tune	2026-10-20	verified
-operator_vi	Vi	Global	Vi	FF0055A5	FF0055A5	white	initials:V	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_bsnl	BSNL	Global	BSNL	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_stc	STC	Global	STC	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mobily	Mobily	Global	Mobily	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_zain	Zain	Global	Zain	FF0055A5	FF0055A5	white	initials:Z	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_etisalat	Etisalat	Global	Etisalat	FF0055A5	FF0055A5	white	initials:E	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_du	du	Global	du	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_kpn	KPN	Global	KPN	FF0055A5	FF0055A5	white	initials:K	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_proximus	Proximus	Global	Proximus	FF0055A5	FF0055A5	white	initials:P	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_swisscom	Swisscom	Global	Swisscom	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_sunrise	Sunrise	Global	Sunrise	FFDA291C	FFDA291C	white	simple-icons:sunrise	vector	https://www.sunrise.ch	2026-10-20	verified
-operator_salt	Salt	Global	Salt	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_telia	Telia	Global	Telia	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_telenor	Telenor	Global	Telenor	FF00C8FF	FF00C8FF	white	simple-icons:telenor	vector	https://www.telenor.no	2026-10-20	verified
-operator_elisa	Elisa	Global	Elisa	FF0055A5	FF0055A5	white	initials:E	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_dna	DNA	Global	DNA	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_plus	Plus	Global	Plus	FF0055A5	FF0055A5	white	initials:P	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_play	Play	Global	Play	FF0055A5	FF0055A5	white	initials:P	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_turkcell	Turkcell	Global	Turkcell	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_turk_telekom	Türk Telekom	Global	Türk Telekom	FF0055A5	FF0055A5	white	initials:TT	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_rostelecom	Rostelecom	Global	Rostelecom	FF0055A5	FF0055A5	white	initials:R	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_tattelecom	Tattelecom	Global	Tattelecom	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_kyivstar	Kyivstar	Global	Kyivstar	FF0055A5	FF0055A5	white	initials:K	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_lifecell	lifecell	Global	lifecell	FF0055A5	FF0055A5	white	initials:L	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_moldcell	Moldcell	Global	Moldcell	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_life_by	life:)	Global	life:)	FF0055A5	FF0055A5	white	initials:L	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_a1	A1	Global	A1	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_three	Three	Global	Three	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_base	BASE	Global	BASE	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_free	Free	Global	Free	FF0055A5	FF0055A5	white	initials:F	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_odido	Odido	Global	Odido	FF2C72FF	FF2C72FF	white	simple-icons:odido	vector	https://www.odido.nl	2026-10-20	verified
-operator_magenta	Magenta	Global	Magenta	FFE20074	FFE20074	white	simple-icons:deutschetelekom	vector	https://tmap.t-mobile.com/portals/pro74u7a/EXTBrandPortal	2026-10-20	verified
-operator_oneandone	1&1	Global	1&1	FF0055A5	FF0055A5	white	initials:1	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_yettel	Yettel	Global	Yettel	FF333333	FF333333	white	existing	vector	https://simple-icons.org	2026-10-20	verified
-operator_iliad	Iliad	Global	Iliad	FF0055A5	FF0055A5	white	initials:I	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_cosmote	Cosmote	Global	Cosmote	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_rakuten	Rakuten Mobile	Global	Rakuten Mobile	FF333333	FF333333	white	existing	vector	https://simple-icons.org	2026-10-20	verified
-operator_onenz	One NZ	Global	One NZ	FF0055A5	FF0055A5	white	initials:ON	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_tdc	TDC	Global	TDC	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ice	ice	Global	ice	FF0055A5	FF0055A5	white	initials:I	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_maxis	Maxis	Global	Maxis	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_celcom	Celcom	Global	Celcom	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_digi	Digi	Global	Digi	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_u_mobile	U Mobile	Global	U Mobile	FF0055A5	FF0055A5	white	initials:UM	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_singtel	Singtel	Global	Singtel	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_m1	M1	Global	M1	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_starhub	StarHub	Global	StarHub	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_telstra	Telstra	Global	Telstra	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_optus	Optus	Global	Optus	FF0055A5	FF0055A5	white	initials:O	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_spark	Spark	Global	Spark	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_2degrees	2degrees	Global	2degrees	FF0055A5	FF0055A5	white	initials:2	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_movistar	Movistar	Global	Movistar	FF019DF4	FF019DF4	white	simple-icons:movistar	vector	https://www.movistar.com.co	2026-10-20	verified
-operator_claro	Claro	Global	Claro	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_telcel	Telcel	Global	Telcel	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_vivo	Vivo	Global	Vivo	FF0055A5	FF0055A5	white	initials:V	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_algar	Algar	Global	Algar	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_onecall	OneCall	Global	OneCall	FF0055A5	FF0055A5	white	initials:O	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mycall	MyCall	Global	MyCall	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_phonero	Phonero	Global	Phonero	FF0055A5	FF0055A5	white	initials:P	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_talkmore	Talkmore	Global	Talkmore	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_chilimobil	Chilimobil	Global	Chilimobil	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_fjordkraft	Fjordkraft Mobil	Global	Fjordkraft Mobil	FF0055A5	FF0055A5	white	initials:FM	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_yoigo	Yoigo	Global	Yoigo	FF333333	FF333333	white	existing	vector	https://simple-icons.org	2026-10-20	verified
-operator_euskaltel	Euskaltel	Global	Euskaltel	FF0055A5	FF0055A5	white	initials:E	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_telecable	Telecable	Global	Telecable	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_r	R	Global	R	FF0055A5	FF0055A5	white	initials:R	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_simyo	simyo	Global	simyo	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_jazztel	jazztel	Global	jazztel	FF0055A5	FF0055A5	white	initials:J	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_amena	amena	Global	amena	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_masmovil	MásMóvil	Global	MásMóvil	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_pepephone	pepephone	Global	pepephone	FF0055A5	FF0055A5	white	initials:P	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_lowi	lowi	Global	lowi	FF0055A5	FF0055A5	white	initials:L	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_lebara	Lebara	Global	Lebara	FF0055A5	FF0055A5	white	initials:L	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_lycamobile	Lycamobile	Global	Lycamobile	FF0055A5	FF0055A5	white	initials:L	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_finetwork	finetwork	Global	finetwork	FF0055A5	FF0055A5	white	initials:F	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ee	EE	Global	EE	FF0055A5	FF0055A5	white	initials:E	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mobifone	MobiFone	Global	MobiFone	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_vinaphone	VinaPhone	Global	VinaPhone	FF0055A5	FF0055A5	white	initials:V	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_viettel	Viettel	Global	Viettel	FF0055A5	FF0055A5	white	initials:V	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_celcomdigi	CelcomDigi	Global	CelcomDigi	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ais	AIS	Global	AIS	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_truemove	TrueMove H	Global	TrueMove H	FF0055A5	FF0055A5	white	initials:TH	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_dtac	dtac	Global	dtac	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_sk_telecom	SK Telecom	Global	SK Telecom	FF0055A5	FF0055A5	white	initials:ST	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_kt	KT	Global	KT	FF0055A5	FF0055A5	white	initials:K	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_lg_uplus	LG U+	Global	LG U+	FF0055A5	FF0055A5	white	initials:LU	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_globe	Globe	Global	Globe	FF0055A5	FF0055A5	white	initials:G	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_smart	Smart	Global	Smart	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_dito	DITO	Global	DITO	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_telkomsel	Telkomsel	Global	Telkomsel	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_indosat	Indosat	Global	Indosat	FF0055A5	FF0055A5	white	initials:I	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_xl_axiata	XL	Global	XL	FF0055A5	FF0055A5	white	initials:X	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_smartfren	Smartfren	Global	Smartfren	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_tri_id	Tri	Global	Tri	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_cht	Chunghwa Telecom	Global	Chunghwa Telecom	FF0055A5	FF0055A5	white	initials:CT	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_taiwan_mobile	Taiwan Mobile	Global	Taiwan Mobile	FF0055A5	FF0055A5	white	initials:TM	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_fareastone	FarEasTone	Global	FarEasTone	FF0055A5	FF0055A5	white	initials:F	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_csl	CSL	Global	CSL	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_three_hk	3 Hong Kong	Global	3 Hong Kong	FF0055A5	FF0055A5	white	initials:3HK	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_smartone	SmarTone	Global	SmarTone	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ymobile	Y! Mobile	Global	Y! Mobile	FF0055A5	FF0055A5	white	initials:YM	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_au_kddi	au	Global	au	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_uq_mobile	UQ mobile	Global	UQ mobile	FF0055A5	FF0055A5	white	initials:UM	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_rogers	Rogers	Global	Rogers	FF0055A5	FF0055A5	white	initials:R	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_bell	Bell	Global	Bell	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_meo	MEO	Global	MEO	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_vivacom	Vivacom	Global	Vivacom	FF0055A5	FF0055A5	white	initials:V	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_lmt	LMT	Global	LMT	FF0055A5	FF0055A5	white	initials:L	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_eir	Eir	Global	Eir	FF0055A5	FF0055A5	white	initials:E	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_siminn	Síminn	Global	Síminn	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_go	GO	Global	GO	FF0055A5	FF0055A5	white	initials:G	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_maroc_telecom	Maroc Telecom	Global	Maroc Telecom	FF0055A5	FF0055A5	white	initials:MT	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_tunisie_telecom	Tunisie Telecom	Global	Tunisie Telecom	FF0055A5	FF0055A5	white	initials:TT	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mobilis	Mobilis	Global	Mobilis	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_azercell	Azercell	Global	Azercell	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_kcell	Kcell	Global	Kcell	FF0055A5	FF0055A5	white	initials:K	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mtn	MTN	Global	MTN	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_vodacom	Vodacom	Global	Vodacom	FF0055A5	FF0055A5	white	initials:V	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_safaricom	Safaricom	Global	Safaricom	FF0055A5	FF0055A5	white	initials:S	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_glo	Glo	Global	Glo	FF0055A5	FF0055A5	white	initials:G	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mobitel_lk	Mobitel	Global	Mobitel	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_dialog	Dialog	Global	Dialog	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_hutch_lk	Hutch	Global	Hutch	FF0055A5	FF0055A5	white	initials:H	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_jazz	Jazz	Global	Jazz	FF0055A5	FF0055A5	white	initials:J	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ufone	Ufone	Global	Ufone	FF0055A5	FF0055A5	white	initials:U	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_zong	Zong	Global	Zong	FF0055A5	FF0055A5	white	initials:Z	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_grameenphone	Grameenphone	Global	Grameenphone	FF0055A5	FF0055A5	white	initials:G	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_robi	Robi	Global	Robi	FF0055A5	FF0055A5	white	initials:R	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_banglalink	Banglalink	Global	Banglalink	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_teletalk	Teletalk	Global	Teletalk	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mytel	Mytel	Global	Mytel	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ooredoo	Ooredoo	Global	Ooredoo	FF0055A5	FF0055A5	white	initials:O	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_cellcom	Cellcom	Global	Cellcom	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_partner	Partner	Global	Partner	FF0055A5	FF0055A5	white	initials:P	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_pelephone	Pelephone	Global	Pelephone	FF0055A5	FF0055A5	white	initials:P	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_hot_mobile	Hot Mobile	Global	Hot Mobile	FF0055A5	FF0055A5	white	initials:HM	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_telus	TELUS	Global	TELUS	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_we	WE	Global	WE	FF0055A5	FF0055A5	white	initials:W	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_tigo	Tigo	Global	Tigo	FF0055A5	FF0055A5	white	initials:T	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_entel	Entel	Global	Entel	FF0055A5	FF0055A5	white	initials:E	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_personal	Personal	Global	Personal	FF0055A5	FF0055A5	white	initials:P	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_cellc	Cell C	Global	Cell C	FF0055A5	FF0055A5	white	initials:CC	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_batelco	Batelco	Global	Batelco	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_umniah	Umniah	Global	Umniah	FF0055A5	FF0055A5	white	initials:U	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_asiacell	Asiacell	Global	Asiacell	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_korek	Korek	Global	Korek	FF0055A5	FF0055A5	white	initials:K	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_awcc	AWCC	Global	AWCC	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_roshan	Roshan	Global	Roshan	FF0055A5	FF0055A5	white	initials:R	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ucell	Ucell	Global	Ucell	FF0055A5	FF0055A5	white	initials:U	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_magti	Magti	Global	Magti	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_inwi	inwi	Global	inwi	FF0055A5	FF0055A5	white	initials:I	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_djezzy	Djezzy	Global	Djezzy	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_9mobile	9mobile	Global	9mobile	FF0055A5	FF0055A5	white	initials:9	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_nova	Nova	Global	Nova	FF0055A5	FF0055A5	white	initials:N	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_wom	WOM	Global	WOM	FF0055A5	FF0055A5	white	initials:W	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_bitel	Bitel	Global	Bitel	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_digitel	Digitel	Global	Digitel	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_movilnet	Movilnet	Global	Movilnet	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_cnt	CNT	Global	CNT	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_viva_bo	Viva	Global	Viva	FF0055A5	FF0055A5	white	initials:V	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_cubacel	Cubacel	Global	Cubacel	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_digicel	Digicel	Global	Digicel	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_mpt	MPT	Global	MPT	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ntc	Nepal Telecom	Global	Nepal Telecom	FF0055A5	FF0055A5	white	initials:NT	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_ncell	Ncell	Global	Ncell	FF0055A5	FF0055A5	white	initials:N	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_cellcard	Cellcard	Global	Cellcard	FF0055A5	FF0055A5	white	initials:C	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_smart_kh	Smart Cambodia	Global	Smart Cambodia	FF0055A5	FF0055A5	white	initials:SC	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_metfone	Metfone	Global	Metfone	FF0055A5	FF0055A5	white	initials:M	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_lao_telecom	Lao Telecom	Global	Lao Telecom	FF0055A5	FF0055A5	white	initials:LT	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_unitel	Unitel	Global	Unitel	FF0055A5	FF0055A5	white	initials:U	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_bmobile	B-Mobile	Global	B-Mobile	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_dst	DST	Global	DST	FF0055A5	FF0055A5	white	initials:D	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_kolbi	Kölbi	Global	Kölbi	FF0055A5	FF0055A5	white	initials:K	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_antel	Antel	Global	Antel	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_fido	Fido	Global	Fido	FF0055A5	FF0055A5	white	initials:F	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_freedom	Freedom	Global	Freedom	FF0055A5	FF0055A5	white	initials:F	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_bite	bite	Global	bite	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_bakcell	Bakcell	Global	Bakcell	FF0055A5	FF0055A5	white	initials:B	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_nar	Nar	Global	Nar	FF0055A5	FF0055A5	white	initials:N	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_geocell	Geocell	Global	Geocell	FF0055A5	FF0055A5	white	initials:G	vector	https://en.wikipedia.org	2026-10-20	verified
-operator_altel	Altel	Global	Altel	FF0055A5	FF0055A5	white	initials:A	vector	https://en.wikipedia.org	2026-10-20	verified
+brand_key	display_name	category	simple_icons_slug	brand_color	initials
+operator_mts	MTS	B		#E60000	MTS
+operator_megafon	MegaFon	B		#009A48	MEGAFO
+operator_beeline	Beeline	B		#A08000	BEELIN
+operator_tele2	Tele2	B		#17121A	TELE2
+operator_mgts	MGTS	B		#000EA6	MGTS
+operator_yota	Yota	B		#006699	YOTA
+operator_vodafone	Vodafone	A	vodafone	#E60000	VODAFO
+operator_t_mobile	T-Mobile	A	deutschetelekom	#E20074	TMOBIL
+operator_orange	Orange	A	orange	#CC5500	ORANGE
+operator_o2	O2	A	o2	#0019A5	O2
+operator_att	AT&T	A	atandt	#008DC2	AT&T
+operator_verizon	Verizon	C		#EE0000	VERIZO
+operator_tim	TIM	B		#003399	TIM
+operator_windtre	WindTre	B		#C84000	WINDTR
+operator_sfr	SFR	B		#E1000F	SFR
+operator_bouygues	Bouygues	B		#0093B3	BOUYGU
+operator_telekom	Telekom	A	deutschetelekom	#E20074	TELEKO
+operator_ntt_docomo	NTT Docomo	B		#CC0000	DOCOMO
+operator_softbank	SoftBank	B		#111111	SOFTBA
+operator_kddi	KDDI	B		#EB6100	KDDI
+operator_china_mobile	China Mobile	B		#0085C3	CHINAM
+operator_china_unicom	China Unicom	B		#CC0000	CHINAU
+operator_china_telecom	China Telecom	B		#0044AA	CT
+operator_jio	Jio	A	jio	#0044CC	JIO
+operator_airtel	Airtel	A	airtel	#E40000	AIRTEL
+operator_vi	Vi	C		#E40000	VI
+operator_bsnl	BSNL	B		#0057B8	BSNL
+operator_stc	STC	B		#4F008C	STC
+operator_mobily	Mobily	B		#00847F	MOBILY
+operator_zain	Zain	B		#5C2D91	ZAIN
+operator_etisalat	Etisalat	B		#719B33	ETI
+operator_du	du	B		#006699	DU
+operator_kpn	KPN	B		#0050FF	KPN
+operator_proximus	Proximus	B		#A00066	PROXIM
+operator_swisscom	Swisscom	B		#3000B3	SWISSC
+operator_sunrise	Sunrise	A	sunrise	#F25B46	SUNRIS
+operator_salt	Salt	B		#1D23D1	SALT
+operator_telia	Telia	B		#660099	TELIA
+operator_telenor	Telenor	A	telenor	#0066CC	TELENO
+operator_elisa	Elisa	B		#0056B3	ELISA
+operator_dna	DNA	B		#008844	DNA
+operator_plus	Plus	B		#629300	PLUS
+operator_play	Play	B		#660099	PLAY
+operator_turkcell	Turkcell	B		#0055A5	TURKCE
+operator_turk_telekom	Türk Telekom	B		#0055A5	TRKTEL
+operator_rostelecom	Rostelecom	B		#9200CE	ROSTEL
+operator_tattelecom	Tattelecom	B		#902D91	TATTEL
+operator_kyivstar	Kyivstar	B		#0055A5	K
+operator_lifecell	lifecell	B		#0055A5	LIFECE
+operator_moldcell	Moldcell	B		#619224	MOLDCE
+operator_life_by	life:)	B		#0055A5	LIFE
+operator_a1	A1	B		#E60000	A1
+operator_three	Three	B		#E60000	THREE
+operator_base	BASE	B		#0098C8	BASE
+operator_free	Free	B		#E21B23	FREE
+operator_odido	Odido	A	odido	#FF5500	ODIDO
+operator_magenta	Magenta	C		#E20074	MAGENT
+operator_oneandone	1&1	B		#003399	1&1
+operator_yettel	Yettel	C		#C8EB00	YETTEL
+operator_iliad	Iliad	B		#CC0000	ILIAD
+operator_cosmote	Cosmote	B		#008000	COSMOT
+operator_rakuten	Rakuten Mobile	C		#BF0000	RAKUTE
+operator_onenz	One NZ	B		#0055A5	ONENZ
+operator_tdc	TDC	B		#A00023	TDC
+operator_ice	ice	B		#006699	ICE
+operator_maxis	Maxis	B		#6C2E93	MAXIS
+operator_celcom	Celcom	B		#000AB8	CEL
+operator_digi	Digi	B		#0055A5	DIGI
+operator_u_mobile	U Mobile	B		#C84000	UMOBIL
+operator_singtel	Singtel	B		#009B34	SINGTE
+operator_m1	M1	B		#005EB8	M1
+operator_starhub	StarHub	B		#379A1A	STARHU
+operator_telstra	Telstra	B		#0066CC	TELSTR
+operator_optus	Optus	B		#0055A5	OPTUS
+operator_spark	Spark	B		#005284	SPARK
+operator_2degrees	2degrees	B		#0094A0	2DEGRE
+operator_movistar	Movistar	A	movistar	#018BD8	MOVIST
+operator_claro	Claro	B		#E60000	CLARO
+operator_telcel	Telcel	B		#002B66	TELCEL
+operator_vivo	Vivo	B		#660099	VIVO
+operator_algar	Algar	B		#D6001C	ALGAR
+operator_onecall	OneCall	B		#005BB9	OC
+operator_mycall	MyCall	B		#1D6FD1	MYCALL
+operator_phonero	Phonero	B		#1D6FD1	PHONER
+operator_talkmore	Talkmore	B		#0055A5	TALKMO
+operator_chilimobil	Chilimobil	B		#CC0000	CH
+operator_fjordkraft	Fjordkraft Mobil	B		#007A87	FJORDK
+operator_yoigo	Yoigo	C		#660099	YOIGO
+operator_euskaltel	Euskaltel	B		#FF5500	EUSKAL
+operator_telecable	Telecable	B		#B80045	TELECA
+operator_r	R	B		#3B00CE	R
+operator_simyo	simyo	B		#399714	SIMYO
+operator_jazztel	jazztel	B		#C84000	JAZZTE
+operator_amena	amena	B		#5E9519	AMENA
+operator_masmovil	MásMóvil	B		#0055A5	MSMVIL
+operator_pepephone	pepephone	B		#D71920	PEPEPH
+operator_lowi	lowi	B		#6F2C91	LOWI
+operator_lebara	Lebara	B		#0084C9	LEBARA
+operator_lycamobile	Lycamobile	B		#E6007E	LYCAMO
+operator_finetwork	finetwork	B		#6E2B8D	FINETW
+operator_ee	EE	B		#141218	EE
+operator_mobifone	MobiFone	B		#9100B8	MOBI
+operator_vinaphone	VinaPhone	B		#0066CC	VINAPH
+operator_viettel	Viettel	B		#CC0000	VIETTE
+operator_celcomdigi	CelcomDigi	B		#4C2582	CDIGI
+operator_ais	AIS	B		#00AA55	AIS
+operator_truemove	TrueMove H	B		#EE0000	TRUEMO
+operator_dtac	dtac	B		#0066CC	DTAC
+operator_sk_telecom	SK Telecom	B		#009872	SKTELE
+operator_kt	KT	B		#1B5E20	KT
+operator_lg_uplus	LG U+	B		#7C8F00	LGU
+operator_globe	Globe	B		#0044AA	GLOBE
+operator_smart	Smart	B		#0090BF	SMART
+operator_dito	DITO	B		#CC0000	DITO
+operator_telkomsel	Telkomsel	B		#CC0000	TK
+operator_indosat	Indosat	B		#CC0000	IND
+operator_xl_axiata	XL	B		#0044AA	XL
+operator_smartfren	Smartfren	B		#CC0000	SF
+operator_tri_id	Tri	B		#9900CC	TRI
+operator_cht	Chunghwa Telecom	B		#1B5E20	CHUNGH
+operator_taiwan_mobile	Taiwan Mobile	B		#0091AF	TAIWAN
+operator_fareastone	FarEasTone	B		#4A148C	FAREAS
+operator_csl	CSL	B		#E65100	CSL
+operator_three_hk	3 Hong Kong	B		#006064	3HONGK
+operator_smartone	SmarTone	B		#059B00	SMARTO
+operator_ymobile	Y! Mobile	B		#311B92	YMOBIL
+operator_au_kddi	au	B		#E95E00	AU
+operator_uq_mobile	UQ mobile	B		#BF360C	UQ
+operator_rogers	Rogers	B		#D52B1E	ROGERS
+operator_bell	Bell	B		#C40000	BELL
+operator_meo	MEO	B		#001BCE	MEO
+operator_vivacom	Vivacom	B		#0011B8	VIVACO
+operator_lmt	LMT	B		#902D91	LMT
+operator_eir	Eir	B		#00A651	EIR
+operator_siminn	Síminn	B		#0055A5	SIM
+operator_go	GO	B		#002584	GO
+operator_maroc_telecom	Maroc Telecom	B		#4A0084	MAROCT
+operator_tunisie_telecom	Tunisie Telecom	B		#6200E4	TUNISI
+operator_mobilis	Mobilis	B		#002AA6	MOBILI
+operator_azercell	Azercell	B		#E4002B	AZERCE
+operator_kcell	Kcell	B		#660099	KCELL
+operator_mtn	MTN	B		#FFCC00	MTN
+operator_vodacom	Vodacom	B		#E60000	VODAC
+operator_safaricom	Safaricom	B		#009850	SAFARI
+operator_glo	Glo	B		#005C84	GLO
+operator_mobitel_lk	Mobitel	B		#1000A0	MOBITE
+operator_dialog	Dialog	B		#CC0000	DIALOG
+operator_hutch_lk	Hutch	B		#FF5500	HUTCH
+operator_jazz	Jazz	B		#CC0000	JAZZ
+operator_ufone	Ufone	B		#00AA55	UFONE
+operator_zong	Zong	B		#00AA55	ZONG
+operator_grameenphone	Grameenphone	B		#009A48	GP
+operator_robi	Robi	B		#0E9B00	ROBI
+operator_banglalink	Banglalink	B		#CC6C1B	BANGLA
+operator_teletalk	Teletalk	B		#008000	TELETA
+operator_mytel	Mytel	B		#CC0000	MY
+operator_ooredoo	Ooredoo	B		#CC0000	OOREDO
+operator_cellcom	Cellcom	B		#0066B3	CELLCO
+operator_partner	Partner	B		#006699	PARTNE
+operator_pelephone	Pelephone	B		#0072CE	PELEPH
+operator_hot_mobile	Hot Mobile	B		#E20613	HOTMOB
+operator_telus	TELUS	B		#2B8000	TELUS
+operator_we	WE	B		#5C2D91	WE
+operator_tigo	Tigo	B		#002855	TIGO
+operator_entel	Entel	B		#005BB9	ENTEL
+operator_personal	Personal	B		#0055A5	PERSON
+operator_cellc	Cell C	B		#C84000	CC
+operator_batelco	Batelco	B		#D2001A	BATELC
+operator_umniah	Umniah	B		#008000	UMNIAH
+operator_asiacell	Asiacell	B		#C8102E	ASIACE
+operator_korek	Korek	B		#005BB9	KOREK
+operator_awcc	AWCC	B		#008248	AWCC
+operator_roshan	Roshan	B		#004B87	ROSHAN
+operator_ucell	Ucell	B		#662D91	UCELL
+operator_magti	Magti	B		#E30613	MAGTI
+operator_inwi	inwi	B		#990066	INWI
+operator_djezzy	Djezzy	B		#E2001A	DJEZZY
+operator_9mobile	9mobile	B		#005E35	9MOB
+operator_nova	Nova	B		#006699	NOVA
+operator_nova_gr	Nova	B		#5C2D91	NGR
+operator_vox	VOX	B		#0055A5	VOX
+operator_red	RED	B		#D50032	RED
+operator_wom	WOM	B		#502D84	WOM
+operator_bitel	Bitel	B		#0055A5	BTL
+operator_digitel	Digitel	B		#004B87	DIGITE
+operator_movilnet	Movilnet	B		#0055A5	MOVILN
+operator_cnt	CNT	B		#006699	CNT
+operator_viva_bo	Viva	B		#008037	VBO
+operator_viva_dr	Viva	B		#E30613	VDR
+operator_cubacel	Cubacel	B		#0054A6	CUBACE
+operator_digicel	Digicel	B		#E30613	DIGICE
+operator_mpt	MPT	B		#0044AA	MPT
+operator_ntc	Nepal Telecom	B		#0044AA	NEPALT
+operator_ncell	Ncell	B		#660099	NCELL
+operator_cellcard	Cellcard	B		#0055A5	CELLCA
+operator_smart_kh	Smart Cambodia	B		#00AA55	SMTKH
+operator_metfone	Metfone	B		#009A48	MET
+operator_lao_telecom	Lao Telecom	B		#0044AA	LAOTEL
+operator_unitel	Unitel	B		#CC0000	U
+operator_bmobile	B-Mobile	B		#0072BC	BMOBIL
+operator_dst	DST	B		#0044AA	DST
+operator_china_broadnet	China Broadnet	B		#0044AA	CB
+operator_ctm	CTM	B		#CC0000	CTM
+operator_unitel_mn	Unitel	B		#00AA55	UM
+operator_mobicom	Mobicom	B		#0066CC	MBC
+operator_skytel_mn	Skytel	B		#CC0000	SKYT
+operator_g_mobile	G-Mobile	B		#0044AA	G
+operator_vietnamobile	Vietnamobile	B		#CC0000	VM
+operator_e_and	e&	B		#0044AA	E&
+operator_omantel	Omantel	B		#CC0000	OMAN
+operator_atom	ATOM	B		#00AA55	ATOM
+operator_viva	Viva	B		#CC0000	VIVA
+operator_team	Team	B		#0044AA	TEAM
+operator_ucom	Ucom	B		#CC0000	UCOM
+operator_jawwal	Jawwal	B		#0044AA	J
+operator_alfa_lb	Alfa	B		#CC0000	ALFA
+operator_touch	touch	B		#00AA55	TOUCH
+operator_syriatel	Syriatel	B		#0044AA	SYRIA
+operator_mci	MCI	B		#CC0000	MCI
+operator_irancell	Irancell	B		#009A48	IR
+operator_rightel	Rightel	B		#660099	RTL
+operator_tcell	Tcell	B		#0066CC	TC
+operator_babilon	Babilon	B		#CC0000	BBL
+operator_zet_mobile	ZET Mobile	B		#00AA55	ZETMOB
+operator_megacom	MegaCom	B		#0044AA	MC
+operator_o_kg	O!	B		#CC0000	OKG
+operator_uzmobile	Uzmobile	B		#0066CC	UZ
+operator_dhiraagu	Dhiraagu	B		#CC0000	D
+operator_tnm	TNM	B		#0044AA	TNM
+operator_mcel	mCel	B		#CC0000	MCEL
+operator_movitel	Movitel	B		#0044AA	MOVITE
+operator_telma	Telma	B		#CC0000	TM
+operator_halotel	Halotel	B		#00AA55	H
+operator_sudani	Sudani	B		#CC0000	SUDAN
+operator_libyana	Libyana	B		#0044AA	L
+operator_al_madar	Al Madar	B		#0066CC	AM
+operator_myt	my.t	B		#CC0000	MYT
+operator_emtel	Emtel	B		#0044AA	EMT
+operator_telkom_za	Telkom	B		#003399	TELKOM
+operator_rain	rain	B		#C80066	RAIN
+operator_btc_bw	BTC	B		#0066CC	BTC
+operator_zantel	Zantel	B		#CC0000	ZANTEL
+operator_telecel	Telecel	B		#CC0000	TELECE
+operator_airteltigo	AirtelTigo	B		#E40000	AT
+operator_yas	Yas	B		#00AA55	Y
+operator_moov	Moov	B		#0044AA	MOOV
+operator_expresso	Expresso	B		#0066CC	EXPRES
+operator_ethio_telecom	Ethio Telecom	B		#0066CC	ET
+operator_econet	Econet	B		#CC0000	ECO
+operator_netone	NetOne	B		#0044AA	NETONE
+operator_unitel_ao	Unitel	B		#CC0000	UNITEL
+operator_movicel	Movicel	B		#0044AA	MOVICE
+operator_mascom	Mascom	B		#00AA55	MAS
+operator_mtc_na	MTC	B		#CC0000	MTC
+operator_videotron	Vidéotron	B		#0044AA	VTR
+operator_sasktel	SaskTel	B		#00AA55	SASK
+operator_eastlink	Eastlink	B		#CC0000	EAST
+operator_us_cellular	US Cellular	B		#003399	US
+operator_flow	Flow	B		#00AA55	FLOW
+operator_bmobile_tt	bmobile	B		#CC0000	BM
+operator_mas_movil	+Móvil	B		#CC0000	MVIL
+operator_altice	Altice	B		#0066CC	ALT
+operator_one	One	B		#CC0000	ONE
+operator_mtel	m:tel	B		#0044AA	MTEL
+operator_bh_telecom	BH Telecom	B		#0066CC	BH
+operator_ht_eronet	HT Eronet	B		#00AA55	HT
+operator_vala	Vala	B		#0044AA	VALA
+operator_ipko	IPKO	B		#CC0000	IPKO
+operator_nos	NOS	B		#0044AA	NOS
+operator_fastweb	Fastweb	B		#CC0000	FASTWE
+operator_postemobile	PosteMobile	B		#CC0000	P
+operator_telemach	Telemach	B		#0044AA	TLM
+operator_sky_mobile	Sky Mobile	B		#003399	SKY
+operator_post_lu	POST Luxembourg	B		#0044AA	POST
+operator_tango_lu	Tango	B		#FF5500	TANGO
+operator_4ka	4ka	B		#CC0000	4KA
+operator_epic_cy	epic	B		#660099	EPIC
+operator_cyta	Cytamobile-Vodafone	B		#0044AA	CY
+operator_kolbi	Kölbi	B		#00A94F	KLBI
+operator_antel	Antel	B		#0055A4	ANTEL
+operator_fido	Fido	B		#009A48	FIDO
+operator_freedom	Freedom	B		#A626AA	FM
+operator_bite	bite	B		#0044AA	BITE
+operator_bakcell	Bakcell	B		#CC0000	BAKCEL
+operator_nar	Nar	B		#CC5500	NAR
+operator_silknet	Silknet	B		#551A8B	SILK
+operator_altel	Altel	B		#0044AA	ALTEL
+operator_monaco_telecom	Monaco Telecom	B		#E2001A	MT
+operator_andorra_telecom	Andorra Telecom	B		#E30613	ANDOR
+operator_gibtelecom	Gibtelecom	B		#003399	GIB
+operator_foroya_tele	Føroya Tele	B		#E30613	FT
+operator_tosa	Tosa	B		#008000	TOSA
+operator_tusass	tusass	B		#0055A5	TUSASS
+operator_prima_sm	Prima	B		#003399	PRIMA
+operator_fl1	FL1	B		#0055A5	FL1
+operator_melita	Melita	B		#0055A5	MELITA
+operator_primetel	PrimeTel	B		#003399	PRIME
+operator_t2_si	T-2	B		#0055A5	T2
+operator_unite_md	Unité	B		#0055A5	UNITE
+operator_alcom	Alcom	B		#0055A5	ALCOM
+operator_jt	JT	B		#0055A5	JT
+operator_sure	Sure	B		#0055A5	SURE
+operator_manx	Manx Telecom	B		#0055A5	MANX
+operator_airtel_vodafone	Airtel-Vodafone	B		#E60000	AV
+operator_gamcel	Gamcel	B		#008000	GAM
+operator_africell_gm	Africell	B		#E60000	AGM
+operator_qcell	QCell	B		#0055A5	QCELL
+operator_mauritel	Mauritel	B		#008000	MAUR
+operator_chinguitel	Chinguitel	B		#0055A5	CHING
+operator_mattel	Mattel	B		#E60000	MATTEL
+operator_cv_movel	CVMóvel	B		#0055A5	CVM
+operator_unitel_t	Unitel T+	B		#E60000	UTP
+operator_cst	CST	B		#0055A5	CST
+operator_unitel_st	Unitel	B		#E60000	UST
+operator_muni	Muni	B		#008000	MUNI
+operator_guinetel	Guinetel	B		#0055A5	GNT
+operator_cws	Cable & Wireless	B		#0055A5	CWS
+operator_telcom_so	Telcom	B		#0055A5	TSO
+operator_golis	Golis	B		#008000	GOLIS
+operator_hormuud	Hormuud	B		#008000	HORM
+operator_somtel	Somtel	B		#0055A5	SOMTEL
+operator_djibouti_telecom	Djibouti Telecom	B		#0055A5	DJT
+operator_smart_bi	Smart	B		#0055A5	SMTBI
+operator_lumitel	Lumitel	B		#008000	LUMI
+operator_eswatini_mobile	Eswatini Mobile	B		#E60000	ESM
+operator_comores_telecom	Comores Telecom	B		#0055A5	CTEL
+operator_eritel	Eritel	B		#0055A5	ERI
+operator_gemtel	Gemtel	B		#0055A5	GEM
+operator_zamtel	Zamtel	B		#008000	ZAM
+operator_tn_mobile	TN Mobile	B		#0055A5	TNMOB
+operator_maore	Maoré Mobile	B		#0055A5	MAORE
+operator_zeop	Zeop	B		#E60000	ZEOP
+operator_ttcl	TTCL	B		#0055A5	TTCL
+operator_faiba	Faiba	B		#0055A5	FAIBA
+operator_jambo	Jambo Telcoms	B		#0055A5	JAMBO
+operator_sabafon	Sabafon	B		#E60000	SABA
+operator_y_yemen	Y	B		#E60000	YYEM
+operator_yemen_mobile	Yemen Mobile	B		#E60000	YEMEN
+operator_tm_cell	TM Cell	B		#0055A5	TMC
+operator_africell_sl	Africell	B		#E60000	ASL
+operator_qcell_sl	QCell	B		#0055A5	QSL

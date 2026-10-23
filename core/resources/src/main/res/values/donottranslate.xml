@@ -302,4 +302,58 @@
     <string name="operator_nova_gr" translatable="false">Nova</string>
     <string name="operator_vox" translatable="false">VOX</string>
     <string name="operator_red" translatable="false">RED</string>
+    <string name="operator_monaco_telecom" translatable="false">Monaco Telecom</string>
+    <string name="operator_andorra_telecom" translatable="false">Andorra Telecom</string>
+    <string name="operator_gibtelecom" translatable="false">Gibtelecom</string>
+    <string name="operator_foroya_tele" translatable="false">Føroya Tele</string>
+    <string name="operator_tosa" translatable="false">Tosa</string>
+    <string name="operator_tusass" translatable="false">tusass</string>
+    <string name="operator_prima_sm" translatable="false">Prima</string>
+    <string name="operator_fl1" translatable="false">FL1</string>
+    <string name="operator_melita" translatable="false">Melita</string>
+    <string name="operator_primetel" translatable="false">PrimeTel</string>
+    <string name="operator_t2_si" translatable="false">T-2</string>
+    <string name="operator_unite_md" translatable="false">Unité</string>
+    <string name="operator_alcom" translatable="false">Alcom</string>
+    <string name="operator_jt" translatable="false">JT</string>
+    <string name="operator_sure" translatable="false">Sure</string>
+    <string name="operator_manx" translatable="false">Manx Telecom</string>
+    <string name="operator_airtel_vodafone" translatable="false">Airtel-Vodafone</string>
+    <string name="operator_gamcel" translatable="false">Gamcel</string>
+    <string name="operator_africell_gm" translatable="false">Africell</string>
+    <string name="operator_qcell" translatable="false">QCell</string>
+    <string name="operator_mauritel" translatable="false">Mauritel</string>
+    <string name="operator_chinguitel" translatable="false">Chinguitel</string>
+    <string name="operator_mattel" translatable="false">Mattel</string>
+    <string name="operator_cv_movel" translatable="false">CVMóvel</string>
+    <string name="operator_unitel_t" translatable="false">Unitel T+</string>
+    <string name="operator_cst" translatable="false">CST</string>
+    <string name="operator_unitel_st" translatable="false">Unitel</string>
+    <string name="operator_muni" translatable="false">Muni</string>
+    <string name="operator_guinetel" translatable="false">Guinetel</string>
+    <string name="operator_cws" translatable="false">Cable &amp; Wireless</string>
+    <string name="operator_telcom_so" translatable="false">Telcom So</string>
+    <string name="operator_golis" translatable="false">Golis</string>
+    <string name="operator_hormuud" translatable="false">Hormuud</string>
+    <string name="operator_somtel" translatable="false">Somtel</string>
+    <string name="operator_djibouti_telecom" translatable="false">Djibouti Telecom</string>
+    <string name="operator_smart_bi" translatable="false">Smart Bi</string>
+    <string name="operator_lumitel" translatable="false">Lumitel</string>
+    <string name="operator_eswatini_mobile" translatable="false">Eswatini Mobile</string>
+    <string name="operator_comores_telecom" translatable="false">Comores Telecom</string>
+    <string name="operator_eritel" translatable="false">Eritel</string>
+    <string name="operator_gemtel" translatable="false">Gemtel</string>
+    <string name="operator_zamtel" translatable="false">Zamtel</string>
+    <string name="operator_tn_mobile" translatable="false">Tn Mobile</string>
+    <string name="operator_maore" translatable="false">Maore</string>
+    <string name="operator_zeop" translatable="false">Zeop</string>
+    <string name="operator_ttcl" translatable="false">Ttcl</string>
+    <string name="operator_faiba" translatable="false">Faiba</string>
+    <string name="operator_jambo" translatable="false">Jambo</string>
+    <string name="operator_sabafon" translatable="false">Sabafon</string>
+    <string name="operator_y_yemen" translatable="false">Y Yemen</string>
+    <string name="operator_yemen_mobile" translatable="false">Yemen Mobile</string>
+    <string name="operator_tm_cell" translatable="false">Tm Cell</string>
+    <string name="operator_africell_sl" translatable="false">Africell Sl</string>
+    <string name="operator_qcell_sl" translatable="false">Qcell Sl</string>
 </resources>
