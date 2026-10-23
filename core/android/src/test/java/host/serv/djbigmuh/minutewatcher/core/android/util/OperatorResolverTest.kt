@@ -225,7 +225,8 @@ class OperatorResolverTest {
 
     @Test
     fun `getOperatorResourceId returns operator_telekom for Telekom`() {
-        assertEquals(R.string.operator_telekom, OperatorResolver.getOperatorResourceId("Telekom"))
+        assertNull(OperatorResolver.getOperatorResourceId("Telekom"))
+        assertEquals(R.string.operator_telekom, OperatorResolver.getOperatorResourceId("Deutsche Telekom"))
     }
 
     @Test
@@ -365,7 +366,7 @@ class OperatorResolverTest {
         assertEquals(R.string.operator_turk_telekom, OperatorResolver.getOperatorResourceId("Türk Telekom"))
         assertEquals(R.string.operator_turk_telekom, OperatorResolver.getOperatorResourceId("Turk Telekom"))
         assertEquals(R.string.operator_turk_telekom, OperatorResolver.getOperatorResourceId("TÜRK TELEKOM"))
-        assertEquals(R.string.operator_telekom, OperatorResolver.getOperatorResourceId("Telekom"))
+        assertNull(OperatorResolver.getOperatorResourceId("Telekom"))
         assertEquals(R.string.operator_telekom, OperatorResolver.getOperatorResourceId("Deutsche Telekom"))
         assertEquals(R.string.operator_turkcell, OperatorResolver.getOperatorResourceId("Turkcell"))
         assertEquals(R.string.operator_yota, OperatorResolver.getOperatorResourceId("Йота"))
@@ -458,5 +459,47 @@ class OperatorResolverTest {
     @Test
     fun `simutils get operator icon resource for operator three`() {
         assertEquals(R.drawable.ic_operator_three, SimUtils.getOperatorIconResource("operator_three"))
+    }
+
+    @Test
+    fun `ambiguous generic brand tokens resolution regression tests`() {
+        val jsonCustom =
+            """
+            {
+                "51503": "operator_smart",
+                "45602": "operator_smart_kh",
+                "45703": "operator_unitel",
+                "63102": "operator_unitel_ao",
+                "42888": "operator_unitel_mn",
+                "26201": "operator_telekom",
+                "29341": "operator_telekom_si",
+                "22603": "operator_vodafone"
+            }
+            """.trimIndent()
+
+        whenever(assets.open(any())).thenAnswer {
+            ByteArrayInputStream(jsonCustom.toByteArray(Charsets.UTF_8))
+        }
+        OperatorResolver.reset()
+
+        assertNull(OperatorResolver.getOperatorBrandKey("Smart"))
+        assertNull(OperatorResolver.getOperatorBrandKey("Unitel"))
+        assertNull(OperatorResolver.getOperatorBrandKey("Telekom"))
+
+        assertEquals("operator_smart", OperatorResolver.resolve(context, "Smart", listOf("51503"), 0).brandKey)
+        assertEquals("operator_smart_kh", OperatorResolver.resolve(context, "Smart", listOf("45602"), 0).brandKey)
+        assertEquals("operator_smart_kh", OperatorResolver.resolve(context, "Smart Axiata", emptyList(), 0).brandKey)
+
+        assertEquals("operator_unitel", OperatorResolver.resolve(context, "Unitel", listOf("45703"), 0).brandKey)
+        assertEquals("operator_unitel_ao", OperatorResolver.resolve(context, "Unitel", listOf("63102"), 0).brandKey)
+        assertEquals("operator_unitel_mn", OperatorResolver.resolve(context, "Unitel", listOf("42888"), 0).brandKey)
+
+        assertEquals("operator_telekom", OperatorResolver.resolve(context, "Telekom", listOf("26201"), 0).brandKey)
+        assertEquals("operator_telekom_si", OperatorResolver.resolve(context, "Telekom", listOf("29341"), 0).brandKey)
+        assertEquals("operator_vodafone", OperatorResolver.resolve(context, "Telekom", listOf("22603"), 0).brandKey)
+
+        val unmappedSmart = OperatorResolver.resolve(context, "Smart", emptyList(), 0)
+        assertNull(unmappedSmart.brandKey)
+        assertEquals("Smart", unmappedSmart.displayName)
     }
 }

@@ -18,6 +18,9 @@ To add a new operator brand to the application, the following seven artifacts mu
 ## MVNO Handling
 Virtual network operators (MVNOs) typically share the PLMN of their host mobile network operator (MNO). Consequently, MVNOs are identified by their subscription network name rather than direct PLMN matching. Dedicated PLMN entries in `mcc_mnc_db.json` are not added for MVNO brands that piggyback on host network PLMNs.
 
+## Ambiguous Brand Names
+Single tokens that are common to unrelated brands across different countries are not registered. Resolution is performed by PLMN from `mcc_mnc_db.json`. Only unambiguous compound tokens are registered.
+
 ## Unsupported Networks
 When a network is encountered whose MCC/MNC is absent from `mcc_mnc_db.json` or whose brand is unmapped, the application falls back to displaying the subscription network name or the MCC/MNC identifier string, using the generic `ic_unknown` icon.
 
