@@ -52,6 +52,19 @@ class CentralNorthernEuropeOperatorsTest {
     }
 
     @Test
+    fun `test Liechtenstein operator mappings`() {
+        val res29501 = OperatorResolver.resolve(context, "", listOf("29501"), 0)
+        assertEquals("operator_swisscom", res29501.brandKey)
+
+        val res29502 = OperatorResolver.resolve(context, "", listOf("29502"), 0)
+        assertEquals("operator_salt_li", res29502.brandKey)
+
+        val res29505 = OperatorResolver.resolve(context, "", listOf("29505"), 0)
+        assertEquals("FL1", res29505.displayName)
+        assertEquals("operator_fl1", res29505.brandKey)
+    }
+
+    @Test
     fun `test Central and Northern Europe brand tokens resolve to resource strings`() {
         assertEquals(R.string.operator_magenta, OperatorResolver.getOperatorResourceId("magenta") as Int)
         assertEquals(R.string.operator_magenta, OperatorResolver.getOperatorResourceId("magenta telekom") as Int)

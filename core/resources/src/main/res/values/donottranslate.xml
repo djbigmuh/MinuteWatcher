@@ -50,6 +50,7 @@
     <string name="operator_swisscom" translatable="false">Swisscom</string>
     <string name="operator_sunrise" translatable="false">Sunrise</string>
     <string name="operator_salt" translatable="false">Salt</string>
+    <string name="operator_salt_li" translatable="false">Salt</string>
     <string name="operator_safaricom" translatable="false">Safaricom</string>
     <string name="operator_telia" translatable="false">Telia</string>
     <string name="operator_telenor" translatable="false">Telenor</string>

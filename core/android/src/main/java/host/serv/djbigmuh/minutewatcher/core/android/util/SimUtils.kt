@@ -46,6 +46,7 @@ object SimUtils {
             R.string.operator_swisscom to R.drawable.ic_operator_swisscom,
             R.string.operator_sunrise to R.drawable.ic_operator_sunrise,
             R.string.operator_salt to R.drawable.ic_operator_salt,
+            R.string.operator_salt_li to R.drawable.ic_operator_salt_li,
             R.string.operator_telia to R.drawable.ic_operator_telia,
             R.string.operator_telenor to R.drawable.ic_operator_telenor,
             R.string.operator_elisa to R.drawable.ic_operator_elisa,

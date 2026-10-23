@@ -227,6 +227,8 @@ internal object OperatorBrandTokens {
             "proximus" to "operator_proximus",
             "swisscom" to "operator_swisscom",
             "sunrise" to "operator_sunrise",
+            "salt li" to "operator_salt_li",
+            "salt liechtenstein" to "operator_salt_li",
             "telia" to "operator_telia",
             "telenor" to "operator_telenor",
             "elisa" to "operator_elisa",

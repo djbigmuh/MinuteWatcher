@@ -42,6 +42,7 @@ object OperatorBrandDatabase {
             "operator_swisscom" to R.string.operator_swisscom,
             "operator_sunrise" to R.string.operator_sunrise,
             "operator_salt" to R.string.operator_salt,
+            "operator_salt_li" to R.string.operator_salt_li,
             "operator_telia" to R.string.operator_telia,
             "operator_telenor" to R.string.operator_telenor,
             "operator_elisa" to R.string.operator_elisa,
