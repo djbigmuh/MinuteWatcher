@@ -97,5 +97,18 @@ class SubSaharanAfricaOperatorsTest {
 
         val res64282 = OperatorResolver.resolve(context, "", listOf("64282"), 0)
         assertEquals("operator_econet", res64282.brandKey)
+
+        val res61301 = OperatorResolver.resolve(context, "", listOf("61301"), 0)
+        assertEquals("operator_moov", res61301.brandKey)
+
+        val res61302 = OperatorResolver.resolve(context, "", listOf("61302"), 0)
+        assertEquals("Orange", res61302.displayName)
+        assertEquals("operator_orange", res61302.brandKey)
+
+        val res61303 = OperatorResolver.resolve(context, "", listOf("61303"), 0)
+        assertEquals("operator_telecel", res61303.brandKey)
+
+        val res61001 = OperatorResolver.resolve(context, "", listOf("61001"), 0)
+        assertEquals("operator_moov", res61001.brandKey)
     }
 }
