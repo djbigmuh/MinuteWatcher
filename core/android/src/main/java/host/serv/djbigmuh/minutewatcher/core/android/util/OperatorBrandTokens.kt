@@ -495,6 +495,7 @@ internal object OperatorBrandTokens {
             "zet mobile" to "operator_zet_mobile",
             "megacom" to "operator_megacom",
             "uzmobile" to "operator_uzmobile",
+            "mobiuz" to "operator_mobiuz",
             "dhiraagu" to "operator_dhiraagu",
             "myt" to "operator_myt",
             "tnm" to "operator_tnm",

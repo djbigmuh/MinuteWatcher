@@ -290,6 +290,7 @@
     <string name="operator_megacom" translatable="false">MegaCom</string>
     <string name="operator_o_kg" translatable="false">O!</string>
     <string name="operator_uzmobile" translatable="false">Uzmobile</string>
+    <string name="operator_mobiuz" translatable="false">Mobiuz</string>
     <string name="operator_dhiraagu" translatable="false">Dhiraagu</string>
     <string name="operator_china_broadnet" translatable="false">China Broadnet</string>
     <string name="operator_ctm" translatable="false">CTM</string>

@@ -232,6 +232,7 @@ object OperatorBrandDatabase {
             "operator_megacom" to R.string.operator_megacom,
             "operator_o_kg" to R.string.operator_o_kg,
             "operator_uzmobile" to R.string.operator_uzmobile,
+            "operator_mobiuz" to R.string.operator_mobiuz,
             "operator_dhiraagu" to R.string.operator_dhiraagu,
             "operator_tnm" to R.string.operator_tnm,
             "operator_mcel" to R.string.operator_mcel,

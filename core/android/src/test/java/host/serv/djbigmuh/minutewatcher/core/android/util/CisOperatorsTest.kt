@@ -98,5 +98,19 @@ class CisOperatorsTest {
         val resultLifecell = OperatorResolver.resolve(context, "lifecell", emptyList(), 0)
         assertEquals("lifecell", resultLifecell.displayName)
         assertEquals("operator_lifecell", resultLifecell.brandKey)
+
+        val res43407 = OperatorResolver.resolve(context, "", listOf("43407"), 0)
+        assertEquals("Mobiuz", res43407.displayName)
+        assertEquals("operator_mobiuz", res43407.brandKey)
+
+        val res43408 = OperatorResolver.resolve(context, "", listOf("43408"), 0)
+        assertEquals(context.getString(R.string.operator_uzmobile), res43408.displayName)
+        assertEquals("operator_uzmobile", res43408.brandKey)
+
+        val resMobiuzNamed = OperatorResolver.resolve(context, "Mobiuz", emptyList(), 0)
+        assertEquals("operator_mobiuz", resMobiuzNamed.brandKey)
+
+        val res43405 = OperatorResolver.resolve(context, "", listOf("43405"), 0)
+        assertEquals("operator_ucell", res43405.brandKey)
     }
 }

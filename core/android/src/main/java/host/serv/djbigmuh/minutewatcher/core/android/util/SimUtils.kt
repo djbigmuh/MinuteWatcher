@@ -219,6 +219,7 @@ object SimUtils {
             R.string.operator_megacom to R.drawable.ic_operator_megacom,
             R.string.operator_o_kg to R.drawable.ic_operator_o_kg,
             R.string.operator_uzmobile to R.drawable.ic_operator_uzmobile,
+            R.string.operator_mobiuz to R.drawable.ic_operator_mobiuz,
             R.string.operator_dhiraagu to R.drawable.ic_operator_dhiraagu,
             R.string.operator_tnm to R.drawable.ic_operator_tnm,
             R.string.operator_mcel to R.drawable.ic_operator_mcel,
