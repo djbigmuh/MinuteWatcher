@@ -3,13 +3,25 @@ package host.serv.djbigmuh.minutewatcher.core.android.util
 /**
  * Internal storage for operator brand search tokens.
  *
- * Token keys are globally unique across all partial maps. Uniqueness violation throws an
- * [IllegalStateException] during initialization. The iteration order of [tokenToResKey] is
+ * Token keys are globally unique across all partial maps and within each partial map.
+ * Uniqueness violation throws an [IllegalStateException] during initialization. The iteration order of [tokenToResKey] is
  * deterministic, preserving the order of entries in the partial maps.
  */
 internal object OperatorBrandTokens {
+    internal fun tokenMapOf(vararg pairs: Pair<String, String>): Map<String, String> {
+        val result = LinkedHashMap<String, String>()
+        for ((key, value) in pairs) {
+            val previous = result.put(key, value)
+            if (previous != null) {
+                throw IllegalStateException(
+                    "Duplicate operator brand token key '$key' mapped to '$previous' and '$value'",
+                )
+            }
+        }
+        return result
+    }
     private val americasAndWesternEuropeTokens =
-        mapOf(
+        tokenMapOf(
             "bell" to "operator_bell",
             "bell mobility" to "operator_bell",
             "rogers" to "operator_rogers",
@@ -107,12 +119,10 @@ internal object OperatorBrandTokens {
             "andorratelecom" to "operator_andorra_telecom",
             "somandorra" to "operator_andorra_telecom",
             "gibtelecom" to "operator_gibtelecom",
-            "gibtelecom" to "operator_gibtelecom",
             "gibtel" to "operator_gibtelecom",
             "føroya tele" to "operator_foroya_tele",
             "foroya tele" to "operator_foroya_tele",
             "ftele" to "operator_foroya_tele",
-            "tosa" to "operator_tosa",
             "tosa" to "operator_tosa",
             "hey" to "operator_tosa",
             "kall" to "operator_tosa",
@@ -123,8 +133,6 @@ internal object OperatorBrandTokens {
             "fl1" to "operator_fl1",
             "telecom liechtenstein" to "operator_fl1",
             "melita" to "operator_melita",
-            "melita" to "operator_melita",
-            "primetel" to "operator_primetel",
             "primetel" to "operator_primetel",
             "t-2" to "operator_t2_si",
             "t2 slovenija" to "operator_t2_si",
@@ -143,60 +151,39 @@ internal object OperatorBrandTokens {
             "airtel-vodafone" to "operator_airtel_vodafone",
             "airtel vodafone" to "operator_airtel_vodafone",
             "gamcel" to "operator_gamcel",
-            "gamcel" to "operator_gamcel",
             "africell gambia" to "operator_africell_gm",
             "africell gm" to "operator_africell_gm",
             "qcell" to "operator_qcell",
-            "qcell" to "operator_qcell",
-            "mauritel" to "operator_mauritel",
             "mauritel" to "operator_mauritel",
             "chinguitel" to "operator_chinguitel",
-            "chinguitel" to "operator_chinguitel",
-            "mattel" to "operator_mattel",
             "mattel" to "operator_mattel",
             "cvmóvel" to "operator_cv_movel",
             "cvmovel" to "operator_cv_movel",
-            "cvmovel" to "operator_cv_movel",
-            "unitel t+" to "operator_unitel_t",
             "unitel t+" to "operator_unitel_t",
             "cst" to "operator_cst",
             "cst sao tome" to "operator_cst",
             "unitel sao tome" to "operator_unitel_st",
             "unitel st" to "operator_unitel_st",
             "muni" to "operator_muni",
-            "muni" to "operator_muni",
-            "guinetel" to "operator_guinetel",
             "guinetel" to "operator_guinetel",
             "cable & wireless" to "operator_cws",
             "cws seychelles" to "operator_cws",
             "telcom somalia" to "operator_telcom_so",
             "telcom so" to "operator_telcom_so",
             "golis" to "operator_golis",
-            "golis" to "operator_golis",
-            "hormuud" to "operator_hormuud",
             "hormuud" to "operator_hormuud",
             "somtel" to "operator_somtel",
-            "somtel" to "operator_somtel",
-            "djibouti telecom" to "operator_djibouti_telecom",
             "djibouti telecom" to "operator_djibouti_telecom",
             "smart burundi" to "operator_smart_bi",
             "lumitel" to "operator_lumitel",
-            "lumitel" to "operator_lumitel",
-            "eswatini mobile" to "operator_eswatini_mobile",
             "eswatini mobile" to "operator_eswatini_mobile",
             "comores telecom" to "operator_comores_telecom",
-            "comores telecom" to "operator_comores_telecom",
-            "eritel" to "operator_eritel",
             "eritel" to "operator_eritel",
             "gemtel" to "operator_gemtel",
-            "gemtel" to "operator_gemtel",
             "zamtel" to "operator_zamtel",
-            "zamtel" to "operator_zamtel",
-            "tn mobile" to "operator_tn_mobile",
             "tn mobile" to "operator_tn_mobile",
             "maoré mobile" to "operator_maore",
             "maore mobile" to "operator_maore",
-            "zeop" to "operator_zeop",
             "zeop" to "operator_zeop",
             "ttcl" to "operator_ttcl",
             "ttcl tanzania" to "operator_ttcl",
@@ -205,10 +192,8 @@ internal object OperatorBrandTokens {
             "jambo telcoms" to "operator_jambo",
             "jambo" to "operator_jambo",
             "sabafon" to "operator_sabafon",
-            "sabafon" to "operator_sabafon",
             "y yemen" to "operator_y_yemen",
             "y telecom" to "operator_y_yemen",
-            "yemen mobile" to "operator_yemen_mobile",
             "yemen mobile" to "operator_yemen_mobile",
             "tm cell" to "operator_tm_cell",
             "altyn asyr" to "operator_tm_cell",
@@ -219,7 +204,7 @@ internal object OperatorBrandTokens {
         )
 
     private val europeAndAsiaTokens =
-        mapOf(
+        tokenMapOf(
             "stc" to "operator_stc",
             "mobily" to "operator_mobily",
             "zain" to "operator_zain",
@@ -317,7 +302,7 @@ internal object OperatorBrandTokens {
         )
 
     private val asiaPacificAndMiddleEastTokens =
-        mapOf(
+        tokenMapOf(
             "sk telecom" to "operator_sk_telecom",
             "skt" to "operator_sk_telecom",
             "sk 텔레콤" to "operator_sk_telecom",
@@ -426,7 +411,7 @@ internal object OperatorBrandTokens {
         )
 
     private val globalAndRegionalTokens =
-        mapOf(
+        tokenMapOf(
             "nova iceland" to "operator_nova",
             "nova.is" to "operator_nova",
             "nova greece" to "operator_nova_gr",

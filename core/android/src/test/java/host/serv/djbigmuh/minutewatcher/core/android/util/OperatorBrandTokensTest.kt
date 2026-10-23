@@ -51,6 +51,29 @@ class OperatorBrandTokensTest {
     }
 
     @Test
+    fun `tokenMapOf throws on duplicate key`() {
+        try {
+            OperatorBrandTokens.tokenMapOf(
+                "dup" to "val1",
+                "dup" to "val2",
+            )
+            fail("Expected IllegalStateException")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message?.contains("dup") == true)
+            assertTrue(e.message?.contains("val1") == true && e.message?.contains("val2") == true)
+        }
+    }
+
+    @Test
+    fun `tokenToResKey validation`() {
+        val tokenMap = OperatorBrandTokens.tokenToResKey
+        assertTrue(tokenMap.isNotEmpty())
+        for ((_, brandKey) in tokenMap) {
+            assertTrue(OperatorBrandDatabase.operatorResourceMap.containsKey(brandKey))
+        }
+    }
+
+    @Test
     fun `operator brand resolution regression tests for restructured tokens`() {
         assertEquals("operator_masmovil", OperatorResolver.getOperatorBrandKey("MASMovil"))
         assertEquals("operator_masmovil", OperatorResolver.getOperatorBrandKey("MásMóvil"))
