@@ -36,6 +36,22 @@ class CentralNorthernEuropeOperatorsTest {
     }
 
     @Test
+    fun `test Romania operator mappings`() {
+        val result22603 = OperatorResolver.resolve(context, "", listOf("22603"), 0)
+        assertEquals("Vodafone", result22603.displayName)
+        assertEquals("operator_vodafone", result22603.brandKey)
+
+        val result22606 = OperatorResolver.resolve(context, "", listOf("22606"), 0)
+        assertEquals("operator_vodafone", result22606.brandKey)
+
+        val result22601 = OperatorResolver.resolve(context, "", listOf("22601"), 0)
+        assertEquals("operator_vodafone", result22601.brandKey)
+
+        val result22610 = OperatorResolver.resolve(context, "", listOf("22610"), 0)
+        assertEquals("operator_orange", result22610.brandKey)
+    }
+
+    @Test
     fun `test Central and Northern Europe brand tokens resolve to resource strings`() {
         assertEquals(R.string.operator_magenta, OperatorResolver.getOperatorResourceId("magenta") as Int)
         assertEquals(R.string.operator_magenta, OperatorResolver.getOperatorResourceId("magenta telekom") as Int)
