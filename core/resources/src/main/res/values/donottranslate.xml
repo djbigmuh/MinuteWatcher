@@ -291,7 +291,7 @@
     <string name="operator_zet_mobile" translatable="false">ZET Mobile</string>
     <string name="operator_megacom" translatable="false">MegaCom</string>
     <string name="operator_o_kg" translatable="false">O!</string>
-    <string name="operator_uzmobile" translatable="false">Uzmobile</string>
+    <string name="operator_uzmobile" translatable="false">UzMobile</string>
     <string name="operator_mobiuz" translatable="false">Mobiuz</string>
     <string name="operator_dhiraagu" translatable="false">Dhiraagu</string>
     <string name="operator_china_broadnet" translatable="false">China Broadnet</string>
@@ -335,28 +335,28 @@
     <string name="operator_muni" translatable="false">Muni</string>
     <string name="operator_guinetel" translatable="false">Guinetel</string>
     <string name="operator_cws" translatable="false">Cable &amp; Wireless</string>
-    <string name="operator_telcom_so" translatable="false">Telcom So</string>
+    <string name="operator_telcom_so" translatable="false">Telcom Somalia</string>
     <string name="operator_golis" translatable="false">Golis</string>
     <string name="operator_hormuud" translatable="false">Hormuud</string>
     <string name="operator_somtel" translatable="false">Somtel</string>
     <string name="operator_djibouti_telecom" translatable="false">Djibouti Telecom</string>
-    <string name="operator_smart_bi" translatable="false">Smart Bi</string>
+    <string name="operator_smart_bi" translatable="false">Smart Mobile</string>
     <string name="operator_lumitel" translatable="false">Lumitel</string>
     <string name="operator_eswatini_mobile" translatable="false">Eswatini Mobile</string>
     <string name="operator_comores_telecom" translatable="false">Comores Telecom</string>
     <string name="operator_eritel" translatable="false">Eritel</string>
     <string name="operator_gemtel" translatable="false">Gemtel</string>
     <string name="operator_zamtel" translatable="false">Zamtel</string>
-    <string name="operator_tn_mobile" translatable="false">Tn Mobile</string>
-    <string name="operator_maore" translatable="false">Maore</string>
+    <string name="operator_tn_mobile" translatable="false">TN Mobile</string>
+    <string name="operator_maore" translatable="false">Maoré Mobile</string>
     <string name="operator_zeop" translatable="false">Zeop</string>
-    <string name="operator_ttcl" translatable="false">Ttcl</string>
+    <string name="operator_ttcl" translatable="false">TTCL</string>
     <string name="operator_faiba" translatable="false">Faiba</string>
     <string name="operator_jambo" translatable="false">Jambo</string>
     <string name="operator_sabafon" translatable="false">Sabafon</string>
-    <string name="operator_y_yemen" translatable="false">Y Yemen</string>
+    <string name="operator_y_yemen" translatable="false">Y</string>
     <string name="operator_yemen_mobile" translatable="false">Yemen Mobile</string>
-    <string name="operator_tm_cell" translatable="false">Tm Cell</string>
-    <string name="operator_africell_sl" translatable="false">Africell Sl</string>
-    <string name="operator_qcell_sl" translatable="false">Qcell Sl</string>
+    <string name="operator_tm_cell" translatable="false">TM Cell</string>
+    <string name="operator_africell_sl" translatable="false">Africell</string>
+    <string name="operator_qcell_sl" translatable="false">QCell</string>
 </resources>
