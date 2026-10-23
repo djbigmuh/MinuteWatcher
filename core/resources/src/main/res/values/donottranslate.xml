@@ -370,4 +370,15 @@
     <string name="operator_seatel" translatable="false">SEATEL</string>
     <string name="operator_etl" translatable="false">ETL</string>
     <string name="operator_smartcell" translatable="false">SmartCell</string>
+    <string name="operator_smile" translatable="false">Smile</string>
+    <string name="operator_our_telekom" translatable="false">Our Telekom</string>
+    <string name="operator_ucall" translatable="false">U-Call</string>
+    <string name="operator_bluesky" translatable="false">Bluesky</string>
+    <string name="operator_mobilis_nc" translatable="false">Mobilis</string>
+    <string name="operator_vini" translatable="false">Vini</string>
+    <string name="operator_frigate" translatable="false">Frigate</string>
+    <string name="operator_fsm_telecom" translatable="false">FSM Telecom</string>
+    <string name="operator_pncc" translatable="false">PNCC</string>
+    <string name="operator_ttc" translatable="false">TTC</string>
+    <string name="operator_nta" translatable="false">NTA</string>
 </resources>

@@ -354,3 +354,14 @@ operator_tashicell	TashiCell	B		#008000	TASHI
 operator_seatel	SEATEL	B		#CC0000	SEATEL
 operator_etl	ETL	B		#0055A5	ETL
 operator_smartcell	SmartCell	B		#00AA55	SCELL
+operator_smile	Smile	B		#00AA55	SMILE
+operator_our_telekom	Our Telekom	B		#0055A5	OURTEL
+operator_ucall	U-Call	B		#CC0000	UCALL
+operator_bluesky	Bluesky	B		#0066CC	BSKY
+operator_mobilis_nc	Mobilis	B		#00A859	MOBNC
+operator_vini	Vini	B		#CC0000	VINI
+operator_frigate	Frigate	B		#0055A5	FRIG
+operator_fsm_telecom	FSM Telecom	B		#0055A5	FSM
+operator_pncc	PNCC	B		#0055A5	PNCC
+operator_ttc	TTC	B		#0055A5	TTC
+operator_nta	NTA	B		#0055A5	NTA

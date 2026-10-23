@@ -24,6 +24,23 @@ class OceaniaOperatorsTest {
         assertEquals("B-Mobile", resolveDisplayName("53701"))
         assertEquals("Digicel", resolveDisplayName("53703"))
         assertEquals("Digicel", resolveDisplayName("54105"))
+
+        assertEquals("operator_smile", OperatorResolver.resolve(context, "", listOf("54101"), 0).brandKey)
+        assertEquals("operator_our_telekom", OperatorResolver.resolve(context, "", listOf("54002"), 0).brandKey)
+        assertEquals("operator_ucall", OperatorResolver.resolve(context, "", listOf("53901"), 0).brandKey)
+        assertEquals("operator_digicel", OperatorResolver.resolve(context, "", listOf("53988"), 0).brandKey)
+        assertEquals("operator_digicel", OperatorResolver.resolve(context, "", listOf("54900"), 0).brandKey)
+        assertEquals("operator_bluesky", OperatorResolver.resolve(context, "", listOf("54901"), 0).brandKey)
+        assertEquals("operator_bluesky", OperatorResolver.resolve(context, "", listOf("54411"), 0).brandKey)
+        assertEquals("operator_mobilis_nc", OperatorResolver.resolve(context, "", listOf("54601"), 0).brandKey)
+        assertEquals("operator_vini", OperatorResolver.resolve(context, "", listOf("54720"), 0).brandKey)
+        assertEquals("operator_vodafone", OperatorResolver.resolve(context, "", listOf("54801"), 0).brandKey)
+        assertEquals("operator_frigate", OperatorResolver.resolve(context, "", listOf("54509"), 0).brandKey)
+        assertEquals("operator_fsm_telecom", OperatorResolver.resolve(context, "", listOf("55001"), 0).brandKey)
+        assertEquals("operator_pncc", OperatorResolver.resolve(context, "", listOf("55201"), 0).brandKey)
+        assertEquals("operator_ttc", OperatorResolver.resolve(context, "", listOf("55301"), 0).brandKey)
+        assertEquals("operator_digicel", OperatorResolver.resolve(context, "", listOf("55502"), 0).brandKey)
+        assertEquals("operator_nta", OperatorResolver.resolve(context, "", listOf("55101"), 0).brandKey)
     }
 
     @Test
