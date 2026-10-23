@@ -61,5 +61,17 @@ class SubSaharanAfricaOperatorsTest {
         assertEquals("SFR", OperatorResolver.resolve(context, "", listOf("64710"), 0).displayName)
         assertEquals("Airtel", OperatorResolver.resolve(context, "", listOf("65010"), 0).displayName)
         assertEquals("Orange", OperatorResolver.resolve(context, "", listOf("65202"), 0).displayName)
+
+        val res61402 = OperatorResolver.resolve(context, "", listOf("61402"), 0)
+        assertEquals("Airtel", res61402.displayName)
+        assertEquals("operator_airtel", res61402.brandKey)
+
+        val res61403 = OperatorResolver.resolve(context, "", listOf("61403"), 0)
+        assertEquals("Moov", res61403.displayName)
+        assertEquals("operator_moov", res61403.brandKey)
+
+        val res61404 = OperatorResolver.resolve(context, "", listOf("61404"), 0)
+        assertEquals("Orange", res61404.displayName)
+        assertEquals("operator_orange", res61404.brandKey)
     }
 }
