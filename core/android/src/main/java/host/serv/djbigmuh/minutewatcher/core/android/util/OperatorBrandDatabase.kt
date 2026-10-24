@@ -436,6 +436,20 @@ object OperatorBrandDatabase {
             "operator_country_wireless" to R.string.operator_country_wireless,
             "operator_speedwavz" to R.string.operator_speedwavz,
             "operator_mobi" to R.string.operator_mobi,
+            "operator_iconnect" to R.string.operator_iconnect,
+            "operator_viya" to R.string.operator_viya,
+            "operator_astca" to R.string.operator_astca,
+            "operator_union_wireless" to R.string.operator_union_wireless,
+            "operator_mta" to R.string.operator_mta,
+            "operator_gci" to R.string.operator_gci,
+            "operator_cspire" to R.string.operator_cspire,
+            "operator_appalachian" to R.string.operator_appalachian,
+            "operator_carolina_west" to R.string.operator_carolina_west,
+            "operator_copper_valley" to R.string.operator_copper_valley,
+            "operator_viaero" to R.string.operator_viaero,
+            "operator_pioneer_cellular" to R.string.operator_pioneer_cellular,
+            "operator_thumb" to R.string.operator_thumb,
+            "operator_strata" to R.string.operator_strata,
         )
 
     val tokenToResKey: Map<String, String> = OperatorBrandTokens.tokenToResKey

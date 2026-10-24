@@ -440,6 +440,20 @@ object SimUtils {
             R.string.operator_country_wireless to R.drawable.ic_operator_country_wireless,
             R.string.operator_speedwavz to R.drawable.ic_operator_speedwavz,
             R.string.operator_mobi to R.drawable.ic_operator_mobi,
+            R.string.operator_iconnect to R.drawable.ic_operator_iconnect,
+            R.string.operator_viya to R.drawable.ic_operator_viya,
+            R.string.operator_astca to R.drawable.ic_operator_astca,
+            R.string.operator_union_wireless to R.drawable.ic_operator_union_wireless,
+            R.string.operator_mta to R.drawable.ic_operator_mta,
+            R.string.operator_gci to R.drawable.ic_operator_gci,
+            R.string.operator_cspire to R.drawable.ic_operator_cspire,
+            R.string.operator_appalachian to R.drawable.ic_operator_appalachian,
+            R.string.operator_carolina_west to R.drawable.ic_operator_carolina_west,
+            R.string.operator_copper_valley to R.drawable.ic_operator_copper_valley,
+            R.string.operator_viaero to R.drawable.ic_operator_viaero,
+            R.string.operator_pioneer_cellular to R.drawable.ic_operator_pioneer_cellular,
+            R.string.operator_thumb to R.drawable.ic_operator_thumb,
+            R.string.operator_strata to R.drawable.ic_operator_strata,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {

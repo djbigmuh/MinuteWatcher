@@ -155,6 +155,23 @@ internal object OperatorBrandTokensRegional {
             "telecom niue" to "operator_telecom_niue",
             "nta" to "operator_nta",
             "national telecommunications authority" to "operator_nta",
+            "iconnect" to "operator_iconnect",
+            "viya" to "operator_viya",
+            "astca" to "operator_astca",
+            "union wireless" to "operator_union_wireless",
+            "mta" to "operator_mta",
+            "gci" to "operator_gci",
+            "c spire" to "operator_cspire",
+            "appalachian wireless" to "operator_appalachian",
+            "carolina west wireless" to "operator_carolina_west",
+            "carolina west" to "operator_carolina_west",
+            "copper valley wireless" to "operator_copper_valley",
+            "copper valley" to "operator_copper_valley",
+            "viaero wireless" to "operator_viaero",
+            "viaero" to "operator_viaero",
+            "pioneer cellular" to "operator_pioneer_cellular",
+            "thumb cellular" to "operator_thumb",
+            "strata networks" to "operator_strata",
         )
 
     internal val globalAndRegionalTokens =

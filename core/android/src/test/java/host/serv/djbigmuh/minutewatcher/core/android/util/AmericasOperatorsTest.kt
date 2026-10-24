@@ -157,6 +157,18 @@ class AmericasOperatorsTest {
         assertEquals("operator_setar", resolvePlmn("36301"))
         assertEquals("operator_wind_do", resolvePlmn("37005"))
         assertEquals("operator_e_networks", resolvePlmn("73800"))
+        assertEquals("operator_union_wireless", resolvePlmn("310020"))
+        assertEquals("operator_viya", resolvePlmn("311470"))
+        assertEquals("operator_astca", resolvePlmn("311780"))
+        assertEquals("operator_cspire", resolvePlmn("311230"))
+        assertEquals("operator_cellcom", resolvePlmn("311840"))
+        assertEquals("operator_appalachian", resolvePlmn("312120"))
+        assertEquals("operator_carolina_west", resolvePlmn("310130"))
+        assertEquals("operator_copper_valley", resolvePlmn("310930"))
+        assertEquals("operator_viaero", resolvePlmn("310450"))
+        assertEquals("operator_pioneer_cellular", resolvePlmn("310360"))
+        assertEquals("operator_thumb", resolvePlmn("311050"))
+        assertEquals("operator_strata", resolvePlmn("310960"))
     }
 
     @Test
@@ -194,6 +206,45 @@ class AmericasOperatorsTest {
         assertEquals(R.string.operator_setar, OperatorResolver.getOperatorResourceId("setar") as Int)
         assertEquals(R.string.operator_ameris, OperatorResolver.getOperatorResourceId("ameris") as Int)
         assertEquals(R.string.operator_globaltel, OperatorResolver.getOperatorResourceId("globaltel") as Int)
+        assertEquals(R.string.operator_union_wireless, OperatorResolver.getOperatorResourceId("union wireless") as Int)
+        assertEquals(R.string.operator_viya, OperatorResolver.getOperatorResourceId("viya") as Int)
+        assertEquals(R.string.operator_astca, OperatorResolver.getOperatorResourceId("astca") as Int)
+        assertEquals(R.string.operator_mta, OperatorResolver.getOperatorResourceId("mta") as Int)
+        assertEquals(R.string.operator_gci, OperatorResolver.getOperatorResourceId("gci") as Int)
+        assertEquals(R.string.operator_cspire, OperatorResolver.getOperatorResourceId("c spire") as Int)
+        assertEquals(R.string.operator_cellcom, OperatorResolver.getOperatorResourceId("cellcom") as Int)
+        assertEquals(
+            R.string.operator_appalachian,
+            OperatorResolver.getOperatorResourceId("appalachian wireless") as Int,
+        )
+        assertEquals(
+            R.string.operator_carolina_west,
+            OperatorResolver.getOperatorResourceId("carolina west") as Int,
+        )
+        assertEquals(
+            R.string.operator_copper_valley,
+            OperatorResolver.getOperatorResourceId("copper valley") as Int,
+        )
+        assertEquals(
+            R.string.operator_viaero,
+            OperatorResolver.getOperatorResourceId("viaero") as Int,
+        )
+        assertEquals(
+            R.string.operator_pioneer_cellular,
+            OperatorResolver.getOperatorResourceId("pioneer cellular") as Int,
+        )
+        assertEquals(
+            R.string.operator_thumb,
+            OperatorResolver.getOperatorResourceId("thumb cellular") as Int,
+        )
+        assertEquals(
+            R.string.operator_strata,
+            OperatorResolver.getOperatorResourceId("strata networks") as Int,
+        )
+        assertEquals(
+            R.string.operator_iconnect,
+            OperatorResolver.getOperatorResourceId("iconnect") as Int,
+        )
     }
 
     @Test
@@ -217,6 +268,21 @@ class AmericasOperatorsTest {
         assertEquals(R.drawable.ic_operator_wind_do, SimUtils.getOperatorIconResource("wind telecom"))
         assertEquals(R.drawable.ic_operator_e_networks, SimUtils.getOperatorIconResource("e-networks"))
         assertEquals(R.drawable.ic_operator_setar, SimUtils.getOperatorIconResource("setar"))
+        assertEquals(R.drawable.ic_operator_union_wireless, SimUtils.getOperatorIconResource("union wireless"))
+        assertEquals(R.drawable.ic_operator_viya, SimUtils.getOperatorIconResource("viya"))
+        assertEquals(R.drawable.ic_operator_astca, SimUtils.getOperatorIconResource("astca"))
+        assertEquals(R.drawable.ic_operator_mta, SimUtils.getOperatorIconResource("mta"))
+        assertEquals(R.drawable.ic_operator_gci, SimUtils.getOperatorIconResource("gci"))
+        assertEquals(R.drawable.ic_operator_cspire, SimUtils.getOperatorIconResource("c spire"))
+        assertEquals(R.drawable.ic_operator_cellcom, SimUtils.getOperatorIconResource("cellcom"))
+        assertEquals(R.drawable.ic_operator_appalachian, SimUtils.getOperatorIconResource("appalachian wireless"))
+        assertEquals(R.drawable.ic_operator_carolina_west, SimUtils.getOperatorIconResource("carolina west"))
+        assertEquals(R.drawable.ic_operator_copper_valley, SimUtils.getOperatorIconResource("copper valley"))
+        assertEquals(R.drawable.ic_operator_viaero, SimUtils.getOperatorIconResource("viaero"))
+        assertEquals(R.drawable.ic_operator_pioneer_cellular, SimUtils.getOperatorIconResource("pioneer cellular"))
+        assertEquals(R.drawable.ic_operator_thumb, SimUtils.getOperatorIconResource("thumb cellular"))
+        assertEquals(R.drawable.ic_operator_strata, SimUtils.getOperatorIconResource("strata networks"))
+        assertEquals(R.drawable.ic_operator_iconnect, SimUtils.getOperatorIconResource("iconnect"))
     }
 
     private fun resolvePlmn(plmn: String): String? {

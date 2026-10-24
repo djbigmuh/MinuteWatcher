@@ -446,4 +446,18 @@
     <string name="operator_country_wireless" translatable="false">Country Wireless</string>
     <string name="operator_speedwavz" translatable="false">Speedwavz</string>
     <string name="operator_mobi" translatable="false">Mobi</string>
+    <string name="operator_iconnect" translatable="false">iConnect</string>
+    <string name="operator_viya" translatable="false">Viya</string>
+    <string name="operator_astca" translatable="false">ASTCA</string>
+    <string name="operator_union_wireless" translatable="false">Union Wireless</string>
+    <string name="operator_mta" translatable="false">MTA</string>
+    <string name="operator_gci" translatable="false">GCI</string>
+    <string name="operator_cspire" translatable="false">C Spire</string>
+    <string name="operator_appalachian" translatable="false">Appalachian Wireless</string>
+    <string name="operator_carolina_west" translatable="false">Carolina West Wireless</string>
+    <string name="operator_copper_valley" translatable="false">Copper Valley Wireless</string>
+    <string name="operator_viaero" translatable="false">Viaero Wireless</string>
+    <string name="operator_pioneer_cellular" translatable="false">Pioneer Cellular</string>
+    <string name="operator_thumb" translatable="false">Thumb Cellular</string>
+    <string name="operator_strata" translatable="false">STRATA Networks</string>
 </resources>
