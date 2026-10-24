@@ -460,4 +460,38 @@
     <string name="operator_pioneer_cellular" translatable="false">Pioneer Cellular</string>
     <string name="operator_thumb" translatable="false">Thumb Cellular</string>
     <string name="operator_strata" translatable="false">STRATA Networks</string>
+    <string name="operator_nextech" translatable="false">Nex-Tech Wireless</string>
+    <string name="operator_chat_mobility" translatable="false">Chat Mobility</string>
+    <string name="operator_nemont" translatable="false">Nemont</string>
+    <string name="operator_chariton" translatable="false">Chariton Valley</string>
+    <string name="operator_northwestcell" translatable="false">NorthwestCell</string>
+    <string name="operator_limitless" translatable="false">Limitless Mobile</string>
+    <string name="operator_midrivers" translatable="false">Mid-Rivers Wireless</string>
+    <string name="operator_cordova" translatable="false">Cordova Wireless</string>
+    <string name="operator_otz" translatable="false">OTZ Cellular</string>
+    <string name="operator_telalaska" translatable="false">Telalaska Cellular</string>
+    <string name="operator_astac" translatable="false">ASTAC</string>
+    <string name="operator_inland" translatable="false">Inland Cellular</string>
+    <string name="operator_illinois_valley" translatable="false">Illinois Valley Cellular</string>
+    <string name="operator_pine_belt" translatable="false">Pine Belt Wireless</string>
+    <string name="operator_bug_tussel" translatable="false">Bug Tussel Wireless</string>
+    <string name="operator_west_central" translatable="false">West Central Wireless</string>
+    <string name="operator_dtc" translatable="false">DTC Wireless</string>
+    <string name="operator_five_star" translatable="false">Five Star Wireless</string>
+    <string name="operator_etc" translatable="false">ETC</string>
+    <string name="operator_vtel" translatable="false">VTel Wireless</string>
+    <string name="operator_james_valley" translatable="false">James Valley Wireless</string>
+    <string name="operator_silver_star" translatable="false">Silver Star Communications</string>
+    <string name="operator_ftc" translatable="false">FTC Wireless</string>
+    <string name="operator_redzone" translatable="false">Redzone Wireless</string>
+    <string name="operator_cleartalk" translatable="false">ClearTalk</string>
+    <string name="operator_ctci" translatable="false">Custer Telephone Co-op</string>
+    <string name="operator_conecto" translatable="false">Conecto</string>
+    <string name="operator_pine_cellular" translatable="false">Pine Cellular</string>
+    <string name="operator_choice" translatable="false">Choice Wireless</string>
+    <string name="operator_bravado" translatable="false">Bravado Wireless</string>
+    <string name="operator_rock" translatable="false">Rock Wireless</string>
+    <string name="operator_nextlink" translatable="false">Nextlink</string>
+    <string name="operator_snake_river" translatable="false">Snake River PCS</string>
+    <string name="operator_breakaway" translatable="false">Breakaway Wireless</string>
 </resources>
