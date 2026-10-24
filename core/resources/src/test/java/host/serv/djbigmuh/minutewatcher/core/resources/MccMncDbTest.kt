@@ -142,6 +142,7 @@ class MccMncDbTest {
                 "525" to setOf(2),
                 "528" to setOf(2),
                 "530" to setOf(2),
+                "536" to setOf(2),
                 "537" to setOf(2),
                 "539" to setOf(2),
                 "540" to setOf(2),

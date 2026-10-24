@@ -152,6 +152,7 @@ internal object OperatorBrandTokensRegional {
             "palau national communications" to "operator_pncc",
             "ttc" to "operator_ttc",
             "tuvalu telecom" to "operator_ttc",
+            "telecom niue" to "operator_telecom_niue",
             "nta" to "operator_nta",
             "national telecommunications authority" to "operator_nta",
         )

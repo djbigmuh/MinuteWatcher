@@ -403,4 +403,5 @@
     <string name="operator_dauphin" translatable="false">Dauphin</string>
     <string name="operator_docomo_pacific" translatable="false">DOCOMO PACIFIC</string>
     <string name="operator_gta" translatable="false">GTA</string>
+    <string name="operator_telecom_niue" translatable="false">Telecom Niue</string>
 </resources>

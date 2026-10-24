@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import host.serv.djbigmuh.minutewatcher.core.resources.R
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,6 +44,8 @@ class CisOperatorsTest {
         assertEquals("operator_moldcell", json.getString("25902"))
         assertEquals("operator_beeline", json.getString("28204"))
         assertEquals("operator_beeline", json.getString("43701"))
+        assertEquals("operator_tm_cell", json.getString("43802"))
+        assertFalse(json.has("43801"))
         assertEquals("Silknet", OperatorResolver.resolve(context, "", listOf("28201"), 0).displayName)
 
         assertEquals("Azercell", OperatorResolver.resolve(context, "", listOf("40001"), 0).displayName)

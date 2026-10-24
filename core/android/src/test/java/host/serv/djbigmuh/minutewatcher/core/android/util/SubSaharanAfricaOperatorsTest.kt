@@ -122,5 +122,7 @@ class SubSaharanAfricaOperatorsTest {
         assertEquals("operator_utl", OperatorResolver.resolve(context, "", listOf("64111"), 0).brandKey)
         assertEquals("operator_telesom", OperatorResolver.resolve(context, "", listOf("63701"), 0).brandKey)
         assertEquals("operator_airtel", OperatorResolver.resolve(context, "", listOf("63514"), 0).brandKey)
+        assertEquals("operator_eswatini_mobile", OperatorResolver.resolve(context, "", listOf("65302"), 0).brandKey)
+        assertEquals("operator_moov", OperatorResolver.resolve(context, "", listOf("62802"), 0).brandKey)
     }
 }

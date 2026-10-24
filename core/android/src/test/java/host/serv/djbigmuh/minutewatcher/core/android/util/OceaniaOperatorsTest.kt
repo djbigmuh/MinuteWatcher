@@ -39,7 +39,9 @@ class OceaniaOperatorsTest {
         assertEquals("operator_fsm_telecom", OperatorResolver.resolve(context, "", listOf("55001"), 0).brandKey)
         assertEquals("operator_pncc", OperatorResolver.resolve(context, "", listOf("55201"), 0).brandKey)
         assertEquals("operator_ttc", OperatorResolver.resolve(context, "", listOf("55301"), 0).brandKey)
-        assertEquals("operator_digicel", OperatorResolver.resolve(context, "", listOf("55502"), 0).brandKey)
+        assertEquals("Telecom Niue", resolveDisplayName("55501"))
+        assertEquals("operator_telecom_niue", OperatorResolver.resolve(context, "", listOf("55501"), 0).brandKey)
+        assertEquals("operator_digicel", OperatorResolver.resolve(context, "", listOf("53602"), 0).brandKey)
         assertEquals("operator_nta", OperatorResolver.resolve(context, "", listOf("55101"), 0).brandKey)
     }
 
