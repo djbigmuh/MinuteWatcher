@@ -203,6 +203,7 @@ class AmericasOperatorsTest {
         assertEquals("operator_nextlink", resolvePlmn("313860"))
         assertEquals("operator_snake_river", resolvePlmn("313030"))
         assertEquals("operator_breakaway", resolvePlmn("313050"))
+        assertEquals("operator_altan", resolvePlmn("334140"))
     }
 
     @Test
@@ -239,6 +240,7 @@ class AmericasOperatorsTest {
         assertEquals(R.string.operator_e_networks, OperatorResolver.getOperatorResourceId("e-networks") as Int)
         assertEquals(R.string.operator_setar, OperatorResolver.getOperatorResourceId("setar") as Int)
         assertEquals(R.string.operator_ameris, OperatorResolver.getOperatorResourceId("ameris") as Int)
+        assertEquals(R.string.operator_altan, OperatorResolver.getOperatorResourceId("altan") as Int)
         assertEquals(R.string.operator_globaltel, OperatorResolver.getOperatorResourceId("globaltel") as Int)
         assertEquals(R.string.operator_union_wireless, OperatorResolver.getOperatorResourceId("union wireless") as Int)
         assertEquals(R.string.operator_viya, OperatorResolver.getOperatorResourceId("viya") as Int)
@@ -297,6 +299,7 @@ class AmericasOperatorsTest {
         assertEquals(R.drawable.ic_operator_chippie, SimUtils.getOperatorIconResource("chippie"))
         assertEquals(R.drawable.ic_operator_telbo, SimUtils.getOperatorIconResource("telbo"))
         assertEquals(R.drawable.ic_operator_apua, SimUtils.getOperatorIconResource("apua"))
+        assertEquals(R.drawable.ic_operator_altan, SimUtils.getOperatorIconResource("altan"))
         assertEquals(R.drawable.ic_operator_logic, SimUtils.getOperatorIconResource("operator_logic"))
         assertEquals(R.drawable.ic_operator_cct, SimUtils.getOperatorIconResource("cct boatphone"))
         assertEquals(R.drawable.ic_operator_wind_do, SimUtils.getOperatorIconResource("wind telecom"))

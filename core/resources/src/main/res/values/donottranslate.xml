@@ -502,4 +502,7 @@
     <string name="operator_win_mobile" translatable="false">Win Mobile</string>
     <string name="operator_tinkoff_mobile" translatable="false">Tinkoff Mobile</string>
     <string name="operator_seven_telecom" translatable="false">+7Telecom</string>
+    <string name="operator_coop_voce" translatable="false">Coop Voce</string>
+    <string name="operator_spusu" translatable="false">spusu</string>
+    <string name="operator_altan" translatable="false">Altán Redes</string>
 </resources>

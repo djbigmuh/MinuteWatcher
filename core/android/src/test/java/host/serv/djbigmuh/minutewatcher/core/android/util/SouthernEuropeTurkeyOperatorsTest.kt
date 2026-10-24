@@ -37,6 +37,8 @@ class SouthernEuropeTurkeyOperatorsTest {
         assertEquals("Vodafone", resolveDisplayName("26891"))
         assertEquals("A1", resolveDisplayName("29403"))
         assertEquals("Iliad", resolveDisplayName("22250"))
+        assertEquals("operator_coop_voce", OperatorResolver.resolve(context, "", listOf("22253"), 0).brandKey)
+        assertEquals("operator_spusu", OperatorResolver.resolve(context, "", listOf("22256"), 0).brandKey)
         assertEquals("Cosmote", resolveDisplayName("20201"))
         assertEquals("Nova", OperatorResolver.resolve(context, "", listOf("20209"), 0).displayName)
         assertEquals("Nova", OperatorResolver.resolve(context, "", listOf("20210"), 0).displayName)
@@ -62,6 +64,8 @@ class SouthernEuropeTurkeyOperatorsTest {
         assertEquals(R.string.operator_cosmote, OperatorResolver.getOperatorResourceId("cosmote") as Int)
         assertEquals(R.string.operator_vivacom, OperatorResolver.getOperatorResourceId("vivacom") as Int)
         assertEquals(R.string.operator_go, OperatorResolver.getOperatorResourceId("go malta") as Int)
+        assertEquals(R.string.operator_coop_voce, OperatorResolver.getOperatorResourceId("coop voce") as Int)
+        assertEquals(R.string.operator_spusu, OperatorResolver.getOperatorResourceId("spusu") as Int)
     }
 
     @Test
@@ -70,6 +74,8 @@ class SouthernEuropeTurkeyOperatorsTest {
         assertEquals(R.drawable.ic_operator_cosmote, SimUtils.getOperatorIconResource("cosmote"))
         assertEquals(R.drawable.ic_operator_vivacom, SimUtils.getOperatorIconResource("vivacom"))
         assertEquals(R.drawable.ic_operator_go, SimUtils.getOperatorIconResource("go malta"))
+        assertEquals(R.drawable.ic_operator_coop_voce, SimUtils.getOperatorIconResource("coop voce"))
+        assertEquals(R.drawable.ic_operator_spusu, SimUtils.getOperatorIconResource("spusu"))
     }
 
     private fun resolveDisplayName(plmn: String): String {

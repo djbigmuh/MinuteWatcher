@@ -34,6 +34,7 @@ class SpainOperatorsTest {
         assertEquals("R", OperatorResolver.resolve(context, "", listOf("21417"), 0).displayName)
         assertEquals("Vodafone", OperatorResolver.resolve(context, "", listOf("21418"), 0).displayName)
         assertEquals("operator_vodafone", OperatorResolver.resolve(context, "", listOf("21418"), 0).brandKey)
+        assertEquals("operator_vodafone", OperatorResolver.resolve(context, "", listOf("21424"), 0).brandKey)
         assertEquals("simyo", OperatorResolver.resolve(context, "", listOf("21419"), 0).displayName)
         assertEquals("jazztel", OperatorResolver.resolve(context, "", listOf("21421"), 0).displayName)
         assertEquals("Digi", OperatorResolver.resolve(context, "", listOf("21422"), 0).displayName)
