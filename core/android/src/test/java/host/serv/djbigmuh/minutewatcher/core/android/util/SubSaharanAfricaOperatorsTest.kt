@@ -124,5 +124,35 @@ class SubSaharanAfricaOperatorsTest {
         assertEquals("operator_airtel", OperatorResolver.resolve(context, "", listOf("63514"), 0).brandKey)
         assertEquals("operator_eswatini_mobile", OperatorResolver.resolve(context, "", listOf("65302"), 0).brandKey)
         assertEquals("operator_moov", OperatorResolver.resolve(context, "", listOf("62802"), 0).brandKey)
+        assertEquals("operator_inwi", OperatorResolver.resolve(context, "", listOf("60405"), 0).brandKey)
+        assertEquals("operator_telecel_ml", OperatorResolver.resolve(context, "", listOf("61003"), 0).brandKey)
+        assertEquals("operator_africell_sl", OperatorResolver.resolve(context, "", listOf("61902"), 0).brandKey)
+        assertEquals("operator_sierratel", OperatorResolver.resolve(context, "", listOf("61906"), 0).brandKey)
+        assertEquals("operator_tawali", OperatorResolver.resolve(context, "", listOf("62202"), 0).brandKey)
+        assertEquals("operator_salaam_td", OperatorResolver.resolve(context, "", listOf("62207"), 0).brandKey)
+        assertEquals("operator_camtel", OperatorResolver.resolve(context, "", listOf("62403"), 0).brandKey)
+        assertEquals("operator_airtel", OperatorResolver.resolve(context, "", listOf("62907"), 0).brandKey)
+        assertEquals("operator_africell_ug", OperatorResolver.resolve(context, "", listOf("64114"), 0).brandKey)
+        assertEquals("operator_airtel", OperatorResolver.resolve(context, "", listOf("64122"), 0).brandKey)
+        assertEquals("operator_sfr", OperatorResolver.resolve(context, "", listOf("64702"), 0).brandKey)
+        assertEquals("operator_switch_na", OperatorResolver.resolve(context, "", listOf("64902"), 0).brandKey)
+        assertEquals("operator_access_mw", OperatorResolver.resolve(context, "", listOf("65002"), 0).brandKey)
+
+        assertEquals(
+            R.string.operator_telecel_ml,
+            OperatorResolver.getOperatorResourceId("telecel mali") as Int,
+        )
+        assertEquals(
+            R.string.operator_sierratel,
+            OperatorResolver.getOperatorResourceId("sierratel") as Int,
+        )
+        assertEquals(
+            R.string.operator_access_mw,
+            OperatorResolver.getOperatorResourceId("access communications") as Int,
+        )
+        assertEquals(
+            R.string.operator_switch_na,
+            OperatorResolver.getOperatorResourceId("switch namibia") as Int,
+        )
     }
 }

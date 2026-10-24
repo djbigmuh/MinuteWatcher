@@ -413,4 +413,12 @@
     <string name="operator_wind_do" translatable="false">Wind</string>
     <string name="operator_e_networks" translatable="false">E-Networks</string>
     <string name="operator_setar" translatable="false">SETAR</string>
+    <string name="operator_telecel_ml" translatable="false">Telecel</string>
+    <string name="operator_sierratel" translatable="false">SierraTel</string>
+    <string name="operator_access_mw" translatable="false">Access</string>
+    <string name="operator_africell_ug" translatable="false">Africell</string>
+    <string name="operator_switch_na" translatable="false">switch</string>
+    <string name="operator_tawali" translatable="false">Tawali</string>
+    <string name="operator_salaam_td" translatable="false">Salam</string>
+    <string name="operator_camtel" translatable="false">Camtel</string>
 </resources>

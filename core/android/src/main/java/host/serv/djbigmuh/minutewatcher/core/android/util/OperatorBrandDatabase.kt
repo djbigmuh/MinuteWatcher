@@ -403,6 +403,14 @@ object OperatorBrandDatabase {
             "operator_wind_do" to R.string.operator_wind_do,
             "operator_e_networks" to R.string.operator_e_networks,
             "operator_setar" to R.string.operator_setar,
+            "operator_telecel_ml" to R.string.operator_telecel_ml,
+            "operator_sierratel" to R.string.operator_sierratel,
+            "operator_access_mw" to R.string.operator_access_mw,
+            "operator_africell_ug" to R.string.operator_africell_ug,
+            "operator_switch_na" to R.string.operator_switch_na,
+            "operator_tawali" to R.string.operator_tawali,
+            "operator_salaam_td" to R.string.operator_salaam_td,
+            "operator_camtel" to R.string.operator_camtel,
         )
 
     val tokenToResKey: Map<String, String> = OperatorBrandTokens.tokenToResKey

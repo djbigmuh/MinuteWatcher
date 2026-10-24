@@ -407,6 +407,14 @@ object SimUtils {
             R.string.operator_wind_do to R.drawable.ic_operator_wind_do,
             R.string.operator_e_networks to R.drawable.ic_operator_e_networks,
             R.string.operator_setar to R.drawable.ic_operator_setar,
+            R.string.operator_telecel_ml to R.drawable.ic_operator_telecel_ml,
+            R.string.operator_sierratel to R.drawable.ic_operator_sierratel,
+            R.string.operator_access_mw to R.drawable.ic_operator_access_mw,
+            R.string.operator_africell_ug to R.drawable.ic_operator_africell_ug,
+            R.string.operator_switch_na to R.drawable.ic_operator_switch_na,
+            R.string.operator_tawali to R.drawable.ic_operator_tawali,
+            R.string.operator_salaam_td to R.drawable.ic_operator_salaam_td,
+            R.string.operator_camtel to R.drawable.ic_operator_camtel,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {
