@@ -385,6 +385,18 @@ object SimUtils {
             R.string.operator_telecel_cf to R.drawable.ic_operator_telecel_cf,
             R.string.operator_utl to R.drawable.ic_operator_utl,
             R.string.operator_telesom to R.drawable.ic_operator_telesom,
+            R.string.operator_btc_bs to R.drawable.ic_operator_btc_bs,
+            R.string.operator_aliv to R.drawable.ic_operator_aliv,
+            R.string.operator_eplus to R.drawable.ic_operator_eplus,
+            R.string.operator_telesur to R.drawable.ic_operator_telesur,
+            R.string.operator_digi_bz to R.drawable.ic_operator_digi_bz,
+            R.string.operator_smart_bz to R.drawable.ic_operator_smart_bz,
+            R.string.operator_the_cable to R.drawable.ic_operator_the_cable,
+            R.string.operator_cellone to R.drawable.ic_operator_cellone,
+            R.string.operator_natcom to R.drawable.ic_operator_natcom,
+            R.string.operator_dauphin to R.drawable.ic_operator_dauphin,
+            R.string.operator_docomo_pacific to R.drawable.ic_operator_docomo_pacific,
+            R.string.operator_gta to R.drawable.ic_operator_gta,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {

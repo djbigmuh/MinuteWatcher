@@ -375,3 +375,15 @@ operator_celtiis	Celtiis	B		#00AA55	CELT
 operator_telecel_cf	Telecel	B		#00A859	TELCF
 operator_utl	UTL	B		#0055A5	UTL
 operator_telesom	Telesom	B		#0055A5	TSOM
+operator_btc_bs	BTC	B		#0055A5	BTCBS
+operator_aliv	Aliv	B		#FF0055	ALIV
+operator_eplus	E+	B		#00A859	EPLUS
+operator_telesur	Telesur	B		#0055A5	TSUR
+operator_digi_bz	Digi	B		#00A859	DIGIBZ
+operator_smart_bz	SMART	B		#FF5500	SMRTBZ
+operator_the_cable	The Cable	B		#0055A5	CABLE
+operator_cellone	CellOne	B		#00AA55	CONE
+operator_natcom	NATCOM	B		#E60000	NATCOM
+operator_dauphin	Dauphin	B		#0055A5	DAUPH
+operator_docomo_pacific	DOCOMO PACIFIC	B		#CC0000	DOCPAC
+operator_gta	GTA	B		#0055A5	GTA

@@ -391,4 +391,16 @@
     <string name="operator_telecel_cf" translatable="false">Telecel</string>
     <string name="operator_utl" translatable="false">UTL</string>
     <string name="operator_telesom" translatable="false">Telesom</string>
+    <string name="operator_btc_bs" translatable="false">BTC</string>
+    <string name="operator_aliv" translatable="false">Aliv</string>
+    <string name="operator_eplus" translatable="false">E+</string>
+    <string name="operator_telesur" translatable="false">Telesur</string>
+    <string name="operator_digi_bz" translatable="false">Digi</string>
+    <string name="operator_smart_bz" translatable="false">SMART</string>
+    <string name="operator_the_cable" translatable="false">The Cable</string>
+    <string name="operator_cellone" translatable="false">CellOne</string>
+    <string name="operator_natcom" translatable="false">NATCOM</string>
+    <string name="operator_dauphin" translatable="false">Dauphin</string>
+    <string name="operator_docomo_pacific" translatable="false">DOCOMO PACIFIC</string>
+    <string name="operator_gta" translatable="false">GTA</string>
 </resources>
