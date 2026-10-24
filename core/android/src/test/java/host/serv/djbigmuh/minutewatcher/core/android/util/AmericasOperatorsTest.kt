@@ -140,6 +140,8 @@ class AmericasOperatorsTest {
         assertEquals("operator_t_mobile", resolvePlmn("311870"))
         assertEquals("operator_att", resolvePlmn("311180"))
         assertEquals("operator_bell", resolvePlmn("302630"))
+        assertEquals("operator_ameris", resolvePlmn("30801"))
+        assertEquals("operator_globaltel", resolvePlmn("30802"))
         assertEquals("operator_telcell", resolvePlmn("36251"))
         assertEquals("operator_chippie", resolvePlmn("36259"))
         assertEquals("operator_telbo", resolvePlmn("36278"))
@@ -183,6 +185,8 @@ class AmericasOperatorsTest {
         assertEquals(R.string.operator_wind_do, OperatorResolver.getOperatorResourceId("wind telecom") as Int)
         assertEquals(R.string.operator_e_networks, OperatorResolver.getOperatorResourceId("e-networks") as Int)
         assertEquals(R.string.operator_setar, OperatorResolver.getOperatorResourceId("setar") as Int)
+        assertEquals(R.string.operator_ameris, OperatorResolver.getOperatorResourceId("ameris") as Int)
+        assertEquals(R.string.operator_globaltel, OperatorResolver.getOperatorResourceId("globaltel") as Int)
     }
 
     @Test

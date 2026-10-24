@@ -433,4 +433,10 @@
     <string name="operator_telemor" translatable="false">Telemor</string>
     <string name="operator_reddi" translatable="false">REDDI</string>
     <string name="operator_iijmio" translatable="false">IIJmio</string>
+    <string name="operator_manuia" translatable="false">Manuia</string>
+    <string name="operator_teletok" translatable="false">Teletok</string>
+    <string name="operator_pmci" translatable="false">PMCI</string>
+    <string name="operator_norfolk_telecom" translatable="false">Norfolk Telecom</string>
+    <string name="operator_ameris" translatable="false">Ameris</string>
+    <string name="operator_globaltel" translatable="false">Globaltel</string>
 </resources>

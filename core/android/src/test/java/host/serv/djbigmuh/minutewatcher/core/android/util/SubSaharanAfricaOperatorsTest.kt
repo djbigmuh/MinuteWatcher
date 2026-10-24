@@ -137,6 +137,7 @@ class SubSaharanAfricaOperatorsTest {
         assertEquals("operator_sfr", OperatorResolver.resolve(context, "", listOf("64702"), 0).brandKey)
         assertEquals("operator_switch_na", OperatorResolver.resolve(context, "", listOf("64902"), 0).brandKey)
         assertEquals("operator_access_mw", OperatorResolver.resolve(context, "", listOf("65002"), 0).brandKey)
+        assertEquals("operator_sure", OperatorResolver.resolve(context, "", listOf("65801"), 0).brandKey)
 
         assertEquals(
             R.string.operator_telecel_ml,

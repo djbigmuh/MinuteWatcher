@@ -42,6 +42,11 @@ class OceaniaOperatorsTest {
         assertEquals("Telecom Niue", resolveDisplayName("55501"))
         assertEquals("operator_telecom_niue", OperatorResolver.resolve(context, "", listOf("55501"), 0).brandKey)
         assertEquals("operator_digicel", OperatorResolver.resolve(context, "", listOf("53602"), 0).brandKey)
+        assertEquals("operator_manuia", OperatorResolver.resolve(context, "", listOf("54301"), 0).brandKey)
+        assertEquals("operator_teletok", OperatorResolver.resolve(context, "", listOf("55401"), 0).brandKey)
+        assertEquals("operator_frigate", OperatorResolver.resolve(context, "", listOf("54501"), 0).brandKey)
+        assertEquals("operator_pmci", OperatorResolver.resolve(context, "", listOf("55280"), 0).brandKey)
+        assertEquals("operator_norfolk_telecom", OperatorResolver.resolve(context, "", listOf("50504"), 0).brandKey)
         assertEquals("operator_nta", OperatorResolver.resolve(context, "", listOf("55101"), 0).brandKey)
     }
 
@@ -50,6 +55,22 @@ class OceaniaOperatorsTest {
         assertEquals(R.string.operator_onenz, OperatorResolver.getOperatorResourceId("one nz") as Int)
         assertEquals(R.string.operator_onenz, OperatorResolver.getOperatorResourceId("one new zealand") as Int)
         assertEquals(R.drawable.ic_operator_onenz, SimUtils.getOperatorIconResource("one nz"))
+        assertEquals(
+            R.string.operator_manuia,
+            OperatorResolver.getOperatorResourceId("manuia") as Int,
+        )
+        assertEquals(
+            R.string.operator_teletok,
+            OperatorResolver.getOperatorResourceId("teletok") as Int,
+        )
+        assertEquals(
+            R.string.operator_pmci,
+            OperatorResolver.getOperatorResourceId("pmci") as Int,
+        )
+        assertEquals(
+            R.string.operator_norfolk_telecom,
+            OperatorResolver.getOperatorResourceId("norfolk telecom") as Int,
+        )
     }
 
     private fun resolveDisplayName(plmn: String): String {
