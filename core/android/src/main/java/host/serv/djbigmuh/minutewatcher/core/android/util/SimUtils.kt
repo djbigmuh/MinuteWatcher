@@ -488,6 +488,14 @@ object SimUtils {
             R.string.operator_nextlink to R.drawable.ic_operator_nextlink,
             R.string.operator_snake_river to R.drawable.ic_operator_snake_river,
             R.string.operator_breakaway to R.drawable.ic_operator_breakaway,
+            R.string.operator_motiv to R.drawable.ic_operator_motiv,
+            R.string.operator_vainah to R.drawable.ic_operator_vainah,
+            R.string.operator_volna to R.drawable.ic_operator_volna,
+            R.string.operator_sevmobile to R.drawable.ic_operator_sevmobile,
+            R.string.operator_krymtelekom to R.drawable.ic_operator_krymtelekom,
+            R.string.operator_win_mobile to R.drawable.ic_operator_win_mobile,
+            R.string.operator_tinkoff_mobile to R.drawable.ic_operator_tinkoff_mobile,
+            R.string.operator_seven_telecom to R.drawable.ic_operator_seven_telecom,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {

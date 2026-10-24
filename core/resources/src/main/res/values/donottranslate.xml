@@ -494,4 +494,12 @@
     <string name="operator_nextlink" translatable="false">Nextlink</string>
     <string name="operator_snake_river" translatable="false">Snake River PCS</string>
     <string name="operator_breakaway" translatable="false">Breakaway Wireless</string>
+    <string name="operator_motiv" translatable="false">MOTIV</string>
+    <string name="operator_vainah" translatable="false">Vainah Telecom</string>
+    <string name="operator_volna" translatable="false">Volna</string>
+    <string name="operator_sevmobile" translatable="false">Sevmobile</string>
+    <string name="operator_krymtelekom" translatable="false">Krymtelekom</string>
+    <string name="operator_win_mobile" translatable="false">Win Mobile</string>
+    <string name="operator_tinkoff_mobile" translatable="false">Tinkoff Mobile</string>
+    <string name="operator_seven_telecom" translatable="false">+7Telecom</string>
 </resources>

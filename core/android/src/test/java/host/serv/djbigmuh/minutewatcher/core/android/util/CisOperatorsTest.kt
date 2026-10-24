@@ -42,6 +42,10 @@ class CisOperatorsTest {
         assertEquals("operator_life_by", json.getString("25704"))
         assertEquals("operator_orange", json.getString("25901"))
         assertEquals("operator_moldcell", json.getString("25902"))
+        assertEquals("operator_unite_md", json.getString("25999"))
+        assertEquals("operator_motiv", json.getString("25035"))
+        assertEquals("operator_vainah", json.getString("25008"))
+        assertEquals("operator_volna", json.getString("25060"))
         assertEquals("operator_beeline", json.getString("28204"))
         assertEquals("operator_beeline", json.getString("43701"))
         assertEquals("operator_tm_cell", json.getString("43802"))
@@ -71,6 +75,15 @@ class CisOperatorsTest {
         assertEquals(R.string.operator_a1, OperatorResolver.getOperatorResourceId("A1"))
         assertEquals(R.string.operator_azercell, OperatorResolver.getOperatorResourceId("azercell"))
         assertEquals(R.string.operator_kcell, OperatorResolver.getOperatorResourceId("kcell"))
+        assertEquals(R.string.operator_motiv, OperatorResolver.getOperatorResourceId("motiv") as Int)
+        assertEquals(R.string.operator_vainah, OperatorResolver.getOperatorResourceId("vainah") as Int)
+        assertEquals(R.string.operator_unite_md, OperatorResolver.getOperatorResourceId("unite") as Int)
+        assertEquals(R.string.operator_volna, OperatorResolver.getOperatorResourceId("volna") as Int)
+        assertEquals(R.string.operator_sevmobile, OperatorResolver.getOperatorResourceId("sevmobile") as Int)
+        assertEquals(R.string.operator_krymtelekom, OperatorResolver.getOperatorResourceId("krymtelekom") as Int)
+        assertEquals(R.string.operator_win_mobile, OperatorResolver.getOperatorResourceId("win mobile") as Int)
+        assertEquals(R.string.operator_tinkoff_mobile, OperatorResolver.getOperatorResourceId("tinkoff") as Int)
+        assertEquals(R.string.operator_seven_telecom, OperatorResolver.getOperatorResourceId("+7telecom") as Int)
     }
 
     @Test
@@ -90,6 +103,15 @@ class CisOperatorsTest {
         assertEquals(R.drawable.ic_operator_nar, SimUtils.getOperatorIconResource("Nar"))
         assertEquals(R.drawable.ic_operator_silknet, SimUtils.getOperatorIconResource("Silknet"))
         assertEquals(R.drawable.ic_operator_altel, SimUtils.getOperatorIconResource("Altel"))
+        assertEquals(R.drawable.ic_operator_motiv, SimUtils.getOperatorIconResource("motiv"))
+        assertEquals(R.drawable.ic_operator_vainah, SimUtils.getOperatorIconResource("vainah"))
+        assertEquals(R.drawable.ic_operator_unite_md, SimUtils.getOperatorIconResource("unite"))
+        assertEquals(R.drawable.ic_operator_volna, SimUtils.getOperatorIconResource("volna"))
+        assertEquals(R.drawable.ic_operator_sevmobile, SimUtils.getOperatorIconResource("sevmobile"))
+        assertEquals(R.drawable.ic_operator_krymtelekom, SimUtils.getOperatorIconResource("krymtelekom"))
+        assertEquals(R.drawable.ic_operator_win_mobile, SimUtils.getOperatorIconResource("win mobile"))
+        assertEquals(R.drawable.ic_operator_tinkoff_mobile, SimUtils.getOperatorIconResource("tinkoff"))
+        assertEquals(R.drawable.ic_operator_seven_telecom, SimUtils.getOperatorIconResource("+7telecom"))
     }
 
     @Test
