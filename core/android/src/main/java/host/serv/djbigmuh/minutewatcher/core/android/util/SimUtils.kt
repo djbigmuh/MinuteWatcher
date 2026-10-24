@@ -422,6 +422,11 @@ object SimUtils {
             R.string.operator_shatel to R.drawable.ic_operator_shatel,
             R.string.operator_perfectum to R.drawable.ic_operator_perfectum,
             R.string.operator_koryolink to R.drawable.ic_operator_koryolink,
+            R.string.operator_telkomcel to R.drawable.ic_operator_telkomcel,
+            R.string.operator_timor_telecom to R.drawable.ic_operator_timor_telecom,
+            R.string.operator_telemor to R.drawable.ic_operator_telemor,
+            R.string.operator_reddi to R.drawable.ic_operator_reddi,
+            R.string.operator_iijmio to R.drawable.ic_operator_iijmio,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {

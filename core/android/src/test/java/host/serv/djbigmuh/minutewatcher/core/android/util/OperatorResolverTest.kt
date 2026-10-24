@@ -373,7 +373,7 @@ class OperatorResolverTest {
         assertEquals(R.string.operator_yota, OperatorResolver.getOperatorResourceId("yota"))
         assertEquals(R.string.operator_yota, OperatorResolver.getOperatorResourceId("YOTA"))
         assertEquals(R.string.operator_tele2, OperatorResolver.getOperatorResourceId("Т2"))
-        assertNull(OperatorResolver.getOperatorResourceId("Timor Telecom"))
+        assertEquals(R.string.operator_timor_telecom, OperatorResolver.getOperatorResourceId("Timor Telecom"))
     }
 
     @Test

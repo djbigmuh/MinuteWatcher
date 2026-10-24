@@ -428,4 +428,9 @@
     <string name="operator_shatel" translatable="false">Shatel Mobile</string>
     <string name="operator_perfectum" translatable="false">Perfectum</string>
     <string name="operator_koryolink" translatable="false">Koryolink</string>
+    <string name="operator_telkomcel" translatable="false">Telkomcel</string>
+    <string name="operator_timor_telecom" translatable="false">Timor Telecom</string>
+    <string name="operator_telemor" translatable="false">Telemor</string>
+    <string name="operator_reddi" translatable="false">REDDI</string>
+    <string name="operator_iijmio" translatable="false">IIJmio</string>
 </resources>

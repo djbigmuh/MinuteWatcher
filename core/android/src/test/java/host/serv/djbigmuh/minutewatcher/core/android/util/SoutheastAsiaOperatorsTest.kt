@@ -30,6 +30,10 @@ class SoutheastAsiaOperatorsTest {
         assertEquals("Singtel", resolveDisplayName("52501"))
         assertEquals("Maxis", resolveDisplayName("50212"))
         assertEquals("CelcomDigi", resolveDisplayName("50216"))
+        assertEquals("Telkomcel", resolveDisplayName("51401"))
+        assertEquals("Timor Telecom", resolveDisplayName("51402"))
+        assertEquals("Telemor", resolveDisplayName("51403"))
+        assertEquals("dtac", resolveDisplayName("52047"))
     }
 
     @Test
@@ -41,6 +45,9 @@ class SoutheastAsiaOperatorsTest {
         assertEquals(R.string.operator_vinaphone, OperatorResolver.getOperatorResourceId("vinaphone") as Int)
         assertEquals(R.string.operator_viettel, OperatorResolver.getOperatorResourceId("viettel") as Int)
         assertEquals(R.string.operator_celcomdigi, OperatorResolver.getOperatorResourceId("celcomdigi") as Int)
+        assertEquals(R.string.operator_telkomcel, OperatorResolver.getOperatorResourceId("telkomcel") as Int)
+        assertEquals(R.string.operator_timor_telecom, OperatorResolver.getOperatorResourceId("timor telecom") as Int)
+        assertEquals(R.string.operator_telemor, OperatorResolver.getOperatorResourceId("telemor") as Int)
 
         assertEquals(R.drawable.ic_operator_ais, SimUtils.getOperatorIconResource("ais"))
         assertEquals(R.drawable.ic_operator_truemove, SimUtils.getOperatorIconResource("truemove"))
@@ -49,6 +56,9 @@ class SoutheastAsiaOperatorsTest {
         assertEquals(R.drawable.ic_operator_vinaphone, SimUtils.getOperatorIconResource("vinaphone"))
         assertEquals(R.drawable.ic_operator_viettel, SimUtils.getOperatorIconResource("viettel"))
         assertEquals(R.drawable.ic_operator_celcomdigi, SimUtils.getOperatorIconResource("celcomdigi"))
+        assertEquals(R.drawable.ic_operator_telkomcel, SimUtils.getOperatorIconResource("telkomcel"))
+        assertEquals(R.drawable.ic_operator_timor_telecom, SimUtils.getOperatorIconResource("timor telecom"))
+        assertEquals(R.drawable.ic_operator_telemor, SimUtils.getOperatorIconResource("telemor"))
     }
 
     private fun resolveDisplayName(plmn: String): String {

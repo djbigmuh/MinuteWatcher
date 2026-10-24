@@ -26,6 +26,7 @@ class EastAsiaOperatorsTest {
         assertEquals("KDDI", resolveDisplayName("44050"))
         assertEquals("KDDI", resolveDisplayName("44055"))
         assertEquals("Rakuten Mobile", resolveDisplayName("44011"))
+        assertEquals("SoftBank", resolveDisplayName("44101"))
         assertEquals("Koryolink", resolveDisplayName("46705"))
     }
 
