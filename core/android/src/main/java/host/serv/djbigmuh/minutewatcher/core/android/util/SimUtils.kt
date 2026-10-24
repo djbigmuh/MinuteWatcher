@@ -433,6 +433,13 @@ object SimUtils {
             R.string.operator_norfolk_telecom to R.drawable.ic_operator_norfolk_telecom,
             R.string.operator_ameris to R.drawable.ic_operator_ameris,
             R.string.operator_globaltel to R.drawable.ic_operator_globaltel,
+            R.string.operator_dish to R.drawable.ic_operator_dish,
+            R.string.operator_tn_wireless to R.drawable.ic_operator_tn_wireless,
+            R.string.operator_ctc_wireless to R.drawable.ic_operator_ctc_wireless,
+            R.string.operator_nntc to R.drawable.ic_operator_nntc,
+            R.string.operator_country_wireless to R.drawable.ic_operator_country_wireless,
+            R.string.operator_speedwavz to R.drawable.ic_operator_speedwavz,
+            R.string.operator_mobi to R.drawable.ic_operator_mobi,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {
