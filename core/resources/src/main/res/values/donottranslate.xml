@@ -421,4 +421,11 @@
     <string name="operator_tawali" translatable="false">Tawali</string>
     <string name="operator_salaam_td" translatable="false">Salam</string>
     <string name="operator_camtel" translatable="false">Camtel</string>
+    <string name="operator_naxtel" translatable="false">Naxtel</string>
+    <string name="operator_salaam" translatable="false">Salaam</string>
+    <string name="operator_golan" translatable="false">Golan Telecom</string>
+    <string name="operator_we4g" translatable="false">We4G</string>
+    <string name="operator_shatel" translatable="false">Shatel Mobile</string>
+    <string name="operator_perfectum" translatable="false">Perfectum</string>
+    <string name="operator_koryolink" translatable="false">Koryolink</string>
 </resources>

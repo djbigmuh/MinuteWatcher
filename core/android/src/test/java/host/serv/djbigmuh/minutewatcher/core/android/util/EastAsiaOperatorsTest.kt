@@ -26,6 +26,7 @@ class EastAsiaOperatorsTest {
         assertEquals("KDDI", resolveDisplayName("44050"))
         assertEquals("KDDI", resolveDisplayName("44055"))
         assertEquals("Rakuten Mobile", resolveDisplayName("44011"))
+        assertEquals("Koryolink", resolveDisplayName("46705"))
     }
 
     @Test
@@ -33,6 +34,12 @@ class EastAsiaOperatorsTest {
         assertEquals(R.string.operator_rakuten, OperatorResolver.getOperatorResourceId("rakuten") as Int)
         assertEquals(R.string.operator_rakuten, OperatorResolver.getOperatorResourceId("rakuten mobile") as Int)
         assertEquals(R.drawable.ic_operator_rakuten, SimUtils.getOperatorIconResource("rakuten"))
+    }
+
+    @Test
+    fun `test Koryolink brand tokens resolve to resource string and icon`() {
+        assertEquals(R.string.operator_koryolink, OperatorResolver.getOperatorResourceId("koryolink") as Int)
+        assertEquals(R.drawable.ic_operator_koryolink, SimUtils.getOperatorIconResource("koryolink"))
     }
 
     private fun resolveDisplayName(plmn: String): String {
