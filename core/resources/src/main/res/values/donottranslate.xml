@@ -404,4 +404,13 @@
     <string name="operator_docomo_pacific" translatable="false">DOCOMO PACIFIC</string>
     <string name="operator_gta" translatable="false">GTA</string>
     <string name="operator_telecom_niue" translatable="false">Telecom Niue</string>
+    <string name="operator_telcell" translatable="false">Telcell</string>
+    <string name="operator_chippie" translatable="false">Chippie</string>
+    <string name="operator_telbo" translatable="false">Telbo</string>
+    <string name="operator_apua" translatable="false">APUA</string>
+    <string name="operator_logic" translatable="false">Logic</string>
+    <string name="operator_cct" translatable="false">CCT</string>
+    <string name="operator_wind_do" translatable="false">Wind</string>
+    <string name="operator_e_networks" translatable="false">E-Networks</string>
+    <string name="operator_setar" translatable="false">SETAR</string>
 </resources>

@@ -140,6 +140,16 @@ class AmericasOperatorsTest {
         assertEquals("operator_t_mobile", resolvePlmn("311870"))
         assertEquals("operator_att", resolvePlmn("311180"))
         assertEquals("operator_bell", resolvePlmn("302630"))
+        assertEquals("operator_telcell", resolvePlmn("36251"))
+        assertEquals("operator_chippie", resolvePlmn("36259"))
+        assertEquals("operator_telbo", resolvePlmn("36278"))
+        assertEquals("operator_apua", resolvePlmn("344030"))
+        assertEquals("operator_logic", resolvePlmn("346001"))
+        assertEquals("operator_cct", resolvePlmn("348570"))
+        assertEquals("operator_digicel", resolvePlmn("356050"))
+        assertEquals("operator_setar", resolvePlmn("36301"))
+        assertEquals("operator_wind_do", resolvePlmn("37005"))
+        assertEquals("operator_e_networks", resolvePlmn("73800"))
     }
 
     @Test
@@ -165,6 +175,14 @@ class AmericasOperatorsTest {
         assertEquals(R.string.operator_antel, OperatorResolver.getOperatorResourceId("antel") as Int)
         assertEquals(R.string.operator_fido, OperatorResolver.getOperatorResourceId("fido") as Int)
         assertEquals(R.string.operator_freedom, OperatorResolver.getOperatorResourceId("freedom") as Int)
+        assertEquals(R.string.operator_telcell, OperatorResolver.getOperatorResourceId("telcell") as Int)
+        assertEquals(R.string.operator_chippie, OperatorResolver.getOperatorResourceId("chippie") as Int)
+        assertEquals(R.string.operator_telbo, OperatorResolver.getOperatorResourceId("telbo") as Int)
+        assertEquals(R.string.operator_apua, OperatorResolver.getOperatorResourceId("apua") as Int)
+        assertEquals(R.string.operator_cct, OperatorResolver.getOperatorResourceId("cct boatphone") as Int)
+        assertEquals(R.string.operator_wind_do, OperatorResolver.getOperatorResourceId("wind telecom") as Int)
+        assertEquals(R.string.operator_e_networks, OperatorResolver.getOperatorResourceId("e-networks") as Int)
+        assertEquals(R.string.operator_setar, OperatorResolver.getOperatorResourceId("setar") as Int)
     }
 
     @Test
@@ -178,6 +196,15 @@ class AmericasOperatorsTest {
         assertEquals(R.drawable.ic_operator_antel, SimUtils.getOperatorIconResource("antel"))
         assertEquals(R.drawable.ic_operator_fido, SimUtils.getOperatorIconResource("fido"))
         assertEquals(R.drawable.ic_operator_freedom, SimUtils.getOperatorIconResource("freedom"))
+        assertEquals(R.drawable.ic_operator_telcell, SimUtils.getOperatorIconResource("telcell"))
+        assertEquals(R.drawable.ic_operator_chippie, SimUtils.getOperatorIconResource("chippie"))
+        assertEquals(R.drawable.ic_operator_telbo, SimUtils.getOperatorIconResource("telbo"))
+        assertEquals(R.drawable.ic_operator_apua, SimUtils.getOperatorIconResource("apua"))
+        assertEquals(R.drawable.ic_operator_logic, SimUtils.getOperatorIconResource("operator_logic"))
+        assertEquals(R.drawable.ic_operator_cct, SimUtils.getOperatorIconResource("cct boatphone"))
+        assertEquals(R.drawable.ic_operator_wind_do, SimUtils.getOperatorIconResource("wind telecom"))
+        assertEquals(R.drawable.ic_operator_e_networks, SimUtils.getOperatorIconResource("e-networks"))
+        assertEquals(R.drawable.ic_operator_setar, SimUtils.getOperatorIconResource("setar"))
     }
 
     private fun resolvePlmn(plmn: String): String? {
