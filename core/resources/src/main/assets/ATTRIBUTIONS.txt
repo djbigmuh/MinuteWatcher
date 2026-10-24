@@ -4,6 +4,7 @@ Category A — CC0 brand glyphs (simple-icons 16.35.0, https://simple-icons.org,
 - ic_operator_airtel (slug: airtel)
 - ic_operator_att (slug: atandt)
 - ic_operator_jio (slug: jio)
+- ic_operator_magenta (slug: deutschetelekom)
 - ic_operator_movistar (slug: movistar)
 - ic_operator_o2 (slug: o2)
 - ic_operator_odido (slug: odido)
@@ -17,18 +18,22 @@ Category A — CC0 brand glyphs (simple-icons 16.35.0, https://simple-icons.org,
 Category B — original stylized marks:
 All other ic_operator_*.xml drawables are original project artwork (octagon plate plus
 brand-colored glyph). Initial glyph outlines are derived from Liberation Sans Bold,
-Copyright (c) Bitstream, Inc., licensed under the SIL Open Font License, Version 1.1.
+Copyright (c) Bitstream, Inc., licensed under the SIL Open Font License, Version 1.1 (full text in OFL-1.1.txt).
 
 Category C — retained legacy marks:
-Icons that already contained recognizable brand-colored artwork prior to normalization are retained unchanged (for example ic_operator_verizon, ic_operator_rakuten, ic_operator_magenta, ic_operator_yettel, ic_operator_yoigo).
+- ic_operator_verizon
+- ic_operator_rakuten
+- ic_operator_yettel
+- ic_operator_yoigo
+- ic_operator_vi
 
 Shared corporate marks:
 - Deutsche Telekom Group: ic_operator_t_mobile, ic_operator_telekom, ic_operator_magenta
 - Turkcell Group: ic_operator_life_by, ic_operator_lifecell
 
 License summary:
-- CC0-1.0: 12 glyph sources (Category A).
-- SIL Open Font License 1.1: Liberation Sans Bold (glyph outlines, Category B).
+- CC0-1.0: 13 glyph sources (Category A).
+- SIL Open Font License 1.1: Liberation Sans Bold (glyph outlines, Category B; full text in OFL-1.1.txt).
 - Original artwork: Category B and Category C.
 
 Trademarks are property of their respective owners; usage is nominative.

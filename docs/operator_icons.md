@@ -1,20 +1,17 @@
 # Operator brand assets — inventory
 
-All operator icons (`core/resources/src/main/res/drawable/ic_operator_*.xml`) are vector drawables in a unified 48x48
-viewport. Every icon is validated by
-`OperatorIconAssetComplianceTest`, `OperatorVectorIntegrityTest` and
-`OperatorIconGeometryTest`.
+All operator icons (`core/resources/src/main/res/drawable/ic_operator_*.xml`) are vector drawables in a unified 48x48 viewport. Every icon is validated by `OperatorIconAssetComplianceTest`, `OperatorVectorIntegrityTest` and `OperatorIconGeometryTest`.
 
 ## Category A — CC0 brand glyphs (simple-icons)
 
-The following icons embed brand glyph paths derived from the simple-icons project (https://simple-icons.org, version
-16.35.0), licensed CC0-1.0:
+The following 13 icons embed brand glyph paths derived from the simple-icons project (https://simple-icons.org, version 16.35.0), licensed CC0-1.0:
 
 | Resource             | simple-icons slug |
 |----------------------|-------------------|
 | ic_operator_airtel   | airtel            |
 | ic_operator_att      | atandt            |
 | ic_operator_jio      | jio               |
+| ic_operator_magenta  | deutschetelekom   |
 | ic_operator_movistar | movistar          |
 | ic_operator_o2       | o2                |
 | ic_operator_odido    | odido             |
@@ -27,29 +24,27 @@ The following icons embed brand glyph paths derived from the simple-icons projec
 
 ## Category B — original stylized marks
 
-All remaining 370 `ic_operator_*.xml` files are original stylized marks created for this project: a light or dark
-octagon
-plate carrying a brand-colored glyph (simplified brand symbol or brand initials). Glyph outlines for initial-based marks
-are derived from the Liberation Sans Bold typeface (SIL Open Font License 1.1). These marks are not official logos; they
-identify operators by brand color and initials under nominative use.
+All remaining 370 `ic_operator_*.xml` files are original stylized marks created for this project: a light or dark octagon plate carrying a brand-colored glyph (simplified brand symbol or brand initials). Glyph outlines for initial-based marks are derived from the Liberation Sans Bold typeface (SIL Open Font License 1.1). These marks are not official logos; they identify operators by brand color and initials under nominative use.
 
 ## Category C — retained legacy marks
 
-Icons that already contained recognizable brand-colored artwork prior to normalization are retained unchanged (for
-example `ic_operator_verizon`, `ic_operator_rakuten`,
-`ic_operator_magenta`, `ic_operator_yettel`, `ic_operator_yoigo`, `ic_operator_vi`).
+The following 5 icons that already contained recognizable brand-colored artwork prior to normalization are retained unchanged:
+- `ic_operator_verizon`
+- `ic_operator_rakuten`
+- `ic_operator_yettel`
+- `ic_operator_yoigo`
+- `ic_operator_vi`
 
 ## License summary
 
-- CC0-1.0: 12 glyph sources (Category A).
-- SIL Open Font License 1.1: Liberation Sans Bold (glyph outlines, Category B).
+- CC0-1.0: 13 glyph sources (Category A).
+- SIL Open Font License 1.1: Liberation Sans Bold (glyph outlines, Category B; text of license in `core/resources/src/main/assets/OFL-1.1.txt`).
 - Original artwork: Category B and Category C.
 
 ## Notes
 
 - Trademark rights remain with their owners; icons are used for nominative operator identification.
-- Brand colors are adjusted where required to satisfy the contrast rule of the compliance test (WCAG 2.1 ratio >= 3.0
-  against white, gray and dark backgrounds).
+- Brand colors are adjusted where required to satisfy the contrast rule of the compliance test (WCAG 2.1 ratio >= 3.0 against white, gray and dark backgrounds).
 
 ## Uniqueness rules
 
@@ -60,8 +55,7 @@ example `ic_operator_verizon`, `ic_operator_rakuten`,
 
 ## Shared corporate marks
 
-- **Deutsche Telekom Group**: `ic_operator_t_mobile`, `ic_operator_telekom`, `ic_operator_magenta` share the corporate
-  T-Mobile/Telekom glyph mark.
+- **Deutsche Telekom Group**: `ic_operator_t_mobile`, `ic_operator_telekom`, `ic_operator_magenta` share the corporate T-Mobile/Telekom glyph mark.
 - **Turkcell Group**: `ic_operator_life_by`, `ic_operator_lifecell` share the corporate life:) / lifecell smiley mark.
 
 ## Normative asset compliance rules

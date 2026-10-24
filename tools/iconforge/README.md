@@ -1,29 +1,22 @@
 # IconForge Tooling
 
-Reproducible tooling for generating operator vector icons and managing the 287-brand reference table (`brands.tsv`).
+Tooling resources for operator vector icon generation and reference asset management.
 
 ## Components
 
-- `brands.tsv`: Reference table for all 287 operator brands.
-- `fetch_simple_icons.py`: Downloads and verifies simple-icons catalog (version 16.35.0).
-- `fetch_fonts.py`: Fetches Liberation Sans Bold (SIL OFL 1.1) glyph outlines.
-- `compose_icon.py`: Deterministically builds Android VectorDrawable XML.
-- `validate_icons.py`: Validates asset compliance against normative rules.
-- `render_icons.py`: Renders preview PNGs to `out/preview/`.
+- `simple_icons.json`: Simple Icons catalog (version 16.35.0, CC0-1.0).
+- `simple_icons_version.txt`: Version metadata for Simple Icons catalog.
+- `cache/liberation_sans_bold_glyphs.json`: Cached glyph outlines for Liberation Sans Bold typeface (SIL OFL 1.1).
+- `out/*.xml`: Reference vector drawable examples.
 
-## Requirements
+The canonical list of operator brands is defined in `OperatorBrandDatabase.operatorResourceMap` and the vector assets in `core/resources/src/main/res/drawable`.
 
-Python dependencies in `requirements.txt`:
+## Creating and Validating Icons
 
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-```bash
-python fetch_simple_icons.py
-python fetch_fonts.py
-python validate_icons.py
-python render_icons.py
-```
+When creating new operator vector drawables:
+1. Base the vector structure on an existing template (e.g. `ic_operator_mts.xml`).
+2. Source brand glyphs from CC0 Simple Icons or Liberation Sans Bold glyph cache.
+3. Validate vector compliance, geometry, and uniqueness via the test suite:
+   ```powershell
+   $env:ANDROID_PREFS_ROOT=$null; ./gradlew :core:resources:testDebugUnitTest :core:android:testDebugUnitTest
+   ```
