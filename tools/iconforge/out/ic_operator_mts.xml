@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp"
-    android:viewportWidth="48" android:viewportHeight="48">
-    <path android:fillColor="#FFFFFFFF"
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#FFFFFFFF"
         android:pathData="M 2.5 13 L 2.5 35 L 13 45.5 L 35 45.5 L 45.5 35 L 45.5 13 L 35 2.5 L 13 2.5 Z" />
-    <path android:fillColor="#FFE30611"
-        android:pathData="M 14 12 L 14 36 L 18 36 L 18 24 L 24 30 L 30 24 L 30 36 L 34 36 L 34 12 L 30 12 L 24 20 L 18 12 Z" />
+    <path
+        android:fillColor="#FFE60000"
+        android:fillType="evenOdd"
+        android:pathData="M 17.76 28.98 V 22.95 Q 17.76 22.74 17.77 22.54 Q 17.77 22.33 17.83 20.78 Q 17.33 22.68 17.09 23.43 L 15.3 28.98 H 13.82 L 12.02 23.43 L 11.27 20.78 Q 11.35 22.42 11.35 22.95 V 28.98 H 9.5 V 19.03 H 12.29 L 14.07 24.59 L 14.23 25.13 L 14.56 26.46 L 15.01 24.87 L 16.84 19.03 H 19.61 V 28.98 Z M 26.04 20.64 V 28.98 H 23.96 V 20.64 H 20.74 V 19.03 H 29.26 V 20.64 Z M 38.5 26.11 Q 38.5 27.57 37.42 28.35 Q 36.33 29.12 34.23 29.12 Q 32.32 29.12 31.23 28.44 Q 30.14 27.76 29.83 26.39 L 31.85 26.06 Q 32.05 26.85 32.64 27.2 Q 33.24 27.56 34.29 27.56 Q 36.47 27.56 36.47 26.23 Q 36.47 25.81 36.22 25.53 Q 35.97 25.26 35.52 25.07 Q 35.06 24.89 33.77 24.63 Q 32.65 24.37 32.21 24.21 Q 31.78 24.05 31.42 23.83 Q 31.07 23.62 30.82 23.31 Q 30.58 23.01 30.44 22.6 Q 30.3 22.19 30.3 21.66 Q 30.3 20.31 31.31 19.6 Q 32.33 18.88 34.26 18.88 Q 36.11 18.88 37.04 19.46 Q 37.97 20.04 38.24 21.37 L 36.22 21.65 Q 36.06 21.01 35.59 20.68 Q 35.11 20.36 34.22 20.36 Q 32.33 20.36 32.33 21.54 Q 32.33 21.93 32.53 22.18 Q 32.73 22.42 33.13 22.6 Q 33.52 22.77 34.73 23.03 Q 36.16 23.34 36.78 23.59 Q 37.4 23.85 37.76 24.19 Q 38.12 24.54 38.31 25.01 Q 38.5 25.49 38.5 26.11 Z" />
 </vector>
