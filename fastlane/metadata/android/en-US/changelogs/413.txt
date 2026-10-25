@@ -1,0 +1,4 @@
+• Updated notification and tile status icons to application brand silhouette.
+• Enhanced error messages with fully localized generic fallbacks.
+• Optimized SIM operator discovery and PLMN database coverage.
+• Updated project metadata and documentation.

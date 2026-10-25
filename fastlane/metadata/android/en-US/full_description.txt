@@ -1,0 +1,15 @@
+MinuteWatcher helps you track your mobile carrier's remaining minutes and data usage per SIM card.
+
+Key Features:
+• Multi-SIM Support: Monitor remaining voice minutes and cellular traffic independently for each active SIM card.
+• Customizable Home Screen Widgets: Choose from multiple widget layouts (including detailed six-line view) with adjustable font sizes, colors, and background transparency.
+• Smart Usage Tracking: Automatic call duration and data consumption monitoring using Android system APIs.
+• Persistent Status Notification & Always-on Display: Optional low-priority silent summary notification visible on lock screen and Always-on Display.
+• Quick Settings Tile & Shortcuts: Fast access to current usage metrics and actions directly from Quick Settings or app shortcuts.
+• Automated Billing Cycle Resets: Set the monthly reset day per SIM card to align with your carrier's billing cycle.
+• Manual Adjustments: Easily adjust counters if carrier billing differs slightly from system state.
+• Privacy First & Offline Only: All usage data and preferences remain strictly on your device. Zero server communications, zero tracking SDKs, zero cloud sync.
+• Multi-Language UI: Supports 28 languages.
+
+Note on Translations:
+Except for Russian and English, UI translations were generated automatically using an LLM and may contain minor phrasing imperfections.
