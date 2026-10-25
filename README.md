@@ -94,6 +94,15 @@ The project uses a few non-stable (Beta/Alpha) versions of critical libraries to
 - **Environment**: JDK 25 and other versions should not be in the system `PATH` to avoid leakage into child processes (Detekt/KSP).
 - **Gradle**: Configured via local environment or user-level settings for cross-platform compatibility.
 
+## Distribution
+
+MinuteWatcher is published across multiple distribution channels:
+- **Google Play Market**: Official store listing for Android devices.
+- **F-Droid**: Open-source repository built directly from source code.
+- **GitHub Releases**: Direct download of signed release APKs and checksums.
+
+For detailed release procedures, store metadata management, and build specifications, see [docs/release.md](docs/release.md).
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
