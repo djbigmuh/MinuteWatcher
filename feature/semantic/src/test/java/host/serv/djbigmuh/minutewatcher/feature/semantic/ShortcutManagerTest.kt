@@ -613,7 +613,7 @@ class ShortcutManagerTest {
         }
 
     @Test
-    fun `shortcuts use ic_shortcut_usage and not ic_notification`() =
+    fun `shortcuts use ic_shortcut_usage and not ic_stat_minutewatcher`() =
         runTest {
             val flow =
                 MutableStateFlow(
