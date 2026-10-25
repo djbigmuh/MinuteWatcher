@@ -71,7 +71,6 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
                         iccId = "icc_1",
                         displayName = "SIM 1",
                         carrierName = "C1",
-                        mccMnc = "25001",
                         isDefaultData = true,
                         isDefaultVoice = true,
                     ),

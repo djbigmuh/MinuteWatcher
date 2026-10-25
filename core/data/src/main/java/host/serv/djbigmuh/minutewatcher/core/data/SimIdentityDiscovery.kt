@@ -156,7 +156,6 @@ class SimIdentityDiscovery
                                     iccId = info.iccId,
                                     displayName = info.displayName?.toString(),
                                     carrierName = info.carrierName?.toString(),
-                                    mccMnc = SimIdentityUtils.getMccMnc(info),
                                     isDefaultData = info.subscriptionId == defaultDataSubId,
                                     isDefaultVoice = info.subscriptionId == defaultVoiceSubId,
                                 )

@@ -763,7 +763,6 @@ class SimIdentityObserverResilienceTest {
         iccId = "icc_$slot",
         displayName = "SIM ${slot + 1}",
         carrierName = "Carrier",
-        mccMnc = "25001",
         isDefaultData = slot == 0,
         isDefaultVoice = slot == 0,
     )

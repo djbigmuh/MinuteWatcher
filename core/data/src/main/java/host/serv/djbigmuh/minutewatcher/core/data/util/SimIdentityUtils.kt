@@ -56,8 +56,6 @@ object SimIdentityUtils {
     private const val MNC_LEN_2 = 2
     private const val MNC_LEN_3 = 3
 
-    fun getMccMnc(info: SubscriptionInfo): String = mccMncCandidates(info).firstOrNull().orEmpty()
-
     /**
      * Creates a [SimIdentity] from a [SubscriptionInfo].
      *

@@ -58,7 +58,6 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                     iccId = "icc_1",
                     displayName = "SIM 1",
                     carrierName = "Carrier",
-                    mccMnc = "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
@@ -102,7 +101,6 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                     iccId = "icc_1",
                     displayName = "SIM 1",
                     carrierName = "Carrier",
-                    mccMnc = "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
@@ -145,7 +143,6 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                     iccId = "icc_1",
                     displayName = "SIM 1",
                     carrierName = "Carrier",
-                    mccMnc = "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
@@ -556,7 +553,6 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                     iccId = "icc_1",
                     displayName = "SIM 1",
                     carrierName = "Carrier",
-                    mccMnc = "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )

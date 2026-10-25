@@ -89,7 +89,6 @@ class CallAttributionResolverTest {
                     "i0",
                     "S0",
                     "C0",
-                    "m0",
                     false,
                     false,
                 )
@@ -101,7 +100,6 @@ class CallAttributionResolverTest {
                     "i1",
                     "S1",
                     "C1",
-                    "m1",
                     false,
                     false,
                 )
@@ -123,7 +121,6 @@ class CallAttributionResolverTest {
                     "i0",
                     "S0",
                     "C0",
-                    "m0",
                     false,
                     false,
                 )
@@ -145,7 +142,6 @@ class CallAttributionResolverTest {
                     null,
                     "S0",
                     "C0",
-                    "m0",
                     false,
                     false,
                 )
@@ -167,7 +163,6 @@ class CallAttributionResolverTest {
                     null,
                     "S1",
                     "C1",
-                    "m1",
                     false,
                     false,
                 )
@@ -179,7 +174,6 @@ class CallAttributionResolverTest {
                     "icc_2",
                     "S2",
                     "C2",
-                    "m2",
                     false,
                     false,
                 )
@@ -213,7 +207,6 @@ class CallAttributionResolverTest {
                     "i7",
                     "S7",
                     "C7",
-                    "25001",
                     false,
                     false,
                 )
@@ -237,7 +230,6 @@ class CallAttributionResolverTest {
                     "i7",
                     "S7",
                     "C7",
-                    "25001",
                     false,
                     false,
                 )

@@ -134,7 +134,6 @@ class TrafficTargetResolverTest {
         iccId = "sim_$slot",
         displayName = "SIM $slot",
         carrierName = "Carrier",
-        mccMnc = "12345",
         isDefaultData = isDefaultData,
         isDefaultVoice = false,
     )

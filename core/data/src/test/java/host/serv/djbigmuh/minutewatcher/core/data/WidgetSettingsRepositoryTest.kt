@@ -277,7 +277,6 @@ class WidgetSettingsRepositoryTest {
             iccId = if (isStable) id else null,
             displayName = "SIM $slot",
             carrierName = "Carrier",
-            mccMnc = "12345",
             isDefaultData = (slot == 0),
             isDefaultVoice = (slot == 0),
         )

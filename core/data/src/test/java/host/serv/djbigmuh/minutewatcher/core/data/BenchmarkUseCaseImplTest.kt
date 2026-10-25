@@ -84,7 +84,6 @@ class BenchmarkUseCaseImplTest {
                     "icc_1",
                     "SIM 1",
                     "C1",
-                    "25001",
                     true,
                     true,
                 )
@@ -106,7 +105,6 @@ class BenchmarkUseCaseImplTest {
                     "icc_1",
                     "SIM 1",
                     "C1",
-                    "25001",
                     true,
                     true,
                 )
@@ -118,7 +116,6 @@ class BenchmarkUseCaseImplTest {
                     "icc_2",
                     "SIM 2",
                     "C2",
-                    "25002",
                     false,
                     false,
                 )

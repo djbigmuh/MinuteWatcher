@@ -365,7 +365,6 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
                     iccId = "id_new",
                     displayName = "SIM 1",
                     carrierName = "Carrier",
-                    mccMnc = "12345",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )

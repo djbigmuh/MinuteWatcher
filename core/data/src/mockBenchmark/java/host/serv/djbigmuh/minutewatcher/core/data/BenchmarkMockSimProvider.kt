@@ -32,7 +32,6 @@ class BenchmarkMockSimProvider
                     iccId = "mock_icc_$i",
                     displayName = "SIM ${i + 1}",
                     carrierName = "Mock Carrier ${i + 1}",
-                    mccMnc = "001001",
                     isDefaultData = i == 0,
                     isDefaultVoice = i == 0,
                 )

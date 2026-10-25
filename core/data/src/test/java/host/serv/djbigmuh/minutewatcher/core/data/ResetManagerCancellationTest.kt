@@ -103,7 +103,6 @@ class ResetManagerCancellationTest {
             iccId = identity,
             displayName = "SIM",
             carrierName = "Carrier",
-            mccMnc = "25001",
             isDefaultData = true,
             isDefaultVoice = true,
         )

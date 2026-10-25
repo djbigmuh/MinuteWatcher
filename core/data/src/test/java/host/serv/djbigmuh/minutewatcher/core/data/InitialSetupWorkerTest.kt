@@ -313,7 +313,7 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
-                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
@@ -348,7 +348,6 @@ class InitialSetupWorkerTest {
                     "1",
                     "MTS",
                     "MTS",
-                    "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
@@ -371,7 +370,7 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
-                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
 
@@ -394,7 +393,7 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
-                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
 
@@ -428,7 +427,7 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
-                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
@@ -472,7 +471,7 @@ class InitialSetupWorkerTest {
             whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = false))
             val identity = SimIdentity("icc_123", 1, 0, IdentitySource.ICCID, isStable = true)
             val activeSim =
-                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", "25001", isDefaultData = true, isDefaultVoice = true)
+                ActiveSimInfo(identity, 0, 1, "123", "MTS", "MTS", isDefaultData = true, isDefaultVoice = true)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(listOf(activeSim)))
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
@@ -646,7 +645,6 @@ class InitialSetupWorkerTest {
                     "slow",
                     "MTS",
                     "MTS",
-                    "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )

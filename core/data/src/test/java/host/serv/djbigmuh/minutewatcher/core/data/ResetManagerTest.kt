@@ -75,7 +75,6 @@ class ResetManagerTest {
                     iccId = identity,
                     displayName = "MTS",
                     carrierName = "MTS",
-                    mccMnc = "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
@@ -122,7 +121,6 @@ class ResetManagerTest {
                     iccId = identity,
                     displayName = "MTS",
                     carrierName = "MTS",
-                    mccMnc = "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
@@ -169,7 +167,6 @@ class ResetManagerTest {
                     iccId = identity,
                     displayName = "MTS",
                     carrierName = "MTS",
-                    mccMnc = "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
@@ -227,7 +224,6 @@ class ResetManagerTest {
                     iccId = identity,
                     displayName = "MTS",
                     carrierName = "MTS",
-                    mccMnc = "25001",
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
@@ -442,7 +438,6 @@ class ResetManagerTest {
         iccId = identity,
         displayName = "Op $slot",
         carrierName = "Op $slot",
-        mccMnc = "2500$slot",
         isDefaultData = slot == 0,
         isDefaultVoice = slot == 0,
     )

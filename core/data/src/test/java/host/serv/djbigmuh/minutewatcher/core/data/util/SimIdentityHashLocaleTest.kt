@@ -68,7 +68,6 @@ class SimIdentityHashLocaleTest {
             iccId = iccid,
             displayName = "SIM 1",
             carrierName = "Carrier",
-            mccMnc = "25001",
             isDefaultData = true,
             isDefaultVoice = true,
         )

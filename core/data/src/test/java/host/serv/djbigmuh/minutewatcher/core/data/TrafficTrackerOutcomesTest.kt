@@ -127,7 +127,6 @@ class TrafficTrackerOutcomesTest {
             iccId = "sim_0",
             displayName = "SIM 1",
             carrierName = "Carrier 1",
-            mccMnc = "25001",
             isDefaultData = true,
             isDefaultVoice = true,
         )
@@ -140,7 +139,6 @@ class TrafficTrackerOutcomesTest {
             iccId = "sim_0",
             displayName = "SIM 1",
             carrierName = "Carrier 1",
-            mccMnc = "25001",
             isDefaultData = true,
             isDefaultVoice = true,
         )
