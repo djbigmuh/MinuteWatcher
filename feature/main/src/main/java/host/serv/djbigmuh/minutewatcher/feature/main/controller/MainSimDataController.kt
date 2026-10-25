@@ -439,7 +439,7 @@ internal class MainSimDataController
 
                 else -> {
                     AppLogger.e("MainSimDataController: $operationName failed for slot $slot", e)
-                    OperationError(R.string.error_unknown, slot, listOf(e.message ?: "??"))
+                    OperationError(R.string.error_unexpected, slot)
                 }
             }
 

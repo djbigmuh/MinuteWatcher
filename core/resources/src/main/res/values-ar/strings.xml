@@ -82,7 +82,7 @@
     <string name="error_storage_unavailable">وحدة التخزين غير متاحة للفتحة %1$d. أعد المحاولة لاحقًا.</string>
     <string name="error_sim_removed">تمت إزالة شريحة SIM من الفتحة %1$d</string>
     <string name="error_operation_failed_retry">فشلت العملية بعد إعادة المحاولة.</string>
-    <string name="error_unknown">خطأ غير معروف: %1$s</string>
+    <string name="error_unexpected">حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.</string>
     <!-- Dialogs -->
     <string name="cancel_button">إلغاء</string>
     <string name="save_button">حفظ</string>

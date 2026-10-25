@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">ஸ்லாட் %1$d க்கு சேமிப்பகம் கிடைக்கவில்லை. பின்னர் மீண்டும் முயற்சிக்கவும்.</string>
     <string name="error_sim_removed">ஸ்லாட் %1$d இலிருந்து சிம் அகற்றப்பட்டது</string>
     <string name="error_operation_failed_retry">மீண்டும் முயன்ற பிறகும் செயல்பாடு தோல்வியடைந்தது.</string>
-    <string name="error_unknown">தெரியாத பிழை: %1$s</string>
+    <string name="error_unexpected">எதிர்பாராத பிழை ஏற்பட்டுள்ளது. மீண்டும் முயற்சிக்கவும்.</string>
     <!-- Dialogs -->
     <string name="cancel_button">ரத்துசெய்</string>
     <string name="save_button">சேமி</string>

@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Ààyè itọju kò sí fun áyè %1$d. Tún gbiyanju ni ẹyìn gbaa.</string>
     <string name="error_sim_removed">A ti yọ SIM kúrò nínú áyè %1$d</string>
     <string name="error_operation_failed_retry">Iṣẹ́ kùnà lẹ́yìn atúngbiyanju.</string>
-    <string name="error_unknown">Àṣìṣe tí a kò mọ̀: %1$s</string>
+    <string name="error_unexpected">Aṣìṣe aláìròtẹlẹ kan ṣẹlẹ. Jọ̀wọ́ tún gbiyanju lẹ́ẹ̀kan si.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Fagilee</string>
     <string name="save_button">Gba pamọ́</string>

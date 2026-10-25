@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Armazenamento indisponível para o slot %1$d. Tente novamente mais tarde.</string>
     <string name="error_sim_removed">O cartão SIM foi removido do slot %1$d</string>
     <string name="error_operation_failed_retry">A operação falhou após nova tentativa.</string>
-    <string name="error_unknown">Erro desconhecido: %1$s</string>
+    <string name="error_unexpected">Ocorreu um erro inesperado. Tente novamente.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Cancelar</string>
     <string name="save_button">Salvar</string>

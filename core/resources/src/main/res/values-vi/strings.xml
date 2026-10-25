@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Bộ nhớ không khả dụng cho khe %1$d. Thử lại sau.</string>
     <string name="error_sim_removed">SIM đã bị xóa khỏi khe %1$d</string>
     <string name="error_operation_failed_retry">Thao tác thất bại sau khi thử lại.</string>
-    <string name="error_unknown">Lỗi không xác định: %1$s</string>
+    <string name="error_unexpected">Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Hủy</string>
     <string name="save_button">Lưu</string>

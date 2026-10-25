@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Almacenamiento no disponible para la ranura %1$d. Vuelve a intentarlo más tarde.</string>
     <string name="error_sim_removed">Se retiró la tarjeta SIM de la ranura %1$d</string>
     <string name="error_operation_failed_retry">La operación falló tras reintentarlo.</string>
-    <string name="error_unknown">Error desconocido: %1$s</string>
+    <string name="error_unexpected">Se ha producido un error inesperado. Por favor, inténtalo de nuevo.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Cancelar</string>
     <string name="save_button">Guardar</string>

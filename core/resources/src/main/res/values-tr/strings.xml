@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Yuva %1$d için depolama alanı yok. Daha sonra tekrar deneyin.</string>
     <string name="error_sim_removed">SIM kart yuva %1$d\'den çıkarıldı</string>
     <string name="error_operation_failed_retry">Yeniden denedikten sonra da işlem başarısız oldu.</string>
-    <string name="error_unknown">Bilinmeyen hata: %1$s</string>
+    <string name="error_unexpected">Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.</string>
     <!-- Dialogs -->
     <string name="cancel_button">İptal</string>
     <string name="save_button">Kaydet</string>

@@ -66,7 +66,7 @@ class OperationErrorStringsLocalizationTest {
                     R.string.error_storage_unavailable,
                     R.string.error_sim_removed,
                     R.string.error_operation_failed_retry,
-                    R.string.error_unknown,
+                    R.string.error_unexpected,
                 )
 
             errorKeys.forEach { resId ->
@@ -103,21 +103,26 @@ class OperationErrorStringsLocalizationTest {
                 "Formatted string for locale $localeTag should not contain %1\$d",
                 removedFormatted.contains("%1\$d"),
             )
-
-            val unknownFormatted = localizedContext.getString(R.string.error_unknown, "TestError")
-            assertFalse(
-                "Formatted string for locale $localeTag should not contain %1\$s",
-                unknownFormatted.contains("%1\$s"),
-            )
         }
     }
 
     @Test
-    fun `error operation failed retry resolves without arguments and is not empty`() {
+    fun `error operation failed retry and error unexpected resolve without arguments and are not empty`() {
         supportedLocales.forEach { localeTag ->
             val localizedContext = getLocalizedContext(localeTag)
-            val message = localizedContext.getString(R.string.error_operation_failed_retry)
-            assertTrue("Operation failed retry string for locale $localeTag must not be empty", message.isNotEmpty())
+            val retryMessage =
+                localizedContext.getString(R.string.error_operation_failed_retry)
+            assertTrue(
+                "Operation failed retry string for locale $localeTag must not be empty",
+                retryMessage.isNotEmpty(),
+            )
+
+            val unexpectedMessage =
+                localizedContext.getString(R.string.error_unexpected)
+            assertTrue(
+                "Unexpected error string for locale $localeTag must not be empty",
+                unexpectedMessage.isNotEmpty(),
+            )
         }
     }
 

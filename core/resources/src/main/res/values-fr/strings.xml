@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Stockage indisponible pour l\'emplacement %1$d. Réessayez plus tard.</string>
     <string name="error_sim_removed">La carte SIM a été retirée de l\'emplacement %1$d</string>
     <string name="error_operation_failed_retry">L\'opération a échoué après une nouvelle tentative.</string>
-    <string name="error_unknown">Erreur inconnue : %1$s</string>
+    <string name="error_unexpected">Une erreur inattendue s\'est produite. Veuillez réessayer.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Annuler</string>
     <string name="save_button">Enregistrer</string>

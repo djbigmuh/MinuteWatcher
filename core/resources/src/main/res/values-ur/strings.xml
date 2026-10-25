@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">سلاٹ %1$d کے لیے اسٹوریج دستیاب نہیں ہے۔ بعد میں کوشش کریں۔</string>
     <string name="error_sim_removed">SIM سلاٹ %1$d سے ہٹا دی گئی تھی</string>
     <string name="error_operation_failed_retry">دوبارہ کوشش کے بعد آپریشن ناکام ہو گیا۔</string>
-    <string name="error_unknown">نامعلوم خرابی: %1$s</string>
+    <string name="error_unexpected">ایک غیر متوقع خرابی پیش آگئی۔ براہ کرم دوبارہ کوشش کریں۔</string>
     <!-- Dialogs -->
     <string name="cancel_button">منسوخ کریں</string>
     <string name="save_button">محفوظ کریں</string>

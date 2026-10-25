@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Penyimpanan tidak tersedia untuk slot %1$d. Coba lagi nanti.</string>
     <string name="error_sim_removed">SIM dilepas dari slot %1$d</string>
     <string name="error_operation_failed_retry">Operasi gagal setelah percobaan ulang.</string>
-    <string name="error_unknown">Kesalahan tidak dikenal: %1$s</string>
+    <string name="error_unexpected">Terjadi kesalahan yang tidak terduga. Silakan coba lagi.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Batal</string>
     <string name="save_button">Simpan</string>

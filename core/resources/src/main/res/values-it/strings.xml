@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Memoria non disponibile per lo slot %1$d. Riprova più tardi.</string>
     <string name="error_sim_removed">La SIM è stata rimossa dallo slot %1$d</string>
     <string name="error_operation_failed_retry">Operazione non riuscita anche dopo aver riprovato.</string>
-    <string name="error_unknown">Errore sconosciuto: %1$s</string>
+    <string name="error_unexpected">Si è verificato un errore imprevisto. Riprova.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Annulla</string>
     <string name="save_button">Salva</string>

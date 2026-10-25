@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">స్లాట్ %1$d కోసం నిల్వ అందుబాటులో లేదు. తర్వాత మళ్లీ ప్రయత్నించండి.</string>
     <string name="error_sim_removed">స్లాట్ %1$d నుండి సిమ్ తీసివేయబడింది</string>
     <string name="error_operation_failed_retry">మళ్లీ ప్రయత్నించిన తర్వాత కూడా ఆపరేషన్ విఫలమైంది.</string>
-    <string name="error_unknown">తెలియని లోపం: %1$s</string>
+    <string name="error_unexpected">अप्रत्याशిత లోపం సంభవించింది. దయచేసి మళ్లీ ప్రయత్నించండి.</string>
     <!-- Dialogs -->
     <string name="cancel_button">రద్దు చేయండి</string>
     <string name="save_button">సేవ్ చేయండి</string>

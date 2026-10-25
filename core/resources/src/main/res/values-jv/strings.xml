@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Panyimpenan ora kasedhiya kanggo slot %1$d. Coba maneh mengko.</string>
     <string name="error_sim_removed">SIM dicopot saka slot %1$d</string>
     <string name="error_operation_failed_retry">Operasi gagal sawise dicoba maneh.</string>
-    <string name="error_unknown">Kesalahan ora dingerteni: %1$s</string>
+    <string name="error_unexpected">Ana kasalahan sing ora disangka-sangka. Coba maneh.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Batal</string>
     <string name="save_button">Simpen</string>

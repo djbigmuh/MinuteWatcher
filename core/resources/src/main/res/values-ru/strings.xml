@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Хранилище недоступно для слота %1$d. Попробуйте позже.</string>
     <string name="error_sim_removed">SIM-карта была извлечена из слота %1$d</string>
     <string name="error_operation_failed_retry">Операция не удалась после повторной попытки.</string>
-    <string name="error_unknown">Неизвестная ошибка: %1$s</string>
+    <string name="error_unexpected">Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Отмена</string>
     <string name="save_button">Сохранить</string>

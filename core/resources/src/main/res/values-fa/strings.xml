@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">حافظه برای اسلات %1$d در دسترس نیست. بعداً تلاش کنید.</string>
     <string name="error_sim_removed">سیم‌کارت از اسلات %1$d خارج شد</string>
     <string name="error_operation_failed_retry">عملیات پس از تلاش مجدد ناموفق بود.</string>
-    <string name="error_unknown">خطای ناشناخته: %1$s</string>
+    <string name="error_unexpected">خطای غیرمنتظره‌ای رخ داد. لطفاً دوباره تلاش کنید.</string>
     <!-- Dialogs -->
     <string name="cancel_button">لغو</string>
     <string name="save_button">ذخیره</string>

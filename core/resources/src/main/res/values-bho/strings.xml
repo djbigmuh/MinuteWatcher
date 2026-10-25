@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">स्लॉट %1$d खातिर स्टोरेज उपलब्ध नइखे। बाद में फिर कोशिश करीं।</string>
     <string name="error_sim_removed">स्लॉट %1$d से सिम निकाल दिहल गइल</string>
     <string name="error_operation_failed_retry">दोबारा कोशिश कइला के बाद भी काम असफल रहल।</string>
-    <string name="error_unknown">अज्ञात गलती: %1$s</string>
+    <string name="error_unexpected">एकटा अनपेक्षित गलती भेल। कृपया फेर कोशिश करी.</string>
     <!-- Dialogs -->
     <string name="cancel_button">रद्द करीं</string>
     <string name="save_button">सेव करीं</string>

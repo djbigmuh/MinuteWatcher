@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">સ્લોટ %1$d માટે સ્ટોરેજ ઉપલબ્ધ નથી. પછીથી ફરી પ્રયાસ કરો.</string>
     <string name="error_sim_removed">સ્લોટ %1$d માંથી સિમ દૂર કરવામાં આવ્યું</string>
     <string name="error_operation_failed_retry">ફરી પ્રયાસ કર્યા પછી પણ કામગીરી નિષ્ફળ ગઈ.</string>
-    <string name="error_unknown">અજ્ઞાત ભૂલ: %1$s</string>
+    <string name="error_unexpected">એક અનપેક્ષિત ભૂલ થઈ. કૃપા કરીને ફરી પ્રયાસ કરો.</string>
     <!-- Dialogs -->
     <string name="cancel_button">રદ કરો</string>
     <string name="save_button">સાચવો</string>

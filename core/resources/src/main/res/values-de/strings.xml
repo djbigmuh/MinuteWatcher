@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Speicher für Slot %1$d nicht verfügbar. Später erneut versuchen.</string>
     <string name="error_sim_removed">SIM-Karte wurde aus Slot %1$d entfernt</string>
     <string name="error_operation_failed_retry">Vorgang auch nach erneutem Versuch fehlgeschlagen.</string>
-    <string name="error_unknown">Unbekannter Fehler: %1$s</string>
+    <string name="error_unexpected">Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Abbrechen</string>
     <string name="save_button">Speichern</string>

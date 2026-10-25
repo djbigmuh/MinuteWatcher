@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">ਸਲਾਟ %1$d ਲਈ ਸਟੋਰੇਜ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਬਾਅਦ ਵਿੱਚ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="error_sim_removed">ਸਲਾਟ %1$d ਤੋਂ ਸਿਮ ਹਟਾ ਦਿੱਤਾ ਗਿਆ</string>
     <string name="error_operation_failed_retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਬਾਅਦ ਵੀ ਕਾਰਵਾਈ ਅਸਫਲ ਰਹੀ।</string>
-    <string name="error_unknown">ਅਣਜਾਣ ਗਲਤੀ: %1$s</string>
+    <string name="error_unexpected">ਇਕ ਅਚਾਨਕ ਗਲਤੀ ਆਈ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਦوبਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <!-- Dialogs -->
     <string name="cancel_button">ਰੱਦ ਕਰੋ</string>
     <string name="save_button">ਸੰਭਾਲੋ</string>

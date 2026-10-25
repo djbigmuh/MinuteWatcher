@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">Ajiyar bayanai ba ya samuwa ga rami %1$d. Sake gwada daga baya.</string>
     <string name="error_sim_removed">An cire SIM daga rami %1$d</string>
     <string name="error_operation_failed_retry">Aiki ya gaza bayan sake gwadawa.</string>
-    <string name="error_unknown">Kuskuren da ba a sani ba: %1$s</string>
+    <string name="error_unexpected">An sami kuskuren da ba a zata ba. Don Allah sake gwadawa.</string>
     <!-- Dialogs -->
     <string name="cancel_button">Soke</string>
     <string name="save_button">Adana</string>

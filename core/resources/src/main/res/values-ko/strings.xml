@@ -78,7 +78,7 @@
     <string name="error_storage_unavailable">슬롯 %1$d에 대한 저장소 공간을 사용할 수 없습니다. 나중에 다시 시도해 주세요.</string>
     <string name="error_sim_removed">슬롯 %1$d에서 SIM 카드가 제거되었습니다</string>
     <string name="error_operation_failed_retry">재시도 후에도 작업에 실패했습니다.</string>
-    <string name="error_unknown">알 수 없는 오류: %1$s</string>
+    <string name="error_unexpected">예기치 않은 오류가 발생했습니다. 다시 시도해 주세요.</string>
     <!-- Dialogs -->
     <string name="cancel_button">취소</string>
     <string name="save_button">저장</string>
