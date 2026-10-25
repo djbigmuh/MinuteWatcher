@@ -30,6 +30,9 @@ class WesternEuropeOperatorsTest {
         assertEquals("operator_ee", resolvePlmn("23430"))
         assertEquals("operator_vodafone", resolvePlmn("23415"))
         assertEquals("operator_proximus", resolvePlmn("20601"))
+        assertEquals("operator_free", resolvePlmn("20835"))
+        assertEquals("operator_sfr", resolvePlmn("20809"))
+        assertEquals("operator_lycamobile", resolvePlmn("20606"))
         assertEquals("Three", OperatorResolver.resolve(context, "", listOf("27202"), 0).displayName)
 
         assertEquals("MEO", OperatorResolver.resolve(context, "", listOf("26880"), 0).displayName)

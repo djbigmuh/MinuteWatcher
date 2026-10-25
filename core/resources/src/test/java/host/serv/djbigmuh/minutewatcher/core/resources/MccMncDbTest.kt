@@ -77,7 +77,7 @@ class MccMncDbTest {
                 "313" to setOf(3),
                 "330" to setOf(3),
                 "334" to setOf(3),
-                "338" to setOf(3),
+                "338" to setOf(2, 3),
                 "342" to setOf(3),
                 "344" to setOf(3),
                 "346" to setOf(3),
@@ -93,7 +93,7 @@ class MccMncDbTest {
                 "368" to setOf(2),
                 "370" to setOf(2),
                 "372" to setOf(2),
-                "374" to setOf(2),
+                "374" to setOf(2, 3),
                 "376" to setOf(3),
                 "400" to setOf(2),
                 "401" to setOf(2),
@@ -234,7 +234,7 @@ class MccMncDbTest {
                 "704" to setOf(2),
                 "706" to setOf(2),
                 "708" to setOf(3),
-                "710" to setOf(2),
+                "710" to setOf(2, 3),
                 "712" to setOf(2),
                 "714" to setOf(2, 3),
                 "716" to setOf(2),
@@ -247,6 +247,7 @@ class MccMncDbTest {
                 "740" to setOf(2),
                 "744" to setOf(2),
                 "748" to setOf(2),
+                "901" to setOf(2, 3),
             )
 
         /**
