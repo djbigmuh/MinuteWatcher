@@ -66,6 +66,8 @@ class SouthernEuropeTurkeyOperatorsTest {
         assertEquals(R.string.operator_go, OperatorResolver.getOperatorResourceId("go malta") as Int)
         assertEquals(R.string.operator_coop_voce, OperatorResolver.getOperatorResourceId("coop voce") as Int)
         assertEquals(R.string.operator_spusu, OperatorResolver.getOperatorResourceId("spusu") as Int)
+        assertEquals(R.string.operator_kena, OperatorResolver.getOperatorResourceId("kena") as Int)
+        assertEquals(R.string.operator_postemobile, OperatorResolver.getOperatorResourceId("postemobile") as Int)
     }
 
     @Test
@@ -76,6 +78,8 @@ class SouthernEuropeTurkeyOperatorsTest {
         assertEquals(R.drawable.ic_operator_go, SimUtils.getOperatorIconResource("go malta"))
         assertEquals(R.drawable.ic_operator_coop_voce, SimUtils.getOperatorIconResource("coop voce"))
         assertEquals(R.drawable.ic_operator_spusu, SimUtils.getOperatorIconResource("spusu"))
+        assertEquals(R.drawable.ic_operator_kena, SimUtils.getOperatorIconResource("kena"))
+        assertEquals(R.drawable.ic_operator_postemobile, SimUtils.getOperatorIconResource("postemobile"))
     }
 
     private fun resolveDisplayName(plmn: String): String {

@@ -3,7 +3,7 @@ package host.serv.djbigmuh.minutewatcher.core.android.util
 import host.serv.djbigmuh.minutewatcher.core.resources.R
 
 object OperatorBrandDatabase {
-    val operatorResourceMap =
+    private val operatorResourceMapPart1 =
         mapOf(
             "operator_mts" to R.string.operator_mts,
             "operator_megafon" to R.string.operator_megafon,
@@ -185,6 +185,10 @@ object OperatorBrandDatabase {
             "operator_inwi" to R.string.operator_inwi,
             "operator_djezzy" to R.string.operator_djezzy,
             "operator_9mobile" to R.string.operator_9mobile,
+        )
+
+    private val operatorResourceMapPart2 =
+        mapOf(
             "operator_nova" to R.string.operator_nova,
             "operator_nova_gr" to R.string.operator_nova_gr,
             "operator_vox" to R.string.operator_vox,
@@ -365,6 +369,10 @@ object OperatorBrandDatabase {
             "operator_ucall" to R.string.operator_ucall,
             "operator_bluesky" to R.string.operator_bluesky,
             "operator_mobilis_nc" to R.string.operator_mobilis_nc,
+        )
+
+    private val operatorResourceMapPart3 =
+        mapOf(
             "operator_vini" to R.string.operator_vini,
             "operator_frigate" to R.string.operator_frigate,
             "operator_fsm_telecom" to R.string.operator_fsm_telecom,
@@ -495,7 +503,41 @@ object OperatorBrandDatabase {
             "operator_coop_voce" to R.string.operator_coop_voce,
             "operator_spusu" to R.string.operator_spusu,
             "operator_altan" to R.string.operator_altan,
+            "operator_giffgaff" to R.string.operator_giffgaff,
+            "operator_tesco_mobile" to R.string.operator_tesco_mobile,
+            "operator_voxi" to R.string.operator_voxi,
+            "operator_smarty" to R.string.operator_smarty,
+            "operator_congstar" to R.string.operator_congstar,
+            "operator_kena" to R.string.operator_kena,
+            "operator_cricket" to R.string.operator_cricket,
+            "operator_boost" to R.string.operator_boost,
+            "operator_metro" to R.string.operator_metro,
+            "operator_mint" to R.string.operator_mint,
+            "operator_visible" to R.string.operator_visible,
+            "operator_google_fi" to R.string.operator_google_fi,
+            "operator_xfinity" to R.string.operator_xfinity,
+            "operator_spectrum_mobile" to R.string.operator_spectrum_mobile,
+            "operator_straight_talk" to R.string.operator_straight_talk,
+            "operator_tracfone" to R.string.operator_tracfone,
+            "operator_simple_mobile" to R.string.operator_simple_mobile,
+            "operator_red_pocket" to R.string.operator_red_pocket,
+            "operator_ultra_mobile" to R.string.operator_ultra_mobile,
+            "operator_consumer_cellular" to R.string.operator_consumer_cellular,
+            "operator_tello" to R.string.operator_tello,
+            "operator_us_mobile" to R.string.operator_us_mobile,
+            "operator_total_verizon" to R.string.operator_total_verizon,
+            "operator_koodo" to R.string.operator_koodo,
+            "operator_fizz" to R.string.operator_fizz,
+            "operator_chatr" to R.string.operator_chatr,
+            "operator_public_mobile" to R.string.operator_public_mobile,
+            "operator_lucky_mobile" to R.string.operator_lucky_mobile,
+            "operator_bait" to R.string.operator_bait,
         )
+
+    val operatorResourceMap =
+        operatorResourceMapPart1 +
+            operatorResourceMapPart2 +
+            operatorResourceMapPart3
 
     val tokenToResKey: Map<String, String> = OperatorBrandTokens.tokenToResKey
 }

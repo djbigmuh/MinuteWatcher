@@ -13,6 +13,11 @@ class AmericasOperatorsTest {
     private val context: Context
         get() = ApplicationProvider.getApplicationContext()
 
+    @org.junit.Before
+    fun setup() {
+        OperatorResolver.reset()
+    }
+
     @Test
     fun `test Americas PLMN database mappings`() {
         assertEquals("operator_att", resolvePlmn("310410"))
@@ -281,6 +286,98 @@ class AmericasOperatorsTest {
             R.string.operator_iconnect,
             OperatorResolver.getOperatorResourceId("iconnect") as Int,
         )
+        assertEquals(
+            R.string.operator_cricket,
+            OperatorResolver.getOperatorResourceId("cricket") as Int,
+        )
+        assertEquals(
+            R.string.operator_boost,
+            OperatorResolver.getOperatorResourceId("boost mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_metro,
+            OperatorResolver.getOperatorResourceId("metro by t-mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_mint,
+            OperatorResolver.getOperatorResourceId("mint mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_visible,
+            OperatorResolver.getOperatorResourceId("visible mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_google_fi,
+            OperatorResolver.getOperatorResourceId("google fi") as Int,
+        )
+        assertEquals(
+            R.string.operator_xfinity,
+            OperatorResolver.getOperatorResourceId("xfinity") as Int,
+        )
+        assertEquals(
+            R.string.operator_spectrum_mobile,
+            OperatorResolver.getOperatorResourceId("spectrum mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_straight_talk,
+            OperatorResolver.getOperatorResourceId("straight talk") as Int,
+        )
+        assertEquals(
+            R.string.operator_tracfone,
+            OperatorResolver.getOperatorResourceId("tracfone") as Int,
+        )
+        assertEquals(
+            R.string.operator_simple_mobile,
+            OperatorResolver.getOperatorResourceId("simple mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_red_pocket,
+            OperatorResolver.getOperatorResourceId("red pocket") as Int,
+        )
+        assertEquals(
+            R.string.operator_ultra_mobile,
+            OperatorResolver.getOperatorResourceId("ultra mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_consumer_cellular,
+            OperatorResolver.getOperatorResourceId("consumer cellular") as Int,
+        )
+        assertEquals(
+            R.string.operator_tello,
+            OperatorResolver.getOperatorResourceId("tello") as Int,
+        )
+        assertEquals(
+            R.string.operator_us_mobile,
+            OperatorResolver.getOperatorResourceId("us mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_total_verizon,
+            OperatorResolver.getOperatorResourceId("total by verizon") as Int,
+        )
+        assertEquals(
+            R.string.operator_koodo,
+            OperatorResolver.getOperatorResourceId("koodo") as Int,
+        )
+        assertEquals(
+            R.string.operator_fizz,
+            OperatorResolver.getOperatorResourceId("fizz") as Int,
+        )
+        assertEquals(
+            R.string.operator_chatr,
+            OperatorResolver.getOperatorResourceId("chatr") as Int,
+        )
+        assertEquals(
+            R.string.operator_public_mobile,
+            OperatorResolver.getOperatorResourceId("public mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_lucky_mobile,
+            OperatorResolver.getOperatorResourceId("lucky mobile") as Int,
+        )
+        assertEquals(
+            R.string.operator_bait,
+            OperatorResolver.getOperatorResourceId("bait") as Int,
+        )
     }
 
     @Test
@@ -300,7 +397,7 @@ class AmericasOperatorsTest {
         assertEquals(R.drawable.ic_operator_telbo, SimUtils.getOperatorIconResource("telbo"))
         assertEquals(R.drawable.ic_operator_apua, SimUtils.getOperatorIconResource("apua"))
         assertEquals(R.drawable.ic_operator_altan, SimUtils.getOperatorIconResource("altan"))
-        assertEquals(R.drawable.ic_operator_logic, SimUtils.getOperatorIconResource("operator_logic"))
+        assertEquals(R.drawable.ic_operator_logic, SimUtils.getOperatorIconResource("logic"))
         assertEquals(R.drawable.ic_operator_cct, SimUtils.getOperatorIconResource("cct boatphone"))
         assertEquals(R.drawable.ic_operator_wind_do, SimUtils.getOperatorIconResource("wind telecom"))
         assertEquals(R.drawable.ic_operator_e_networks, SimUtils.getOperatorIconResource("e-networks"))
@@ -320,6 +417,29 @@ class AmericasOperatorsTest {
         assertEquals(R.drawable.ic_operator_thumb, SimUtils.getOperatorIconResource("thumb cellular"))
         assertEquals(R.drawable.ic_operator_strata, SimUtils.getOperatorIconResource("strata networks"))
         assertEquals(R.drawable.ic_operator_iconnect, SimUtils.getOperatorIconResource("iconnect"))
+        assertEquals(R.drawable.ic_operator_cricket, SimUtils.getOperatorIconResource("cricket"))
+        assertEquals(R.drawable.ic_operator_boost, SimUtils.getOperatorIconResource("boost mobile"))
+        assertEquals(R.drawable.ic_operator_metro, SimUtils.getOperatorIconResource("metro by t-mobile"))
+        assertEquals(R.drawable.ic_operator_mint, SimUtils.getOperatorIconResource("mint mobile"))
+        assertEquals(R.drawable.ic_operator_visible, SimUtils.getOperatorIconResource("visible mobile"))
+        assertEquals(R.drawable.ic_operator_google_fi, SimUtils.getOperatorIconResource("google fi"))
+        assertEquals(R.drawable.ic_operator_xfinity, SimUtils.getOperatorIconResource("xfinity"))
+        assertEquals(R.drawable.ic_operator_spectrum_mobile, SimUtils.getOperatorIconResource("spectrum mobile"))
+        assertEquals(R.drawable.ic_operator_straight_talk, SimUtils.getOperatorIconResource("straight talk"))
+        assertEquals(R.drawable.ic_operator_tracfone, SimUtils.getOperatorIconResource("tracfone"))
+        assertEquals(R.drawable.ic_operator_simple_mobile, SimUtils.getOperatorIconResource("simple mobile"))
+        assertEquals(R.drawable.ic_operator_red_pocket, SimUtils.getOperatorIconResource("red pocket"))
+        assertEquals(R.drawable.ic_operator_ultra_mobile, SimUtils.getOperatorIconResource("ultra mobile"))
+        assertEquals(R.drawable.ic_operator_consumer_cellular, SimUtils.getOperatorIconResource("consumer cellular"))
+        assertEquals(R.drawable.ic_operator_tello, SimUtils.getOperatorIconResource("tello"))
+        assertEquals(R.drawable.ic_operator_us_mobile, SimUtils.getOperatorIconResource("us mobile"))
+        assertEquals(R.drawable.ic_operator_total_verizon, SimUtils.getOperatorIconResource("total by verizon"))
+        assertEquals(R.drawable.ic_operator_koodo, SimUtils.getOperatorIconResource("koodo"))
+        assertEquals(R.drawable.ic_operator_fizz, SimUtils.getOperatorIconResource("fizz"))
+        assertEquals(R.drawable.ic_operator_chatr, SimUtils.getOperatorIconResource("chatr"))
+        assertEquals(R.drawable.ic_operator_public_mobile, SimUtils.getOperatorIconResource("public mobile"))
+        assertEquals(R.drawable.ic_operator_lucky_mobile, SimUtils.getOperatorIconResource("lucky mobile"))
+        assertEquals(R.drawable.ic_operator_bait, SimUtils.getOperatorIconResource("bait"))
     }
 
     private fun resolvePlmn(plmn: String): String? {

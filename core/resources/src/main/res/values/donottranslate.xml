@@ -505,4 +505,33 @@
     <string name="operator_coop_voce" translatable="false">Coop Voce</string>
     <string name="operator_spusu" translatable="false">spusu</string>
     <string name="operator_altan" translatable="false">Altán Redes</string>
+    <string name="operator_giffgaff" translatable="false">giffgaff</string>
+    <string name="operator_tesco_mobile" translatable="false">Tesco Mobile</string>
+    <string name="operator_voxi" translatable="false">VOXI</string>
+    <string name="operator_smarty" translatable="false">SMARTY</string>
+    <string name="operator_congstar" translatable="false">congstar</string>
+    <string name="operator_kena" translatable="false">Kena Mobile</string>
+    <string name="operator_cricket" translatable="false">Cricket Wireless</string>
+    <string name="operator_boost" translatable="false">Boost Mobile</string>
+    <string name="operator_metro" translatable="false">Metro by T-Mobile</string>
+    <string name="operator_mint" translatable="false">Mint Mobile</string>
+    <string name="operator_visible" translatable="false">Visible</string>
+    <string name="operator_google_fi" translatable="false">Google Fi</string>
+    <string name="operator_xfinity" translatable="false">Xfinity Mobile</string>
+    <string name="operator_spectrum_mobile" translatable="false">Spectrum Mobile</string>
+    <string name="operator_straight_talk" translatable="false">Straight Talk</string>
+    <string name="operator_tracfone" translatable="false">TracFone</string>
+    <string name="operator_simple_mobile" translatable="false">Simple Mobile</string>
+    <string name="operator_red_pocket" translatable="false">Red Pocket</string>
+    <string name="operator_ultra_mobile" translatable="false">Ultra Mobile</string>
+    <string name="operator_consumer_cellular" translatable="false">Consumer Cellular</string>
+    <string name="operator_tello" translatable="false">Tello</string>
+    <string name="operator_us_mobile" translatable="false">US Mobile</string>
+    <string name="operator_total_verizon" translatable="false">Total by Verizon</string>
+    <string name="operator_koodo" translatable="false">Koodo</string>
+    <string name="operator_fizz" translatable="false">Fizz</string>
+    <string name="operator_chatr" translatable="false">Chatr</string>
+    <string name="operator_public_mobile" translatable="false">Public Mobile</string>
+    <string name="operator_lucky_mobile" translatable="false">Lucky Mobile</string>
+    <string name="operator_bait" translatable="false">Bait</string>
 </resources>

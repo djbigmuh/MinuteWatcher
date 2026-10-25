@@ -86,6 +86,13 @@ class WesternEuropeOperatorsTest {
         assertEquals(R.string.operator_vodacom, OperatorResolver.getOperatorResourceId("vodacom") as Int)
         assertEquals(R.string.operator_safaricom, OperatorResolver.getOperatorResourceId("safaricom") as Int)
         assertEquals(R.string.operator_glo, OperatorResolver.getOperatorResourceId("glo") as Int)
+        assertEquals(R.string.operator_giffgaff, OperatorResolver.getOperatorResourceId("giffgaff") as Int)
+        assertEquals(R.string.operator_giffgaff, OperatorResolver.getOperatorResourceId("Giffgaff") as Int)
+        assertEquals(R.string.operator_tesco_mobile, OperatorResolver.getOperatorResourceId("tesco mobile") as Int)
+        assertEquals(R.string.operator_tesco_mobile, OperatorResolver.getOperatorResourceId("tesco") as Int)
+        assertEquals(R.string.operator_voxi, OperatorResolver.getOperatorResourceId("voxi") as Int)
+        assertEquals(R.string.operator_smarty, OperatorResolver.getOperatorResourceId("smarty") as Int)
+        assertEquals(R.string.operator_congstar, OperatorResolver.getOperatorResourceId("congstar") as Int)
     }
 
     @Test
@@ -101,6 +108,11 @@ class WesternEuropeOperatorsTest {
         assertEquals(R.drawable.ic_operator_vodacom, SimUtils.getOperatorIconResource("vodacom"))
         assertEquals(R.drawable.ic_operator_safaricom, SimUtils.getOperatorIconResource("safaricom"))
         assertEquals(R.drawable.ic_operator_glo, SimUtils.getOperatorIconResource("glo"))
+        assertEquals(R.drawable.ic_operator_giffgaff, SimUtils.getOperatorIconResource("giffgaff"))
+        assertEquals(R.drawable.ic_operator_tesco_mobile, SimUtils.getOperatorIconResource("tesco mobile"))
+        assertEquals(R.drawable.ic_operator_voxi, SimUtils.getOperatorIconResource("voxi"))
+        assertEquals(R.drawable.ic_operator_smarty, SimUtils.getOperatorIconResource("smarty"))
+        assertEquals(R.drawable.ic_operator_congstar, SimUtils.getOperatorIconResource("congstar"))
     }
 
     private fun resolvePlmn(plmn: String): String? {
