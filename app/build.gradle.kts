@@ -20,7 +20,7 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "host.serv.djbigmuh.minutewatcher"
-        versionCode = 412
+        versionCode = 413
         versionName = "4.3.0"
         testInstrumentationRunner = "host.serv.djbigmuh.minutewatcher.HiltTestRunner"
     }
