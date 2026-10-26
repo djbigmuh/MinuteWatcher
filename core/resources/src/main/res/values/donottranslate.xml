@@ -548,4 +548,6 @@
     <string name="operator_nema" translatable="false">Nema</string>
     <string name="operator_sber_mobile" translatable="false">SberMobile</string>
     <string name="operator_miranda" translatable="false">Miranda</string>
+    <string name="operator_bell_mts" translatable="false">Bell MTS</string>
+    <string name="operator_mts_rs" translatable="false">mts</string>
 </resources>

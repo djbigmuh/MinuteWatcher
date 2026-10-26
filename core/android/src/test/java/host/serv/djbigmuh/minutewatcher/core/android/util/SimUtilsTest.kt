@@ -38,7 +38,7 @@ class SimUtilsTest {
 
     @Test
     fun `getOperatorIconResource returns correct icons for known tokens`() {
-        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS RUS"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС RUS"))
         assertEquals(R.drawable.ic_operator_beeline, SimUtils.getOperatorIconResource("Beeline"))
         assertEquals(R.drawable.ic_operator_megafon, SimUtils.getOperatorIconResource("MegaFon Corp"))
         assertEquals(R.drawable.ic_operator_tele2, SimUtils.getOperatorIconResource("Tele2 Russia"))
@@ -59,19 +59,19 @@ class SimUtilsTest {
         assertEquals(R.drawable.ic_operator_mgts, SimUtils.getOperatorIconResource("МГТС"))
         assertEquals(R.drawable.ic_operator_yota, SimUtils.getOperatorIconResource("Йота"))
         assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС Россия"))
-        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS МТС"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС МТС"))
         assertEquals(R.drawable.ic_operator_sber_mobile, SimUtils.getOperatorIconResource("СберМобайл"))
     }
 
     @Test
     fun `getOperatorIconResource is case insensitive`() {
-        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("mts"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("мтс"))
     }
 
     @Test
     fun `getOperatorIconResource handles delimiters correctly`() {
-        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS-RUS"))
-        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS_RUS"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС-RUS"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС_RUS"))
     }
 
     @Test
@@ -166,7 +166,7 @@ class SimUtilsTest {
     @Test
     fun `getShortOperatorName returns resource string for known brand operator name`() {
         whenever(context.getString(R.string.operator_mts)).thenReturn("MTS")
-        val result = SimUtils.getShortOperatorName(context, "MTS RUS", 0)
+        val result = SimUtils.getShortOperatorName(context, "МТС RUS", 0)
         assertEquals("MTS", result)
     }
 

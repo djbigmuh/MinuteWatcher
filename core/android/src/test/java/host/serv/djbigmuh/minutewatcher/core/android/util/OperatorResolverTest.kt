@@ -73,9 +73,9 @@ class OperatorResolverTest {
 
     @Test
     fun `resolve by display name returns correct brandKey`() {
-        val result = OperatorResolver.resolve(context, "MTS", emptyList(), 0)
-        assertEquals("MTS", result.displayName)
-        assertEquals("operator_mts", result.brandKey)
+        val result = OperatorResolver.resolve(context, "Bell MTS", emptyList(), 0)
+        assertEquals("Bell MTS", result.displayName)
+        assertEquals("operator_bell_mts", result.brandKey)
 
         val customResult = OperatorResolver.resolve(context, "My Operator", emptyList(), 0)
         assertEquals("My Operator", customResult.displayName)
@@ -439,9 +439,9 @@ class OperatorResolverTest {
 
     @Test
     fun `resolve name token priority over db plmn`() {
-        val result = OperatorResolver.resolve(context, "MTS", listOf("21407"), 0)
-        assertEquals("MTS", result.displayName)
-        assertEquals("operator_mts", result.brandKey)
+        val result = OperatorResolver.resolve(context, "Vodafone", listOf("21407"), 0)
+        assertEquals("Vodafone", result.displayName)
+        assertEquals("operator_vodafone", result.brandKey)
     }
 
     @Test

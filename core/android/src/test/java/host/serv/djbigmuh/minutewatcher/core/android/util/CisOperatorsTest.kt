@@ -62,7 +62,7 @@ class CisOperatorsTest {
 
     @Test
     fun `cis brand tokens resolve to brand string resources`() {
-        assertEquals(R.string.operator_mts, OperatorResolver.getOperatorResourceId("MTS"))
+        assertEquals(R.string.operator_mts, OperatorResolver.getOperatorResourceId("МТС"))
         assertEquals(R.string.operator_megafon, OperatorResolver.getOperatorResourceId("MegaFon"))
         assertEquals(R.string.operator_beeline, OperatorResolver.getOperatorResourceId("Beeline"))
         assertEquals(R.string.operator_tele2, OperatorResolver.getOperatorResourceId("Tele2"))
@@ -89,7 +89,7 @@ class CisOperatorsTest {
 
     @Test
     fun `cis brands resolve icons correctly`() {
-        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS"))
+        assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС"))
         assertEquals(R.drawable.ic_operator_megafon, SimUtils.getOperatorIconResource("MegaFon"))
         assertEquals(R.drawable.ic_operator_beeline, SimUtils.getOperatorIconResource("Beeline"))
         assertEquals(R.drawable.ic_operator_tele2, SimUtils.getOperatorIconResource("Tele2"))

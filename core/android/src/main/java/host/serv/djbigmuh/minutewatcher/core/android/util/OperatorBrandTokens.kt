@@ -69,7 +69,6 @@ internal object OperatorBrandTokens {
             "safaricom" to "operator_safaricom",
             "glo" to "operator_glo",
             "globacom" to "operator_glo",
-            "mts" to "operator_mts",
             "мтс" to "operator_mts",
             "megafon" to "operator_megafon",
             "мегафон" to "operator_megafon",

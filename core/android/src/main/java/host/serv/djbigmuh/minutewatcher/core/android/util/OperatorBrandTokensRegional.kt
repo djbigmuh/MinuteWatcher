@@ -530,5 +530,8 @@ internal object OperatorBrandTokensRegional {
             "miranda media" to "operator_miranda",
             "миранда" to "operator_miranda",
             "miranda" to "operator_miranda",
+            "bell mts" to "operator_bell_mts",
+            "mts srbija" to "operator_mts_rs",
+            "telekom srbija" to "operator_mts_rs",
         )
 }

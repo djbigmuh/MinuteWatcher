@@ -31,17 +31,12 @@ class OperatorBrandTokensTest {
 
         val lastExpected =
             listOf(
-                "liberty",
-                "liberty latin america",
-                "nema",
-                "sbermobile",
-                "sber mobile",
-                "сбермобайл",
-                "miranda media",
-                "миранда",
                 "miranda",
+                "bell mts",
+                "mts srbija",
+                "telekom srbija",
             )
-        assertEquals(lastExpected, keys.takeLast(9))
+        assertEquals(lastExpected, keys.takeLast(4))
 
         try {
             OperatorBrandTokens.mergeTokenMaps(
@@ -91,6 +86,7 @@ class OperatorBrandTokensTest {
         assertEquals("operator_e_and", OperatorResolver.getOperatorBrandKey("e&"))
         assertNull(OperatorResolver.getOperatorBrandKey("bmobile"))
         assertNull(OperatorResolver.getOperatorBrandKey("movil"))
+        assertNull(OperatorResolver.getOperatorBrandKey("mts"))
 
         val bmobileTtNoName = OperatorResolver.resolve(context, "", listOf("37412"), 0)
         assertEquals("operator_bmobile_tt", bmobileTtNoName.brandKey)
