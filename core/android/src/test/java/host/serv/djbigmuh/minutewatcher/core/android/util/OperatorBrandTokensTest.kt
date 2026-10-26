@@ -37,8 +37,11 @@ class OperatorBrandTokensTest {
                 "sbermobile",
                 "sber mobile",
                 "сбермобайл",
+                "miranda media",
+                "миранда",
+                "miranda",
             )
-        assertEquals(lastExpected, keys.takeLast(6))
+        assertEquals(lastExpected, keys.takeLast(9))
 
         try {
             OperatorBrandTokens.mergeTokenMaps(

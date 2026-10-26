@@ -547,4 +547,5 @@
     <string name="operator_liberty" translatable="false">Liberty</string>
     <string name="operator_nema" translatable="false">Nema</string>
     <string name="operator_sber_mobile" translatable="false">SberMobile</string>
+    <string name="operator_miranda" translatable="false">Miranda</string>
 </resources>

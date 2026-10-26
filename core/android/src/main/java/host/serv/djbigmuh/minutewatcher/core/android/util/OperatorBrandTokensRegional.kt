@@ -527,5 +527,8 @@ internal object OperatorBrandTokensRegional {
             "sbermobile" to "operator_sber_mobile",
             "sber mobile" to "operator_sber_mobile",
             "сбермобайл" to "operator_sber_mobile",
+            "miranda media" to "operator_miranda",
+            "миранда" to "operator_miranda",
+            "miranda" to "operator_miranda",
         )
 }

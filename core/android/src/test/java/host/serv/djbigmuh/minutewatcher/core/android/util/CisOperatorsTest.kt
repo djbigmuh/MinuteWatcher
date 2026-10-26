@@ -32,6 +32,7 @@ class CisOperatorsTest {
         assertEquals("operator_beeline", json.getString("25028"))
         assertEquals("operator_rostelecom", json.getString("25039"))
         assertEquals("operator_sber_mobile", json.getString("25050"))
+        assertEquals("operator_miranda", json.getString("25054"))
         assertEquals("operator_tattelecom", json.getString("25027"))
         assertEquals("operator_yota", json.getString("25011"))
         assertEquals("operator_kyivstar", json.getString("25502"))
