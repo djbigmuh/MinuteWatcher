@@ -31,11 +31,11 @@ class OperatorBrandTokensTest {
 
         val lastExpected =
             listOf(
-                "kang song net",
                 "sweden 3g",
                 "moov mauritel",
                 "liberty",
                 "liberty latin america",
+                "nema",
             )
         assertEquals(lastExpected, keys.takeLast(5))
 

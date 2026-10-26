@@ -523,5 +523,6 @@ internal object OperatorBrandTokensRegional {
             "moov mauritel" to "operator_mauritel",
             "liberty" to "operator_liberty",
             "liberty latin america" to "operator_liberty",
+            "nema" to "operator_nema",
         )
 }

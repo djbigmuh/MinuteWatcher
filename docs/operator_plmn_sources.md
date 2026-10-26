@@ -53,7 +53,7 @@
 | 283 | Armenia                          | 28301=operator_team, 28305=operator_viva, 28310=operator_ucom | ITU-T E.212 / PSRC Armenia         | 2026-10-25 |
 | 284 | Bulgaria                         | 28401=operator_a1, 28403=operator_vivacom, 28405=operator_yettel | ITU-T E.212 / CRC Bulgaria         | 2026-10-25 |
 | 286 | Turkey                           | 28601=operator_turkcell, 28602=operator_vodafone, 28603=operator_turk_telekom, 28604=operator_turk_telekom | ITU-T E.212 / BTK Turkey           | 2026-10-25 |
-| 288 | Faroe Islands                    | 28801=operator_foroya_tele, 28802=operator_tosa, 28803=operator_tosa | ITU-T E.212                        | 2026-10-25 |
+| 288 | Faroe Islands                    | 28801=operator_foroya_tele, 28802=operator_nema | ITU-T E.212                        | 2026-10-25 |
 | 290 | Greenland                        | 29001=operator_tusass | ITU-T E.212                        | 2026-10-25 |
 | 292 | San Marino                       | 29201=operator_prima_sm | ITU-T E.212                        | 2026-10-25 |
 | 293 | Slovenia                         | 29340=operator_a1, 29341=operator_telekom_si, 29364=operator_t2_si, 29370=operator_telemach | ITU-T E.212 / AKOS Slovenia        | 2026-10-25 |
