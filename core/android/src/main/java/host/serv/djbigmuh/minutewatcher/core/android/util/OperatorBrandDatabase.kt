@@ -548,6 +548,8 @@ object OperatorBrandDatabase {
             "operator_miranda" to R.string.operator_miranda,
             "operator_bell_mts" to R.string.operator_bell_mts,
             "operator_mts_rs" to R.string.operator_mts_rs,
+            "operator_one_bm" to R.string.operator_one_bm,
+            "operator_quark" to R.string.operator_quark,
         )
 
     val operatorResourceMap =

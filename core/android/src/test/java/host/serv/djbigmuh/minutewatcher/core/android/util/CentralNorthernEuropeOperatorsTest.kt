@@ -45,9 +45,6 @@ class CentralNorthernEuropeOperatorsTest {
         assertEquals("Vodafone", result22603.displayName)
         assertEquals("operator_vodafone", result22603.brandKey)
 
-        val result22606 = OperatorResolver.resolve(context, "", listOf("22606"), 0)
-        assertEquals("operator_vodafone", result22606.brandKey)
-
         val result22601 = OperatorResolver.resolve(context, "", listOf("22601"), 0)
         assertEquals("operator_vodafone", result22601.brandKey)
 

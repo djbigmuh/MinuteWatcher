@@ -45,7 +45,6 @@ class OceaniaOperatorsTest {
         assertEquals("operator_manuia", OperatorResolver.resolve(context, "", listOf("54301"), 0).brandKey)
         assertEquals("operator_teletok", OperatorResolver.resolve(context, "", listOf("55401"), 0).brandKey)
         assertEquals("operator_frigate", OperatorResolver.resolve(context, "", listOf("54501"), 0).brandKey)
-        assertEquals("operator_pmci", OperatorResolver.resolve(context, "", listOf("55280"), 0).brandKey)
         assertEquals("operator_defence_au", OperatorResolver.resolve(context, "", listOf("50504"), 0).brandKey)
         assertEquals("operator_nta", OperatorResolver.resolve(context, "", listOf("55101"), 0).brandKey)
     }

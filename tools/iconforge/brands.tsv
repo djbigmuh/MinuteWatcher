@@ -403,3 +403,5 @@ operator_sber_mobile	SberMobile	B		#21A038	SBERM
 operator_miranda	Miranda	B		#0055A5	MIRAND
 operator_bell_mts	Bell MTS	B		#0066CC	BMTS
 operator_mts_rs	mts	B		#CC0000	MTSRS
+operator_one_bm	One	B		#00AA55	OBM
+operator_quark	Quark	B		#0055A5	QUARK

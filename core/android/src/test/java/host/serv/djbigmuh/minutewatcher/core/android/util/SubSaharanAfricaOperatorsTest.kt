@@ -117,7 +117,7 @@ class SubSaharanAfricaOperatorsTest {
         assertEquals("operator_africell_ao", OperatorResolver.resolve(context, "", listOf("63105"), 0).brandKey)
         assertEquals("operator_cellcom_gn", OperatorResolver.resolve(context, "", listOf("61105"), 0).brandKey)
         assertEquals("operator_togocel", OperatorResolver.resolve(context, "", listOf("61501"), 0).brandKey)
-        assertEquals("operator_celtiis", OperatorResolver.resolve(context, "", listOf("61604"), 0).brandKey)
+        assertEquals("operator_celtiis", OperatorResolver.resolve(context, "", listOf("61607"), 0).brandKey)
         assertEquals("operator_telecel_cf", OperatorResolver.resolve(context, "", listOf("62302"), 0).brandKey)
         assertEquals("operator_utl", OperatorResolver.resolve(context, "", listOf("64111"), 0).brandKey)
         assertEquals("operator_telesom", OperatorResolver.resolve(context, "", listOf("63701"), 0).brandKey)

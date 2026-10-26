@@ -24,7 +24,7 @@ The following 13 icons embed brand glyph paths derived from the simple-icons pro
 
 ## Category B — original stylized marks
 
-All remaining 517 `ic_operator_*.xml` files are original stylized marks created for this project: a light or dark octagon plate carrying a brand-colored glyph (simplified brand symbol or brand initials). Glyph outlines for initial-based marks are derived from the Liberation Sans Bold typeface (SIL Open Font License 1.1). These marks are not official logos; they identify operators by brand color and initials under nominative use.
+All remaining 519 `ic_operator_*.xml` files are original stylized marks created for this project: a light or dark octagon plate carrying a brand-colored glyph (simplified brand symbol or brand initials). Glyph outlines for initial-based marks are derived from the Liberation Sans Bold typeface (SIL Open Font License 1.1). These marks are not official logos; they identify operators by brand color and initials under nominative use.
 
 ## Category C — retained legacy marks
 

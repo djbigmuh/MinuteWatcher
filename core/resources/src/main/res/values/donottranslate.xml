@@ -550,4 +550,6 @@
     <string name="operator_miranda" translatable="false">Miranda</string>
     <string name="operator_bell_mts" translatable="false">Bell MTS</string>
     <string name="operator_mts_rs" translatable="false">mts</string>
+    <string name="operator_one_bm" translatable="false">One</string>
+    <string name="operator_quark" translatable="false">Quark</string>
 </resources>
