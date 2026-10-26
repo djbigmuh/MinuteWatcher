@@ -185,7 +185,7 @@ internal class SimLimitState(
     val initialTrafficText: String,
     val initialRolloverEnabled: Boolean = false,
     val initialTrafficMb: Int = 0,
-    locale: Locale,
+    val locale: Locale,
     currentMinutesText: String = initialMinutesText,
     currentTrafficText: String = initialTrafficText,
     currentRolloverEnabled: Boolean = initialRolloverEnabled,
@@ -356,12 +356,15 @@ internal class SimLimitState(
             }
         }
 
+        val isPristineInitial = minutesText.text == initialMinutesText
         val processed =
             NumericTextInputProcessor.process(
                 minutesText,
                 newValue,
                 Constants.UI.MAX_MINUTES_INPUT_CHARS,
                 NumericInputMode.MINUTES,
+                locale,
+                isPristineInitial,
             ) ?: return
 
         minutesText = processed
@@ -382,12 +385,15 @@ internal class SimLimitState(
             }
         }
 
+        val isPristineInitial = trafficText.text == initialTrafficText
         val processed =
             NumericTextInputProcessor.process(
                 trafficText,
                 newValue,
                 Constants.UI.MAX_TRAFFIC_INPUT_CHARS,
                 NumericInputMode.TRAFFIC,
+                locale,
+                isPristineInitial,
             ) ?: return
 
         trafficText = processed

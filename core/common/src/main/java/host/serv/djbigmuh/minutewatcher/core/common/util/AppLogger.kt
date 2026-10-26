@@ -87,10 +87,28 @@ object AppLogger {
         val timestamp: Instant = Instant.now(),
     )
 
-    private val dateFormat =
+    private var cachedZoneId: ZoneId = ZoneId.systemDefault()
+    private var dateFormatFormatter: DateTimeFormatter =
         DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
-            .withZone(ZoneId.systemDefault())
+            .withZone(cachedZoneId)
+
+    @VisibleForTesting
+    internal fun getFormatter(): DateTimeFormatter {
+        val currentZone = ZoneId.systemDefault()
+        if (currentZone != cachedZoneId) {
+            synchronized(this) {
+                if (currentZone != cachedZoneId) {
+                    cachedZoneId = currentZone
+                    dateFormatFormatter =
+                        DateTimeFormatter
+                            .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+                            .withZone(cachedZoneId)
+                }
+            }
+        }
+        return dateFormatFormatter
+    }
 
     fun init(
         context: Context,
@@ -271,7 +289,7 @@ object AppLogger {
                     drainedEntries.add(entry)
                     handleWriteFailureLocked("failed to open writer", drainedEntries)
                 } else {
-                    val timestamp = dateFormat.format(entry.timestamp)
+                    val timestamp = getFormatter().format(entry.timestamp)
                     activeWriter.write("$timestamp ${entry.level}/$TAG: ${entry.message}\n")
                     activeWriter.flush()
                     consecutiveWriteFailures = 0

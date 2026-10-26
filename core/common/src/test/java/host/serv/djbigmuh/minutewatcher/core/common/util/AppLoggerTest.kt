@@ -342,4 +342,20 @@ class AppLoggerTest {
     private fun waitForChannelDrain(timeoutMs: Long = 10000L) {
         assertTrue("AppLogger quiescent state", kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) })
     }
+
+    @Test
+    fun `formatter updates when default timezone changes`() {
+        val originalTz = java.util.TimeZone.getDefault()
+        try {
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Europe/London"))
+            val formatter1 = AppLogger.getFormatter()
+            assertEquals(java.time.ZoneId.of("Europe/London"), formatter1.zone)
+
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Tokyo"))
+            val formatter2 = AppLogger.getFormatter()
+            assertEquals(java.time.ZoneId.of("Asia/Tokyo"), formatter2.zone)
+        } finally {
+            java.util.TimeZone.setDefault(originalTz)
+        }
+    }
 }

@@ -3,6 +3,7 @@ package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import host.serv.djbigmuh.minutewatcher.core.common.util.NumberInputNormalizer
+import java.util.Locale
 
 internal enum class NumericInputMode {
     MINUTES,
@@ -15,10 +16,12 @@ internal object NumericTextInputProcessor {
         newValue: TextFieldValue,
         maxLength: Int,
         mode: NumericInputMode,
+        locale: Locale = Locale.getDefault(),
+        isPristineInitial: Boolean = false,
     ): TextFieldValue? {
         if (newValue.text.length > maxLength) return null
 
-        val processed = replaceInitialZeroIfNeeded(old, newValue, mode)
+        val processed = replaceInitialZeroIfNeeded(old, newValue, mode, locale, isPristineInitial)
         val cleanedText = removeLeadingZeros(processed.text)
         val selection = calculateSelection(processed, cleanedText)
 
@@ -29,9 +32,12 @@ internal object NumericTextInputProcessor {
         old: TextFieldValue,
         newValue: TextFieldValue,
         mode: NumericInputMode,
+        locale: Locale,
+        isPristineInitial: Boolean,
     ): TextFieldValue {
         val oldText = old.text
         val isZero = NumberInputNormalizer.isZeroValue(oldText)
+        val hasDecimal = NumberInputNormalizer.normalize(oldText, locale).contains('.')
         val shouldReplace =
             when (mode) {
                 NumericInputMode.MINUTES ->
@@ -42,7 +48,8 @@ internal object NumericTextInputProcessor {
                 NumericInputMode.TRAFFIC ->
                     isZero &&
                         newValue.text.length == oldText.length + 1 &&
-                        newValue.text.startsWith(oldText)
+                        newValue.text.startsWith(oldText) &&
+                        (!hasDecimal || isPristineInitial)
             }
 
         if (!shouldReplace) return newValue

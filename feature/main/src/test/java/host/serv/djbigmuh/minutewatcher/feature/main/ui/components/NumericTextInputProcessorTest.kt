@@ -7,6 +7,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 class NumericTextInputProcessorTest {
@@ -54,7 +55,13 @@ class NumericTextInputProcessorTest {
 
         val decimalOld = TextFieldValue("0", selection = TextRange(1))
         val decimalNew = TextFieldValue("0.5", selection = TextRange(3))
-        val decimalResult = NumericTextInputProcessor.process(decimalOld, decimalNew, 10, NumericInputMode.TRAFFIC)
+        val decimalResult =
+            NumericTextInputProcessor.process(
+                decimalOld,
+                decimalNew,
+                10,
+                NumericInputMode.TRAFFIC,
+            )
         assertEquals("0.5", decimalResult?.text)
     }
 
@@ -65,5 +72,158 @@ class NumericTextInputProcessorTest {
         val result = NumericTextInputProcessor.process(old, newValue, 6, NumericInputMode.MINUTES)
         assertEquals("1234", result?.text)
         assertEquals(TextRange(4), result?.selection)
+    }
+
+    @Test
+    fun `traffic pristine initial placeholder 0 0 appended 5 gives 5`() {
+        val old = TextFieldValue("0.0")
+        val newValue = TextFieldValue("0.05")
+        val result =
+            NumericTextInputProcessor.process(
+                old,
+                newValue,
+                10,
+                NumericInputMode.TRAFFIC,
+                Locale.US,
+                true,
+            )
+        assertEquals("5", result?.text)
+    }
+
+    @Test
+    fun `traffic user zero appended 5 gives 5`() {
+        val old = TextFieldValue("0")
+        val newValue = TextFieldValue("05")
+        val result =
+            NumericTextInputProcessor.process(
+                old,
+                newValue,
+                10,
+                NumericInputMode.TRAFFIC,
+                Locale.US,
+                false,
+            )
+        assertEquals("5", result?.text)
+    }
+
+    @Test
+    fun `traffic double zero appended 5 gives 5`() {
+        val old = TextFieldValue("00")
+        val newValue = TextFieldValue("005")
+        val result =
+            NumericTextInputProcessor.process(
+                old,
+                newValue,
+                10,
+                NumericInputMode.TRAFFIC,
+                Locale.US,
+                false,
+            )
+        assertEquals("5", result?.text)
+    }
+
+    @Test
+    fun `traffic decimal point old appended 0 gives 0 dot 0`() {
+        val old = TextFieldValue("0.")
+        val newValue = TextFieldValue("0.0")
+        val result =
+            NumericTextInputProcessor.process(
+                old,
+                newValue,
+                10,
+                NumericInputMode.TRAFFIC,
+                Locale.US,
+                false,
+            )
+        assertEquals("0.0", result?.text)
+    }
+
+    @Test
+    fun `traffic edited decimal old appended 5 appends correctly`() {
+        val old = TextFieldValue("0.0")
+        val newValue = TextFieldValue("0.05")
+        val result =
+            NumericTextInputProcessor.process(
+                old,
+                newValue,
+                10,
+                NumericInputMode.TRAFFIC,
+                Locale.US,
+                false,
+            )
+        assertEquals("0.05", result?.text)
+    }
+
+    @Test
+    fun `traffic comma locale edited decimal old appended 5 appends correctly`() {
+        val locale = Locale.GERMANY
+        val old = TextFieldValue("0,0")
+        val newValue = TextFieldValue("0,05")
+        val result =
+            NumericTextInputProcessor.process(
+                old,
+                newValue,
+                10,
+                NumericInputMode.TRAFFIC,
+                locale,
+                false,
+            )
+        assertEquals("0,05", result?.text)
+    }
+
+    @Test
+    fun `traffic zero plus zero stays zero`() {
+        val old = TextFieldValue("0")
+        val newValue = TextFieldValue("00")
+        val result =
+            NumericTextInputProcessor.process(
+                old,
+                newValue,
+                10,
+                NumericInputMode.TRAFFIC,
+                Locale.US,
+                false,
+            )
+        assertEquals("0", result?.text)
+    }
+
+    @Test
+    fun `minutes zero plus five gives five and zero plus zero stays zero`() {
+        val old = TextFieldValue("0")
+        val newValue1 = TextFieldValue("05")
+        val r1 =
+            NumericTextInputProcessor.process(
+                old,
+                newValue1,
+                6,
+                NumericInputMode.MINUTES,
+            )
+        assertEquals("5", r1?.text)
+
+        val newValue2 = TextFieldValue("00")
+        val r2 =
+            NumericTextInputProcessor.process(
+                old,
+                newValue2,
+                6,
+                NumericInputMode.MINUTES,
+            )
+        assertEquals("0", r2?.text)
+    }
+
+    @Test
+    fun `sequential input 0 dot 0 5 in traffic results in 0 dot 05`() {
+        val current = TextFieldValue("0.0")
+        val next = TextFieldValue("0.05")
+        val res =
+            NumericTextInputProcessor.process(
+                current,
+                next,
+                10,
+                NumericInputMode.TRAFFIC,
+                Locale.US,
+                false,
+            )
+        assertEquals("0.05", res?.text)
     }
 }

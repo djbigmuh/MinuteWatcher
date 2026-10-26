@@ -13,7 +13,7 @@ import host.serv.djbigmuh.minutewatcher.core.model.Constants
 
 @Stable
 internal class AdjustmentInputState(
-    initialText: String,
+    val initialText: String,
     val isMinutes: Boolean = true,
 ) {
     var text by mutableStateOf(
@@ -59,8 +59,18 @@ internal class AdjustmentInputState(
                 Constants.UI.MAX_TRAFFIC_INPUT_CHARS
             }
         val mode = if (isMinutes) NumericInputMode.MINUTES else NumericInputMode.TRAFFIC
+        val isPristineInitial = text.text == initialText
+        val locale = java.util.Locale.getDefault()
 
-        val processed = NumericTextInputProcessor.process(text, newValue, maxChars, mode) ?: return
+        val processed =
+            NumericTextInputProcessor.process(
+                text,
+                newValue,
+                maxChars,
+                mode,
+                locale,
+                isPristineInitial,
+            ) ?: return
 
         text = processed
         errorText = null

@@ -67,7 +67,7 @@ internal object TileContentResolver {
             )
         }
 
-        val selected = TileSimSelector.select(sims) ?: sims.first()
+        val selected = TileSimSelector.select(sims) ?: sims.minByOrNull { it.slot } ?: sims.first()
         val operatorName = operatorNameOf(selected)
         val minutes = selected.entities[PackageType.MINUTES]
 

@@ -119,6 +119,23 @@ class TileContentResolverTest {
         assertTrue(content.isActive)
     }
 
+    @Test
+    fun `fallback without minutes limit selects sim with minimum slot from unordered list`() {
+        val content =
+            resolve(
+                sims =
+                    listOf(
+                        sim(slot = 2, limit = 0L, remaining = 0L),
+                        sim(slot = 0, limit = 0L, remaining = 0L),
+                        sim(slot = 1, limit = 0L, remaining = 0L),
+                    ),
+            )
+
+        assertEquals("OP0", content.label)
+        assertEquals(NO_DATA, content.subtitle)
+        assertFalse(content.isActive)
+    }
+
     private companion object {
         private const val NO_SIM = "NO_SIM"
         private const val NO_DATA = "NO_DATA"
