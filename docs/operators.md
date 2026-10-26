@@ -24,5 +24,8 @@ Single tokens that are common to unrelated brands across different countries are
 ## Unsupported Networks
 When a network is encountered whose MCC/MNC is absent from `mcc_mnc_db.json` or whose brand is unmapped, the application falls back to displaying the subscription network name or the MCC/MNC identifier string, using the generic `ic_unknown` icon.
 
+## Display Name Resolution
+The operator display name reflects network self-identification (name reported by network/SIM, e.g., EONS, SPN, `SubscriptionInfo.displayName`), without rewriting. Canonical brand resource strings apply only when the network does not report a specific name. The PLMN database and search tokens determine exclusively brand attribution (icon) and never overwrite the name reported by the network. Names and country attribution in provenance data follow network self-identification and actual numbering plans, without political judgments or external renames.
+
 ## Candidate Brands
 No candidate brands at this time.

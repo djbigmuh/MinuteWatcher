@@ -84,13 +84,10 @@ class NorwegianOperatorsTest {
     }
 
     @Test
-    fun `short names use norwegian brand strings`() {
+    fun `short names preserve reported operator name`() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
-        whenever(context.getString(R.string.operator_onecall)).thenReturn("OneCall")
-        whenever(context.getString(R.string.operator_fjordkraft)).thenReturn("Fjordkraft Mobil")
-        whenever(context.getString(R.string.operator_ice)).thenReturn("ice")
-        assertEquals("OneCall", SimUtils.getShortOperatorName(context, "ONECALL", 0))
-        assertEquals("Fjordkraft Mobil", SimUtils.getShortOperatorName(context, "Fjordkraft", 0))
+        assertEquals("ONECALL", SimUtils.getShortOperatorName(context, "ONECALL", 0))
+        assertEquals("Fjordkraft", SimUtils.getShortOperatorName(context, "Fjordkraft", 0))
         assertEquals("ice", OperatorResolver.resolve(appContext, "", listOf("24206"), 0).displayName)
     }
 }

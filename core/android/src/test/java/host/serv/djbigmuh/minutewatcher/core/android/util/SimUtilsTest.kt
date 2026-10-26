@@ -164,10 +164,15 @@ class SimUtilsTest {
     }
 
     @Test
-    fun `getShortOperatorName returns resource string for known brand operator name`() {
-        whenever(context.getString(R.string.operator_mts)).thenReturn("MTS")
-        val result = SimUtils.getShortOperatorName(context, "МТС RUS", 0)
-        assertEquals("MTS", result)
+    fun `getShortOperatorName resolves resource string for unspecific brand token`() {
+        val result = SimUtils.getShortOperatorName(context, "МТС", 0)
+        assertEquals("МТС", result)
+    }
+
+    @Test
+    fun `getShortOperatorName returns specific network name as is without rewriting`() {
+        val result = SimUtils.getShortOperatorName(context, "Jasper", 0)
+        assertEquals("Jasper", result)
     }
 
     @Test

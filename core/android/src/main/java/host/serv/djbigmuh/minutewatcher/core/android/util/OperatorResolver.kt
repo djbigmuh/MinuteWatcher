@@ -188,7 +188,7 @@ object OperatorResolver {
      * @param name Operator name to check.
      * @return True if the name is specific and can be used as is.
      */
-    private fun isValidSpecificName(name: String): Boolean {
+    internal fun isValidSpecificName(name: String): Boolean {
         val trimmed = name.trim()
         if (SimUtils.isInactiveSim(trimmed)) return false
         if (genericSimRegex.matches(trimmed)) return false

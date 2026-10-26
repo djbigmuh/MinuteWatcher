@@ -574,16 +574,20 @@ object SimUtils {
         slot: Int,
     ): String {
         val localizedContext = AppLocaleContexts.forAppLocale(context)
+        val trimmed = operatorName.trim()
+        if (OperatorResolver.isValidSpecificName(trimmed)) {
+            return trimmed
+        }
         return try {
             val resId = OperatorResolver.getOperatorResourceId(operatorName)
             when {
                 resId != null -> getStringSafe(localizedContext, resId, operatorName)
-                operatorName.isNotEmpty() -> operatorName
+                operatorName.isNotEmpty() -> trimmed
                 else -> genericOperatorName(localizedContext, slot)
             }
         } catch (e: Exception) {
             AppLogger.e("Error resolving short operator name for: $operatorName", e)
-            if (operatorName.isNotEmpty()) operatorName else genericOperatorName(localizedContext, slot)
+            if (operatorName.isNotEmpty()) trimmed else genericOperatorName(localizedContext, slot)
         }
     }
 
