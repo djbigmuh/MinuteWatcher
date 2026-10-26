@@ -10,10 +10,10 @@
 
 | Category | Count | Description |
 |---|---|---|
-| **MISSING (INCLUDE_MNO)** | 290 | Active public mobile network operators missing in project DB |
+| **MISSING (INCLUDE_MNO)** | 287 | Active public mobile network operators missing in project DB |
 | **MISSING (INCLUDE_MVNO_OWN_PLMN)** | 104 | Active MVNOs with dedicated PLMN missing in project DB |
-| **PROJECT_ONLY** | 234 | PLMNs present in project DB but inactive or absent in reference dataset |
-| **CONFLICT** | 81 | PLMNs present in both sets but mapped to different operator brands |
+| **PROJECT_ONLY** | 233 | PLMNs present in project DB but inactive or absent in reference dataset |
+| **CONFLICT** | 63 | PLMNs present in both sets but mapped to different operator brands |
 | **EXCLUDE_SPECIAL** | 172 | Special purpose networks (GSM-R, maritime, satellite, test) |
 | **EXCLUDE_DEFUNCT** | 1755 | Decommissioned/defunct network codes |
 | **EXCLUDE_MVNO_SHARED_PLMN** | 56 | Shared PLMN MVNOs (addressed via SIM subscription name) |
@@ -214,9 +214,6 @@ During integration and resolution of audit findings, the following decision rule
 | `313560` | United States | 313 |  | Boldyn Networks US | `INCLUDE_MNO` | `operator_boldyn_networks_us` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
 | `313690` | United States | 313 |  | Shenandoah Cable Television, LLC | `INCLUDE_MNO` | `operator_shenandoah_cable_television_llc` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
 | `313770` | United States | 313 | Mobile-X | Tango Networks | `INCLUDE_MVNO_OWN_PLMN` | `operator_mobile_x` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
-| `313790` | Puerto Rico | 313 | Liberty | Liberty Cablevision of Puerto Rico LLC | `INCLUDE_MNO` | `operator_liberty` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
-| `313790` | United States | 313 | Liberty | Liberty Cablevision of Puerto Rico LLC | `INCLUDE_MNO` | `operator_liberty` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
-| `313790` | United States Virgin Islands | 313 | Liberty | Liberty | `INCLUDE_MNO` | `operator_liberty` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
 | `313810` | United States | 313 |  | Watch Communications | `INCLUDE_MNO` | `operator_watch_communications` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
 | `313820` | United States | 313 |  | Inland Cellular Telephone Company | `INCLUDE_MNO` | `operator_inland_cellular_telephone_company` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
 | `313850` | United States | 313 |  | Softcom Internet Communications, Inc | `INCLUDE_MNO` | `operator_softcom_internet_communications_inc` | [https://www.itu.int/rec/T-REC-E.212 / Wikipedia](https://www.itu.int/rec/T-REC-E.212 / Wikipedia) | 2026-10-25 |
@@ -456,7 +453,7 @@ During integration and resolution of audit findings, the following decision rule
 | `23877` | `operator_telenor` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `23896` | `operator_telia` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `24008` | `operator_telenor` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
-| `24207` | `operator_ice` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
+| `24207` | `operator_telia` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `24212` | `operator_telenor` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `24404` | `operator_dna` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `24406` | `operator_elisa` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
@@ -485,7 +482,6 @@ During integration and resolution of audit findings, the following decision rule
 | `27830` | `operator_go` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `28002` | `operator_cyta` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `28604` | `operator_turk_telekom` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
-| `28803` | `operator_tosa` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `29402` | `operator_a1` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `302221` | `operator_telus` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
 | `302222` | `operator_telus` | Inactive or decommissioned in dataset; verified with regulator | [https://www.itu.int/rec/T-REC-E.212](https://www.itu.int/rec/T-REC-E.212) | 2026-10-25 |
@@ -668,24 +664,17 @@ During integration and resolution of audit findings, the following decision rule
 
 | PLMN | Project BrandKey | Dataset Brand / Operator | Source | Recommended Action |
 |---|---|---|---|---|
-| `22207` | `operator_tim` | Kena Mobile (Noverca) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `22603` | `operator_vodafone` | Telekom (Telekom Romania Mobile) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `23207` | `operator_magenta` | Hofer Telekom (T-Mobile Austria) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `24004` | `operator_telenor` | SWEDEN (3G Infrastructure Services AB) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `25050` | `operator_mts` | SberMobile (Sberbank-Telecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `25054` | `operator_tattelecom` | Miranda-Media (Miranda-Media) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `25096` | `operator_seven_telecom` | +7Telecom (K-Telecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `25903` | `operator_unite_md` | Moldtelecom (Moldtelecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `25905` | `operator_unite_md` | Moldtelecom (Moldtelecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `25999` | `operator_unite_md` | Moldtelecom (Moldtelecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `26220` | `operator_o2` | Enreach (Enreach Germany GmbH) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `26223` | `operator_oneandone` | 1&1 (Drillisch Online AG) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `27401` | `operator_siminn` | Síminn (Iceland Telecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `27408` | `operator_siminn` | On-waves (Iceland Telecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `27801` | `operator_vodafone` | Epic (Epic) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `28603` | `operator_turk_telekom` | Türk Telekom (Türk Telekom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `28801` | `operator_foroya_tele` | Føroya Tele (Føroya Tele) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `28802` | `operator_tosa` | Nema (Nema) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `29341` | `operator_telekom_si` | Mobitel (Telekom Slovenije) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `310032` | `operator_iconnect` | IT&E Wireless (PTI Pacifica Inc.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `310032` | `operator_iconnect` | IT&E Wireless (PTI Pacifica Inc.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
@@ -715,16 +704,11 @@ During integration and resolution of audit findings, the following decision rule
 | `46605` | `operator_fareastone` | Gt (Asia Pacific Telecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `46689` | `operator_taiwan_mobile` | T Star (Taiwan Star Telecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `46692` | `operator_cht` | Chunghwa (Chunghwa Telecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `46706` | `operator_koryolink` | Kang Song NET (Korea Posts and Telecommunications Corporation) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `51028` | `operator_smartfren` | Fren/Hepi (PT Mobile-8 Telecom) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `51089` | `operator_tri_id` | 3 (PT Hutchison 3 Indonesia) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `52802` | `operator_bmobile` | PCSB (Progresif Cellular Sdn Bhd) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `54002` | `operator_our_telekom` | BeMobile (BMobile (SI) Ltd) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
+| `54002` | `operator_bmobile_sb` | BeMobile (BMobile (SI) Ltd) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `54501` | `operator_frigate` | Kiribati - ATH (Amalgamated Telecom Holdings Kiribati Limited) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `54901` | `operator_bluesky` | Digicel (Digicel Pacific Ltd.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `60203` | `operator_e_and` | Etisalat (Etisalat Egypt) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `60901` | `operator_mauritel` | Mattel (Mattel) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `60910` | `operator_mattel` | Moov (Mauritel Mobiles) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `61001` | `operator_moov` | Malitel (Malitel SA) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `61301` | `operator_moov` | Telmob (Onatel) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `61604` | `operator_celtiis` | BBCOM (Bell Benin Communications) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
@@ -736,19 +720,13 @@ During integration and resolution of audit findings, the following decision rule
 | `62801` | `operator_moov` | Libertis (Gabon Telecom S.A.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `63202` | `operator_orange` | MTN Areeba (Spacetel Guiné-Bissau S.A.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `63301` | `operator_cws` | Cable & Wireless (Cable & Wireless Seychelles) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `63704` | `operator_telcom_so` | Somafone (Somafone FZLLC) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `64002` | `operator_yas` | tiGO (MIC Tanzania Limited) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `64111` | `operator_utl` | Uganda Telecom (Uganda Telecom Ltd.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `64702` | `operator_sfr` | Only (Telco OI) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `65204` | `operator_btc_bw` | beMobile (Botswana Telecommunications Corporation) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `70267` | `operator_digi_bz` | DigiCell (Belize Telemedia Limited (BTL)) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `70403` | `operator_movistar` | Claro (Telecomunicaciones de Guatemala, S.A.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `71201` | `operator_kolbi` | Kölbi ICE (Instituto Costarricense de Electricidad) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `71202` | `operator_kolbi` | Kölbi ICE (Instituto Costarricense de Electricidad) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `71204` | `operator_movistar` | Liberty (Liberty Latin America) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 | `71401` | `operator_flow` | +Móvil (Cable & Wireless Panama S.A.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `71402` | `operator_movistar` | Tigo (Grupo de Comunicaciones Digitales, S.A.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
-| `714020` | `operator_movistar` | Tigo (Grupo de Comunicaciones Digitales, S.A.) | ITU-T E.212 / Wikipedia | Review brand assignment; update mapping if operator changed or reallocated. |
 
 ## Excluded Networks Summary
 
