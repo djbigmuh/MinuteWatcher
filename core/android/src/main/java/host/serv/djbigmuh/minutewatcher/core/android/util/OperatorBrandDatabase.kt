@@ -532,6 +532,16 @@ object OperatorBrandDatabase {
             "operator_public_mobile" to R.string.operator_public_mobile,
             "operator_lucky_mobile" to R.string.operator_lucky_mobile,
             "operator_bait" to R.string.operator_bait,
+            "operator_defence_au" to R.string.operator_defence_au,
+            "operator_bmobile_sb" to R.string.operator_bmobile_sb,
+            "operator_pcsb" to R.string.operator_pcsb,
+            "operator_kang_song_net" to R.string.operator_kang_song_net,
+            "operator_enreach" to R.string.operator_enreach,
+            "operator_numerex" to R.string.operator_numerex,
+            "operator_only" to R.string.operator_only,
+            "operator_somafone" to R.string.operator_somafone,
+            "operator_sweden" to R.string.operator_sweden,
+            "operator_sweden_3g" to R.string.operator_sweden_3g,
         )
 
     val operatorResourceMap =

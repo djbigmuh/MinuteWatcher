@@ -325,7 +325,7 @@
     <string name="operator_gamcel" translatable="false">Gamcel</string>
     <string name="operator_africell_gm" translatable="false">Africell</string>
     <string name="operator_qcell" translatable="false">QCell</string>
-    <string name="operator_mauritel" translatable="false">Mauritel</string>
+    <string name="operator_mauritel" translatable="false">Moov Mauritel</string>
     <string name="operator_chinguitel" translatable="false">Chinguitel</string>
     <string name="operator_mattel" translatable="false">Mattel</string>
     <string name="operator_cv_movel" translatable="false">CVMóvel</string>
@@ -534,4 +534,14 @@
     <string name="operator_public_mobile" translatable="false">Public Mobile</string>
     <string name="operator_lucky_mobile" translatable="false">Lucky Mobile</string>
     <string name="operator_bait" translatable="false">Bait</string>
+    <string name="operator_defence_au" translatable="false">Department of Defence</string>
+    <string name="operator_bmobile_sb" translatable="false">bmobile</string>
+    <string name="operator_pcsb" translatable="false">PCSB</string>
+    <string name="operator_kang_song_net" translatable="false">Kang Song NET</string>
+    <string name="operator_enreach" translatable="false">Enreach</string>
+    <string name="operator_numerex" translatable="false">Numerex</string>
+    <string name="operator_only" translatable="false">Only</string>
+    <string name="operator_somafone" translatable="false">Somafone</string>
+    <string name="operator_sweden" translatable="false">Sweden</string>
+    <string name="operator_sweden_3g" translatable="false">Sweden 3G</string>
 </resources>

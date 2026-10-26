@@ -29,7 +29,14 @@ class OperatorBrandTokensTest {
         val firstExpected = listOf("bell", "bell mobility", "rogers", "rogers wireless", "meo")
         assertEquals(firstExpected, keys.take(5))
 
-        val lastExpected = listOf("4ka", "epic cyprus", "cyta", "cytamobile", "cytamobile-vodafone")
+        val lastExpected =
+            listOf(
+                "cytamobile-vodafone",
+                "department of defence",
+                "kang song net",
+                "sweden 3g",
+                "moov mauritel",
+            )
         assertEquals(lastExpected, keys.takeLast(5))
 
         try {
@@ -89,7 +96,7 @@ class OperatorBrandTokensTest {
         assertEquals("bmobile", bmobileTtNamed.displayName)
 
         val bmobileBrunei = OperatorResolver.resolve(context, "bmobile", listOf("52802"), 0)
-        assertEquals("operator_bmobile", bmobileBrunei.brandKey)
+        assertEquals("operator_pcsb", bmobileBrunei.brandKey)
 
         val flowPanama = OperatorResolver.resolve(context, "Flow", listOf("71401"), 0)
         assertEquals("operator_flow", flowPanama.brandKey)

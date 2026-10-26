@@ -34,6 +34,7 @@ class SoutheastAsiaOperatorsTest {
         assertEquals("Timor Telecom", resolveDisplayName("51402"))
         assertEquals("Telemor", resolveDisplayName("51403"))
         assertEquals("dtac", resolveDisplayName("52047"))
+        assertEquals("PCSB", resolveDisplayName("52802"))
     }
 
     @Test

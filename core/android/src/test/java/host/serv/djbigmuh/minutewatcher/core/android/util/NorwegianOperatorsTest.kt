@@ -46,7 +46,7 @@ class NorwegianOperatorsTest {
         assertEquals("operator_telia", json.getString("24208"))
         assertEquals("operator_ice", json.getString("24206"))
         assertEquals("operator_ice", json.getString("24214"))
-        assertEquals("operator_ice", json.getString("24207"))
+        assertEquals("operator_telia", json.getString("24207"))
     }
 
     @Test

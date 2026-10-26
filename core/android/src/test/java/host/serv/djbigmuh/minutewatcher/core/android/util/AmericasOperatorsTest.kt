@@ -96,12 +96,13 @@ class AmericasOperatorsTest {
         assertEquals("operator_personal", OperatorResolver.getOperatorBrandKey("Personal"))
 
         assertEquals("Tigo", OperatorResolver.resolve(context, "", listOf("70402"), 0).displayName)
-        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("70403"), 0).displayName)
+        assertEquals("Claro", OperatorResolver.resolve(context, "", listOf("70403"), 0).displayName)
         assertEquals("Digicel", OperatorResolver.resolve(context, "", listOf("70602"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("71030"), 0).displayName)
         assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("71204"), 0).displayName)
-        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("71402"), 0).displayName)
-        assertEquals("Movistar", OperatorResolver.resolve(context, "", listOf("714020"), 0).displayName)
+        assertEquals("Tigo", OperatorResolver.resolve(context, "", listOf("71402"), 0).displayName)
+        assertEquals("Tigo", OperatorResolver.resolve(context, "", listOf("714020"), 0).displayName)
+        assertEquals("Numerex", OperatorResolver.resolve(context, "", listOf("310640"), 0).displayName)
         assertEquals("Entel", OperatorResolver.resolve(context, "", listOf("73602"), 0).displayName)
         assertEquals("Tigo", OperatorResolver.resolve(context, "", listOf("74404"), 0).displayName)
 

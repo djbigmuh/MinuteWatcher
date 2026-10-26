@@ -306,7 +306,7 @@ operator_airtel_vodafone	Airtel-Vodafone	B		#E60000	AV
 operator_gamcel	Gamcel	B		#008000	GAM
 operator_africell_gm	Africell	B		#E60000	AGM
 operator_qcell	QCell	B		#0055A5	QCELL
-operator_mauritel	Mauritel	B		#008000	MAUR
+operator_mauritel	Moov Mauritel	B		#0044AA	MAUR
 operator_chinguitel	Chinguitel	B		#0055A5	CHING
 operator_mattel	Mattel	B		#E60000	MATTEL
 operator_cv_movel	CVMóvel	B		#0055A5	CVM
@@ -387,3 +387,13 @@ operator_natcom	NATCOM	B		#E60000	NATCOM
 operator_dauphin	Dauphin	B		#0055A5	DAUPH
 operator_docomo_pacific	DOCOMO PACIFIC	B		#CC0000	DOCPAC
 operator_gta	GTA	B		#0055A5	GTA
+operator_defence_au	Department of Defence	B		#003366	DEFENCE
+operator_bmobile_sb	bmobile	B		#0072BC	BMSO
+operator_pcsb	PCSB	B		#0055A5	PCSB
+operator_kang_song_net	Kang Song NET	B		#CC0000	KANG
+operator_enreach	Enreach	B		#0088CC	ENREAC
+operator_numerex	Numerex	B		#0055A5	NUMERE
+operator_only	Only	B		#CC0000	ONLY
+operator_somafone	Somafone	B		#008000	SOMAFO
+operator_sweden	Sweden	B		#0055A5	SWEDEN
+operator_sweden_3g	Sweden 3G	B		#0055A5	S3G

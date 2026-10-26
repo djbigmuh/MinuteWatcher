@@ -528,6 +528,16 @@ object SimUtils {
             R.string.operator_public_mobile to R.drawable.ic_operator_public_mobile,
             R.string.operator_lucky_mobile to R.drawable.ic_operator_lucky_mobile,
             R.string.operator_bait to R.drawable.ic_operator_bait,
+            R.string.operator_defence_au to R.drawable.ic_operator_defence_au,
+            R.string.operator_bmobile_sb to R.drawable.ic_operator_bmobile_sb,
+            R.string.operator_pcsb to R.drawable.ic_operator_pcsb,
+            R.string.operator_kang_song_net to R.drawable.ic_operator_kang_song_net,
+            R.string.operator_enreach to R.drawable.ic_operator_enreach,
+            R.string.operator_numerex to R.drawable.ic_operator_numerex,
+            R.string.operator_only to R.drawable.ic_operator_only,
+            R.string.operator_somafone to R.drawable.ic_operator_somafone,
+            R.string.operator_sweden to R.drawable.ic_operator_sweden,
+            R.string.operator_sweden_3g to R.drawable.ic_operator_sweden_3g,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {

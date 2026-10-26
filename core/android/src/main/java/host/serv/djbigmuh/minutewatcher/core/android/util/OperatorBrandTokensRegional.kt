@@ -517,5 +517,9 @@ internal object OperatorBrandTokensRegional {
             "cyta" to "operator_cyta",
             "cytamobile" to "operator_cyta",
             "cytamobile-vodafone" to "operator_cyta",
+            "department of defence" to "operator_defence_au",
+            "kang song net" to "operator_kang_song_net",
+            "sweden 3g" to "operator_sweden_3g",
+            "moov mauritel" to "operator_mauritel",
         )
 }

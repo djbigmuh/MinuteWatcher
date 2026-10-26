@@ -27,6 +27,9 @@ class CentralNorthernEuropeOperatorsTest {
         assertEquals("operator_telia", resolvePlmn("24801"))
         assertEquals("operator_tele2", resolvePlmn("24603"))
         assertEquals("operator_tele2", resolvePlmn("24007"))
+        assertEquals("operator_enreach", resolvePlmn("26220"))
+        assertEquals("operator_sweden", resolvePlmn("24004"))
+        assertEquals("operator_sweden_3g", resolvePlmn("24005"))
 
         assertEquals("LMT", OperatorResolver.resolve(context, "", listOf("24701"), 0).displayName)
         assertEquals("operator_lmt", OperatorResolver.getOperatorBrandKey("LMT"))
