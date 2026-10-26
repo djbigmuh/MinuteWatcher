@@ -1,25 +1,16 @@
-# UI Guidelines
+# UI Guidelines and Launcher Icon Specifications
 
-This document outlines the UI and UX standards for the MinuteWatcher application.
+## App Icon Layout
 
-## RTL (Right-to-Left) Support
+Canonical launcher icon layout must be maintained:
 
-To ensure a high-quality experience for users of RTL languages (like Arabic), follow these guidelines for icons and layouts.
-
-### Icon Mirroring
-
-- **Directional Icons**: Icons that convey direction (e.g., arrows, chevrons, progress indicators) must be mirrored in RTL mode. In Compose, use `Icons.AutoMirrored` or set `autoMirror = true` in `Image` or `Icon` components.
-- **Logos and Brands**: Brand logos (e.g., mobile operator icons) must **not** be mirrored. They should maintain their original orientation regardless of the layout direction.
-- **Static Icons**: Icons without intrinsic directionality (e.g., Settings gear, Language globe, Close 'X') do not require mirroring.
-
-### Summary Table
-
-| Icon Type | Mirror in RTL? | Implementation Note |
-| :--- | :--- | :--- |
-| Arrows/Chevrons | Yes | Use `Icons.AutoMirrored` |
-| Operator Logos | No | Default behavior (`autoMirror = false`) |
-| Close/Cancel | No | Symmetry usually makes mirroring unnecessary |
-| Settings/Palette | No | Fixed semantic meaning |
-
-> [!NOTE]
-> Icons with semantic directionality (arrows, chevron) — autoMirror=true. Logos — false.
+- Adaptive icon XML: `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+- Launcher icon files are placed only in `res/mipmap-anydpi-v26/` (adaptive icon) and `res/drawable/` (vector parts);
+  placing the adaptive icon in unqualified `res/mipmap/` is prohibited — explicit qualifier `anydpi-v26` guarantees
+  priority when resolving resources on device.
+- Required adaptive icon elements: `<background>`, `<foreground>`, `<monochrome>`
+- Vector parts: `app/src/main/res/drawable/ic_launcher_background.xml`, `ic_launcher_foreground.xml`
+- Namespace MUST be `http://schemas.android.com/apk/res/android`
+- Do not move, duplicate, or rasterize launcher icon files.
+- Do not create `ic_launcher_round` without a matching manifest reference in the same change, nor suppress lint icon checks.
+- Manifest `android:roundIcon` references `@mipmap/ic_launcher`.

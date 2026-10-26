@@ -127,7 +127,6 @@ To ensure readiness for automated build systems (such as F-Droid build servers a
         - versionName: '4.3.0'
           versionCode: 413
           commit: v4.3.0
-          subdir: app
           gradle:
             - yes
       ```

@@ -12,9 +12,8 @@ MinuteWatcher is an Android application designed to track your mobile carrier's 
 - **Privacy First**: All data is stored locally. No third-party tracking or cloud uploads.
 - **Multi-language Support**: Supports 28 languages (configured in `locales_config.xml`), including RTL (Arabic, Urdu,
   Persian) and CJK (Japanese, Chinese, Korean). The original (native) UI language is Russian; translations into other
-  languages were generated automatically using a Large Language Model (LLM) and may not have been reviewed by native
-  speakers. If you notice an error or unnatural phrasing in your language, please contact the developer by email
-  (available in the About dialog within the app).
+  languages were machine-generated and may contain minor phrasing imperfections. If you notice an error or unnatural phrasing in
+  your language, please contact the developer by email (available in the About dialog within the app).
 
 ## Technical Limitations
 

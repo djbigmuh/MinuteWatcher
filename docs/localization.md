@@ -55,8 +55,7 @@ The required cardinal plural categories for all supported app languages accordin
 - **Native Source Language**: The native (source) language of the UI and internal documentation is Russian.
 - **Fallback Language**: The default resource set (`values/`) is English, serving as the fallback for unsupported
   locales.
-- **Machine Generation**: All translations except Russian were generated automatically using a Large Language Model
-  (LLM) and may not have been proofread by native speakers.
+- **Machine Generation**: All translations except Russian were machine-generated and may contain minor phrasing imperfections.
 - **Feedback & Corrections**: User reports on language inaccuracies are welcomed via the developer contact channel
   (e-mail available in the About dialog). Native speaker corrections are integrated key by key to replace machine
   values.

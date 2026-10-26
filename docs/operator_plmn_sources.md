@@ -57,7 +57,7 @@
 | 290 | Greenland                        | 29001=operator_tusass | ITU-T E.212                        | 2026-10-25 |
 | 292 | San Marino                       | 29201=operator_prima_sm | ITU-T E.212                        | 2026-10-25 |
 | 293 | Slovenia                         | 29340=operator_a1, 29341=operator_telekom_si, 29364=operator_t2_si, 29370=operator_telemach | ITU-T E.212 / AKOS Slovenia        | 2026-10-25 |
-| 294 | Croatia                          | 29401=operator_telekom, 29402=operator_a1, 29403=operator_a1, 29404=operator_lycamobile | ITU-T E.212 / AEK Macedonia        | 2026-10-25 |
+| 294 | North Macedonia                  | 29401=operator_telekom, 29402=operator_a1, 29403=operator_a1, 29404=operator_lycamobile | ITU-T E.212 / AEK Macedonia        | 2026-10-25 |
 | 295 | Liechtenstein                    | 29501=operator_swisscom, 29502=operator_salt_li, 29505=operator_fl1 | ITU-T E.212 / AK Liechtenstein     | 2026-10-25 |
 | 297 | Montenegro                       | 29701=operator_one, 29702=operator_telekom, 29703=operator_mtel | ITU-T E.212 / EKIP Montenegro      | 2026-10-25 |
 | 302 | Canada                           | 302220=operator_telus, 302221=operator_telus, 302222=operator_telus, 302270=operator_eastlink, 302370=operator_fido, 302490=operator_freedom, 302500=operator_videotron, 302510=operator_videotron, 302520=operator_videotron, 302610=operator_bell, 302630=operator_bell, 302640=operator_bell, 302660=operator_bell_mts, 302680=operator_sasktel, 302690=operator_bell, 302720=operator_rogers, 302780=operator_sasktel | ITU-T E.212 / ISED Canada          | 2026-10-25 |

@@ -12,4 +12,4 @@ Key Features:
 • Multi-Language UI: Supports 28 languages.
 
 Note on Translations:
-Except for Russian and English, UI translations were generated automatically using an LLM and may contain minor phrasing imperfections.
+Except for Russian and English, UI translations are machine-generated and may contain minor phrasing imperfections.
