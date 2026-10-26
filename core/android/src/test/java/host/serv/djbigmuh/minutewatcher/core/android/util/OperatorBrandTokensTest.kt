@@ -31,13 +31,14 @@ class OperatorBrandTokensTest {
 
         val lastExpected =
             listOf(
-                "sweden 3g",
-                "moov mauritel",
                 "liberty",
                 "liberty latin america",
                 "nema",
+                "sbermobile",
+                "sber mobile",
+                "сбермобайл",
             )
-        assertEquals(lastExpected, keys.takeLast(5))
+        assertEquals(lastExpected, keys.takeLast(6))
 
         try {
             OperatorBrandTokens.mergeTokenMaps(

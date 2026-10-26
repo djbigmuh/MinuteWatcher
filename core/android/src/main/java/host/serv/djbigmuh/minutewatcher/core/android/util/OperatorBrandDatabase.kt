@@ -544,6 +544,7 @@ object OperatorBrandDatabase {
             "operator_sweden_3g" to R.string.operator_sweden_3g,
             "operator_liberty" to R.string.operator_liberty,
             "operator_nema" to R.string.operator_nema,
+            "operator_sber_mobile" to R.string.operator_sber_mobile,
         )
 
     val operatorResourceMap =

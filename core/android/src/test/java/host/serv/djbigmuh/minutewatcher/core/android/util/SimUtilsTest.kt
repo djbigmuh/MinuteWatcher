@@ -60,7 +60,7 @@ class SimUtilsTest {
         assertEquals(R.drawable.ic_operator_yota, SimUtils.getOperatorIconResource("Йота"))
         assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("МТС Россия"))
         assertEquals(R.drawable.ic_operator_mts, SimUtils.getOperatorIconResource("MTS МТС"))
-        assertEquals(R.drawable.ic_unknown, SimUtils.getOperatorIconResource("СберМобайл"))
+        assertEquals(R.drawable.ic_operator_sber_mobile, SimUtils.getOperatorIconResource("СберМобайл"))
     }
 
     @Test

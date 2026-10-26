@@ -524,5 +524,8 @@ internal object OperatorBrandTokensRegional {
             "liberty" to "operator_liberty",
             "liberty latin america" to "operator_liberty",
             "nema" to "operator_nema",
+            "sbermobile" to "operator_sber_mobile",
+            "sber mobile" to "operator_sber_mobile",
+            "сбермобайл" to "operator_sber_mobile",
         )
 }
