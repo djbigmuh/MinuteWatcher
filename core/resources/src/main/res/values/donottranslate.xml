@@ -544,4 +544,5 @@
     <string name="operator_somafone" translatable="false">Somafone</string>
     <string name="operator_sweden" translatable="false">Sweden</string>
     <string name="operator_sweden_3g" translatable="false">Sweden 3G</string>
+    <string name="operator_liberty" translatable="false">Liberty</string>
 </resources>

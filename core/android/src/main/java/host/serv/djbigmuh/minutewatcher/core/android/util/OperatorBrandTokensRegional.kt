@@ -521,5 +521,7 @@ internal object OperatorBrandTokensRegional {
             "kang song net" to "operator_kang_song_net",
             "sweden 3g" to "operator_sweden_3g",
             "moov mauritel" to "operator_mauritel",
+            "liberty" to "operator_liberty",
+            "liberty latin america" to "operator_liberty",
         )
 }

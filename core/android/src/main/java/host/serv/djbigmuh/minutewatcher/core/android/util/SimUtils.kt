@@ -538,6 +538,7 @@ object SimUtils {
             R.string.operator_somafone to R.drawable.ic_operator_somafone,
             R.string.operator_sweden to R.drawable.ic_operator_sweden,
             R.string.operator_sweden_3g to R.drawable.ic_operator_sweden_3g,
+            R.string.operator_liberty to R.drawable.ic_operator_liberty,
         )
 
     fun getOperatorIconResource(brandKey: String?): Int {
