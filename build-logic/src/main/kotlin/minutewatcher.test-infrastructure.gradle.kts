@@ -1,5 +1,3 @@
-import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
-
 plugins {
     id("jacoco")
 }
@@ -9,7 +7,6 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-Dnet.bytebuddy.experimental=true")
 
     // Centralized Robolectric configuration
-    systemProperty("robolectric.sdk", SdkVersions.ROBOLECTRIC_SDK.toString())
     systemProperty("robolectric.graphicsMode", "NATIVE")
     systemProperty(
         "minutewatcher.coreResourcesResDir",
@@ -20,20 +17,18 @@ tasks.withType<Test>().configureEach {
         rootProject.layout.projectDirectory.dir("app/src/main/res").asFile.absolutePath,
     )
 
-    val roboUserHome = project.layout.buildDirectory.dir("robolectric-user-home")
-    val roboCacheDir = project.layout.buildDirectory.dir("robolectric-cache")
+    val moduleCacheName = project.path.removePrefix(":").replace(':', '.').ifEmpty { "root" }
+    val roboUserHome = rootProject.layout.projectDirectory.dir(".robolectric/$moduleCacheName/home")
     val testTmpDir = project.layout.buildDirectory.dir("tmp")
 
     doFirst {
-        roboUserHome.get().asFile.mkdirs()
-        roboCacheDir.get().asFile.mkdirs()
+        roboUserHome.asFile.mkdirs()
         testTmpDir.get().asFile.mkdirs()
     }
 
-    systemProperty("robolectric.dependency.repo.dir", roboCacheDir.get().asFile.absolutePath)
     systemProperty("robolectric.dependency.repo.id", "central")
     systemProperty("robolectric.dependency.repo.url", "https://repo1.maven.org/maven2/")
-    systemProperty("user.home", roboUserHome.get().asFile.absolutePath)
+    systemProperty("user.home", roboUserHome.asFile.absolutePath)
     systemProperty("java.io.tmpdir", testTmpDir.get().asFile.absolutePath)
     systemProperty("robolectric.logging.enabled", "true")
 

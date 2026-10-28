@@ -42,8 +42,10 @@ $env:ANDROID_PREFS_ROOT=$null; ./gradlew detekt ktlintCheck
 
 To maintain test execution speed and minimize overhead, we follow a strict SDK consolidation policy:
 
-- **Default SDK**: Set globally to **37** via a Gradle system property (`systemProperty("robolectric.sdk", "37")`),
-  verified by `RobolectricSdkSmokeTest`. Per-module `robolectric.properties` files are NOT created.
+- **Default SDK**: Robolectric runs tests against each module's `targetSdk`, which is centrally defined by
+  `SdkVersions.TARGET_SDK` in `build-logic`. There is no global Robolectric SDK system property;
+  `RobolectricSdkSmokeTest` verifies that the emulated SDK equals the module's `targetSdkVersion`.
+  Per-module `robolectric.properties` files are NOT created.
 - **No Routine Pinning**: Do NOT add `@Config(sdk = [35])` or any other SDK pinning to test classes if it matches the default.
 - **Behavior-Specific Tests**: Pinning a different SDK is ONLY permitted when testing logic that branches based on `Build.VERSION`. In such cases, accompany the `@Config` with a comment: `// behavior-specific SDK`.
 - **UI Infrastructure Pinning**: Pinning SDK 35 for Compose UI tests is permitted when required due to test framework

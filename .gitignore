@@ -67,3 +67,4 @@ tools/iconforge/out/
 *_output.txt
 files_with_*.txt
 .android/
+.robolectric/
