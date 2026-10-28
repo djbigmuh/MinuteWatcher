@@ -44,7 +44,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.mockito.kotlin.mock
@@ -147,11 +146,6 @@ abstract class MainViewModelTestFixtures {
             whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(initialSnapshot))
         }
-    }
-
-    @After
-    open fun tearDown() {
-        // MainDispatcherRule handles resetMain()
     }
 
     protected fun createViewModel(

@@ -37,7 +37,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -111,11 +110,6 @@ class UsageAccessNavigationTest {
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
         whenever(settingsUseCase.appLanguage).thenReturn(MutableStateFlow(null))
-    }
-
-    @After
-    fun tearDown() {
-        // MainDispatcherRule handles resetMain()
     }
 
     private suspend fun TestScope.actAndAdvance(block: suspend () -> Unit) {

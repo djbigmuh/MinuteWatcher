@@ -22,7 +22,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -87,11 +86,6 @@ class UsageMonitorReceiverTest {
     ) : ListenableWorker(context, workerParams) {
         override fun startWork(): ListenableFuture<Result> =
             SettableFuture.create<Result>().apply { set(Result.success()) }
-    }
-
-    @After
-    fun tearDown() {
-        // MainDispatcherRule handles resetMain()
     }
 
     @Test

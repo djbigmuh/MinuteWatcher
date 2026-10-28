@@ -17,7 +17,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -62,11 +61,6 @@ class WidgetSettingsViewModelRaceTest {
                 )
             advanceUntilIdle()
         }
-
-    @After
-    fun tearDown() {
-        // MainDispatcherRule handles resetMain()
-    }
 
     @Test
     fun `saveAndNotify persists updates made during the lock acquisition`() =
