@@ -97,7 +97,5 @@ internal class AdjustmentInputState(
                     }
                 },
             )
-
-        val Saver: Saver<AdjustmentInputState, *> = saver(Locale.getDefault())
     }
 }

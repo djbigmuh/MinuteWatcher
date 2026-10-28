@@ -122,7 +122,7 @@ class AdjustmentInputStateTest {
         original.errorText = "Invalid input"
 
         @Suppress("UNCHECKED_CAST")
-        val saver = AdjustmentInputState.Saver as Saver<AdjustmentInputState, Any>
+        val saver = AdjustmentInputState.saver(defaultLocale) as Saver<AdjustmentInputState, Any>
         val saved = with(saver) { dummySaverScope.save(original) }
         assertNotNull(saved)
 
@@ -140,7 +140,7 @@ class AdjustmentInputStateTest {
         original.errorText = null
 
         @Suppress("UNCHECKED_CAST")
-        val saver = AdjustmentInputState.Saver as Saver<AdjustmentInputState, Any>
+        val saver = AdjustmentInputState.saver(defaultLocale) as Saver<AdjustmentInputState, Any>
         val saved = with(saver) { dummySaverScope.save(original) }
         assertNotNull(saved)
 
