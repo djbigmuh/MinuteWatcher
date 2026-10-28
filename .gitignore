@@ -58,6 +58,7 @@ diag_result.txt
 
 # Tools local output
 tools/iconforge/out/
+tools/plmn_audit/reports/
 
 # Junk and local output files
 *.exe
