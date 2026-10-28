@@ -53,9 +53,6 @@ ksp_log.txt
 detekt_output.txt
 ktlint_output.txt
 
-# Generated benchmark config
-app/benchmark-config.txt
-
 # Diagnostic scripts (local only)
 diag_result.txt
 
