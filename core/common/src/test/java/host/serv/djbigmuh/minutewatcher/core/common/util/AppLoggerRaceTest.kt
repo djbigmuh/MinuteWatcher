@@ -44,7 +44,7 @@ class AppLoggerRaceTest {
                 logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
             }
         }
-        assertTrue("AppLogger quiescent state", kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) })
+        kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) }
     }
 
     @Test

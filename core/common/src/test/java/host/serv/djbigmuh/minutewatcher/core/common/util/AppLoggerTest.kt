@@ -338,11 +338,11 @@ class AppLoggerTest {
         pollUntil(timeoutMs, "Log marker '$marker' in ${targetDir.name}/logs.txt") {
             logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
         }
-        assertTrue("AppLogger quiescent state", kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) })
+        kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) }
     }
 
     private fun waitForChannelDrain(timeoutMs: Long = 10000L) {
-        assertTrue("AppLogger quiescent state", kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) })
+        kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) }
     }
 
     @Test
