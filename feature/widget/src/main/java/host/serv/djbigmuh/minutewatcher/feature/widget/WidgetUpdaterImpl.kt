@@ -114,7 +114,7 @@ class WidgetUpdaterImpl
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("WidgetUpdater: update failed", e)
-                val failure = terminalFailure(wasCoalesced = false)
+                val failure = terminalFailure()
                 deferred.complete(failure)
                 return failure
             } finally {
@@ -205,9 +205,9 @@ class WidgetUpdaterImpl
                 reason = WidgetUpdateResult.FailureReason.TRANSIENT,
             )
 
-        private fun terminalFailure(wasCoalesced: Boolean): WidgetUpdateResult.Failure =
+        private fun terminalFailure(): WidgetUpdateResult.Failure =
             WidgetUpdateResult.Failure(
-                wasCoalesced = wasCoalesced,
+                wasCoalesced = false,
                 isRetryable = false,
                 reason = WidgetUpdateResult.FailureReason.TERMINAL,
             )
@@ -256,7 +256,7 @@ class WidgetUpdaterImpl
                 throw e
             } catch (e: Exception) {
                 AppLogger.e("WidgetUpdater: update process failed", e)
-                terminalFailure(wasCoalesced = false)
+                terminalFailure()
             }
 
         private fun createFailureResult(lastOutcome: UpdateOutcome?): WidgetUpdateResult {
