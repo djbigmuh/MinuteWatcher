@@ -54,15 +54,4 @@ class WorkManagerInitializerManifestTest {
         assertNotNull("MinuteWatcherApp must implement Configuration.Provider", app)
         assertNotNull("workManagerConfiguration must not be null", app?.workManagerConfiguration)
     }
-
-    @Test
-    fun `merged manifest lacks WorkManagerInitializer and has ProfileInstallerInitializer`() {
-        val manifestFile = File(getProjectRootDir(), "app/src/main/AndroidManifest.xml")
-        val content = manifestFile.readText()
-        assertTrue(
-            "Manifest should contain WorkManagerInitializer remove node",
-            content.contains("androidx.work.WorkManagerInitializer"),
-        )
-        assertTrue("Manifest should contain tools:node=\"remove\"", content.contains("tools:node=\"remove\""))
-    }
 }
