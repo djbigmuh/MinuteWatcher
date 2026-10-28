@@ -160,7 +160,7 @@ class TrafficTracker
 
         private val trafficMutex = Mutex()
         private val updateMutex = Mutex()
-    private var currentUpdateForced = false
+        private var currentUpdateForced = false
         private val initializationFailed = AtomicBoolean(false)
         private val isInitStarted = AtomicBoolean(false)
         private val bothPermissionsGranted = AtomicBoolean(false)
@@ -952,64 +952,64 @@ class TrafficTracker
             }
         }
 
-    private suspend fun resolveResetDate(
-        startElapsed: Long,
-        targetIdentity: String,
-    ): Long? {
-        simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
-        return when (val resetReadResult = readResetDate(targetIdentity)) {
-            is ResetDateReadResult.Success -> resetReadResult.resetDate
-            is ResetDateReadResult.TimedOut -> {
-                AppLogger.w(
-                    "TrafficTracker: Timeout reading reset date for $targetIdentity",
-                )
-                updateStatusOnError(
-                    startElapsed,
-                    "Timeout reading reset date",
-                    code = TrackingStatus.ErrorCode.TIMEOUT,
-                )
-                null
-            }
+        private suspend fun resolveResetDate(
+            startElapsed: Long,
+            targetIdentity: String,
+        ): Long? {
+            simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
+            return when (val resetReadResult = readResetDate(targetIdentity)) {
+                is ResetDateReadResult.Success -> resetReadResult.resetDate
+                is ResetDateReadResult.TimedOut -> {
+                    AppLogger.w(
+                        "TrafficTracker: Timeout reading reset date for $targetIdentity",
+                    )
+                    updateStatusOnError(
+                        startElapsed,
+                        "Timeout reading reset date",
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    )
+                    null
+                }
 
-            is ResetDateReadResult.Missing -> resolveMissingResetDate(startElapsed, targetIdentity)
+                is ResetDateReadResult.Missing -> resolveMissingResetDate(startElapsed, targetIdentity)
+            }
         }
-    }
 
-    private suspend fun resolveMissingResetDate(
-        startElapsed: Long,
-        targetIdentity: String,
-    ): Long? {
-        AppLogger.w(
-            "TrafficTracker: Reset date record missing for $targetIdentity, " +
-                "re-initializing window",
-        )
-        simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
-        return when (val retryReadResult = readResetDate(targetIdentity)) {
-            is ResetDateReadResult.Success -> retryReadResult.resetDate
-            is ResetDateReadResult.TimedOut -> {
-                AppLogger.w(
-                    "TrafficTracker: Timeout reading reset date on retry for $targetIdentity",
-                )
-                updateStatusOnError(
-                    startElapsed,
-                    "Timeout reading reset date on retry",
-                    code = TrackingStatus.ErrorCode.TIMEOUT,
-                )
-                null
-            }
+        private suspend fun resolveMissingResetDate(
+            startElapsed: Long,
+            targetIdentity: String,
+        ): Long? {
+            AppLogger.w(
+                "TrafficTracker: Reset date record missing for $targetIdentity, " +
+                    "re-initializing window",
+            )
+            simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
+            return when (val retryReadResult = readResetDate(targetIdentity)) {
+                is ResetDateReadResult.Success -> retryReadResult.resetDate
+                is ResetDateReadResult.TimedOut -> {
+                    AppLogger.w(
+                        "TrafficTracker: Timeout reading reset date on retry for $targetIdentity",
+                    )
+                    updateStatusOnError(
+                        startElapsed,
+                        "Timeout reading reset date on retry",
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    )
+                    null
+                }
 
-            is ResetDateReadResult.Missing -> {
-                AppLogger.e(
-                    "TrafficTracker: Reset date record still missing after " +
-                        "re-initialization for $targetIdentity",
-                )
-                updateStatusOnError(
-                    startElapsed,
-                    "Reset date record missing after re-initialization",
-                    type = TrackingStatus.ErrorType.DATABASE_ERROR,
-                )
-                null
-            }
+                is ResetDateReadResult.Missing -> {
+                    AppLogger.e(
+                        "TrafficTracker: Reset date record still missing after " +
+                            "re-initialization for $targetIdentity",
+                    )
+                    updateStatusOnError(
+                        startElapsed,
+                        "Reset date record missing after re-initialization",
+                        type = TrackingStatus.ErrorType.DATABASE_ERROR,
+                    )
+                    null
+                }
             }
         }
 
@@ -1039,29 +1039,29 @@ class TrafficTracker
             return isValid
         }
 
-    private sealed interface ResetDateReadResult {
-        data class Success(
-            val resetDate: Long,
-        ) : ResetDateReadResult
+        private sealed interface ResetDateReadResult {
+            data class Success(
+                val resetDate: Long,
+            ) : ResetDateReadResult
 
-        data object Missing : ResetDateReadResult
+            data object Missing : ResetDateReadResult
 
-        data object TimedOut : ResetDateReadResult
-    }
-
-    private suspend fun readResetDate(targetIdentity: String): ResetDateReadResult {
-        val usage =
-            simUsageRepository
-                .getSimUsage(targetIdentity)
-                .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
-                ?: return ResetDateReadResult.TimedOut
-
-        val resetDate = usage.lastResetDate
-        if (resetDate == Constants.Data.EMPTY_TIMESTAMP) {
-            return ResetDateReadResult.Missing
+            data object TimedOut : ResetDateReadResult
         }
-        return ResetDateReadResult.Success(resetDate)
-    }
+
+        private suspend fun readResetDate(targetIdentity: String): ResetDateReadResult {
+            val usage =
+                simUsageRepository
+                    .getSimUsage(targetIdentity)
+                    .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
+                    ?: return ResetDateReadResult.TimedOut
+
+            val resetDate = usage.lastResetDate
+            if (resetDate == Constants.Data.EMPTY_TIMESTAMP) {
+                return ResetDateReadResult.Missing
+            }
+            return ResetDateReadResult.Success(resetDate)
+        }
 
         /**
          * Reads the baseline retry count for the given [targetIdentity].

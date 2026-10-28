@@ -73,8 +73,8 @@ class CallTracker
 
         private val trackerState = AtomicReference(State.IDLE)
 
-    @VisibleForTesting
-    internal val permissionObserverJob = AtomicReference<Job?>(null)
+        @VisibleForTesting
+        internal val permissionObserverJob = AtomicReference<Job?>(null)
         private val initJob = AtomicReference<Job?>(null)
 
         @Volatile
@@ -154,7 +154,7 @@ class CallTracker
             return current == State.INITIALIZED || current == State.INITIALIZING
         }
 
-    private val observerLock = Any()
+        private val observerLock = Any()
 
         private fun startPermissionObserver() {
             synchronized(observerLock) {

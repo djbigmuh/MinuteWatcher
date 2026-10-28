@@ -99,41 +99,41 @@ class WidgetLimitManager
 
         fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
-    @Suppress("ThrowsCount")
+        @Suppress("ThrowsCount")
         suspend fun setWidgetLimitExceeded(value: Boolean) {
-        if (cachedLimitExceeded == null) {
-            val settings =
-                try {
-                    appSettingsRepository
-                        .getAppSettings()
-                        .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.w("WidgetLimitManager: error reading app settings", e)
-                    null
-                }
-            if (settings != null) {
-                cachedLimitExceeded = settings.widgetLimitExceeded
-            } else {
-                AppLogger.w("WidgetLimitManager: timeout reading app settings when cache was null")
-                cachedLimitExceeded = value
-                try {
-                    appSettingsRepository.updateAppSettings {
-                        it.copy(widgetLimitExceeded = value)
+            if (cachedLimitExceeded == null) {
+                val settings =
+                    try {
+                        appSettingsRepository
+                            .getAppSettings()
+                            .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.w("WidgetLimitManager: error reading app settings", e)
+                        null
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLogger.e("Failed to set widget limit exceeded flag to $value", e)
+                if (settings != null) {
+                    cachedLimitExceeded = settings.widgetLimitExceeded
+                } else {
+                    AppLogger.w("WidgetLimitManager: timeout reading app settings when cache was null")
+                    cachedLimitExceeded = value
+                    try {
+                        appSettingsRepository.updateAppSettings {
+                            it.copy(widgetLimitExceeded = value)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("Failed to set widget limit exceeded flag to $value", e)
+                    }
+                    return
                 }
+            }
+
+            if (cachedLimitExceeded == value) {
                 return
             }
-        }
-
-        if (cachedLimitExceeded == value) {
-            return
-        }
 
             cachedLimitExceeded = value
             try {

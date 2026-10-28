@@ -89,13 +89,13 @@ class NotificationHelper
         @Volatile
         private var hasLoggedMissingService = false
 
-    @Volatile
-    private var initializedLocaleTag: String? = null
+        @Volatile
+        private var initializedLocaleTag: String? = null
 
-    @Volatile
-    private var legacyChannelDeleted = false
+        @Volatile
+        private var legacyChannelDeleted = false
 
-    private val channelsLock = Any()
+        private val channelsLock = Any()
 
         /**
          * Creates or updates notification channels with localized names and descriptions.

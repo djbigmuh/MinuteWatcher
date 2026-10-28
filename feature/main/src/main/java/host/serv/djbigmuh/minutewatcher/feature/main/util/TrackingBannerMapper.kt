@@ -93,7 +93,7 @@ object TrackingBannerMapper {
             (
                 widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
                     widgetError?.code == TrackingStatus.ErrorCode.RENDER_FAILURE
-                ) &&
+            ) &&
                 widgetError.code != TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT
 
         val isSettingsFailed =

@@ -299,10 +299,10 @@ class ShortcutManager
                 .build()
         }
 
-    private fun createShortcutIntent(
-        shortcutId: String,
-        slot: Int,
-    ): Intent =
+        private fun createShortcutIntent(
+            shortcutId: String,
+            slot: Int,
+        ): Intent =
             Intent()
                 .setClassName(
                     context.packageName,
