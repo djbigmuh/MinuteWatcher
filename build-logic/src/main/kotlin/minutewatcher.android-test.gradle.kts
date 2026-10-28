@@ -23,3 +23,7 @@ extensions.configure<TestExtension> {
         targetCompatibility = JavaVersion.toVersion(SdkVersions.JAVA_TOOLCHAIN_VERSION)
     }
 }
+
+extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
+    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
+}

@@ -57,7 +57,9 @@ fun SimLimitComposeDialog(
     onConfirm: (minutes: Int, trafficMb: Int, rollover: Boolean) -> Unit,
     onReset: () -> Unit,
 ) {
-    val locale = FormatUtils.getLocale(LocalContext.current)
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val context = LocalContext.current
+    val locale = remember(configuration, context) { configuration.locales.get(0) ?: FormatUtils.getLocale(context) }
     val state = rememberSimLimitState(slot, initialMinutes, initialTrafficMb, initialRolloverEnabled, locale)
     var showResetConfirm by remember { mutableStateOf(false) }
 

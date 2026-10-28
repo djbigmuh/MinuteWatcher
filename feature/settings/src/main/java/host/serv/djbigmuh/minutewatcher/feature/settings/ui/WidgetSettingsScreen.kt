@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -196,7 +197,7 @@ private fun WidgetSettingsContent(
     onUpdateSimSettings: (slot: Int, transform: SimSettingsTransform) -> Unit,
     onBack: () -> Unit,
 ) {
-    var showColorPicker by remember { mutableStateOf(value = false) }
+    var showColorPicker by rememberSaveable { mutableStateOf(value = false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     HandleSaveResultEffect(
@@ -228,6 +229,7 @@ private fun WidgetSettingsContent(
 
         if (showColorPicker) {
             ColorPickerWrapper(
+                initialColor = settings.backgroundColor,
                 onColorSelected = { color ->
                     onUpdateSettings { it.copy(backgroundColor = color) }
                 },

@@ -1,8 +1,7 @@
-package host.serv.djbigmuh.minutewatcher.core.resources
+package host.serv.djbigmuh.minutewatcher.core.android.util
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import host.serv.djbigmuh.minutewatcher.core.android.util.OperatorResolver
 import org.json.JSONObject
 import org.junit.Assert.fail
 import org.junit.Test
@@ -378,7 +377,6 @@ class MccMncDbTest {
             val mcc = plmn.substring(0, 3)
             val mncStr = plmn.substring(3)
 
-            // Check 2-digit vs 3-digit zero padding ambiguity (e.g. 70801 vs 708001)
             if (mncStr.length == 2 && mncStr.startsWith("0")) {
                 val padded3 = mcc + "0" + mncStr
                 if (padded3 in plmnSet) {
@@ -433,15 +431,20 @@ class MccMncDbTest {
     }
 
     private fun findSourcesFile(): File? {
-        var curr: File? = File(System.getProperty("user.dir") ?: ".")
-        while (curr != null) {
-            val candidate = File(curr, "docs/operator_plmn_sources.md")
-            if (candidate.exists()) {
-                return candidate
+        val coreResDirProp = System.getProperty("minutewatcher.coreResourcesResDir")
+        val baseFile =
+            if (coreResDirProp != null) {
+                File(coreResDirProp)
+            } else {
+                File(System.getProperty("user.dir") ?: ".")
             }
-            curr = curr.parentFile
+        var dir: File? = baseFile
+        while (dir != null && !File(dir, "settings.gradle.kts").exists()) {
+            dir = dir.parentFile
         }
-        return null
+        if (dir == null) return null
+        val candidate = File(dir, "docs/operator_plmn_sources.md")
+        return if (candidate.exists()) candidate else null
     }
 
     private fun parseJsonMap(jsonObj: JSONObject): Map<String, Map<String, String>> {

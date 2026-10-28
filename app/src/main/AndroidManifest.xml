@@ -17,6 +17,11 @@
       because android:localeConfig is a platform API 33+ (Tiramisu) attribute.
       On API 26-32, per-app language selection is provided by AppCompat via AppLocalesMetadataHolderService.
     -->
+    <!--
+      tools:ignore="UnusedTranslation": Indonesian resource directory qualifier is "in" per Android platform convention,
+      while BCP-47 language tag in locales_config.xml is "id". The platform maps "id" to "values-in", but Lint
+      reports UnusedTranslation because it doesn't recognize this legacy ISO 639 mapping.
+    -->
     <application
         android:name=".MinuteWatcherApp"
         android:icon="@mipmap/ic_launcher"
@@ -28,7 +33,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.MinuteWatcher"
-        tools:ignore="GoogleAppIndexingWarning"
+        tools:ignore="GoogleAppIndexingWarning,UnusedTranslation"
         tools:targetApi="tiramisu">
 
         <!--

@@ -298,6 +298,7 @@ object Constants {
      */
     object IntentExtras {
         const val SIM_SLOT = "sim_slot"
+        const val SHORTCUT_ID = "shortcut_id"
     }
 
     /**

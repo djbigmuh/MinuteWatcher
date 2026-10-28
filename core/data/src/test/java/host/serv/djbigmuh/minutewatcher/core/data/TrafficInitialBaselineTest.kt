@@ -160,7 +160,13 @@ class TrafficInitialBaselineTest {
 
             // 1. Mock SIM usage with lastResetDate = 0
             val usageWithZero = createSimUsage(sim1Identity, 1, 0, lastResetDate = 0L)
-            whenever(simUsageRepository.getSimUsage(sim1Identity)).thenReturn(flowOf(usageWithZero))
+            val usageWithValid =
+                createSimUsage(sim1Identity, 1, 0, lastResetDate = timeProvider.now())
+            var attempts = 0
+            whenever(simUsageRepository.getSimUsage(sim1Identity)).thenAnswer {
+                attempts++
+                flowOf(if (attempts == 1) usageWithZero else usageWithValid)
+            }
             whenever(simUsageResetRepository.getLastTotalBytes(sim1Identity)).thenReturn(flowOf(-1L))
 
             // 2. Perform update.
@@ -168,7 +174,10 @@ class TrafficInitialBaselineTest {
             tracker.updateTrafficUsage()
             testDispatcher.scheduler.advanceUntilIdle()
 
-            verify(simUsageResetRepository).ensureTrackingWindowInitialized(eq(sim1Identity))
+            verify(
+                simUsageResetRepository,
+                org.mockito.kotlin.times(2),
+            ).ensureTrackingWindowInitialized(eq(sim1Identity))
         }
 
     @Test
@@ -178,9 +187,19 @@ class TrafficInitialBaselineTest {
             val now = timeProvider.now()
 
             // Phase 1: Initialization
+            var phase1Attempts = 0
             whenever(
                 simUsageRepository.getSimUsage(sim1Identity),
-            ).thenReturn(flowOf(createSimUsage(sim1Identity, 1, 0, lastResetDate = 0L)))
+            ).thenAnswer {
+                phase1Attempts++
+                flowOf(
+                    if (phase1Attempts == 1) {
+                        createSimUsage(sim1Identity, 1, 0, lastResetDate = 0L)
+                    } else {
+                        createSimUsage(sim1Identity, 1, 0, lastResetDate = now)
+                    },
+                )
+            }
             whenever(simUsageResetRepository.getLastTotalBytes(sim1Identity)).thenReturn(flowOf(-1L))
 
             tracker.updateTrafficUsage()

@@ -1,6 +1,6 @@
-# Operator brand assets — inventory
-
 All operator icons (`core/resources/src/main/res/drawable/ic_operator_*.xml`) are vector drawables in a unified 48x48 viewport. Every icon is validated by `OperatorIconAssetComplianceTest`, `OperatorVectorIntegrityTest` and `OperatorIconGeometryTest`.
+
+The single source of truth for operator brand mappings is `OperatorBrandDatabase.brandRecords`.
 
 ## Category A — CC0 brand glyphs (simple-icons)
 

@@ -1,14 +1,8 @@
-import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
-
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.kotlinCompose)
-}
-
-kotlin {
-    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {
@@ -30,10 +24,10 @@ dependencies {
 
     implementation(platform(libs.androidxComposeBom))
     implementation(libs.androidxComposeRuntime)
+    implementation(libs.androidxUi)
+    implementation("androidx.compose.foundation:foundation")
     implementation(libs.androidxCoreKtx)
     implementation(libs.androidxAppcompat)
-    implementation(libs.googleMaterial)
-    implementation(libs.androidxMaterial3)
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
 
@@ -43,6 +37,7 @@ dependencies {
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.androidxJunit)
     testImplementation(testFixtures(project(":core:common")))
+    testImplementation(testFixtures(project(":core:resources")))
 
     testFixturesApi(libs.junit)
     testFixturesImplementation(testFixtures(project(":core:common")))

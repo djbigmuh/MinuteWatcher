@@ -114,18 +114,25 @@ object AppLogger {
         context: Context,
         customLogger: Logger = AndroidLogger(),
     ) {
+        val filesDir = context.filesDir
         synchronized(this) {
             if (isShutdown) return
+            if (logDir == filesDir && logger == customLogger && isFileLoggingEnabled == BuildConfig.DEBUG) {
+                return
+            }
             closeWriter()
             consecutiveWriteFailures = 0
-            logDir = context.filesDir
+            logDir = filesDir
             logger = customLogger
             isFileLoggingEnabled = BuildConfig.DEBUG
         }
-        stopWorkerAndStartNewIfNeeded(startNew = true)
+        stopWorkerAndStartNewIfNeeded(startNew = true, blocking = false)
     }
 
-    private fun stopWorkerAndStartNewIfNeeded(startNew: Boolean) {
+    private fun stopWorkerAndStartNewIfNeeded(
+        startNew: Boolean,
+        blocking: Boolean = false,
+    ) {
         val oldJob: Job?
         val newGen: Long
         synchronized(this) {
@@ -137,14 +144,37 @@ object AppLogger {
 
         if (oldJob != null) {
             oldJob.cancel()
-            runBlocking {
-                val joined =
-                    withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS) {
-                        oldJob.join()
+            if (blocking) {
+                runBlocking {
+                    val joined =
+                        withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS) {
+                            oldJob.join()
+                        }
+                    if (joined == null) {
+                        Log.w(TAG, "AppLogger: worker join timed out after $WORKER_JOIN_TIMEOUT_MS ms")
                     }
-                if (joined == null) {
-                    Log.w(TAG, "AppLogger: worker join timed out after $WORKER_JOIN_TIMEOUT_MS ms")
                 }
+            } else {
+                logScope.launch {
+                    val joined =
+                        withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS) {
+                            oldJob.join()
+                        }
+                    if (joined == null) {
+                        Log.w(TAG, "AppLogger: worker join timed out after $WORKER_JOIN_TIMEOUT_MS ms")
+                    }
+                    if (startNew) {
+                        synchronized(this@AppLogger) {
+                            if (isWorkerStartAllowed(newGen)) {
+                                workerJob =
+                                    logScope.launch {
+                                        runWorker(newGen)
+                                    }
+                            }
+                        }
+                    }
+                }
+                return
             }
         }
 
@@ -384,7 +414,7 @@ object AppLogger {
             isFileLoggingEnabled = false
             closeWriter()
         }
-        stopWorkerAndStartNewIfNeeded(startNew = false)
+        stopWorkerAndStartNewIfNeeded(startNew = false, blocking = true)
     }
 
     @VisibleForTesting
@@ -400,7 +430,7 @@ object AppLogger {
                 // Drain channel
             }
         }
-        stopWorkerAndStartNewIfNeeded(startNew = false)
+        stopWorkerAndStartNewIfNeeded(startNew = false, blocking = true)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -429,6 +459,6 @@ object AppLogger {
                 // Drain channel
             }
         }
-        stopWorkerAndStartNewIfNeeded(startNew = enabled)
+        stopWorkerAndStartNewIfNeeded(startNew = enabled, blocking = false)
     }
 }

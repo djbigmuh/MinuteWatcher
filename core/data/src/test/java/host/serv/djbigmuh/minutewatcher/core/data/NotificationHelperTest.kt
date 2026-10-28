@@ -1,9 +1,14 @@
 package host.serv.djbigmuh.minutewatcher.core.data
 
+import android.app.LocaleManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
+import android.os.LocaleList
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.NotificationCompat
+import androidx.core.os.LocaleListCompat
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.domain.NavigationProvider
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
@@ -44,6 +49,40 @@ class NotificationHelperTest {
         helper = NotificationHelper(context, navigationProvider, permissionManager)
         helper.ensureChannels()
     }
+
+    private fun setTestAppLocale(locales: LocaleListCompat) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val localeManager = context.getSystemService(LocaleManager::class.java)
+            if (localeManager != null) {
+                val targetList =
+                    if (locales.isEmpty) {
+                        LocaleList.getEmptyLocaleList()
+                    } else {
+                        val first = locales.get(0)
+                        if (first != null) LocaleList(first) else LocaleList.getEmptyLocaleList()
+                    }
+                localeManager.applicationLocales = targetList
+            }
+        }
+        AppCompatDelegate.setApplicationLocales(locales)
+    }
+
+    private fun createContextWithMockManager(mockManager: NotificationManager): Context =
+        object : android.content.ContextWrapper(context) {
+            override fun getSystemService(name: String): Any? =
+                if (name == Context.NOTIFICATION_SERVICE) {
+                    mockManager
+                } else {
+                    super.getSystemService(name)
+                }
+
+            override fun getSystemServiceName(serviceClass: Class<*>): String? =
+                if (serviceClass == NotificationManager::class.java) {
+                    Context.NOTIFICATION_SERVICE
+                } else {
+                    super.getSystemServiceName(serviceClass)
+                }
+        }
 
     @Test
     fun `constructor has no side effects and does not create channels until ensureChannels`() {
@@ -399,38 +438,73 @@ class NotificationHelperTest {
     }
 
     @Test
-    fun `createNotificationChannel handles runtime exceptions from notification manager gracefully`() {
+    fun `sequential calls to ensureChannels result in one createNotificationChannel call per channel`() {
         val mockManager: NotificationManager = mock()
-        doThrow(RuntimeException("Platform error"))
-            .whenever(mockManager)
-            .createNotificationChannel(any())
-        whenever(mockManager.getNotificationChannel(any())).thenReturn(null)
-
-        val wrappedContext =
-            object : android.content.ContextWrapper(context) {
-                override fun getSystemService(name: String): Any? {
-                    if (name == Context.NOTIFICATION_SERVICE) {
-                        return mockManager
-                    }
-                    return super.getSystemService(name)
-                }
-
-                override fun getSystemServiceName(serviceClass: Class<*>): String? {
-                    if (serviceClass == NotificationManager::class.java) {
-                        return Context.NOTIFICATION_SERVICE
-                    }
-                    return super.getSystemServiceName(serviceClass)
-                }
-            }
-
-        val testHelper =
-            NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+        val wrappedContext = createContextWithMockManager(mockManager)
+        val testHelper = NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+        testHelper.ensureChannels()
+        testHelper.ensureChannels()
         testHelper.ensureChannels()
 
         verify(mockManager, org.mockito.kotlin.times(2)).createNotificationChannel(any())
+    }
 
+    @Test
+    fun `sendUsageNotification and sendAodSummaryNotification do not call createNotificationChannel`() {
+        val mockManager: NotificationManager = mock()
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
-        assertFalse(testHelper.isAodSummaryAvailable())
-        assertFalse(testHelper.sendAodSummaryNotification("Title", "Line", "Expanded"))
+        val wrappedContext = createContextWithMockManager(mockManager)
+        val testHelper = NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+        testHelper.sendUsageNotification("Title", "Msg", 0, UsageNotificationType.MINUTES)
+        testHelper.sendAodSummaryNotification("AOD", "Line", "Expanded")
+
+        verify(mockManager, org.mockito.kotlin.never()).createNotificationChannel(any())
+    }
+
+    @Test
+    fun `changing app locale between ensureChannels calls recreates notification channels`() {
+        val mockManager: NotificationManager = mock()
+        val wrappedContext = createContextWithMockManager(mockManager)
+        val testHelper = NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+
+        setTestAppLocale(LocaleListCompat.forLanguageTags("en"))
+        testHelper.ensureChannels()
+
+        setTestAppLocale(LocaleListCompat.forLanguageTags("de"))
+        testHelper.ensureChannels()
+
+        verify(mockManager, org.mockito.kotlin.times(4)).createNotificationChannel(any())
+    }
+
+    @Test
+    fun `RuntimeException from createNotificationChannel is not thrown and does not set initialization flag`() {
+        val mockManager: NotificationManager = mock()
+        doThrow(RuntimeException("Platform error")).whenever(mockManager).createNotificationChannel(any())
+        val wrappedContext = createContextWithMockManager(mockManager)
+        val testHelper = NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+
+        testHelper.ensureChannels()
+        verify(mockManager, org.mockito.kotlin.times(1)).createNotificationChannel(any())
+
+        testHelper.ensureChannels()
+        verify(mockManager, org.mockito.kotlin.times(2)).createNotificationChannel(any())
+    }
+
+    @Test
+    fun `deletion of legacy channel is executed once per process`() {
+        val mockManager: NotificationManager = mock()
+        val wrappedContext = createContextWithMockManager(mockManager)
+        val testHelper = NotificationHelper(wrappedContext, navigationProvider, permissionManager)
+
+        setTestAppLocale(LocaleListCompat.forLanguageTags("en"))
+        testHelper.ensureChannels()
+
+        setTestAppLocale(LocaleListCompat.forLanguageTags("fr"))
+        testHelper.ensureChannels()
+
+        verify(
+            mockManager,
+            org.mockito.kotlin.times(1),
+        ).deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
     }
 }

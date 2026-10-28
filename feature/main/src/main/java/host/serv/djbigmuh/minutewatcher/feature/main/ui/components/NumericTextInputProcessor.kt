@@ -11,12 +11,18 @@ internal enum class NumericInputMode {
 }
 
 internal object NumericTextInputProcessor {
+    /**
+     * Processes numeric text input updates.
+     *
+     * @param locale The explicit locale used for decimal separator and number normalization.
+     *               Must not be default implicit locale to ensure deterministic behavior.
+     */
     fun process(
         old: TextFieldValue,
         newValue: TextFieldValue,
         maxLength: Int,
         mode: NumericInputMode,
-        locale: Locale = Locale.getDefault(),
+        locale: Locale,
         isPristineInitial: Boolean = false,
     ): TextFieldValue? {
         if (newValue.text.length > maxLength) return null
@@ -90,16 +96,15 @@ internal object NumericTextInputProcessor {
         }
 
     private fun removeLeadingZeros(input: String): String {
-        var textStr = input
-        if (textStr.isNotEmpty()) {
-            while (textStr.length > 1 &&
-                textStr[0] == '0' &&
-                Character.isDigit(textStr[1])
-            ) {
-                textStr = textStr.drop(1)
-            }
+        if (input.length <= 1) return input
+        var startIndex = 0
+        while (startIndex < input.length - 1 &&
+            input[startIndex] == '0' &&
+            input[startIndex + 1].isDigit()
+        ) {
+            startIndex++
         }
-        return textStr
+        return input.substring(startIndex)
     }
 
     private fun calculateSelection(

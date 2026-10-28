@@ -9,7 +9,8 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class RobolectricSdkSmokeTest {
     @Test
-    fun `verify Robolectric runs on expected SDK 37`() {
-        assertEquals(37, Build.VERSION.SDK_INT)
+    fun `verify Robolectric runs on expected SDK`() {
+        val expectedSdk = System.getProperty("robolectric.sdk")?.toIntOrNull() ?: 37
+        assertEquals(expectedSdk, Build.VERSION.SDK_INT)
     }
 }

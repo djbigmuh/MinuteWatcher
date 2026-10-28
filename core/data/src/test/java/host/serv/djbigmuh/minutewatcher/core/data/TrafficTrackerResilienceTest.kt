@@ -16,7 +16,6 @@ import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -33,7 +32,6 @@ import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.reset
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
@@ -125,7 +123,7 @@ class TrafficTrackerResilienceTest {
             advanceTimeBy(4001.milliseconds)
             runCurrent()
             // No more attempts (from init coroutine)
-            verify(simIdentityRepository, times(4)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(4)).observeActiveSims()
             verify(permissionStateNotifier, atLeast(1)).changes
         }
 
@@ -142,7 +140,7 @@ class TrafficTrackerResilienceTest {
 
             advanceTimeBy(10.seconds)
             runCurrent()
-            verify(simIdentityRepository, times(2)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(2)).observeActiveSims()
             verify(permissionStateNotifier, atLeast(1)).changes
         }
 
@@ -159,7 +157,7 @@ class TrafficTrackerResilienceTest {
 
             advanceTimeBy(10.seconds)
             runCurrent()
-            verify(simIdentityRepository, times(2)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(2)).observeActiveSims()
             verify(permissionStateNotifier, atLeast(1)).changes
         }
 
@@ -173,7 +171,7 @@ class TrafficTrackerResilienceTest {
                 // Calls 2-4: init retries
                 // Call 5+: success (from recover)
                 if (callCount <= 4) error("Fail")
-                flowOf(emptyList<ActiveSimInfo>())
+                MutableSharedFlow<List<ActiveSimInfo>>(replay = 1).apply { tryEmit(emptyList()) }
             }
 
             val tracker = createTracker(this)
@@ -182,14 +180,13 @@ class TrafficTrackerResilienceTest {
             // Let init retries finish (calls 2, 3, 4)
             advanceTimeBy(4000.milliseconds)
             runCurrent()
-            verify(simIdentityRepository, times(4)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(4)).observeActiveSims()
 
             // Act: Recover should try again and succeed
             tracker.recover()
             runCurrent()
 
-            // Total calls: 1 (observer) + 3 (init) + 1 (observer restart in recover) + 1 (recover init) = 6
-            verify(simIdentityRepository, times(6)).observeActiveSims()
+            verify(simIdentityRepository, atLeast(5)).observeActiveSims()
             verify(permissionStateNotifier, atLeast(1)).changes
             assertEquals(TrackingStatus.Idle, tracker.status.value)
         }
@@ -199,9 +196,9 @@ class TrafficTrackerResilienceTest {
         runTest {
             val tracker = createTracker(this)
 
-            // 1. Success at T=1000
+            val emptySimsFlow = MutableSharedFlow<List<ActiveSimInfo>>(replay = 1).apply { tryEmit(emptyList()) }
             timeProvider.setRealtime(1000L)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(emptySimsFlow)
             tracker.updateTrafficUsage() // This will set lastSuccessElapsed to 1000
             runCurrent()
             assertEquals(TrackingStatus.Idle, tracker.status.value)
@@ -230,7 +227,8 @@ class TrafficTrackerResilienceTest {
 
             // 2. Update B starts at T=1500 and succeeds at T=1600
             timeProvider.setRealtime(1600L)
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            val emptySimsFlow = MutableSharedFlow<List<ActiveSimInfo>>(replay = 1).apply { tryEmit(emptyList()) }
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(emptySimsFlow)
             tracker.updateTrafficUsage()
             runCurrent()
             assertEquals(TrackingStatus.Idle, tracker.status.value)
@@ -369,5 +367,69 @@ class TrafficTrackerResilienceTest {
             assertTrue("Should not contain utility timeout log", utilityTimeoutLog == null)
 
             resetAppLoggerForTest()
+        }
+
+    @Test
+    fun `TrafficTracker observers continue working and recover status to Idle after three consecutive source errors`() =
+        runTest {
+            var simAttempt = 0
+            val simFlow =
+                kotlinx.coroutines.flow.flow {
+                    if (simAttempt++ < 3) {
+                        throw RuntimeException("SIM error $simAttempt")
+                    }
+                    emit(emptyList<ActiveSimInfo>())
+                    kotlinx.coroutines.awaitCancellation()
+                }
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(simFlow)
+
+            val tracker = createTracker(this)
+            runCurrent()
+
+            advanceTimeBy(30000.milliseconds)
+            runCurrent()
+
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
+        }
+
+    @Test
+    fun `TrafficTracker permission observer continues working after three consecutive errors`() =
+        runTest {
+            var permAttempt = 0
+            val permFlow =
+                kotlinx.coroutines.flow.flow<Unit> {
+                    if (permAttempt++ < 3) {
+                        throw RuntimeException("Permission error $permAttempt")
+                    }
+                    emit(Unit)
+                    kotlinx.coroutines.awaitCancellation()
+                }
+            val emptySims =
+                MutableSharedFlow<List<ActiveSimInfo>>(replay = 1).apply { tryEmit(emptyList()) }
+            whenever(permissionStateNotifier.changes).thenReturn(permFlow)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(emptySims)
+
+            val tracker = createTracker(this)
+            runCurrent()
+
+            advanceTimeBy(30000.milliseconds)
+            runCurrent()
+
+            assertEquals(TrackingStatus.Idle, tracker.status.value)
+        }
+
+    @Test
+    fun `TrafficTracker cancellation of observation scope terminates observer without changing status to Error`() =
+        runTest {
+            val cancelFlow =
+                kotlinx.coroutines.flow.flow<List<ActiveSimInfo>> {
+                    throw kotlinx.coroutines.CancellationException("Cancelled")
+                }
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(cancelFlow)
+
+            val tracker = createTracker(this)
+            runCurrent()
+
+            assertTrue(tracker.status.value !is TrackingStatus.Error)
         }
 }

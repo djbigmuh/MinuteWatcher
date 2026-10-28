@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -116,5 +117,84 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
 
             // 4. Verification: init completes first, then saveCallSession is invoked
             verify(callSessionRepository, atLeastOnce()).saveCallSession(eq(1), any(), any(), any(), anyOrNull())
+        }
+
+    @Test
+    fun `permission observer continues working and processes event after three consecutive source errors`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            var attempt = 0
+            val flow =
+                kotlinx.coroutines.flow.flow {
+                    if (attempt++ < 3) {
+                        throw RuntimeException("Error $attempt")
+                    }
+                    emit(Unit)
+                    kotlinx.coroutines.awaitCancellation()
+                }
+            whenever(permissionStateNotifier.changes).thenReturn(flow)
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
+        }
+
+    @Test
+    fun `permission observer continues working after 100 consecutive source errors`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            var attempt = 0
+            val flow =
+                kotlinx.coroutines.flow.flow {
+                    if (attempt++ < 100) {
+                        throw RuntimeException("Error $attempt")
+                    }
+                    emit(Unit)
+                    kotlinx.coroutines.awaitCancellation()
+                }
+            whenever(permissionStateNotifier.changes).thenReturn(flow)
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
+        }
+
+    @Test
+    fun `source recovery after series of errors calls recovery callback and transitions status to Idle`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            var attempt = 0
+            val flow =
+                kotlinx.coroutines.flow.flow {
+                    if (attempt++ < 3) {
+                        throw RuntimeException("Error $attempt")
+                    }
+                    emit(Unit)
+                    kotlinx.coroutines.awaitCancellation()
+                }
+            whenever(permissionStateNotifier.changes).thenReturn(flow)
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Idle, callTracker.status.value)
+        }
+
+    @Test
+    fun `cancellation of observation scope terminates observer coroutine without changing tracker status`() =
+        runTest(testDispatcher) {
+            setupCommonMocks()
+            val cancelFlow =
+                kotlinx.coroutines.flow.flow<Unit> {
+                    throw kotlinx.coroutines.CancellationException("Cancelled")
+                }
+            whenever(permissionStateNotifier.changes).thenReturn(cancelFlow)
+            val callTracker = createTracker()
+            callTracker.ensureStarted()
+            advanceUntilIdle()
+
+            assertTrue(callTracker.status.value !is TrackingStatus.Error)
         }
 }

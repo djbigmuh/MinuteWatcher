@@ -255,12 +255,13 @@ class ShortcutManager
                     shortLabel,
                 )
 
+            val shortcutId = "minutes_shortcut_$slot"
             return ShortcutInfoCompat
-                .Builder(context, "minutes_shortcut_$slot")
+                .Builder(context, shortcutId)
                 .setShortLabel(shortLabel)
                 .setLongLabel(longLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_usage))
-                .setIntent(createShortcutIntent(slot))
+                .setIntent(createShortcutIntent(shortcutId, slot))
                 .build()
         }
 
@@ -288,16 +289,20 @@ class ShortcutManager
                     shortLabel,
                 )
 
+            val shortcutId = "traffic_shortcut_$slot"
             return ShortcutInfoCompat
-                .Builder(context, "traffic_shortcut_$slot")
+                .Builder(context, shortcutId)
                 .setShortLabel(shortLabel)
                 .setLongLabel(longLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_usage))
-                .setIntent(createShortcutIntent(slot))
+                .setIntent(createShortcutIntent(shortcutId, slot))
                 .build()
         }
 
-        private fun createShortcutIntent(slot: Int): Intent =
+    private fun createShortcutIntent(
+        shortcutId: String,
+        slot: Int,
+    ): Intent =
             Intent()
                 .setClassName(
                     context.packageName,
@@ -305,6 +310,7 @@ class ShortcutManager
                 ).apply {
                     action = Intent.ACTION_VIEW
                     putExtra(IntentExtras.SIM_SLOT, slot)
+                    putExtra(IntentExtras.SHORTCUT_ID, shortcutId)
                 }
 
         private suspend fun applyShortcutsGuarded(shortcuts: List<ShortcutInfoCompat>) {

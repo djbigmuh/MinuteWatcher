@@ -148,6 +148,11 @@ class TrafficTrackerTest {
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo, mockSubInfo2))
     }
 
+    private fun activeSimsFlow(sims: List<ActiveSimInfo> = emptyList()): MutableSharedFlow<List<ActiveSimInfo>> =
+        MutableSharedFlow<List<ActiveSimInfo>>(replay = 1).apply {
+            tryEmit(sims)
+        }
+
     private fun setupIdentityMocks() {
         runBlocking {
             whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(-1))
@@ -176,7 +181,7 @@ class TrafficTrackerTest {
                         isDefaultVoice = false,
                     ),
                 )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow(activeSims))
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
         }
     }
@@ -382,7 +387,7 @@ class TrafficTrackerTest {
                         isDefaultVoice = false,
                     ),
                 )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow(activeSims))
 
             // Acts on update
             tracker.updateTrafficUsage()
@@ -422,7 +427,7 @@ class TrafficTrackerTest {
                         isDefaultVoice = false,
                     ),
                 )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow(activeSims))
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
             whenever(simUsageRepository.getSimUsage("sim_1"))
                 .thenReturn(flowOf(createSimUsage("sim_1", 0, 0, 10000000L)))
@@ -466,7 +471,7 @@ class TrafficTrackerTest {
                         isDefaultVoice = false,
                     ),
                 )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow(activeSims))
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0", "sim_1")))
             whenever(simUsageRepository.getSimUsage("sim_1"))
                 .thenReturn(flowOf(createSimUsage("sim_1", 0, 0, 10000000L)))
@@ -679,7 +684,7 @@ class TrafficTrackerTest {
                     isDefaultData = true,
                     isDefaultVoice = true,
                 )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(invalidSim)))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow(listOf(invalidSim)))
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
 
             tracker.updateTrafficUsage()
@@ -694,7 +699,7 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage sets Idle when no active SIM`() =
         runTest {
             val tracker = startTracker()
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow())
             whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(-1)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
@@ -708,7 +713,7 @@ class TrafficTrackerTest {
     fun `updateTrafficUsage with empty active SIMs DOES cleanup retries`() =
         runTest {
             val tracker = startTracker()
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(activeSimsFlow())
 
             tracker.updateTrafficUsage()
             runCurrent()
@@ -927,4 +932,94 @@ class TrafficTrackerTest {
         autoResetDay = 1,
         lastResetDate = lastReset,
     )
+
+    @Test
+    fun `read reset date returns value and completes update`() =
+        runTest {
+            val usage = createSimUsage("sim_0", 1, 0, 1000L)
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(usage))
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(500L))
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+
+            val tracker = startTracker()
+            val result = tracker.updateTrafficUsage()
+
+            assertEquals(TrafficUpdateOutcome.Completed, result)
+        }
+
+    @Test
+    fun `read reset date timeout returns TimedOut and sets TIMEOUT error code`() =
+        runTest {
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(
+                flow {
+                    kotlinx.coroutines.awaitCancellation()
+                },
+            )
+
+            val tracker = startTracker()
+            val result = tracker.updateTrafficUsage()
+
+            assertTrue(result is TrafficUpdateOutcome.TimedOut)
+            val status = tracker.status.value as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorCode.TIMEOUT, status.code)
+        }
+
+    @Test
+    fun `missing reset date with successful re-initialization completes update`() =
+        runTest {
+            var calls = 0
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenAnswer {
+                calls++
+                if (calls == 1) {
+                    flowOf(createSimUsage("sim_0", 1, 0, 0L))
+                } else {
+                    flowOf(createSimUsage("sim_0", 1, 0, 1000L))
+                }
+            }
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(500L))
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+
+            val tracker = startTracker()
+            val result = tracker.updateTrafficUsage()
+
+            assertEquals(TrafficUpdateOutcome.Completed, result)
+        }
+
+    @Test
+    fun `missing reset date after re-initialization fails with DATABASE_ERROR`() =
+        runTest {
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", 1, 0, 0L)))
+
+            val tracker = startTracker()
+            val result = tracker.updateTrafficUsage()
+
+            assertTrue(result is TrafficUpdateOutcome.Failed)
+            val status = tracker.status.value as TrackingStatus.Error
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
+        }
+
+    @Test
+    fun `DATABASE_ERROR status is not overwritten by subsequent successful cycle without force`() =
+        runTest {
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", 1, 0, 0L)))
+
+            val tracker = startTracker()
+            timeProvider.advance(1000)
+            tracker.updateTrafficUsage()
+            runCurrent()
+
+            assertTrue(tracker.status.value is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (tracker.status.value as TrackingStatus.Error).type)
+
+            timeProvider.advance(1000)
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0", 1, 0, 1000L)))
+            whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(500L))
+            whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(1000L))
+
+            tracker.updateTrafficUsage()
+            runCurrent()
+
+            assertTrue(tracker.status.value is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (tracker.status.value as TrackingStatus.Error).type)
+        }
 }

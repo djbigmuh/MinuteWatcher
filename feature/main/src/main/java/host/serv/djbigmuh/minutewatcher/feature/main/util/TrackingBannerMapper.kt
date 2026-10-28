@@ -90,7 +90,10 @@ object TrackingBannerMapper {
         val usageError = statusMap[TrackingKey.USAGE_STATE] as? TrackingStatus.Error
 
         val isWidgetObservationFailed =
-            widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR &&
+            (
+                widgetError?.type == TrackingStatus.ErrorType.DATABASE_ERROR ||
+                    widgetError?.code == TrackingStatus.ErrorCode.RENDER_FAILURE
+                ) &&
                 widgetError.code != TrackingStatus.ErrorCode.WIDGET_SIZE_LIMIT
 
         val isSettingsFailed =

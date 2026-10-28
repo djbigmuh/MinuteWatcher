@@ -5,6 +5,7 @@ import androidx.annotation.VisibleForTesting
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
+import host.serv.djbigmuh.minutewatcher.core.common.util.observeWithRetry
 import host.serv.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import host.serv.djbigmuh.minutewatcher.core.domain.TrackingStatusProvider
@@ -17,20 +18,14 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.pow
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of call tracking logic that monitors call events and records duration.
@@ -77,7 +72,9 @@ class CallTracker
         }
 
         private val trackerState = AtomicReference(State.IDLE)
-        private val permissionObserverJob = AtomicReference<Job?>(null)
+
+    @VisibleForTesting
+    internal val permissionObserverJob = AtomicReference<Job?>(null)
         private val initJob = AtomicReference<Job?>(null)
 
         @Volatile
@@ -157,47 +154,57 @@ class CallTracker
             return current == State.INITIALIZED || current == State.INITIALIZING
         }
 
+    private val observerLock = Any()
+
         private fun startPermissionObserver() {
-            val previous = permissionObserverJob.getAndSet(null)
-            previous?.cancel()
-            val changesFlow = permissionStateNotifier.changes
-            val newJob =
-                scope.launch {
-                    changesFlow
-                        .retryWhen { cause, attempt ->
-                            if (attempt < MAX_RETRY_ATTEMPTS && cause !is CancellationException) {
-                                val delayTime =
-                                    (
-                                        2.0.pow(attempt.toDouble()) *
-                                            RETRY_DELAY_BASE_MS
-                                    ).toLong().coerceAtMost(RETRY_DELAY_MAX_MS)
-                                AppLogger.w(
-                                    "CallTracker: Permission observer failed (attempt $attempt), " +
-                                        "retrying in ${delayTime}ms",
-                                    cause,
-                                )
-                                delay(delayTime.milliseconds)
-                                true
-                            } else {
-                                false
-                            }
-                        }.catch { e ->
-                            AppLogger.e("CallTracker: Permission observer died permanently", e)
-                            updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
-                        }.collect {
-                            try {
-                                initMutex.withLock {
-                                    refreshStatus(force = true)
+            synchronized(observerLock) {
+                val existing = permissionObserverJob.get()
+                if (existing == null || !existing.isActive) {
+                    val previous = permissionObserverJob.getAndSet(null)
+                    previous?.cancel()
+                    val changesFlow = permissionStateNotifier.changes
+                    val newJob =
+                        scope.launch {
+                            changesFlow
+                                .observeWithRetry(
+                                    label = "CallTracker Permission observer",
+                                    logThreshold = LOG_THRESHOLD,
+                                    onPersistentFailure = { cause ->
+                                        updateStatus(
+                                            TrackingStatus.Error(
+                                                TrackingStatus.ErrorType.UNKNOWN,
+                                                cause.message,
+                                            ),
+                                        )
+                                    },
+                                    onRecovered = {
+                                        updateStatus(TrackingStatus.Idle)
+                                    },
+                                    onSourceCompleted = {
+                                        AppLogger.e("CallTracker: Permission observer completed normally (unexpected)")
+                                        updateStatus(
+                                            TrackingStatus.Error(
+                                                TrackingStatus.ErrorType.UNKNOWN,
+                                                "Permission observer completed normally",
+                                            ),
+                                        )
+                                    },
+                                ).collect {
+                                    try {
+                                        initMutex.withLock {
+                                            refreshStatus(force = true)
+                                        }
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
+                                    }
                                 }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
-                            }
                         }
+                    if (!permissionObserverJob.compareAndSet(null, newJob)) {
+                        newJob.cancel()
+                    }
                 }
-            if (!permissionObserverJob.compareAndSet(null, newJob)) {
-                newJob.cancel()
             }
         }
 
@@ -436,8 +443,6 @@ class CallTracker
         }
 
         companion object {
-            private const val MAX_RETRY_ATTEMPTS = 10
-            private const val RETRY_DELAY_BASE_MS = 1000
-            private const val RETRY_DELAY_MAX_MS = 30000L
+            private const val LOG_THRESHOLD = 3
         }
     }

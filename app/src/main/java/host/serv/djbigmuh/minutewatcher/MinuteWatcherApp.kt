@@ -67,7 +67,11 @@ class MinuteWatcherApp :
         AppLogger.init(this)
         notificationHelper.ensureChannels()
 
-        WorkManager.initialize(this, workManagerConfiguration)
+        try {
+            WorkManager.initialize(this, workManagerConfiguration)
+        } catch (_: IllegalStateException) {
+            // Already initialized
+        }
 
         // Eagerly start trackers to ensure they are ready for events and UI observation.
         callTracker.ensureStarted()

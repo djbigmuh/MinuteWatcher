@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- General UI -->
     <string name="sim_cards_title">Cartões SIM</string>
     <string name="no_sim_found">Cartões SIM não encontrados</string>
@@ -132,12 +132,22 @@
     <string name="traffic_remaining_text">Tráfego restante: </string>
     <string name="gb_abbr"> GB</string>
     <string name="auto_reset_day_suffix">dia do mês</string>
-    <plurals name="minutes_plurals">
+    <!--
+      tools:ignore="UnusedQuantity": The 'many' quantity category is selected by CLDR plural rules
+      starting from Android 14 for values of 1,000,000 and above. On older Android versions,
+      the platform falls back to 'other'.
+    -->
+    <plurals name="minutes_plurals" tools:ignore="UnusedQuantity">
         <item quantity="one">%1$d minuto</item>
         <item quantity="many">%1$d de minutos</item>
         <item quantity="other">%1$d minutos</item>
     </plurals>
-    <plurals name="days_plurals">
+    <!--
+      tools:ignore="UnusedQuantity": The 'many' quantity category is selected by CLDR plural rules
+      starting from Android 14 for values of 1,000,000 and above. On older Android versions,
+      the platform falls back to 'other'.
+    -->
+    <plurals name="days_plurals" tools:ignore="UnusedQuantity">
         <item quantity="one">%1$d dia</item>
         <item quantity="many">%1$d de dias</item>
         <item quantity="other">%1$d dias</item>

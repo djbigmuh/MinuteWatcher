@@ -1,15 +1,9 @@
-import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
-
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.kotlinCompose)
     id("kotlin-parcelize")
-}
-
-kotlin {
-    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {

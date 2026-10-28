@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import host.serv.djbigmuh.minutewatcher.controller.MainPermissionController
+import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.data.NotificationHelper
 import host.serv.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
@@ -155,8 +156,18 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun handleIntent(intent: Intent?) {
         intent?.let {
+            val shortcutId = it.getStringExtra(IntentExtras.SHORTCUT_ID)
+            if (!shortcutId.isNullOrEmpty()) {
+                try {
+                    androidx.core.content.pm.ShortcutManagerCompat
+                        .reportShortcutUsed(this, shortcutId)
+                } catch (e: Exception) {
+                    AppLogger.w("Failed to report shortcut used: $shortcutId", e)
+                }
+            }
             val simSlot = it.getIntExtra(IntentExtras.SIM_SLOT, -1)
             if (simSlot != -1) {
                 viewModel.highlightSlot(simSlot)

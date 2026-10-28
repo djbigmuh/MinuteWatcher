@@ -114,6 +114,53 @@ class PluralResourcesTest {
         assertTrue(urDays["other"]!!.contains("%1\$d"))
     }
 
+    @Test
+    fun `plurals with many quantity have tools ignore UnusedQuantity`() {
+        val resDir = findResDir()
+        val builder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+
+        locales.forEach { tag ->
+            val dirName = LocaleResourceDirs.resourceDirForTag(tag)
+            val file = File(resDir, "$dirName/strings.xml")
+            if (file.exists()) {
+                val doc = builder.parse(file)
+                val plurals = doc.getElementsByTagName("plurals")
+                checkPluralsHaveUnusedQuantityIgnore(plurals, dirName)
+            }
+        }
+    }
+
+    private fun checkPluralsHaveUnusedQuantityIgnore(
+        plurals: org.w3c.dom.NodeList,
+        dirName: String,
+    ) {
+        for (i in 0 until plurals.length) {
+            val node = plurals.item(i) as org.w3c.dom.Element
+            if (hasManyQuantity(node)) {
+                val ignore = node.getAttribute("tools:ignore")
+                assertTrue(
+                    "Plural element '${
+                        node.getAttribute(
+                            "name",
+                        )
+                    }' in $dirName must have tools:ignore=\"UnusedQuantity\"",
+                    ignore.contains("UnusedQuantity"),
+                )
+            }
+        }
+    }
+
+    private fun hasManyQuantity(node: org.w3c.dom.Element): Boolean {
+        val items = node.getElementsByTagName("item")
+        for (j in 0 until items.length) {
+            val item = items.item(j) as org.w3c.dom.Element
+            if (item.getAttribute("quantity") == "many") {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun verifyFormatArguments(
         tag: String,
         resourceName: String,

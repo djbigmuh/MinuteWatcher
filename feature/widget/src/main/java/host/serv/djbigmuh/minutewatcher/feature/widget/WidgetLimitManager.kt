@@ -3,8 +3,10 @@ package host.serv.djbigmuh.minutewatcher.feature.widget
 import android.content.Context
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
+import host.serv.djbigmuh.minutewatcher.core.common.util.firstWithTimeout
 import host.serv.djbigmuh.minutewatcher.core.common.util.observeWithRetry
 import host.serv.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
+import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
@@ -13,6 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Manages the widget size limit exceeded flag and probe logic.
@@ -96,7 +99,42 @@ class WidgetLimitManager
 
         fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
+    @Suppress("ThrowsCount")
         suspend fun setWidgetLimitExceeded(value: Boolean) {
+        if (cachedLimitExceeded == null) {
+            val settings =
+                try {
+                    appSettingsRepository
+                        .getAppSettings()
+                        .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.w("WidgetLimitManager: error reading app settings", e)
+                    null
+                }
+            if (settings != null) {
+                cachedLimitExceeded = settings.widgetLimitExceeded
+            } else {
+                AppLogger.w("WidgetLimitManager: timeout reading app settings when cache was null")
+                cachedLimitExceeded = value
+                try {
+                    appSettingsRepository.updateAppSettings {
+                        it.copy(widgetLimitExceeded = value)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to set widget limit exceeded flag to $value", e)
+                }
+                return
+            }
+        }
+
+        if (cachedLimitExceeded == value) {
+            return
+        }
+
             cachedLimitExceeded = value
             try {
                 appSettingsRepository.updateAppSettings {

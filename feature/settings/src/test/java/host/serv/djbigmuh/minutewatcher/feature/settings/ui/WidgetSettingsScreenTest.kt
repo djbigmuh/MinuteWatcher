@@ -1,7 +1,6 @@
 package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import android.content.Context
-import android.content.DialogInterface
 import android.content.res.Configuration
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -21,8 +20,6 @@ import host.serv.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import host.serv.djbigmuh.minutewatcher.core.resources.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -36,7 +33,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowDialog
 import java.util.Locale
 
 // UI-infra SDK pin: Espresso InputManager reflection fails on SDK > 35 in Robolectric
@@ -565,9 +561,7 @@ class WidgetSettingsScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.custom_color)).performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
-        val dialog = ShadowDialog.getLatestDialog()
-        assertNotNull("Dialog must be displayed after clicking color row", dialog)
-        assertTrue("Dialog must be showing", dialog.isShowing)
+        composeTestRule.onNodeWithText(context.getString(R.string.save_button)).assertExists()
     }
 
     @Test
@@ -584,12 +578,7 @@ class WidgetSettingsScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.custom_color)).performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
-        val dialog = ShadowDialog.getLatestDialog() as? androidx.appcompat.app.AlertDialog
-        assertNotNull("Dialog must be displayed", dialog)
-
-        val positiveButton = dialog!!.getButton(DialogInterface.BUTTON_POSITIVE)
-        assertNotNull("Positive button must exist", positiveButton)
-        positiveButton.performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.save_button)).performClick()
         composeTestRule.waitForIdle()
 
         verify(viewModel).updateSettings(any())
@@ -609,20 +598,11 @@ class WidgetSettingsScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.custom_color)).performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
-        val dialog = ShadowDialog.getLatestDialog() as? androidx.appcompat.app.AlertDialog
-        assertNotNull("Dialog must be displayed", dialog)
-        assertTrue("Dialog must be showing", dialog!!.isShowing)
-
-        val positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
-        assertNotNull("Positive button must exist", positiveButton)
-        positiveButton.performClick()
-        org.robolectric.Shadows
-            .shadowOf(android.os.Looper.getMainLooper())
-            .idle()
+        composeTestRule.onNodeWithText(context.getString(R.string.save_button)).performClick()
         composeTestRule.waitForIdle()
 
         verify(viewModel, org.mockito.kotlin.times(1)).updateSettings(any())
-        assertFalse("Dialog must be closed after confirming", dialog.isShowing)
+        composeTestRule.onNodeWithText(context.getString(R.string.save_button)).assertDoesNotExist()
     }
 
     @Test
@@ -639,16 +619,11 @@ class WidgetSettingsScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.custom_color)).performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
-        val dialog = ShadowDialog.getLatestDialog() as? androidx.appcompat.app.AlertDialog
-        assertNotNull("Dialog must be displayed", dialog)
-
-        val negativeButton = dialog!!.getButton(DialogInterface.BUTTON_NEGATIVE)
-        assertNotNull("Negative button must exist", negativeButton)
-        negativeButton.performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.cancel_button)).performClick()
         composeTestRule.waitForIdle()
 
         verify(viewModel, never()).updateSettings(any())
-        assertFalse("Dialog must be closed after cancelling", dialog.isShowing)
+        composeTestRule.onNodeWithText(context.getString(R.string.save_button)).assertDoesNotExist()
     }
 
     @Test

@@ -2,6 +2,8 @@ package host.serv.djbigmuh.minutewatcher.core.common.util
 
 import android.content.Context
 import host.serv.djbigmuh.minutewatcher.core.common.testing.AppLoggerResetRule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -357,5 +359,91 @@ class AppLoggerTest {
         } finally {
             java.util.TimeZone.setDefault(originalTz)
         }
+    }
+
+    @Test
+    fun `repeated init with different directory writes subsequent logs to new directory`() {
+        val dir1 = tmpFolder.newFolder("init_dir1")
+        val dir2 = tmpFolder.newFolder("init_dir2")
+        val ctx1 =
+            mock<Context> {
+                on { filesDir } doReturn dir1
+            }
+        val ctx2 =
+            mock<Context> {
+                on { filesDir } doReturn dir2
+            }
+
+        AppLogger.init(ctx1)
+        AppLogger.d("Log in dir1")
+        waitForLogMarker("Log in dir1", targetDir = dir1)
+
+        AppLogger.init(ctx2)
+        AppLogger.d("Log in dir2")
+        waitForLogMarker("Log in dir2", targetDir = dir2)
+
+        assertFalse(File(dir1, "logs.txt").readText().contains("Log in dir2"))
+        assertTrue(File(dir2, "logs.txt").readText().contains("Log in dir2"))
+    }
+
+    @Test
+    fun `logs in channel during generation change are not lost`() {
+        val dir1 = tmpFolder.newFolder("gen_dir1")
+        val dir2 = tmpFolder.newFolder("gen_dir2")
+        val ctx1 =
+            mock<Context> {
+                on { filesDir } doReturn dir1
+            }
+        val ctx2 =
+            mock<Context> {
+                on { filesDir } doReturn dir2
+            }
+
+        AppLogger.init(ctx1)
+        repeat(50) { i ->
+            AppLogger.d("Batch entry $i")
+        }
+        AppLogger.init(ctx2)
+
+        val marker = "Batch entry"
+        waitForLogMarker(marker, targetDir = dir2)
+
+        val logFile2 = File(dir2, "logs.txt")
+        assertTrue(logFile2.exists())
+    }
+
+    @Test
+    fun `init completes without blocking calling thread`() {
+        val singleDispatcher = kotlinx.coroutines.newSingleThreadContext("TestSingleThread")
+        val testScope = CoroutineScope(singleDispatcher)
+        val dir = tmpFolder.newFolder("nonblocking_dir")
+        val mockContext =
+            mock<Context> {
+                on { filesDir } doReturn dir
+            }
+
+        testScope.launch {
+            AppLogger.init(mockContext)
+            AppLogger.d("Non-blocking test log")
+        }
+        waitForLogMarker("Non-blocking test log", targetDir = dir)
+        singleDispatcher.close()
+    }
+
+    @Test
+    fun `shutdown stops worker and subsequent logs are ignored`() {
+        val dir = tmpFolder.newFolder("shutdown_dir")
+        val mockContext =
+            mock<Context> {
+                on { filesDir } doReturn dir
+            }
+        AppLogger.init(mockContext)
+        AppLogger.shutdown()
+
+        AppLogger.d("Ignored message")
+        waitForChannelDrain()
+
+        val logFile = File(dir, "logs.txt")
+        assertFalse(logFile.exists() && logFile.readText().contains("Ignored message"))
     }
 }

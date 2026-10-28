@@ -89,6 +89,14 @@ class NotificationHelper
         @Volatile
         private var hasLoggedMissingService = false
 
+    @Volatile
+    private var initializedLocaleTag: String? = null
+
+    @Volatile
+    private var legacyChannelDeleted = false
+
+    private val channelsLock = Any()
+
         /**
          * Creates or updates notification channels with localized names and descriptions.
          */
@@ -96,39 +104,55 @@ class NotificationHelper
         fun ensureChannels() {
             val manager = notificationManager ?: return
             val locContext = AppLocaleContexts.forAppLocale(context)
-            val channel =
-                NotificationChannel(
-                    Constants.Notifications.CHANNEL_ID,
-                    locContext.getString(R.string.notification_channel_name),
-                    NotificationManager.IMPORTANCE_DEFAULT,
-                ).apply {
-                    description = locContext.getString(R.string.notification_channel_desc)
-                }
-            val aodChannel =
-                NotificationChannel(
-                    Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
-                    locContext.getString(R.string.notification_channel_aod_summary_name),
-                    NotificationManager.IMPORTANCE_LOW,
-                ).apply {
-                    description = locContext.getString(R.string.notification_channel_aod_summary_desc)
-                    setSound(null, null)
-                    enableVibration(false)
-                    setShowBadge(false)
-                }
-            try {
-                manager.createNotificationChannel(channel)
-            } catch (e: RuntimeException) {
-                AppLogger.e("Failed to create/update main notification channel", e)
+            val locales = locContext.resources.configuration.locales
+            val currentLocaleTag = if (!locales.isEmpty) locales.get(0).toLanguageTag() else ""
+
+            if (initializedLocaleTag == currentLocaleTag) {
+                return
             }
-            try {
-                manager.createNotificationChannel(aodChannel)
-            } catch (e: RuntimeException) {
-                AppLogger.e("Failed to create/update V2 AOD summary notification channel", e)
-            }
-            try {
-                manager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
-            } catch (e: RuntimeException) {
-                AppLogger.w("Failed to delete legacy AOD summary notification channel: ${e.message}")
+
+            synchronized(channelsLock) {
+                if (initializedLocaleTag == currentLocaleTag) {
+                    return
+                }
+
+                val channel =
+                    NotificationChannel(
+                        Constants.Notifications.CHANNEL_ID,
+                        locContext.getString(R.string.notification_channel_name),
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    ).apply {
+                        description = locContext.getString(R.string.notification_channel_desc)
+                    }
+                val aodChannel =
+                    NotificationChannel(
+                        Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2,
+                        locContext.getString(R.string.notification_channel_aod_summary_name),
+                        NotificationManager.IMPORTANCE_LOW,
+                    ).apply {
+                        description = locContext.getString(R.string.notification_channel_aod_summary_desc)
+                        setSound(null, null)
+                        enableVibration(false)
+                        setShowBadge(false)
+                    }
+
+                try {
+                    manager.createNotificationChannel(channel)
+                    manager.createNotificationChannel(aodChannel)
+
+                    if (!legacyChannelDeleted) {
+                        try {
+                            manager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
+                        } catch (e: Exception) {
+                            AppLogger.w("Failed to delete legacy AOD summary notification channel: ${e.message}")
+                        }
+                        legacyChannelDeleted = true
+                    }
+
+                    initializedLocaleTag = currentLocaleTag
+                } catch (e: RuntimeException) {
+                    AppLogger.e("Failed to create or update notification channels", e)
+                }
             }
         }
 
@@ -146,7 +170,6 @@ class NotificationHelper
             simSlot: Int,
             type: UsageNotificationType,
         ): Boolean {
-            ensureChannels()
             val manager = notificationManager
             if (manager == null) {
                 if (!hasLoggedMissingService) {
@@ -268,7 +291,6 @@ class NotificationHelper
             contentLine: String,
             expandedText: String,
         ): Boolean {
-            ensureChannels()
             val manager =
                 notificationManager ?: run {
                     if (!hasLoggedMissingService) {

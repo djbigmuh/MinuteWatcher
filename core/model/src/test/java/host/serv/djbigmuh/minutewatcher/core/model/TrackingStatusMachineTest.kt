@@ -81,4 +81,15 @@ class TrackingStatusMachineTest {
             machine.transition(TrackingStatus.Idle, force = true)
             assertEquals(TrackingStatus.Idle, machine.current)
         }
+
+    @Test
+    fun `error with RENDER_FAILURE code is cleared by healthy status`() {
+        val current =
+            TrackingStatus.Error(
+                TrackingStatus.ErrorType.UNKNOWN,
+                code = TrackingStatus.ErrorCode.RENDER_FAILURE,
+            )
+        val new = TrackingStatus.Active
+        assertEquals(new, TrackingStatusMachine.merge(current, new, force = false))
+    }
 }

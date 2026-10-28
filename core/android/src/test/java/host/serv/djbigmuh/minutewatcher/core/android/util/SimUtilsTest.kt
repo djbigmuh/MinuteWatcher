@@ -75,15 +75,26 @@ class SimUtilsTest {
     }
 
     @Test
-    fun `operatorIconMap covers all operatorResourceMap keys`() {
-        val missing = OperatorResolver.operatorResourceMap.values.filter { it !in SimUtils.operatorIconMap }
-        assertTrue("operatorIconMap missing keys for operatorResourceMap: $missing", missing.isEmpty())
+    fun `all brand records resolve to valid name and icon resources and brand keys are unique`() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        val records = OperatorBrandDatabase.brandRecords
+        val keys = records.map { it.brandKey }
+
+        assertEquals("All brand keys must be unique", keys.size, keys.toSet().size)
+
+        records.forEach { record ->
+            val nameStr = runCatching { appContext.resources.getString(record.nameResId) }.getOrNull()
+            assertTrue("Name resource for ${record.brandKey} must resolve", !nameStr.isNullOrEmpty())
+
+            val iconDrawable = runCatching { AppCompatResources.getDrawable(appContext, record.iconResId) }.getOrNull()
+            assertTrue("Icon resource for ${record.brandKey} must resolve", iconDrawable != null)
+        }
     }
 
     @Test
     fun `all operator icons load successfully in Robolectric`() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
-        SimUtils.operatorIconMap.values.toSet().forEach { drawableResId ->
+        OperatorBrandDatabase.operatorIconMap.values.toSet().forEach { drawableResId ->
             val drawable = AppCompatResources.getDrawable(appContext, drawableResId)
             assertTrue("Drawable $drawableResId must load successfully", drawable != null)
         }
@@ -233,7 +244,7 @@ class SimUtilsTest {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         val seenDrawables = mutableMapOf<Int, Int>()
 
-        SimUtils.operatorIconMap.forEach { (_, drawableResId) ->
+        OperatorBrandDatabase.operatorIconMap.forEach { (_, drawableResId) ->
             val resName = appContext.resources.getResourceEntryName(drawableResId)
             assertTrue(
                 "Drawable name $resName must start with ic_operator_ or be ic_unknown",

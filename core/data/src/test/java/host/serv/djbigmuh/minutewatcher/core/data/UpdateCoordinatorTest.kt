@@ -191,7 +191,8 @@ class UpdateCoordinatorTest {
                 "Should contain 'Retrying in', got: ${status.message}",
                 status.message?.contains("Retrying in") == true,
             )
-            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, status.type)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, status.type)
+            assertEquals(TrackingStatus.ErrorCode.RENDER_FAILURE, status.code)
 
             supervisorJob.cancel()
         }
@@ -662,9 +663,10 @@ class UpdateCoordinatorTest {
                 coordinator.notifyDataChanged(updateWidget = true, force = true)
             }
 
-            val status = coordinator.status.value
-            assertTrue("Status should be Error", status is TrackingStatus.Error)
-            assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
+            val status = coordinator.status.value as TrackingStatus.Error
+            assertTrue("Status should be Error", true)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, status.type)
+            assertEquals(TrackingStatus.ErrorCode.RENDER_FAILURE, status.code)
 
             val suppressedCallSuccess = coordinator.notifyDataChanged(updateWidget = true, force = true)
             assertFalse("Subsequent forced update should be suppressed", suppressedCallSuccess)

@@ -89,9 +89,9 @@ The project uses a few non-stable (Beta/Alpha) versions of critical libraries to
 
 ## Development Requirements
 
-- **JDK**: JDK 21 (Temurin 21.0.12+ recommended).
-- **Environment**: JDK 25 and other versions should not be in the system `PATH` to avoid leakage into child processes (Detekt/KSP).
-- **Gradle**: Configured via local environment or user-level settings for cross-platform compatibility.
+- **JDK**: JDK 21 (Temurin 21 recommended). Automatically provisioned via Gradle Toolchains and the Foojay Resolver
+  convention plugin.
+- **Gradle**: Configured via Gradle Wrapper or local environment for cross-platform compatibility.
 
 ## Distribution
 

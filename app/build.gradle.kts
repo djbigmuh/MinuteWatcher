@@ -1,5 +1,4 @@
 import com.android.build.api.dsl.ApplicationExtension
-import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("minutewatcher.android-application")
@@ -7,12 +6,6 @@ plugins {
     alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.kotlinCompose)
     alias(libs.plugins.androidxBaselineprofile)
-}
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(SdkVersions.JAVA_TOOLCHAIN_VERSION))
-    }
 }
 
 configure<ApplicationExtension> {
@@ -151,7 +144,6 @@ dependencies {
 
     implementation(libs.googleMaterial)
     implementation(libs.androidxMaterial3)
-    implementation(libs.androidxMaterial3WindowSize)
     implementation(libs.androidxCoreKtx)
     implementation(libs.androidxAppcompat)
     implementation(libs.androidxLifecycleRuntimeKtx)

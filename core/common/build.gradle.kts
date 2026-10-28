@@ -1,12 +1,6 @@
-import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
-
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.kotlinKsp)
-}
-
-kotlin {
-    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {
@@ -25,7 +19,6 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:resources"))
     implementation(libs.androidxCoreKtx)
-    implementation(libs.androidxAppcompat)
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
     api(libs.kotlinxCoroutinesCore)

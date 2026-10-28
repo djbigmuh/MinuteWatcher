@@ -30,3 +30,7 @@ extensions.configure<LibraryExtension> {
         }
     }
 }
+
+extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
+    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
+}

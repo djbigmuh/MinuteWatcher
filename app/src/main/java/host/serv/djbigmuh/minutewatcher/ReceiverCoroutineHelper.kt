@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -34,54 +35,76 @@ private const val RECEIVER_ASYNC_TIMEOUT_MS = 8_000L
  * @param block The suspend block to execute. Receives application context.
  * @return The launched [Job] for deterministic tracking and scope completion.
  */
+@Suppress("TooGenericExceptionCaught")
 fun goAsyncWithScope(
     context: Context,
     pendingResult: BroadcastReceiver.PendingResult,
     dispatcher: CoroutineDispatcher? = null,
     block: suspend (appContext: Context) -> Unit,
 ): Job {
-    val appContext = context.applicationContext
-    val finalDispatcher =
-        dispatcher ?: try {
-            EntryPointAccessors
-                .fromApplication(
-                    appContext,
-                    CommonEntryPoint::class.java,
-                ).ioDispatcher()
-        } catch (e: IllegalStateException) {
-            handleEntryPointAccessFailure(e)
-        } catch (e: IllegalArgumentException) {
-            handleEntryPointAccessFailure(e)
-        }
+    val finished = AtomicBoolean(false)
 
-    val supervisorJob = SupervisorJob()
-    val scope = CoroutineScope(finalDispatcher + supervisorJob)
-
-    return scope.launch {
-        try {
-            val completed =
-                withTimeoutOrNull(RECEIVER_ASYNC_TIMEOUT_MS.milliseconds) {
-                    block(appContext)
-                    true
-                } ?: false
-            if (!completed) {
-                AppLogger.e("ReceiverCoroutineHelper: Async block timed out after ${RECEIVER_ASYNC_TIMEOUT_MS}ms")
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("Receiver async block failed", e)
-        } finally {
+    fun finishOnce() {
+        if (finished.compareAndSet(false, true)) {
             try {
                 pendingResult.finish()
-            } finally {
-                supervisorJob.cancel()
+            } catch (e: Exception) {
+                AppLogger.e("ReceiverCoroutineHelper: finish failed", e)
             }
         }
     }
-}
 
-private fun handleEntryPointAccessFailure(e: Exception): CoroutineDispatcher {
-    AppLogger.e("ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher fallback", e)
-    return IoDispatcherFallback.io
+    var coroutineLaunched = false
+    try {
+        val appContext = context.applicationContext
+        val finalDispatcher =
+            dispatcher ?: try {
+                EntryPointAccessors
+                    .fromApplication(
+                        appContext,
+                        CommonEntryPoint::class.java,
+                    ).ioDispatcher()
+            } catch (e: Throwable) {
+                AppLogger.e(
+                    "ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher fallback",
+                    e,
+                )
+                IoDispatcherFallback.io
+            }
+
+        val supervisorJob = SupervisorJob()
+        val scope = CoroutineScope(finalDispatcher + supervisorJob)
+
+        val job =
+            scope.launch {
+                try {
+                    val completed =
+                        withTimeoutOrNull(RECEIVER_ASYNC_TIMEOUT_MS.milliseconds) {
+                            block(appContext)
+                            true
+                        } ?: false
+                    if (!completed) {
+                        AppLogger.e(
+                            "ReceiverCoroutineHelper: Async block timed out after ${RECEIVER_ASYNC_TIMEOUT_MS}ms",
+                        )
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Receiver async block failed", e)
+                } finally {
+                    try {
+                        finishOnce()
+                    } finally {
+                        supervisorJob.cancel()
+                    }
+                }
+            }
+        coroutineLaunched = true
+        return job
+    } finally {
+        if (!coroutineLaunched) {
+            finishOnce()
+        }
+    }
 }

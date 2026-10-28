@@ -12,6 +12,7 @@ import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingKey
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatusMachine
+import host.serv.djbigmuh.minutewatcher.core.model.isSticky
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -132,11 +133,34 @@ class TrafficTracker
             force: Boolean = false,
         ) {
             AppLogger.d("TrafficTracker: transitioning to $newStatus (force=$force)")
-            statusMachine.transition(newStatus, force)
+            val currentStatus = statusMachine.current
+            val isPermissionMissingRecovery =
+                !force &&
+                    currentStatus is TrackingStatus.Error &&
+                    currentStatus.type == TrackingStatus.ErrorType.PERMISSION_MISSING &&
+                    newStatus !is TrackingStatus.Error
+
+            val effectiveForce = if (isPermissionMissingRecovery) true else force
+
+            if (!effectiveForce) {
+                val isStickyDbError =
+                    currentStatus is TrackingStatus.Error &&
+                        currentStatus.type.isSticky() &&
+                        currentStatus.type != TrackingStatus.ErrorType.PERMISSION_MISSING
+                if (isStickyDbError) {
+                    AppLogger.d(
+                        "TrafficTracker: transition to $newStatus skipped " +
+                            "(sticky ${currentStatus.type} error, not forced)",
+                    )
+                    return
+                }
+            }
+            statusMachine.transition(newStatus, effectiveForce)
         }
 
         private val trafficMutex = Mutex()
         private val updateMutex = Mutex()
+    private var currentUpdateForced = false
         private val initializationFailed = AtomicBoolean(false)
         private val isInitStarted = AtomicBoolean(false)
         private val bothPermissionsGranted = AtomicBoolean(false)
@@ -334,7 +358,15 @@ class TrafficTracker
             if (bothGranted) {
                 if (!previousGranted) {
                     AppLogger.d("TrafficTracker: permissions granted transition detected, updating traffic")
-                    launchTrafficUpdate("Traffic update after permissions granted transition failed")
+                    scope.launch {
+                        try {
+                            updateTrafficUsage(force = true)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            AppLogger.e("TrafficTracker: Traffic update after permissions granted transition failed", e)
+                        }
+                    }
                 }
                 checkAndScheduleAutoRecovery("permission change")
             } else if (previousGranted) {
@@ -618,7 +650,7 @@ class TrafficTracker
          * **Thread Safety:** Safe to call from any coroutine context. Holds internal mutex
          * during the entire update process to ensure data consistency.
          */
-        suspend fun updateTrafficUsage(): TrafficUpdateOutcome {
+        suspend fun updateTrafficUsage(force: Boolean = false): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             val token = currentInitToken.get()
             if (token != null) {
@@ -640,8 +672,13 @@ class TrafficTracker
                 }
             }
 
-            return runCatchingTrafficUpdate(startElapsed) {
-                updateTrafficUsageLogic()
+            currentUpdateForced = force
+            try {
+                return runCatchingTrafficUpdate(startElapsed) {
+                    updateTrafficUsageLogic()
+                }
+            } finally {
+                currentUpdateForced = false
             }
         }
 
@@ -880,10 +917,19 @@ class TrafficTracker
                         TrafficUpdateOutcome.Skipped
                     }
                 }
-                simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
                 val expectedLastResetDate =
-                    readResetDate(startElapsed, targetIdentity)
-                        ?: return@withLock TrafficUpdateOutcome.TimedOut(startElapsed)
+                    resolveResetDate(startElapsed, targetIdentity)
+                        ?: return@withLock if (statusMachine.current is TrackingStatus.Error &&
+                            (statusMachine.current as TrackingStatus.Error).type ==
+                            TrackingStatus.ErrorType.DATABASE_ERROR
+                        ) {
+                            TrafficUpdateOutcome.Failed(
+                                TrackingStatus.ErrorType.DATABASE_ERROR,
+                                null,
+                            )
+                        } else {
+                            TrafficUpdateOutcome.TimedOut(startElapsed)
+                        }
                 val retryResult = readBaselineRetryCount(targetIdentity)
                 if (retryResult.isFailure) {
                     updateStatusOnError(
@@ -903,6 +949,67 @@ class TrafficTracker
                     statsResult,
                     expectedLastResetDate,
                 )
+            }
+        }
+
+    private suspend fun resolveResetDate(
+        startElapsed: Long,
+        targetIdentity: String,
+    ): Long? {
+        simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
+        return when (val resetReadResult = readResetDate(targetIdentity)) {
+            is ResetDateReadResult.Success -> resetReadResult.resetDate
+            is ResetDateReadResult.TimedOut -> {
+                AppLogger.w(
+                    "TrafficTracker: Timeout reading reset date for $targetIdentity",
+                )
+                updateStatusOnError(
+                    startElapsed,
+                    "Timeout reading reset date",
+                    code = TrackingStatus.ErrorCode.TIMEOUT,
+                )
+                null
+            }
+
+            is ResetDateReadResult.Missing -> resolveMissingResetDate(startElapsed, targetIdentity)
+        }
+    }
+
+    private suspend fun resolveMissingResetDate(
+        startElapsed: Long,
+        targetIdentity: String,
+    ): Long? {
+        AppLogger.w(
+            "TrafficTracker: Reset date record missing for $targetIdentity, " +
+                "re-initializing window",
+        )
+        simUsageResetRepository.ensureTrackingWindowInitialized(targetIdentity)
+        return when (val retryReadResult = readResetDate(targetIdentity)) {
+            is ResetDateReadResult.Success -> retryReadResult.resetDate
+            is ResetDateReadResult.TimedOut -> {
+                AppLogger.w(
+                    "TrafficTracker: Timeout reading reset date on retry for $targetIdentity",
+                )
+                updateStatusOnError(
+                    startElapsed,
+                    "Timeout reading reset date on retry",
+                    code = TrackingStatus.ErrorCode.TIMEOUT,
+                )
+                null
+            }
+
+            is ResetDateReadResult.Missing -> {
+                AppLogger.e(
+                    "TrafficTracker: Reset date record still missing after " +
+                        "re-initialization for $targetIdentity",
+                )
+                updateStatusOnError(
+                    startElapsed,
+                    "Reset date record missing after re-initialization",
+                    type = TrackingStatus.ErrorType.DATABASE_ERROR,
+                )
+                null
+            }
             }
         }
 
@@ -932,22 +1039,29 @@ class TrafficTracker
             return isValid
         }
 
-        private suspend fun readResetDate(
-            startElapsed: Long,
-            targetIdentity: String,
-        ): Long? =
+    private sealed interface ResetDateReadResult {
+        data class Success(
+            val resetDate: Long,
+        ) : ResetDateReadResult
+
+        data object Missing : ResetDateReadResult
+
+        data object TimedOut : ResetDateReadResult
+    }
+
+    private suspend fun readResetDate(targetIdentity: String): ResetDateReadResult {
+        val usage =
             simUsageRepository
                 .getSimUsage(targetIdentity)
                 .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds)
-                ?.lastResetDate
-                ?: run {
-                    updateStatusOnError(
-                        startElapsed,
-                        "Timeout reading simUsage",
-                        code = TrackingStatus.ErrorCode.TIMEOUT,
-                    )
-                    null
-                }
+                ?: return ResetDateReadResult.TimedOut
+
+        val resetDate = usage.lastResetDate
+        if (resetDate == Constants.Data.EMPTY_TIMESTAMP) {
+            return ResetDateReadResult.Missing
+        }
+        return ResetDateReadResult.Success(resetDate)
+    }
 
         /**
          * Reads the baseline retry count for the given [targetIdentity].
@@ -1063,7 +1177,7 @@ class TrafficTracker
             }
 
             lastSuccessElapsed.set(timeProvider.elapsedRealtime())
-            transitionStatus(TrackingStatus.Active, force = true)
+            transitionStatus(TrackingStatus.Active, force = currentUpdateForced)
             simChangeHandler.updateLastDataSubId(target.dataSubId)
             dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
             return if (!result) {
@@ -1127,7 +1241,7 @@ class TrafficTracker
             }
             baselineManager.removeRetry(targetIdentity)
             lastSuccessElapsed.set(timeProvider.elapsedRealtime())
-            transitionStatus(TrackingStatus.Active, force = true)
+            transitionStatus(TrackingStatus.Active, force = currentUpdateForced)
             simChangeHandler.updateLastDataSubId(target.dataSubId)
             dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
             return if (applied) {

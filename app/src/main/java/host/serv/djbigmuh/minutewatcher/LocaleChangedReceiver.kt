@@ -4,25 +4,22 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.VisibleForTesting
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
+import dagger.hilt.android.AndroidEntryPoint
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.data.NotificationHelper
 import host.serv.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import javax.inject.Inject
 
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface LocaleRefreshEntryPoint {
-    fun dataChangeNotifier(): DataChangeNotifier
-
-    fun notificationHelper(): NotificationHelper
-}
-
+@AndroidEntryPoint
 open class LocaleChangedReceiver : BroadcastReceiver() {
+    @Inject
+    lateinit var notificationHelper: NotificationHelper
+
+    @Inject
+    lateinit var dataChangeNotifier: DataChangeNotifier
+
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -30,11 +27,10 @@ open class LocaleChangedReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_LOCALE_CHANGED) return
 
         val pendingResult = acquirePendingResult()
-        goAsyncWithScope(context, pendingResult, dispatcher = asyncDispatcher()) { appContext ->
+        goAsyncWithScope(context, pendingResult, dispatcher = asyncDispatcher()) { _ ->
             try {
-                provideNotificationHelper(appContext).ensureChannels()
-                val notifier = provideDataChangeNotifier(appContext)
-                notifier.notifyDataChanged(updateWidget = true, force = true)
+                provideNotificationHelper().ensureChannels()
+                provideDataChangeNotifier().notifyDataChanged(updateWidget = true, force = true)
                 AppLogger.d("LocaleChangedReceiver: Data changed notified and channels updated successfully")
             } catch (e: CancellationException) {
                 throw e
@@ -51,14 +47,8 @@ open class LocaleChangedReceiver : BroadcastReceiver() {
     protected open fun asyncDispatcher(): CoroutineDispatcher? = null
 
     @VisibleForTesting
-    protected open suspend fun provideNotificationHelper(appContext: Context): NotificationHelper {
-        val entryPoint = EntryPointAccessors.fromApplication(appContext, LocaleRefreshEntryPoint::class.java)
-        return entryPoint.notificationHelper()
-    }
+    protected open fun provideNotificationHelper(): NotificationHelper = notificationHelper
 
     @VisibleForTesting
-    protected open suspend fun provideDataChangeNotifier(appContext: Context): DataChangeNotifier {
-        val entryPoint = EntryPointAccessors.fromApplication(appContext, LocaleRefreshEntryPoint::class.java)
-        return entryPoint.dataChangeNotifier()
-    }
+    protected open fun provideDataChangeNotifier(): DataChangeNotifier = dataChangeNotifier
 }

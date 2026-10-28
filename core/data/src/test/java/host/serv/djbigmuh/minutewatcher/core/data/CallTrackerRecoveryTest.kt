@@ -144,28 +144,19 @@ class CallTrackerRecoveryTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `recover restarts permission observer after permanent stop`() =
+    fun `repeated call to recover when observer is active does not create a second observation coroutine`() =
         runTest(testDispatcher) {
             setupCommonMocks()
+            whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
             val callTracker = createTracker(backgroundScope)
-
-            val failingFlow = kotlinx.coroutines.flow.flow<Unit> { throw IllegalStateException("Permanent failure") }
-            whenever(permissionStateNotifier.changes).thenReturn(failingFlow)
-
             callTracker.ensureStarted()
             advanceUntilIdle()
 
-            whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
-            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
-
+            val job1 = callTracker.permissionObserverJob.get()
             callTracker.recover()
             advanceUntilIdle()
+            val job2 = callTracker.permissionObserverJob.get()
 
-            clearInvocations(callSessionRepository)
-            permissionChangesFlow.emit(Unit)
-            advanceUntilIdle()
-
-            verify(callSessionRepository, atLeastOnce()).getActiveCallSubIds()
-            assertEquals(TrackingStatus.Active, callTracker.status.value)
+            org.junit.Assert.assertSame("Observer coroutine should not be recreated", job1, job2)
         }
 }

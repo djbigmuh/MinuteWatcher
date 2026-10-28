@@ -1,3 +1,5 @@
+import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
+
 plugins {
     id("jacoco")
 }
@@ -7,31 +9,31 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-Dnet.bytebuddy.experimental=true")
 
     // Centralized Robolectric configuration
-    systemProperty("robolectric.sdk", "37")
+    systemProperty("robolectric.sdk", SdkVersions.ROBOLECTRIC_SDK.toString())
     systemProperty("robolectric.graphicsMode", "NATIVE")
     systemProperty(
         "minutewatcher.coreResourcesResDir",
-        File(rootDir, "core/resources/src/main/res").absolutePath,
+        rootProject.layout.projectDirectory.dir("core/resources/src/main/res").asFile.absolutePath,
     )
     systemProperty(
         "minutewatcher.appResDir",
-        File(rootDir, "app/src/main/res").absolutePath,
+        rootProject.layout.projectDirectory.dir("app/src/main/res").asFile.absolutePath,
     )
 
-    val roboUserHome = rootProject.layout.projectDirectory.dir(".gradle/user-home")
-    val roboCacheDir = rootProject.layout.projectDirectory.dir(".gradle/robolectric-cache")
+    val roboUserHome = project.layout.buildDirectory.dir("robolectric-user-home")
+    val roboCacheDir = project.layout.buildDirectory.dir("robolectric-cache")
     val testTmpDir = project.layout.buildDirectory.dir("tmp")
 
     doFirst {
-        roboUserHome.asFile.mkdirs()
-        roboCacheDir.asFile.mkdirs()
+        roboUserHome.get().asFile.mkdirs()
+        roboCacheDir.get().asFile.mkdirs()
         testTmpDir.get().asFile.mkdirs()
     }
 
-    systemProperty("robolectric.dependency.repo.dir", roboCacheDir.asFile.absolutePath)
+    systemProperty("robolectric.dependency.repo.dir", roboCacheDir.get().asFile.absolutePath)
     systemProperty("robolectric.dependency.repo.id", "central")
     systemProperty("robolectric.dependency.repo.url", "https://repo1.maven.org/maven2/")
-    systemProperty("user.home", roboUserHome.asFile.absolutePath)
+    systemProperty("user.home", roboUserHome.get().asFile.absolutePath)
     systemProperty("java.io.tmpdir", testTmpDir.get().asFile.absolutePath)
     systemProperty("robolectric.logging.enabled", "true")
 

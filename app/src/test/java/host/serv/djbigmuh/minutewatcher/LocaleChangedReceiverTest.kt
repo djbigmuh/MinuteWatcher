@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
 import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.data.NotificationHelper
 import host.serv.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
@@ -29,10 +32,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = MinuteWatcherTestApp::class)
+@Config(application = HiltTestApplication::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class LocaleChangedReceiverTest {
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
@@ -43,6 +50,7 @@ class LocaleChangedReceiverTest {
 
     @Before
     fun setup() {
+        hiltRule.inject()
         context = ApplicationProvider.getApplicationContext()
         mockPendingResult = mock(BroadcastReceiver.PendingResult::class.java)
         mockNotifier = mock(DataChangeNotifier::class.java)
@@ -58,10 +66,9 @@ class LocaleChangedReceiverTest {
 
             override fun asyncDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
 
-            override suspend fun provideNotificationHelper(appContext: Context): NotificationHelper =
-                mockNotificationHelper
+            override fun provideNotificationHelper(): NotificationHelper = mockNotificationHelper
 
-            override suspend fun provideDataChangeNotifier(appContext: Context): DataChangeNotifier = mockNotifier
+            override fun provideDataChangeNotifier(): DataChangeNotifier = mockNotifier
         }
 
     @Test

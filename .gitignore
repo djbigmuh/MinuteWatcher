@@ -2,6 +2,7 @@
 .gradle/
 .gradle_home/
 .idea/
+!.idea/inspectionProfiles/
 .DS_Store
 /build
 /captures
@@ -10,6 +11,7 @@
 app/release/
 app/build/
 build/
+build/diagnostics/
 *.log
 .kotlin/
 .artifacts/
@@ -57,9 +59,11 @@ app/benchmark-config.txt
 # Diagnostic scripts (local only)
 diag_result.txt
 
+# Tools local output
+tools/iconforge/out/
+
 # Junk and local output files
 *.exe
 *_output.txt
 files_with_*.txt
 .android/
-

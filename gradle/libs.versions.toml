@@ -29,13 +29,13 @@ leakcanary = "2.14"
 hiltWork = "1.4.0"
 mockito = "5.23.0"
 mockitoKotlin = "6.3.0"
-colorpickerview = "2.4.0"
 appsearch = "1.1.0"
 # AppFunctions (alpha): required for the AppFunctionServiceEntryPoint architecture used by
 # on-device assistant integration. Update to stable when available.
 appfunctions = "1.0.0-alpha10"
 kotlinxCoroutines = "1.11.0"
 kotlinxCoroutinesTest = "1.11.0"
+ktlint = "14.2.0"
 detekt = "2.0.0-alpha.6"
 
 [libraries]
@@ -94,7 +94,6 @@ androidxHiltNavigationCompose = { group = "androidx.hilt", name = "hilt-navigati
 androidxWorkTesting = { group = "androidx.work", name = "work-testing", version.ref = "work" }
 mockingCore = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 mockingKotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
-skydovesColorpickerview = { group = "com.github.skydoves", name = "colorpickerview", version.ref = "colorpickerview" }
 androidxAppsearch = { group = "androidx.appsearch", name = "appsearch", version.ref = "appsearch" }
 androidxAppsearchCompiler = { group = "androidx.appsearch", name = "appsearch-compiler", version.ref = "appsearch" }
 androidxAppsearchLocalStorage = { group = "androidx.appsearch", name = "appsearch-local-storage", version.ref = "appsearch" }
@@ -107,9 +106,6 @@ kotlinxCoroutinesGuava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coro
 kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 androidxMaterialIconsCore = { group = "androidx.compose.material", name = "material-icons-core" }
 
-
-
-
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -119,5 +115,5 @@ kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kot
 hiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "hiltVersion" }
 kotlinKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidxBaselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "14.2.0" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }

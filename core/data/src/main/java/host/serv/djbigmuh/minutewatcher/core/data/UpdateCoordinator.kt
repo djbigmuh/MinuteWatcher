@@ -19,6 +19,7 @@ import host.serv.djbigmuh.minutewatcher.core.model.util.SnapshotUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -228,7 +229,7 @@ class UpdateCoordinator
                 previousSetup?.cancel()
 
                 val newSetupJob =
-                    scope.launch {
+                    scope.launch(start = CoroutineStart.LAZY) {
                         try {
                             val success =
                                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
@@ -253,12 +254,15 @@ class UpdateCoordinator
                                     "Failed to start widget observation: ${e.message}",
                                 ),
                             )
-                        } finally {
-                            setupJob.compareAndSet(currentCoroutineContext().job, null)
                         }
                     }
 
-                if (!setupJob.compareAndSet(null, newSetupJob)) {
+                if (setupJob.compareAndSet(null, newSetupJob)) {
+                    newSetupJob.invokeOnCompletion {
+                        setupJob.compareAndSet(newSetupJob, null)
+                    }
+                    newSetupJob.start()
+                } else {
                     newSetupJob.cancel()
                 }
             }
@@ -485,8 +489,9 @@ class UpdateCoordinator
                 )
                 transitionStatus(
                     TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        TrackingStatus.ErrorType.UNKNOWN,
                         "Widget observation permanently stopped after $cycles degraded cycles",
+                        code = TrackingStatus.ErrorCode.RENDER_FAILURE,
                     ),
                     force = true,
                 )
@@ -499,9 +504,10 @@ class UpdateCoordinator
             )
             transitionStatus(
                 TrackingStatus.Error(
-                    TrackingStatus.ErrorType.DATABASE_ERROR,
+                    TrackingStatus.ErrorType.UNKNOWN,
                     "Widget observation failed after $restartCount restarts. " +
                         "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
+                    code = TrackingStatus.ErrorCode.RENDER_FAILURE,
                 ),
                 force = true,
             )
@@ -671,8 +677,9 @@ class UpdateCoordinator
                 )
                 transitionStatus(
                     TrackingStatus.Error(
-                        TrackingStatus.ErrorType.DATABASE_ERROR,
+                        TrackingStatus.ErrorType.UNKNOWN,
                         "Widget updates suppressed after $consecutiveUpdateFailures failures",
+                        code = TrackingStatus.ErrorCode.RENDER_FAILURE,
                     ),
                 )
             }

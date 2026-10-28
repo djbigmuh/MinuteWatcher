@@ -36,6 +36,7 @@ class WidgetLimitManagerTest {
     fun setup() {
         initTestLogger()
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsFlow)
+        whenever(appSettingsRepository.getAppSettings()).thenReturn(settingsFlow)
         manager = WidgetLimitManager(appSettingsRepository, testScope)
     }
 
@@ -123,13 +124,72 @@ class WidgetLimitManagerTest {
         }
 
     @Test
-    fun `setWidgetLimitExceeded updates repository even when value is same`() =
+    fun `calling setWidgetLimitExceeded(false) when cache is false does not access repository`() =
         runTest(testDispatcher) {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = true)
+            manager.updateCache(false)
+            clearInvocations(appSettingsRepository)
 
-            manager.setWidgetLimitExceeded(value = true)
+            manager.setWidgetLimitExceeded(false)
 
-            verify(appSettingsRepository).updateAppSettings(any())
+            verify(appSettingsRepository, never()).getAppSettings()
+            verify(appSettingsRepository, never()).updateAppSettings(any())
+        }
+
+    @Test
+    fun `calling setWidgetLimitExceeded(true) when cache is false accesses repo once and updates cache`() =
+        runTest(testDispatcher) {
+            manager.updateCache(false)
+            clearInvocations(appSettingsRepository)
+
+            manager.setWidgetLimitExceeded(true)
+
+            verify(appSettingsRepository, never()).getAppSettings()
+            verify(appSettingsRepository, org.mockito.kotlin.times(1)).updateAppSettings(any())
+            assertEquals(true, manager.isLimitExceeded())
+        }
+
+    @Test
+    fun `calling setWidgetLimitExceeded(false) when cache is null reads settings and avoids write if false`() =
+        runTest(testDispatcher) {
+            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
+            clearInvocations(appSettingsRepository)
+
+            manager.setWidgetLimitExceeded(false)
+
+            verify(appSettingsRepository, org.mockito.kotlin.times(1)).getAppSettings()
+            verify(appSettingsRepository, never()).updateAppSettings(any())
+            assertEquals(false, manager.isLimitExceeded())
+        }
+
+    @Test
+    fun `read timeout when cache is null results in value write and log warning`() =
+        runTest(testDispatcher) {
+            val hangingFlow =
+                kotlinx.coroutines.flow.flow<AppSettings> {
+                    kotlinx.coroutines.awaitCancellation()
+                }
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(hangingFlow)
+            clearInvocations(appSettingsRepository)
+
+            manager.setWidgetLimitExceeded(false)
+
+            verify(appSettingsRepository, org.mockito.kotlin.times(1)).getAppSettings()
+            verify(appSettingsRepository, org.mockito.kotlin.times(1)).updateAppSettings(any())
+            assertEquals(false, manager.isLimitExceeded())
+        }
+
+    @Test
+    fun `ten consecutive calls to setWidgetLimitExceeded(false) when cache is false result in no repo access`() =
+        runTest(testDispatcher) {
+            manager.updateCache(false)
+            clearInvocations(appSettingsRepository)
+
+            repeat(10) {
+                manager.setWidgetLimitExceeded(false)
+            }
+
+            verify(appSettingsRepository, never()).getAppSettings()
+            verify(appSettingsRepository, never()).updateAppSettings(any())
         }
 
     @Test

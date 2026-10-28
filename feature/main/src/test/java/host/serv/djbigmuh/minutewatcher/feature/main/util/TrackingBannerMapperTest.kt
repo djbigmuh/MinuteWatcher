@@ -637,6 +637,27 @@ class TrackingBannerMapperTest {
         assertTrue(state.observationFailed)
     }
 
+    @Test
+    fun `mapToBannerState handles RENDER_FAILURE error code correctly`() {
+        val state =
+            TrackingBannerMapper.mapToBannerState(
+                statusMap =
+                    mapOf(
+                        TrackingKey.WIDGET_OBSERVATION to
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
+                                code = TrackingStatus.ErrorCode.RENDER_FAILURE,
+                            ),
+                    ),
+                phoneGranted = true,
+                usageGranted = true,
+                notificationsGranted = true,
+                settings = AppSettings(onboardingCompleted = true),
+            )
+
+        assertTrue("observationFailed should be true for RENDER_FAILURE", state.observationFailed)
+    }
+
     private fun mapToBannerStateWithAppSearch(
         statusMap: Map<TrackingKey, TrackingStatus>,
         retryCount: Int = 0,

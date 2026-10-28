@@ -53,6 +53,9 @@ sealed interface TrackingStatus {
 
         /** System service/capability unavailable on device. */
         SERVICE_UNAVAILABLE,
+
+        /** Widget render or transfer failure not related to storage/database. */
+        RENDER_FAILURE,
     }
 
     companion object {

@@ -28,7 +28,9 @@ fun AdjustmentComposeDialog(
     onDismiss: () -> Unit,
     onConfirm: (Float) -> Unit,
 ) {
-    val locale = FormatUtils.getLocale(LocalContext.current)
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val context = LocalContext.current
+    val locale = remember(configuration, context) { configuration.locales.get(0) ?: FormatUtils.getLocale(context) }
     val initialValue = maxOf(0f, currentValue)
     val initialText =
         remember(currentValue, isMinutes, locale) {
@@ -40,8 +42,8 @@ fun AdjustmentComposeDialog(
         }
 
     val state =
-        rememberSaveable(initialText, isMinutes, saver = AdjustmentInputState.Saver) {
-            AdjustmentInputState(initialText, isMinutes)
+        rememberSaveable(initialText, isMinutes, locale, saver = AdjustmentInputState.saver(locale)) {
+            AdjustmentInputState(initialText, isMinutes, locale)
         }
 
     val maxLimit =

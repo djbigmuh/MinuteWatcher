@@ -10,11 +10,13 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import host.serv.djbigmuh.minutewatcher.core.common.util.NumberInputNormalizer
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
+import java.util.Locale
 
 @Stable
 internal class AdjustmentInputState(
     val initialText: String,
     val isMinutes: Boolean = true,
+    val locale: Locale = Locale.getDefault(),
 ) {
     var text by mutableStateOf(
         TextFieldValue(
@@ -60,7 +62,6 @@ internal class AdjustmentInputState(
             }
         val mode = if (isMinutes) NumericInputMode.MINUTES else NumericInputMode.TRAFFIC
         val isPristineInitial = text.text == initialText
-        val locale = java.util.Locale.getDefault()
 
         val processed =
             NumericTextInputProcessor.process(
@@ -77,7 +78,7 @@ internal class AdjustmentInputState(
     }
 
     companion object {
-        val Saver: Saver<AdjustmentInputState, *> =
+        fun saver(locale: Locale): Saver<AdjustmentInputState, *> =
             listSaver(
                 save = {
                     listOf(
@@ -90,10 +91,13 @@ internal class AdjustmentInputState(
                     AdjustmentInputState(
                         initialText = it[0] as String,
                         isMinutes = it[2] as Boolean,
+                        locale = locale,
                     ).apply {
                         errorText = (it[1] as String).takeIf { str -> str.isNotEmpty() }
                     }
                 },
             )
+
+        val Saver: Saver<AdjustmentInputState, *> = saver(Locale.getDefault())
     }
 }

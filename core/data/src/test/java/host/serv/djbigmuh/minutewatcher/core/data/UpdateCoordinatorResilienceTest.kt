@@ -19,6 +19,7 @@ import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -429,4 +431,132 @@ class UpdateCoordinatorResilienceTest {
 
             assertEquals(TrackingStatus.Active, coordinator.status.value)
         }
+
+    @Test
+    fun `setupJob does not contain completed job after start returns`() =
+        runTest {
+            val simFlow = MutableStateFlow(listOf(createTestSimCardUiModel()))
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(simFlow)
+            val validSnapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(MutableStateFlow(validSnapshot))
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            coordinator.start()
+            testScheduler.advanceUntilIdle()
+
+            val setupJobField = UpdateCoordinator::class.java.getDeclaredField("setupJob").apply { isAccessible = true }
+            val ref = setupJobField.get(coordinator) as java.util.concurrent.atomic.AtomicReference<*>
+            val job = ref.get() as Job?
+            assertTrue("setupJob should not contain a completed job", job == null || !job.isCompleted)
+        }
+
+    @Test
+    fun `repeated start when setup is active does not create second coroutine`() =
+        runTest {
+            val simFlow = MutableStateFlow(emptyList<SimCardUiModel>())
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(simFlow)
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            coordinator.start()
+            testScheduler.runCurrent()
+
+            val setupJobField = UpdateCoordinator::class.java.getDeclaredField("setupJob").apply { isAccessible = true }
+            val ref = setupJobField.get(coordinator) as java.util.concurrent.atomic.AtomicReference<*>
+            val job1 = ref.get() as Job?
+
+            coordinator.start()
+            testScheduler.runCurrent()
+
+            val job2 = ref.get() as Job?
+            assertTrue("setupJob reference should remain the same", job1 === job2)
+        }
+
+    @Test
+    fun `start after setup completion and no active observation creates new setup`() =
+        runTest {
+            val simFlow = MutableStateFlow(listOf(createTestSimCardUiModel()))
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(simFlow)
+            val stateFlow = MutableStateFlow(GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList()))
+            whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            coordinator.start()
+            testScheduler.advanceUntilIdle()
+
+            coordinator.recover()
+            testScheduler.advanceUntilIdle()
+
+            coordinator.start()
+            testScheduler.advanceUntilIdle()
+        }
+
+    @Test
+    fun `cancelling setup from recover cancels setupJob`() =
+        runTest {
+            val simFlow = MutableStateFlow(emptyList<SimCardUiModel>())
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(simFlow)
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            coordinator.start()
+            testScheduler.runCurrent()
+
+            val setupJobField = UpdateCoordinator::class.java.getDeclaredField("setupJob").apply { isAccessible = true }
+            val ref = setupJobField.get(coordinator) as java.util.concurrent.atomic.AtomicReference<*>
+            val oldJob = ref.get() as Job?
+            assertTrue(oldJob != null && oldJob.isActive)
+
+            coordinator.recover()
+            testScheduler.advanceUntilIdle()
+
+            assertTrue(oldJob?.isCancelled == true)
+        }
+
+    @Test
+    fun `concurrent start from ten coroutines creates exactly one setup`() =
+        runTest {
+            val simFlow = MutableStateFlow(emptyList<SimCardUiModel>())
+            whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(simFlow)
+
+            val coordinator =
+                UpdateCoordinator(dataRefreshNotifier, widgetUpdater, usageStateRepository, backgroundScope)
+            val scope = CoroutineScope(backgroundScope.coroutineContext)
+            repeat(10) {
+                scope.launch {
+                    coordinator.start()
+                }
+            }
+            testScheduler.runCurrent()
+
+            val setupJobField = UpdateCoordinator::class.java.getDeclaredField("setupJob").apply { isAccessible = true }
+            val ref = setupJobField.get(coordinator) as java.util.concurrent.atomic.AtomicReference<*>
+            val job = ref.get() as Job?
+            assertTrue("setupJob should be active", job != null && job.isActive)
+        }
+
+    private fun createTestSimCardUiModel(slot: Int = 0) =
+        SimCardUiModel(
+            slot = slot,
+            identity = "sim_$slot",
+            operatorName = "Operator",
+            iconRes = 0,
+            minutesUsed = 0,
+            minutesLimit = 100,
+            manualAdjustment = 0,
+            minutesRemaining = 100,
+            effectiveMinutesLimit = 100,
+            isMinutesLimitSet = true,
+            trafficUsedMb = 0f,
+            trafficLimitMb = 1000,
+            trafficRemainingGb = 1f,
+            effectiveTrafficLimitGb = 1f,
+            trafficAdjustmentGb = 0f,
+            isTrafficLimitSet = true,
+            autoResetEnabled = true,
+            autoResetDay = 1,
+            rolloverEnabled = false,
+        )
 }

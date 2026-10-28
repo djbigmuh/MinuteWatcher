@@ -30,3 +30,7 @@ extensions.configure<ApplicationExtension> {
         }
     }
 }
+
+extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
+    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
+}

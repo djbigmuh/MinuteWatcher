@@ -1,14 +1,8 @@
-import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
-
 plugins {
     id("minutewatcher.android-library")
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinKsp)
     alias(libs.plugins.kotlinCompose)
-}
-
-kotlin {
-    jvmToolchain(SdkVersions.JAVA_TOOLCHAIN_VERSION)
 }
 
 android {
@@ -35,10 +29,7 @@ dependencies {
     debugImplementation(libs.androidxUiTooling)
     implementation(libs.androidxMaterial3)
     implementation(libs.androidxMaterialIconsCore)
-    implementation(libs.skydovesColorpickerview)
     implementation(libs.androidxCoreKtx)
-    implementation(libs.androidxAppcompat)
-    implementation(libs.googleMaterial)
     implementation(libs.androidxLifecycleViewmodelKtx)
     implementation(libs.androidxLifecycleRuntimeCompose)
 
