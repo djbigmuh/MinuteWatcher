@@ -73,6 +73,7 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 androidxJunit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 
 # Compose
+androidxComposeFoundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidxLifecycleRuntimeKtx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidxComposeRuntime = { group = "androidx.compose.runtime", name = "runtime" }
 androidxUi = { group = "androidx.compose.ui", name = "ui" }

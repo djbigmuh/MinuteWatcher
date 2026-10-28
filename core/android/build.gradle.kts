@@ -25,7 +25,7 @@ dependencies {
     implementation(platform(libs.androidxComposeBom))
     implementation(libs.androidxComposeRuntime)
     implementation(libs.androidxUi)
-    implementation("androidx.compose.foundation:foundation")
+    implementation(libs.androidxComposeFoundation)
     implementation(libs.androidxCoreKtx)
     implementation(libs.androidxAppcompat)
     implementation(libs.daggerHiltAndroid)
