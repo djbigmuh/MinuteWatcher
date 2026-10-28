@@ -29,7 +29,7 @@ class AppLoggerTest {
     @Before
     fun setup() {
         logDir = tmpFolder.newFolder("logs")
-        AppLogger.initForTest(logDir, enabled = true)
+        AppLogger.initForTest(logDir)
     }
 
     @After
@@ -234,7 +234,7 @@ class AppLoggerTest {
     fun `calls after shutdown do not throw and do not create log file`() {
         AppLogger.resetForTest()
         val nonExistentDir = File(tmpFolder.root, "non_existent_shutdown_dir")
-        AppLogger.initForTest(nonExistentDir, enabled = true)
+        AppLogger.initForTest(nonExistentDir)
         AppLogger.shutdown()
 
         AppLogger.d("Should be ignored")
@@ -250,11 +250,11 @@ class AppLoggerTest {
         val dir1 = tmpFolder.newFolder("logs1")
         val dir2 = tmpFolder.newFolder("logs2")
 
-        AppLogger.initForTest(dir1, enabled = true)
+        AppLogger.initForTest(dir1)
         AppLogger.d("Log in dir1")
         waitForLogMarker("Log in dir1", targetDir = dir1)
 
-        AppLogger.initForTest(dir2, enabled = true)
+        AppLogger.initForTest(dir2)
         AppLogger.d("Log in dir2")
         waitForLogMarker("Log in dir2", targetDir = dir2)
 
@@ -304,7 +304,7 @@ class AppLoggerTest {
         waitForChannelDrain()
 
         val newDir = tmpFolder.newFolder("logs_reinit")
-        AppLogger.initForTest(newDir, enabled = true)
+        AppLogger.initForTest(newDir)
 
         val newMarker = "REINITIALIZED_SUCCESS_MARKER"
         AppLogger.d(newMarker)
@@ -319,7 +319,7 @@ class AppLoggerTest {
         AppLogger.shutdown()
 
         val newDir = tmpFolder.newFolder("logs_after_shutdown")
-        AppLogger.initForTest(newDir, enabled = true)
+        AppLogger.initForTest(newDir)
 
         val marker = "LOG_AFTER_REINIT_FROM_SHUTDOWN"
         AppLogger.d(marker)

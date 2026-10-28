@@ -441,24 +441,21 @@ object AppLogger {
      * Initializes the logger for testing with full state reset.
      *
      * Performs a complete reset of the test state (including clearing the shutdown flag)
-     * and restarts the file logging worker if file logging is [enabled].
+     * and restarts the file logging worker.
      */
     @VisibleForTesting
-    internal fun initForTest(
-        dir: File,
-        enabled: Boolean = true,
-    ) {
+    internal fun initForTest(dir: File) {
         synchronized(this) {
             isShutdown = false
             closeWriter()
             consecutiveWriteFailures = 0
             logDir = dir
             logger = AndroidLogger()
-            isFileLoggingEnabled = enabled
+            isFileLoggingEnabled = true
             while (logChannel.tryReceive().isSuccess) {
                 // Drain channel
             }
         }
-        stopWorkerAndStartNewIfNeeded(startNew = enabled, blocking = false)
+        stopWorkerAndStartNewIfNeeded(startNew = true, blocking = false)
     }
 }

@@ -25,7 +25,7 @@ class AppLoggerRaceTest {
     fun setup() {
         logDir = tempFolder.newFolder("logs")
         AppLogger.resetForTest()
-        AppLogger.initForTest(logDir, enabled = true)
+        AppLogger.initForTest(logDir)
     }
 
     @After
@@ -138,10 +138,10 @@ class AppLoggerRaceTest {
 
         runWorkerThread(startLatch, readyLatch, completedLatch, exceptions, "lifecycle thread") {
             repeat(lifecycleIterations) { iter ->
-                if (iter % 2 == 0) AppLogger.initForTest(logDir, enabled = true) else AppLogger.resetForTest()
+                if (iter % 2 == 0) AppLogger.initForTest(logDir) else AppLogger.resetForTest()
                 Thread.sleep(2)
             }
-            AppLogger.initForTest(logDir, enabled = true)
+            AppLogger.initForTest(logDir)
         }
 
         assertTrue("Timed out waiting for start latch", startLatch.await(10, TimeUnit.SECONDS))
@@ -149,7 +149,7 @@ class AppLoggerRaceTest {
         assertTrue("All threads should finish within timeout", completedLatch.await(15, TimeUnit.SECONDS))
         assertTrue("No uncaught exceptions should occur: $exceptions", exceptions.isEmpty())
 
-        AppLogger.initForTest(logDir, enabled = true)
+        AppLogger.initForTest(logDir)
         val finalMarker = "CONCURRENT_TEST_FINAL_MARKER"
         waitForLogMarker(finalMarker)
 

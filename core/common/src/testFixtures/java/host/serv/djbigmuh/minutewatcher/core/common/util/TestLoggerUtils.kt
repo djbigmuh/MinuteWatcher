@@ -25,9 +25,6 @@ fun resetAppLoggerForTest() {
 /**
  * Public testFixtures utility to initialize [AppLogger] for tests across module boundaries.
  */
-fun initAppLoggerForTest(
-    dir: File,
-    enabled: Boolean = true,
-) {
-    AppLogger.initForTest(dir, enabled)
+fun initAppLoggerForTest(dir: File) {
+    AppLogger.initForTest(dir)
 }
