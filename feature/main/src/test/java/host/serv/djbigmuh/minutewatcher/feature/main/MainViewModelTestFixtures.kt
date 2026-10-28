@@ -52,7 +52,7 @@ import org.mockito.kotlin.whenever
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class MainViewModelTestFixtures {
     /**
-     * MainViewModel and its controllers (BannerController, etc) involve complex StateFlow
+     * MainViewModel and its controllers (BannerController, etc.) involve complex StateFlow
      * combinations with WhileSubscribed sharing strategy and deep nesting of reactive flows.
      * In a Robolectric environment, managing deterministic advancement of StandardTestDispatcher
      * through these layers while ensuring WhileSubscribed triggers correctly at each level

@@ -57,7 +57,7 @@ class BillingPeriodCalculatorTest {
 
     @Test
     fun `calculate non leap year Feb reset 31`() {
-        // Reset day 31, now is March 5 2025
+        // Reset day 31, now is March 5, 2025
         // currentYearMonth = March (31 days). resetDayActual = min(31, 31) = 31.
         // now.dayOfMonth (5) < 31 is true.
         // Prev month Feb (28 days). prevResetDay = min(31, 28) = 28.

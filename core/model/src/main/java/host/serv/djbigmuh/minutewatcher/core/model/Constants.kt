@@ -43,10 +43,10 @@ object Constants {
     /**
      * Always-on Display (AOD) summary constants.
      *
-     * HEARTBEAT_INTERVAL_MS — Periodic self-check interval of limited frequency (15 minutes),
-     *   restoring the summary notification after external removal by the system or user
-     *   (on Android 14+ ongoing notifications not tied to a foreground service can be dismissed
-     *   by the user, including "Clear All") without waiting for data changes.
+     * HEARTBEAT_INTERVAL_MS — Periodic self-check interval of limited frequency (15 minutes).
+     *   It restores the summary notification after external removal by the system or user,
+     *   without waiting for data changes. On Android 14+, ongoing notifications not tied to
+     *   a foreground service can be dismissed by the user, including via "Clear All".
      *   Executed only when the process is alive, without wakelock; overhead is negligible.
      */
     object Aod {
