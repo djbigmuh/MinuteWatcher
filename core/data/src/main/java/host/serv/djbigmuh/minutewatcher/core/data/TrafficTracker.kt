@@ -371,18 +371,18 @@ class TrafficTracker
                 checkAndScheduleAutoRecovery("permission change")
             } else if (previousGranted) {
                 AppLogger.d("TrafficTracker: permissions revoked transition detected, updating traffic")
-                launchTrafficUpdate("Traffic update after permissions revoked transition failed")
+                launchTrafficUpdate()
             }
         }
 
-        private fun launchTrafficUpdate(errorMessage: String) {
+        private fun launchTrafficUpdate() {
             scope.launch {
                 try {
                     updateTrafficUsage()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    AppLogger.e("TrafficTracker: $errorMessage", e)
+                    AppLogger.e("TrafficTracker: traffic update after permissions revoked transition failed", e)
                 }
             }
         }
