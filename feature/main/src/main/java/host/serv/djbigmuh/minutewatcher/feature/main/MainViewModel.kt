@@ -271,7 +271,7 @@ class MainViewModel
                 scope = viewModelScope,
                 initController = initController,
                 onRefreshNeeded = {
-                    refreshAndNotify(force = false)
+                    refreshAndNotify()
                 },
             ) {
                 lastRefreshAt = it
