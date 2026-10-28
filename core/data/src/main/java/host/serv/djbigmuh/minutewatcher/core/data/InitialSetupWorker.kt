@@ -147,6 +147,7 @@ class InitialSetupWorker
                     MigrationDecision.RETRY
                 } else {
                     markMigrationSkippedPermanently()
+                    MigrationDecision.PROCEED
                 }
             }
 
@@ -173,6 +174,7 @@ class InitialSetupWorker
                         MigrationDecision.RETRY
                     } else {
                         markMigrationSkippedPermanently()
+                        MigrationDecision.PROCEED
                     }
                 }
 
@@ -192,7 +194,7 @@ class InitialSetupWorker
             }
         }
 
-        private suspend fun markMigrationSkippedPermanently(): MigrationDecision {
+        private suspend fun markMigrationSkippedPermanently() {
             AppLogger.e(
                 "InitialSetupWorker: legacy data availability could not be determined " +
                     "after $MAX_MIGRATION_ATTEMPTS attempts, skipping migration",
@@ -200,7 +202,6 @@ class InitialSetupWorker
             deps.migrationFlagsRepository.setMigrationV1Completed(completed = true)
             deps.migrationFlagsRepository.setMigrationV1Skipped(MigrationSkipReason.LEGACY_DATA_CHECK_FAILED)
             deps.migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
-            return MigrationDecision.PROCEED
         }
 
         /**
