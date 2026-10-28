@@ -1,11 +1,11 @@
 [versions]
 agp = "9.4.1"
-kotlin = "2.4.10"
+kotlin = "2.4.21"
 coreKtx = "1.19.0"
 hiltVersion = "2.60.1"
 lifecycle = "2.11.0"
 datastore = "1.2.1"
-ksp = "2.3.11"
+ksp = "2.3.12"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 androidxTestCore = "1.6.1"

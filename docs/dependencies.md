@@ -19,23 +19,18 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 - **Reason**: The project requires the latest build system features to support SDK 37 and experimental Gradle 9.x integrations.
 - **Plan**: Continue using the latest preview versions until a stable branch for the 9.x series is established.
 
-### 4. Kotlin (Future/Preview)
-- **Version**: `2.4.10`
-- **Reason**: Required for compatibility with the advanced AGP and Compose features targeted by this project.
-- **Plan**: Monitor Kotlin release cycles and align with stable 2.4.x releases once they reach general availability.
-
-### 5. Detekt (Alpha)
+### 4. Detekt (Alpha)
 - **Version**: `2.0.0-alpha.6`
 - **Reason**: Required for compatibility with Gradle 9.x and modern JDKs until the stable 2.x branch is released.
 - **Plan**: Upgrade to the stable 2.x release once available; revise `config/detekt/detekt.yml` for new and deprecated
   rules; verify `buildUponDefaultConfig` behavior.
 
-### 6. AndroidX AppSearch Platform Storage
+### 5. AndroidX AppSearch Platform Storage
 
 - **Artifact**: `androidx.appsearch:appsearch-platform-storage` (1.1.0)
 - **Purpose**: Enables system search integration on Android 12+ (API 31+) via `PlatformStorage`.
 
-### 7. AndroidX AppFunctions (Alpha)
+### 6. AndroidX AppFunctions (Alpha)
 
 - **Version**: `1.0.0-alpha10`
 - **Reason**: On-device assistant integration requires compile-time API `@AppFunctionServiceEntryPoint` and
