@@ -346,7 +346,7 @@ internal class SimIdentityObserver
                 }
 
                 is SimDiscoveryResult.PermissionMissing -> {
-                    shouldRetry = handlePermissionMissing()
+                    handlePermissionMissing()
                 }
 
                 is SimDiscoveryResult.Unsupported -> {
@@ -367,7 +367,7 @@ internal class SimIdentityObserver
             return shouldRetry
         }
 
-        private suspend fun FlowCollector<List<ActiveSimInfo>>.handlePermissionMissing(): Boolean {
+        private suspend fun FlowCollector<List<ActiveSimInfo>>.handlePermissionMissing() {
             generalAttempt.set(0)
             transitionStatus(
                 TrackingStatus.Error(
@@ -376,7 +376,6 @@ internal class SimIdentityObserver
                 ),
             )
             emit(emptyList())
-            return false
         }
 
         private suspend fun FlowCollector<List<ActiveSimInfo>>.handleDiscoveryFailure(
