@@ -9,28 +9,23 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 - **Reason**: Required for Android SDK 37 support in unit tests. Standard stable versions do not yet fully support the latest platform APIs.
 - **Plan**: Upgrade to the stable `4.17.x` release when available.
 
-### 2. AndroidX Baseline Profile (RC)
-- **Version**: `1.5.0-rc01`
-- **Reason**: Contains critical fixes for baseline profile generation and is required for compatibility with Gradle 9.x.
-- **Plan**: Transition to the stable `1.5.0` version once released and verified.
-
-### 3. Android Gradle Plugin (Alpha/Beta)
+### 2. Android Gradle Plugin (Alpha/Beta)
 - **Version**: `9.4.1`
 - **Reason**: The project requires the latest build system features to support SDK 37 and experimental Gradle 9.x integrations.
 - **Plan**: Continue using the latest preview versions until a stable branch for the 9.x series is established.
 
-### 4. Detekt (Alpha)
+### 3. Detekt (Alpha)
 - **Version**: `2.0.0-alpha.6`
 - **Reason**: Required for compatibility with Gradle 9.x and modern JDKs until the stable 2.x branch is released.
 - **Plan**: Upgrade to the stable 2.x release once available; revise `config/detekt/detekt.yml` for new and deprecated
   rules; verify `buildUponDefaultConfig` behavior.
 
-### 5. AndroidX AppSearch Platform Storage
+### 4. AndroidX AppSearch Platform Storage
 
 - **Artifact**: `androidx.appsearch:appsearch-platform-storage` (1.1.0)
 - **Purpose**: Enables system search integration on Android 12+ (API 31+) via `PlatformStorage`.
 
-### 6. AndroidX AppFunctions (Alpha)
+### 5. AndroidX AppFunctions (Alpha)
 
 - **Version**: `1.0.0-alpha10`
 - **Reason**: On-device assistant integration requires compile-time API `@AppFunctionServiceEntryPoint` and
