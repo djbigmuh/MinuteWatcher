@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 /**
  * Result of a widget update operation.

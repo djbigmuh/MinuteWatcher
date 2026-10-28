@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
@@ -27,7 +27,7 @@ interface SimLimitsRepository {
      * Updates SIM limits.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun updateSimLimits(
         identity: String,
@@ -50,7 +50,7 @@ interface SimLimitsRepository {
      * Sets auto-reset settings.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setAutoReset(
         identity: String,

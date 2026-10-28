@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke

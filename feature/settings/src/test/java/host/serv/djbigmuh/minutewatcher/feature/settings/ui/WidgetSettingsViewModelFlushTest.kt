@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.settings.ui
+﻿package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy

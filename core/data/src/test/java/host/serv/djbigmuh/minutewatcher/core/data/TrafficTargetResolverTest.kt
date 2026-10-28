@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.telephony.SubscriptionInfo
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
@@ -114,7 +114,7 @@ class TrafficTargetResolverTest {
 
     @Test
     fun `resolve handles exception in getDefaultDataSubscriptionId gracefully`() {
-        whenever(permissionManager.getDefaultDataSubscriptionId()).thenThrow(RuntimeException("Cancelled"))
+        whenever(permissionManager.getDefaultDataSubscriptionId()).thenThrow(RuntimeException("Canceled"))
 
         val activeSims = listOf(createActiveSim(0, 1, isDefaultData = true))
 

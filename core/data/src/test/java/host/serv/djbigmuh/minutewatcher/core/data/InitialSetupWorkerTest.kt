@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.Manifest
 import android.app.Application
@@ -625,7 +625,7 @@ class InitialSetupWorkerTest {
             runCurrent()
             job.cancel()
             withTimeoutOrNull(30.seconds) { job.join() }
-                ?: throw AssertionError("Timed out waiting for cancelled worker job to finish")
+                ?: throw AssertionError("Timed out waiting for canceled worker job to finish")
             throw CancellationException("Simulated external cancellation")
         }
 

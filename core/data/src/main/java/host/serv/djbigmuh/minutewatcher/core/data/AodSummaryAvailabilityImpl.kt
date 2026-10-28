@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.di.IoDispatcher
 import host.serv.djbigmuh.minutewatcher.core.domain.AodSummaryAvailability

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.BenchmarkUseCase
@@ -35,7 +35,7 @@ class BenchmarkUseCaseImpl
          * @param simCount Number of SIMs to mock, coerced to [SimConstants.MAX_SUPPORTED_SIM_SLOTS].
          * Safe to call from any coroutine context.
          * @throws IOException if any DataStore update fails or waiting for active SIMs times out.
-         * @throws CancellationException if the population process is cancelled.
+         * @throws CancellationException if the population process is canceled.
          */
         override suspend fun populateMockData(simCount: Int) {
             val safeCount = simCount.coerceIn(1, SimConstants.MAX_SUPPORTED_SIM_SLOTS)

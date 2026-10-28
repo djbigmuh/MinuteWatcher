@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 /**
  * Availability manager for AppFunctions (Assistant access).

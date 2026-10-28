@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data.util
+﻿package host.serv.djbigmuh.minutewatcher.core.data.util
 
 import host.serv.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import host.serv.djbigmuh.minutewatcher.core.model.IdentitySource

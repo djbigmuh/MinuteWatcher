@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import android.os.Parcelable
 import androidx.annotation.StringRes

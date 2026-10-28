@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -47,7 +47,7 @@ class UsageUseCaseImpl
          *
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore write fails.
-         * @throws CancellationException if the process is cancelled.
+         * @throws CancellationException if the process is canceled.
          */
         override suspend fun refreshOperatorInfo() {
             val activeList = permissionManager.getActiveSubscriptions()
@@ -85,7 +85,7 @@ class UsageUseCaseImpl
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore operations fail or read times out.
          * @throws InvalidSlotException if slot is invalid.
-         * @throws CancellationException if cancelled.
+         * @throws CancellationException if canceled.
          */
         override suspend fun adjustMinutes(
             slot: Int,
@@ -125,7 +125,7 @@ class UsageUseCaseImpl
          * Safe to call from any coroutine context.
          * @throws IOException if DataStore operations fail or read times out.
          * @throws host.serv.djbigmuh.minutewatcher.core.domain.InvalidSlotException if slot is invalid.
-         * @throws CancellationException if cancelled.
+         * @throws CancellationException if canceled.
          */
         override suspend fun adjustTraffic(
             slot: Int,
@@ -162,7 +162,7 @@ class UsageUseCaseImpl
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore operations fail.
          * @throws host.serv.djbigmuh.minutewatcher.core.domain.InvalidSlotException if slot is invalid.
-         * @throws kotlinx.coroutines.CancellationException if cancelled.
+         * @throws kotlinx.coroutines.CancellationException if canceled.
          */
         override suspend fun resetCounters(slot: Int) {
             val identity = simIdentityRepository.getIdentity(slot)

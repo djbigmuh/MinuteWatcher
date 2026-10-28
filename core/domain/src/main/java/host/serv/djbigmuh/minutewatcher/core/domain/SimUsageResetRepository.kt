@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
@@ -17,7 +17,7 @@ interface SimUsageResetRepository {
      * Resets SIM usage statistics manually.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun resetSimUsageManual(identity: String)
 
@@ -27,7 +27,7 @@ interface SimUsageResetRepository {
      *
      * @return true if reset was performed.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun resetSimUsageIfDue(
         identity: String,
@@ -45,7 +45,7 @@ interface SimUsageResetRepository {
      *
      * @return true if write was applied, false if skipped due to window mismatch.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setLastTotalBytes(
         identity: String,
@@ -60,7 +60,7 @@ interface SimUsageResetRepository {
      *
      * @return true if write was applied, false if skipped due to window mismatch.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun incrementTrafficAndSetBaseline(
         identity: String,
@@ -76,7 +76,7 @@ interface SimUsageResetRepository {
      *
      * @return true if initialization was performed, false if already initialized.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun ensureTrackingWindowInitialized(identity: String): Boolean
 
@@ -89,7 +89,7 @@ interface SimUsageResetRepository {
      * Sets the baseline retry count for the identity.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setBaselineRetryCount(
         identity: String,
@@ -100,7 +100,7 @@ interface SimUsageResetRepository {
      * Clears retry counts for identities not in the [activeIdentities] set.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun cleanupBaselineRetries(activeIdentities: Set<String>)
 }

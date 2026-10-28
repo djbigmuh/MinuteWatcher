@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model
+﻿package host.serv.djbigmuh.minutewatcher.core.model
 
 /**
  * Reasons why a data migration might be skipped.

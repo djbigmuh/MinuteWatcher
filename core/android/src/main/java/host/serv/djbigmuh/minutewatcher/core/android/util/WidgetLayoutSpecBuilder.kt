@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android.util
+﻿package host.serv.djbigmuh.minutewatcher.core.android.util
 
 import host.serv.djbigmuh.minutewatcher.core.model.SimLayoutComponent
 import host.serv.djbigmuh.minutewatcher.core.model.SimLayoutRow

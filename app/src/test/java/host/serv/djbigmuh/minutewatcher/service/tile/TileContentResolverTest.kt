@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.service.tile
+﻿package host.serv.djbigmuh.minutewatcher.service.tile
 
 import host.serv.djbigmuh.minutewatcher.core.model.DataSourceType
 import host.serv.djbigmuh.minutewatcher.core.model.MeasurementUnit

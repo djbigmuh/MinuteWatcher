@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.SimSettingsState
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +23,7 @@ interface SimWidgetVisibilityRepository {
      * Sets widget settings for a batch of identities.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>)
 }

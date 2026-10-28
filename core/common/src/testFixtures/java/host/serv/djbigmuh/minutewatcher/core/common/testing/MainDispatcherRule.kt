@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.testing
+﻿package host.serv.djbigmuh.minutewatcher.core.common.testing
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import androidx.compose.runtime.Stable
 import host.serv.djbigmuh.minutewatcher.core.model.AppTheme

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.service.tile
+﻿package host.serv.djbigmuh.minutewatcher.service.tile
 
 import android.app.PendingIntent
 import android.content.Intent

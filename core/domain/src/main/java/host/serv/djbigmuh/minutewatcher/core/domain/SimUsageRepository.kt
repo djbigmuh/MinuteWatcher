@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +34,7 @@ interface SimUsageRepository {
      * @param callSignature A unique string signature for the call session.
      * @return True if minutes were incremented, false if already counted or identity is invalid.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun incrementMinutesUsedForCall(
         identity: String,

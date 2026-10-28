@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.service.tile
+﻿package host.serv.djbigmuh.minutewatcher.service.tile
 
 import android.service.quicksettings.Tile
 import host.serv.djbigmuh.minutewatcher.core.model.DataSourceType

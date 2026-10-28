@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager

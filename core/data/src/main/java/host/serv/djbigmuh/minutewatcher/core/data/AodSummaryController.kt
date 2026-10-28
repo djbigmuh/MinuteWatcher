@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
@@ -189,7 +189,7 @@ class AodSummaryController
                 notificationHelper.cancelAodSummaryNotification()
                 isPosted = false
                 lastPublishedText = null
-                AppLogger.d("AOD summary notification cancelled: $reason")
+                AppLogger.d("AOD summary notification canceled: $reason")
             }
         }
 

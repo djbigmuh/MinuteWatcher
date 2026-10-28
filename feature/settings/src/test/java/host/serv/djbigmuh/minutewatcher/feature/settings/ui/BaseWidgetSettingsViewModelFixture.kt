@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.settings.ui
+﻿package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.domain.AodSummaryAvailability

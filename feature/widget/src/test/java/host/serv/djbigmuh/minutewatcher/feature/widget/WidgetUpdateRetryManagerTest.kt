@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.widget
+﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import kotlinx.coroutines.test.runTest

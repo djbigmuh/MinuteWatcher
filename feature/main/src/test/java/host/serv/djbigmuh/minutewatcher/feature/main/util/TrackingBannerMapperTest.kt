@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.util
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.util
 
 import host.serv.djbigmuh.minutewatcher.core.model.AppSettings
 import host.serv.djbigmuh.minutewatcher.core.model.Constants

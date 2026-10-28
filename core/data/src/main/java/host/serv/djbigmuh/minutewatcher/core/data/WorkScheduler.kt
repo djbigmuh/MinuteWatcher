@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.content.Context
 import androidx.work.BackoffPolicy
@@ -56,7 +56,7 @@ class WorkScheduler
 
             val policy = if (force) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
 
-            // By default, we use KEEP to avoid cancelling and restarting migrations/setup
+            // By default, we use KEEP to avoid canceling and restarting migrations/setup
             // on every activity recreation (e.g., screen rotation).
             return WorkManager.getInstance(context).enqueueUniqueWork(
                 INITIAL_SETUP_WORK_NAME,

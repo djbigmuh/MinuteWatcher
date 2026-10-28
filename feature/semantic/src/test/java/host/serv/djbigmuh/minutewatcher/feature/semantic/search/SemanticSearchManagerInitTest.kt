@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.search
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.search
 
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher
+﻿package host.serv.djbigmuh.minutewatcher
 
 import host.serv.djbigmuh.minutewatcher.core.domain.AppInfoProvider
 import javax.inject.Inject

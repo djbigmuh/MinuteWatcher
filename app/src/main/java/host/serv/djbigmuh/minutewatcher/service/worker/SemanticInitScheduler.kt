@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.service.worker
+﻿package host.serv.djbigmuh.minutewatcher.service.worker
 
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -14,9 +14,9 @@ internal object SemanticInitScheduler {
      * Schedules semantic initialization work idempotently using [ExistingWorkPolicy.KEEP].
      *
      * - The work is idempotent and can be run repeatedly without harming data.
-     * - Already enqueued or running work is not cancelled or restarted.
+     * - Already enqueued or running work is not canceled or restarted.
      * - A repeated call after successful completion enqueues new work.
-     * - Cancelling running initialization would interrupt indexing and shortcut updates without completion guarantee.
+     * - Canceling running initialization would interrupt indexing and shortcut updates without completion guarantee.
      *
      * @param workManager WorkManager instance.
      */

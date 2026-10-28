@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule

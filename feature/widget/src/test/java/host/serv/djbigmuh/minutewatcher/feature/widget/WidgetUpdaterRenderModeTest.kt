@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.widget
+﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import host.serv.djbigmuh.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi

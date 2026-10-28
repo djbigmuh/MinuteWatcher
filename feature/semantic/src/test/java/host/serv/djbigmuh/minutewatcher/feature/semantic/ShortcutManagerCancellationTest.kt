@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic
 
 import android.content.Context
 import androidx.core.content.pm.ShortcutInfoCompat

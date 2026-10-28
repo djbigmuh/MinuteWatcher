@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android.testing
+﻿package host.serv.djbigmuh.minutewatcher.core.android.testing
 
 import host.serv.djbigmuh.minutewatcher.core.android.util.OperatorResolver
 import host.serv.djbigmuh.minutewatcher.core.android.util.SimCardMapper

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.resources.testing
+﻿package host.serv.djbigmuh.minutewatcher.core.resources.testing
 
 /**
  * Utility for mapping between language tags and Android resource directories (qualifiers),

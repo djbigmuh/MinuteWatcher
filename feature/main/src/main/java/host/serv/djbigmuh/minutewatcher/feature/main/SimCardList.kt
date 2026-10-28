@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.macrobenchmark
+﻿package host.serv.djbigmuh.minutewatcher.macrobenchmark
 
 import android.os.Build
 import androidx.benchmark.macro.MacrobenchmarkScope

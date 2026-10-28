@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -75,7 +75,7 @@ class AppFunctionAvailabilityImplTest {
     @Config(sdk = [36]) // behavior-specific SDK
     fun `setAssistantAccessEnabled rethrows CancellationException from gateway`() =
         runTest {
-            fakeGateway.exceptionToThrow = CancellationException("Cancelled")
+            fakeGateway.exceptionToThrow = CancellationException("Canceled")
             availability.setAssistantAccessEnabled(true)
         }
 }

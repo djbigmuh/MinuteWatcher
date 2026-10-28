@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.settings.ui
+﻿package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

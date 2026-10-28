@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.settings.ui
+﻿package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import host.serv.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
@@ -35,7 +35,7 @@ class WidgetSettingsSaverTest {
     }
 
     @Test
-    fun `save returns Success even if notifyDataChanged is cancelled`() =
+    fun `save returns Success even if notifyDataChanged is canceled`() =
         runTest {
             val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
             whenever(loader.saveGeneralSettings(any())).thenReturn(Unit)
@@ -140,7 +140,7 @@ class WidgetSettingsSaverTest {
         }
 
     @Test
-    fun `cancelled caller scope still executes notifyDataChanged on appScope`() =
+    fun `canceled caller scope still executes notifyDataChanged on appScope`() =
         runTest {
             val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
             whenever(loader.saveGeneralSettings(any())).thenReturn(Unit)
@@ -163,7 +163,7 @@ class WidgetSettingsSaverTest {
             val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
             whenever(
                 dataChangeNotifier.notifyDataChanged(any(), any()),
-            ).thenThrow(CancellationException("Notification cancelled"))
+            ).thenThrow(CancellationException("Notification canceled"))
 
             assertThrows(CancellationException::class.java) {
                 runBlocking {
@@ -212,7 +212,7 @@ class WidgetSettingsSaverTest {
         runTest {
             val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
             whenever(dataChangeNotifier.notifyDataChanged(any(), any()))
-                .thenThrow(CancellationException("Cancelled"))
+                .thenThrow(CancellationException("Canceled"))
 
             assertThrows(CancellationException::class.java) {
                 runBlocking {
@@ -224,7 +224,7 @@ class WidgetSettingsSaverTest {
         }
 
     @Test
-    fun `slow notifier call longer than SHORT_TIMEOUT_MS is not cancelled and completes`() =
+    fun `slow notifier call longer than SHORT_TIMEOUT_MS is not canceled and completes`() =
         runTest {
             var completed = false
             val slowNotifier =

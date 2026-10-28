@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import java.io.IOException
@@ -17,7 +17,7 @@ interface WidgetSettingsLoader {
      * Loads the current widget settings state.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun load(): WidgetSettingsState
 
@@ -25,7 +25,7 @@ interface WidgetSettingsLoader {
      * Saves only the general widget settings.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun saveGeneralSettings(state: WidgetSettingsState)
 
@@ -34,7 +34,7 @@ interface WidgetSettingsLoader {
      *
      * @return List of slot indices for which settings failed to save. Empty if all succeeded.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun saveSimSettings(state: WidgetSettingsState): List<Int>
 }

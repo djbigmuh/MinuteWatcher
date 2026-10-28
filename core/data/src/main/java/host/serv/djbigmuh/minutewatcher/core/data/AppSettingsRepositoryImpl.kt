@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
@@ -114,7 +114,7 @@ class AppSettingsRepositoryImpl
          * Guaranteed to be atomic via [Mutex].
          * Safe to call from any coroutine context.
          * @throws IOException if DataStore write operation fails.
-         * @throws CancellationException if the update process is cancelled.
+         * @throws CancellationException if the update process is canceled.
          */
         override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
             updateMutex.withLock {

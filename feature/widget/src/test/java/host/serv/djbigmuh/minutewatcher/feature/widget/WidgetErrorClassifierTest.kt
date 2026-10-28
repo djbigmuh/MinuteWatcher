@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.widget
+﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import android.os.TransactionTooLargeException
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger

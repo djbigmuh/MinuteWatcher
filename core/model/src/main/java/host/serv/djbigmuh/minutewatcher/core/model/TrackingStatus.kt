@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model
+﻿package host.serv.djbigmuh.minutewatcher.core.model
 
 /**
  * Represents the current tracking status of a component.

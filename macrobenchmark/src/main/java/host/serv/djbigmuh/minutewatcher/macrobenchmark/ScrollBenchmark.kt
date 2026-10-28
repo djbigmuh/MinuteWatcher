@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.macrobenchmark
+﻿package host.serv.djbigmuh.minutewatcher.macrobenchmark
 
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.FrameTimingMetric

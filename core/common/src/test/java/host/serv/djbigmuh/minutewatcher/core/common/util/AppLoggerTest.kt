@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.util
+﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
 import android.content.Context
 import host.serv.djbigmuh.minutewatcher.core.common.testing.AppLoggerResetRule

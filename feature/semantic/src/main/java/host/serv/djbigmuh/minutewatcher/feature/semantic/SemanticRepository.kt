@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic
 
 import host.serv.djbigmuh.minutewatcher.core.domain.UsageStateRepository
 import host.serv.djbigmuh.minutewatcher.core.model.GlobalSnapshot

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
@@ -77,7 +77,7 @@ class IdentityMigrationService
          * or `null` if the result could not be determined due to read timeout or exception.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * @throws CancellationException if the operation is cancelled.
+         * @throws CancellationException if the operation is canceled.
          */
         suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean? =
             try {
@@ -140,7 +140,7 @@ class IdentityMigrationService
          * redundant checks on subsequent app launches.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * @throws CancellationException if the operation is cancelled.
+         * @throws CancellationException if the operation is canceled.
          */
         suspend fun markSchemaCurrent() {
             try {
@@ -170,7 +170,7 @@ class IdentityMigrationService
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * @throws IOException if DataStore migration fails due to I/O error.
-         * @throws CancellationException if the migration process is cancelled.
+         * @throws CancellationException if the migration process is canceled.
          * @throws Exception if a fatal error occurs during migration execution.
          */
         suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome =

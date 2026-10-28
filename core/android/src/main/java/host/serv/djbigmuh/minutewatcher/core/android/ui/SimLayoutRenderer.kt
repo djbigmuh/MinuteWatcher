@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android.ui
+﻿package host.serv.djbigmuh.minutewatcher.core.android.ui
 
 import androidx.compose.runtime.Composable
 import host.serv.djbigmuh.minutewatcher.core.model.SimLayoutComponent

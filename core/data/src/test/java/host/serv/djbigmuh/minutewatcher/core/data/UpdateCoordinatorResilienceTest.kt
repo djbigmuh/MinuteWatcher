@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -494,7 +494,7 @@ class UpdateCoordinatorResilienceTest {
         }
 
     @Test
-    fun `cancelling setup from recover cancels setupJob`() =
+    fun `canceling setup from recover cancels setupJob`() =
         runTest {
             val simFlow = MutableStateFlow(emptyList<SimCardUiModel>())
             whenever(usageStateRepository.observeSimCardUiModels()).thenReturn(simFlow)

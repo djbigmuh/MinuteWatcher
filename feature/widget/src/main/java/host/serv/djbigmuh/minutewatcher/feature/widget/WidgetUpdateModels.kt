@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.widget
+﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 /**
  * Result of a low-level widget update attempt.

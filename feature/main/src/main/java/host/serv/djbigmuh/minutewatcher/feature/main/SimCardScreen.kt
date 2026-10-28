@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold

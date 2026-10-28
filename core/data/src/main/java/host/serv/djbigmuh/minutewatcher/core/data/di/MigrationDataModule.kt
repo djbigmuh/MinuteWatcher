@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data.di
+﻿package host.serv.djbigmuh.minutewatcher.core.data.di
 
 import dagger.Binds
 import dagger.Module

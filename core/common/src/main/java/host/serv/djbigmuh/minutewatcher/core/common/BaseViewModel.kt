@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common
+﻿package host.serv.djbigmuh.minutewatcher.core.common
 
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model
+﻿package host.serv.djbigmuh.minutewatcher.core.model
 
 /**
  * Represents a stable identity for a SIM card.

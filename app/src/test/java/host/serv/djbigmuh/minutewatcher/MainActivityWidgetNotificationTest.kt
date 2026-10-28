@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher
+﻿package host.serv.djbigmuh.minutewatcher
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
@@ -102,7 +102,7 @@ class MainActivityWidgetNotificationTest {
         runTest(testDispatcher) {
             val fakeNotifier =
                 FakeDataChangeNotifier().apply {
-                    exceptionToThrow = CancellationException("Cancelled")
+                    exceptionToThrow = CancellationException("Canceled")
                 }
             val testScope = CoroutineScope(testDispatcher + SupervisorJob())
             val dispatcher = WidgetDataChangeDispatcher(fakeNotifier, testScope)
@@ -110,7 +110,7 @@ class MainActivityWidgetNotificationTest {
             withTimeout(5.seconds) {
                 val job = dispatcher.notifyDataChanged("test reason")
                 job.join()
-                assertTrue("Job should be cancelled by CancellationException", job.isCancelled)
+                assertTrue("Job should be canceled by CancellationException", job.isCancelled)
             }
 
             assertTrue("Scope must remain active", testScope.isActive)

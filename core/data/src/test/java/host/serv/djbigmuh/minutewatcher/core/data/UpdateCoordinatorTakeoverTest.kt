@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.resetAppLoggerForTest
 import host.serv.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier
@@ -168,7 +168,7 @@ class UpdateCoordinatorTakeoverTest {
         }
 
     @Test
-    fun `forced update clears takeoverUpdateJob after cancelled job completion`() =
+    fun `forced update clears takeoverUpdateJob after canceled job completion`() =
         runTest {
             val snapshotFlow = MutableStateFlow(createSnapshot(500L, "Initial", used = 0))
             whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)

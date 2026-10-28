@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.MigrationSkipReason
 import kotlinx.coroutines.flow.Flow

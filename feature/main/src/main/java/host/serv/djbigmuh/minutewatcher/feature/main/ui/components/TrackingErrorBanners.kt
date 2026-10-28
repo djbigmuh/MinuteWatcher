@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable

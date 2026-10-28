@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.search
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.search
 
 import androidx.appsearch.annotation.Document
 import androidx.appsearch.annotation.Document.Id

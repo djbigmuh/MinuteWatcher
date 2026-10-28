@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.di
+﻿package host.serv.djbigmuh.minutewatcher.core.common.di
 
 import android.content.Context
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger

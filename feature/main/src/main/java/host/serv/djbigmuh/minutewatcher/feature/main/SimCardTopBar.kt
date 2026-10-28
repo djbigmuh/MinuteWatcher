@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info

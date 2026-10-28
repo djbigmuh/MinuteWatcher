@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android.ui
+﻿package host.serv.djbigmuh.minutewatcher.core.android.ui
 
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.Modifier

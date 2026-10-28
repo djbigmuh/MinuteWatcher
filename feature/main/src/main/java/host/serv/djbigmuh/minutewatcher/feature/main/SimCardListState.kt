@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import androidx.annotation.StringRes
 import host.serv.djbigmuh.minutewatcher.core.model.SimCardUiModel

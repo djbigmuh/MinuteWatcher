@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -74,7 +74,7 @@ class TrafficTrackerJobOwnershipTest {
         )
 
     @Test
-    fun `external caller coroutine calling recover is not cancelled when new initialization starts`() =
+    fun `external caller coroutine calling recover is not canceled when new initialization starts`() =
         runTest(testDispatcher) {
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
             val deps = createTrackerDeps()
@@ -134,7 +134,7 @@ class TrafficTrackerJobOwnershipTest {
 
             callerJob.cancelAndJoin()
 
-            assertTrue("Caller job should be cancelled", callerJob.isCancelled)
+            assertTrue("Caller job should be canceled", callerJob.isCancelled)
             assertTrue("Internal initJob in appScope should remain active", internalJob!!.isActive)
 
             appScope.cancel()

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
@@ -15,7 +15,7 @@ interface BenchmarkUseCase {
      *
      * @param simCount Number of mock SIM cards to create (1 or 2).
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun populateMockData(simCount: Int)
 }

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model.util
+﻿package host.serv.djbigmuh.minutewatcher.core.model.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

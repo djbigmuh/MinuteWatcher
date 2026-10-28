@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger

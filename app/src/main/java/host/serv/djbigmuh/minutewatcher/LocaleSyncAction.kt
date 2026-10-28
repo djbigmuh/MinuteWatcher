@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher
+﻿package host.serv.djbigmuh.minutewatcher
 
 internal sealed interface LocaleSyncAction {
     data object None : LocaleSyncAction

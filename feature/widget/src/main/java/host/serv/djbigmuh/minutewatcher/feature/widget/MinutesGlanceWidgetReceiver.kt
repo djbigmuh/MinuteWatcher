@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.widget
+﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver

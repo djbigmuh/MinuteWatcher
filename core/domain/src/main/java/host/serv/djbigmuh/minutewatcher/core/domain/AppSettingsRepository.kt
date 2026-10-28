@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.flow.Flow
@@ -33,7 +33,7 @@ interface AppSettingsRepository {
      *
      * @param transform Transformation function for settings.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings)
 }

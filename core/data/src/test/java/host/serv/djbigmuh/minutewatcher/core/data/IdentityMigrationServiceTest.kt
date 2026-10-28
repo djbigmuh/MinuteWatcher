@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -434,10 +434,10 @@ class IdentityMigrationServiceTest {
     @Test
     fun `hasLegacyData rethrows CancellationException`() =
         testScope.runTest {
-            val cancelledDataStore: DataStore<Preferences> = mock()
-            whenever(cancelledDataStore.data).thenReturn(flow { throw CancellationException("Cancelled") })
+            val canceledDataStore: DataStore<Preferences> = mock()
+            whenever(canceledDataStore.data).thenReturn(flow { throw CancellationException("Canceled") })
 
-            val service = IdentityMigrationService(cancelledDataStore, simDataStore)
+            val service = IdentityMigrationService(canceledDataStore, simDataStore)
             assertThrows(CancellationException::class.java) {
                 kotlinx.coroutines.runBlocking {
                     service.hasLegacyData()

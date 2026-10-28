@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.di
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.di
 
 import dagger.Binds
 import dagger.Module

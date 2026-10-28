@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.util
+﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CoroutineScope
@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 enum class ObservationMode {
     /**
-     * Processes only the latest value emitted by the flow, cancelling previous processing
+     * Processes only the latest value emitted by the flow, canceling previous processing
      * when a new value arrives (equivalent to `collectLatest`).
      */
     LATEST,

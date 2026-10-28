@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.search
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.search
 
 /**
  * Constants for AppSearch database and namespace.

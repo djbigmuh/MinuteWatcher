@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.testing
+﻿package host.serv.djbigmuh.minutewatcher.core.common.testing
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.resetAppLoggerForTest
 import org.junit.rules.TestWatcher

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.Manifest
 import androidx.annotation.VisibleForTesting
@@ -128,7 +128,7 @@ class CallTracker
                                 initDeferred.complete(Unit)
                             } catch (e: CancellationException) {
                                 trackerState.set(State.IDLE)
-                                AppLogger.d("CallTracker: Initialization cancelled")
+                                AppLogger.d("CallTracker: Initialization canceled")
                                 throw e
                             } catch (e: Exception) {
                                 AppLogger.e("CallTracker: Failed to initialize call tracking", e)
@@ -218,7 +218,7 @@ class CallTracker
          * @param eventElapsedRealtime Time when the event was captured (SystemClock.elapsedRealtime).
          * -1 if unknown.
          * @throws IOException If a database or storage error occurs during call start recording.
-         * @throws CancellationException if the calling coroutine is cancelled.
+         * @throws CancellationException if the calling coroutine is canceled.
          * Does NOT throw if the tracker is stopped while waiting for initialization.
          */
         suspend fun onCallStarted(
@@ -244,7 +244,7 @@ class CallTracker
          * @param eventElapsedRealtime Time when the event was captured (SystemClock.elapsedRealtime).
          * -1 if unknown.
          * @throws IOException If a database or storage error occurs during call end recording.
-         * @throws CancellationException if the calling coroutine is cancelled.
+         * @throws CancellationException if the calling coroutine is canceled.
          * Does NOT throw if the tracker is stopped while waiting for initialization.
          */
         suspend fun onCallEnded(
@@ -328,7 +328,7 @@ class CallTracker
                 val activeSubIdsSet = activeCalls.toSet()
                 attributionResolver.retainOnlyActiveSubIds(activeSubIdsSet)
             } catch (e: CancellationException) {
-                AppLogger.d("CallTracker: refreshStatus cancelled")
+                AppLogger.d("CallTracker: refreshStatus canceled")
                 throw e
             } catch (e: SecurityException) {
                 AppLogger.e("SecurityException refreshing status", e)

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.buildlogic
+﻿package host.serv.djbigmuh.minutewatcher.buildlogic
 
 /**
  * Centralized Android SDK and JVM Toolchain version configuration for all modules.

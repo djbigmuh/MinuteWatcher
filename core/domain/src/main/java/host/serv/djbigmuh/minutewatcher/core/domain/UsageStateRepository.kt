@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import host.serv.djbigmuh.minutewatcher.core.model.SimCardUiModel
@@ -70,7 +70,7 @@ interface UsageStateRepository {
      *
      * @return [RefreshResult] indicating success, timeout, or failure.
      * @throws IOException if storage or network access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     @Throws(IOException::class)
     suspend fun refresh(): RefreshResult

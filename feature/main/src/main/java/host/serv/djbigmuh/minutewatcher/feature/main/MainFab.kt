@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Text

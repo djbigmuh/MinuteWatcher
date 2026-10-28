@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model.util
+﻿package host.serv.djbigmuh.minutewatcher.core.model.util
 
 /**
  * Constants for widget UI dimensions and font sizes.

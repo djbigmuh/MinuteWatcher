@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions
 
 import androidx.appfunctions.AppFunctionElementNotFoundException
 import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
@@ -178,7 +178,7 @@ class UsageSummaryProviderTest {
                 GlobalSnapshot(SchemaVersion(1, 0, 0), Constants.Data.EMPTY_TIMESTAMP, emptyList(), emptyList())
             val fakeRepo =
                 FakeUsageStateRepository(emptySnapshot) {
-                    throw CancellationException("Cancelled")
+                    throw CancellationException("Canceled")
                 }
             val provider = UsageSummaryProvider(fakeRepo)
 

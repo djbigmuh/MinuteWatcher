@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.controller
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.controller
 
 /**
  * Represents the state of the application initialization process.

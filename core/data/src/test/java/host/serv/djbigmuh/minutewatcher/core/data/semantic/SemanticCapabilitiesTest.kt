@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data.semantic
+﻿package host.serv.djbigmuh.minutewatcher.core.data.semantic
 
 import android.content.Context
 import android.content.pm.PackageManager

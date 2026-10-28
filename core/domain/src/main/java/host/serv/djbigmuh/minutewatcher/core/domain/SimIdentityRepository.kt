@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import host.serv.djbigmuh.minutewatcher.core.model.SimIdentity
@@ -23,7 +23,7 @@ interface SimIdentityRepository {
      * @throws SimNotFoundException if no SIM is in the slot.
      * @throws SeedUnavailableException if identity seed is unavailable within timeout (storage failure).
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun getIdentity(slot: Int): String
 
@@ -34,7 +34,7 @@ interface SimIdentityRepository {
      * @throws SimNotFoundException if no SIM is in the slot.
      * @throws SeedUnavailableException if identity seed is unavailable within timeout (storage failure).
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun getSimIdentity(slot: Int): SimIdentity
 
@@ -60,7 +60,7 @@ interface SimIdentityRepository {
      * Sets the operator name for the given identity.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setSimOperator(
         identity: String,

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.widget
+﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import android.content.Context
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -102,6 +102,6 @@ class WidgetUpdaterCancellationTest {
                     is WidgetUpdateResult.Success -> result.wasCoalesced
                     is WidgetUpdateResult.Failure -> result.wasCoalesced
                 }
-            assert(!wasCoalesced) { "Subsequent update should not be coalesced with cancelled one" }
+            assert(!wasCoalesced) { "Subsequent update should not be coalesced with canceled one" }
         }
 }

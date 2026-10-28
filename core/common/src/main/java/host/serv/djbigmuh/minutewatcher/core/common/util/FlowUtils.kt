@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.util
+﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow

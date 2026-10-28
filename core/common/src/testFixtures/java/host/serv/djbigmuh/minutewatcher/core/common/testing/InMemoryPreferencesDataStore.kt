@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.testing
+﻿package host.serv.djbigmuh.minutewatcher.core.common.testing
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android.util
+﻿package host.serv.djbigmuh.minutewatcher.core.android.util
 
 import android.annotation.SuppressLint
 import android.app.LocaleManager

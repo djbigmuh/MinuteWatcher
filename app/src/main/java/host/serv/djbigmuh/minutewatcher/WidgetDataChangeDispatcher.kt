@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher
+﻿package host.serv.djbigmuh.minutewatcher
 
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android.util
+﻿package host.serv.djbigmuh.minutewatcher.core.android.util
 
 import android.content.Context
 import android.content.res.AssetManager

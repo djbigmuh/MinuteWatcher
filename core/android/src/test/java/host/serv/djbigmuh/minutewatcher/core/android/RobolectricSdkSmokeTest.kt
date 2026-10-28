@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android
+﻿package host.serv.djbigmuh.minutewatcher.core.android
 
 import android.app.Application
 import android.os.Build

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.datastore.preferences.core.MutablePreferences
 import host.serv.djbigmuh.minutewatcher.core.data.di.DataStoreKeys

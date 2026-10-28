@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.search
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.search
 
 import host.serv.djbigmuh.minutewatcher.core.model.DataSourceType
 import host.serv.djbigmuh.minutewatcher.core.model.MeasurementUnit

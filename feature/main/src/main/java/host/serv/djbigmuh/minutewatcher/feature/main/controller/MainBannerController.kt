@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.controller
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.controller
 
 import dagger.Lazy
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope

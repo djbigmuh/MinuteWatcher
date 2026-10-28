@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.settings.ui
+﻿package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import androidx.annotation.VisibleForTesting
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope

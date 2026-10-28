@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher
+﻿package host.serv.djbigmuh.minutewatcher
 
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -129,7 +129,7 @@ class LocaleChangedReceiverTest {
         runTest {
             whenever(
                 mockNotifier.notifyDataChanged(true, true),
-            ).thenThrow(CancellationException("Cancelled"))
+            ).thenThrow(CancellationException("Canceled"))
 
             val receiver = createReceiver()
 

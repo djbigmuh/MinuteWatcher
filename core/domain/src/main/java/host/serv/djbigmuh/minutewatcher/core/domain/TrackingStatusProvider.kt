@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingKey
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
@@ -26,7 +26,7 @@ interface TrackingStatusProvider {
      * Attempts to recover from an error state.
      *
      * @throws IOException if recovery fails due to storage or system error.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun recover() {}
 }

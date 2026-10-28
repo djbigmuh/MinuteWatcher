@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.controller
+﻿package host.serv.djbigmuh.minutewatcher.controller
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -232,7 +232,7 @@ class MainPermissionControllerTest {
                 onCheckNotifications = {},
             )
 
-            // Emit on flow1, should be ignored because job was cancelled
+            // Emit on flow1, should be ignored because job was canceled
             flow1.value = AppSettings(isLoaded = true, wasPhonePermissionRequestedBefore = false)
             runCurrent()
             assertFalse(requested1)

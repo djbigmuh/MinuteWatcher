@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -148,7 +148,7 @@ class SimUsageRepositoryImpl
          * across threads/coroutines.
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if write fails.
-         * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
+         * @throws kotlinx.coroutines.CancellationException if reset is canceled.
          */
         override suspend fun resetSimUsageManual(identity: String) {
             resetMutex.withLock {
@@ -181,7 +181,7 @@ class SimUsageRepositoryImpl
          * @return True if reset was actually performed (statistics cleared).
          * Safe to call from any coroutine context.
          * @throws java.io.IOException if write fails.
-         * @throws kotlinx.coroutines.CancellationException if reset is cancelled.
+         * @throws kotlinx.coroutines.CancellationException if reset is canceled.
          */
         override suspend fun resetSimUsageIfDue(
             identity: String,

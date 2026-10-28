@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
@@ -16,7 +16,7 @@ interface WidgetUpdater {
      *
      * @return [WidgetUpdateResult] indicating the outcome of the update.
      * @throws IOException if communication with the widget system fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun updateAll(): WidgetUpdateResult
 

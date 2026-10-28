@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data.semantic
+﻿package host.serv.djbigmuh.minutewatcher.core.data.semantic
 
 import host.serv.djbigmuh.minutewatcher.core.model.SchemaVersion
 import javax.inject.Inject

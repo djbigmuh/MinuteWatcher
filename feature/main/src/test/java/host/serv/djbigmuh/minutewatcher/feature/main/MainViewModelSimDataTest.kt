@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import host.serv.djbigmuh.minutewatcher.core.domain.SeedUnavailableException
 import host.serv.djbigmuh.minutewatcher.core.domain.SimNotFoundException

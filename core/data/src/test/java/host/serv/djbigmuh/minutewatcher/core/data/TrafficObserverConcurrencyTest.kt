@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
@@ -117,7 +117,7 @@ class TrafficObserverConcurrencyTest {
             tracker.simObserverJob.get()?.cancel()
             pollUntil(
                 timeoutMs = 5000L,
-                message = "Observer jobs cancelled",
+                message = "Observer jobs canceled",
             ) {
                 tracker.permissionObserverJob.get()?.isActive != true &&
                     tracker.simObserverJob.get()?.isActive != true

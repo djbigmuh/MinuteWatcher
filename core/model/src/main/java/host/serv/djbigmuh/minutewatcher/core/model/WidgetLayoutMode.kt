@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model
+﻿package host.serv.djbigmuh.minutewatcher.core.model
 
 private const val VAL_SINGLE_LINE = 0
 private const val VAL_TWO_LINES = 1

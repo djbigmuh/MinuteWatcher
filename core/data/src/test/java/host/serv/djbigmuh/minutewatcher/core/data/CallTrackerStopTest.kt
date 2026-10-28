@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
@@ -131,7 +131,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `onCallStarted rethrows CancellationException when caller is cancelled`() =
+    fun `onCallStarted rethrows CancellationException when caller is canceled`() =
         runTest(testDispatcher) {
             setupCommonMocks()
 
@@ -177,7 +177,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
             callerJob.cancel()
             runCurrent()
 
-            Assert.assertTrue("Caller job should be cancelled", callerJob.isCancelled)
+            Assert.assertTrue("Caller job should be canceled", callerJob.isCancelled)
 
             if (initLock.isLocked) initLock.unlock()
             tracker.stop()

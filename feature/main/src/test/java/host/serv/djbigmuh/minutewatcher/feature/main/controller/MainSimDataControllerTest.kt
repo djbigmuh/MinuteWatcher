@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.controller
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.controller
 
 import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -482,14 +482,14 @@ class MainSimDataControllerTest {
     @Test
     fun `recovery cancellation is not suppressed`() =
         runTest {
-            var wasCancelled = false
+            var wasCanceled = false
             val fakeStatusRepository =
                 object : TrackingStatusRepository {
                     override suspend fun recoverTracking(key: TrackingKey) {
                         try {
                             delay(10_000)
                         } catch (e: CancellationException) {
-                            wasCancelled = true
+                            wasCanceled = true
                             throw e
                         }
                     }
@@ -519,7 +519,7 @@ class MainSimDataControllerTest {
             appJob.cancel()
             testScheduler.advanceUntilIdle()
 
-            assertTrue("Cancellation should be propagated", wasCancelled)
+            assertTrue("Cancellation should be propagated", wasCanceled)
         }
 
     @Test

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
@@ -423,7 +423,7 @@ class TrafficTrackerResilienceTest {
         runTest {
             val cancelFlow =
                 kotlinx.coroutines.flow.flow<List<ActiveSimInfo>> {
-                    throw kotlinx.coroutines.CancellationException("Cancelled")
+                    throw kotlinx.coroutines.CancellationException("Canceled")
                 }
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(cancelFlow)
 

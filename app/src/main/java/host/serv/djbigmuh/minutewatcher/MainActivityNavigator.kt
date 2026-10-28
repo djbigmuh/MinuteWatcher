@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher
+﻿package host.serv.djbigmuh.minutewatcher
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager

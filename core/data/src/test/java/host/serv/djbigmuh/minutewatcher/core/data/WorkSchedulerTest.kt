@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -82,9 +82,9 @@ class WorkSchedulerTest {
         val activeWork = newWorkInfos.first { it.id != firstWorkId }
         assertNotEquals(firstWorkId, activeWork.id)
 
-        val cancelledWork = newWorkInfos.firstOrNull { it.id == firstWorkId }
-        if (cancelledWork != null) {
-            assertEquals(WorkInfo.State.CANCELLED, cancelledWork.state)
+        val canceledWork = newWorkInfos.firstOrNull { it.id == firstWorkId }
+        if (canceledWork != null) {
+            assertEquals(WorkInfo.State.CANCELLED, canceledWork.state)
         }
     }
 

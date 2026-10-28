@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.ui.components
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.NumberInputNormalizer
 import host.serv.djbigmuh.minutewatcher.core.model.Constants

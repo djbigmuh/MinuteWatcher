@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
@@ -19,7 +19,7 @@ interface AutoResetScheduleRepository {
      * Sets the timestamp (wall clock millis) of the last auto-reset check.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setLastCheckMillis(valueMillis: Long)
 
@@ -33,7 +33,7 @@ interface AutoResetScheduleRepository {
      * Sets the consecutive failure count of auto-reset checks.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setFailureCount(count: Int)
 }

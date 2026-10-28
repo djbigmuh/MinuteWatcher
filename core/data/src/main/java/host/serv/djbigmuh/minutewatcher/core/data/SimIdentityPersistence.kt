@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
@@ -49,7 +49,7 @@ class SimIdentityPersistence
          *
          * @param identities List of SIM identities to save.
          * @throws IOException If DataStore read/write times out or fails.
-         * @throws CancellationException If caller coroutine scope is cancelled.
+         * @throws CancellationException If caller coroutine scope is canceled.
          */
         suspend fun saveSimIdentitiesInfo(identities: List<SimIdentity>) {
             val validIdentities = filterValidIdentities(identities)

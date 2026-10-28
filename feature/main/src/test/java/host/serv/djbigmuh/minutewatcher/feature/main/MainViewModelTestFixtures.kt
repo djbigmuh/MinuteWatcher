@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main
+﻿package host.serv.djbigmuh.minutewatcher.feature.main
 
 import androidx.lifecycle.SavedStateHandle
 import host.serv.djbigmuh.minutewatcher.core.android.testing.SingletonResetRule

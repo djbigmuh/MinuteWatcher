@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model.util
+﻿package host.serv.djbigmuh.minutewatcher.core.model.util
 
 object UsageColors {
     private const val NORMAL_DARK = 0xFF6BCB77.toInt()

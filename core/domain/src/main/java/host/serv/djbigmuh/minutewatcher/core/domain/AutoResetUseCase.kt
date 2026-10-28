@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 /**
  * Use case for performing automatic reset of SIM usage statistics.
@@ -12,7 +12,7 @@ interface AutoResetUseCase {
      *
      * @param shouldNotify Whether to show notification about reset.
      * @return `true` if all SIMs were successfully processed, `false` if any partial failure occurred.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun performAutoReset(shouldNotify: Boolean = true): Boolean
 }

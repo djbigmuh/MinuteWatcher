@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.TimeProvider
@@ -47,11 +47,11 @@ class TrackerCancellationRegressionTest {
     }
 
     @Test
-    fun `TrafficTracker startInitialization does NOT proceed if cancelled during join`() =
+    fun `TrafficTracker startInitialization does NOT proceed if canceled during join`() =
         runTest {
             val tracker = createTracker(backgroundScope)
 
-            // 1. Create a job that will stay in 'Cancelling' state for a bit
+            // 1. Create a job that will stay in 'Canceling' state for a bit
             val oldJob =
                 backgroundScope.launch {
                     withContext(NonCancellable) {
@@ -82,12 +82,12 @@ class TrackerCancellationRegressionTest {
             job.cancel()
             runCurrent()
 
-            // Even if oldJob completes now, 'job' should have been cancelled at ensureActive()
+            // Even if oldJob completes now, 'job' should have been canceled at ensureActive()
             testScheduler.advanceTimeBy(2000)
             runCurrent()
 
             assertFalse(
-                "startInitialization should have been cancelled and NOT finished",
+                "startInitialization should have been canceled and NOT finished",
                 startInitializationFinished,
             )
         }

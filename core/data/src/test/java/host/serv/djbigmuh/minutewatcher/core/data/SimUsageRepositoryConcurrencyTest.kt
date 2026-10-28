@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import host.serv.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider

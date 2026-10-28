@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions
 
 import androidx.appfunctions.AppFunctionSerializable
 

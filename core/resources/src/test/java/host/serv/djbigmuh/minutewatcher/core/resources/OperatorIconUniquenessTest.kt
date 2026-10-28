@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.resources
+﻿package host.serv.djbigmuh.minutewatcher.core.resources
 
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android.util
+﻿package host.serv.djbigmuh.minutewatcher.core.android.util
 
 /**
  * Internal storage for operator brand search tokens.

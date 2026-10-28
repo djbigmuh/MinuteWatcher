@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model.util
+﻿package host.serv.djbigmuh.minutewatcher.core.model.util
 
 /**
  * Utility for clamping numeric values within a specified range.

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
@@ -35,7 +35,7 @@ class InitialSetupWorker
          * the unique setup work chain. Exceeding this budget is treated as temporary
          * storage degradation and triggers [Result.retry].
          *
-         * @throws CancellationException if the work is cancelled by WorkManager.
+         * @throws CancellationException if the work is canceled by WorkManager.
          */
         override suspend fun doWork(): Result =
             withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {

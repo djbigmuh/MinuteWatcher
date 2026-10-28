@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.service.tile
+﻿package host.serv.djbigmuh.minutewatcher.service.tile
 
 import host.serv.djbigmuh.minutewatcher.core.model.PackageType
 import host.serv.djbigmuh.minutewatcher.core.model.SimSnapshot

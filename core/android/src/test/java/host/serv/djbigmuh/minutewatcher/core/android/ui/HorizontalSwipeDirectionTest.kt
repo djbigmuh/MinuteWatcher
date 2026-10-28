@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.android.ui
+﻿package host.serv.djbigmuh.minutewatcher.core.android.ui
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

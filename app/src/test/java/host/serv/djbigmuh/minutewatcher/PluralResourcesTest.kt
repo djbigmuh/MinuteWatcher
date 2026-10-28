@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher
+﻿package host.serv.djbigmuh.minutewatcher
 
 import android.icu.text.PluralRules
 import host.serv.djbigmuh.minutewatcher.core.resources.testing.LocaleResourceDirs

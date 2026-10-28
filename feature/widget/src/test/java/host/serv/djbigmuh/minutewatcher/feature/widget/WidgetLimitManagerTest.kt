@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.widget
+﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import host.serv.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
@@ -244,7 +244,7 @@ class WidgetLimitManagerTest {
             assertThrows(CancellationException::class.java) {
                 runBlocking {
                     manager.performProbeUpdate(mock()) { _, _ ->
-                        throw CancellationException("Cancelled")
+                        throw CancellationException("Canceled")
                     }
                 }
             }

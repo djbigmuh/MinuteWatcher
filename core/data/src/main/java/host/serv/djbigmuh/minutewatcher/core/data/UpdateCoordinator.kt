@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.annotation.VisibleForTesting
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
@@ -691,7 +691,7 @@ class UpdateCoordinator
          * @param updateWidget If true, a widget update will be initiated.
          * @param force If true, an immediate widget update is forced, bypassing hash checks.
          * Safe to call from any coroutine context.
-         * @throws CancellationException if the notification process is cancelled.
+         * @throws CancellationException if the notification process is canceled.
          */
         override suspend fun notifyDataChanged(
             updateWidget: Boolean,
@@ -741,7 +741,7 @@ class UpdateCoordinator
             if (oldJob != null) {
                 takeoverUpdateJob.set(oldJob)
                 oldJob.cancel()
-                // Wait for the cancelled job to finish to avoid coalescing in WidgetUpdater
+                // Wait for the canceled job to finish to avoid coalescing in WidgetUpdater
                 withContext(NonCancellable) {
                     withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                         oldJob.join()

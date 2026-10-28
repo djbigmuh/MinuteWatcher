@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -292,7 +292,7 @@ class UsageStateRepositoryImpl
          * @return [RefreshResult] containing the new snapshot on success, or the previous one on timeout.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * @throws CancellationException if the refresh is cancelled.
+         * @throws CancellationException if the refresh is canceled.
          */
         override suspend fun refresh(): RefreshResult {
             val startRevision = snapshotFlow.value.revision

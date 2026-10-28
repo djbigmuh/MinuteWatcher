@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.resources
+﻿package host.serv.djbigmuh.minutewatcher.core.resources
 
 import host.serv.djbigmuh.minutewatcher.core.resources.testing.LocaleResourceDirs
 import org.junit.Assert.assertEquals

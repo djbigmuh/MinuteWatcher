@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.settings.ui
+﻿package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.DataSourceType
@@ -56,12 +56,12 @@ class WidgetSettingsViewModelAodTest : BaseWidgetSettingsViewModelFixture() {
     fun `refreshAodSummaryAvailability rethrows CancellationException`() =
         runTest {
             whenever(aodSummaryAvailability.isAodSummaryAvailable())
-                .thenThrow(CancellationException("Cancelled"))
+                .thenThrow(CancellationException("Canceled"))
 
             try {
                 initViewModel()
             } catch (e: CancellationException) {
-                assertEquals("Cancelled", e.message)
+                assertEquals("Canceled", e.message)
             }
         }
 

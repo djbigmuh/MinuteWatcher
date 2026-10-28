@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
@@ -35,7 +35,7 @@ interface SimIdentitySeedRepository {
      *
      * @param seed Seed string to persist.
      * @throws Exception if non-timeout storage operation fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setSeed(seed: String)
 
@@ -48,7 +48,7 @@ interface SimIdentitySeedRepository {
      * @param generator Function to generate a new seed if needed.
      * @return [SeedResolutionResult] containing either a persistent or ephemeral seed.
      * @throws IOException if critical storage access fails (though usually falls back to ephemeral).
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun getOrCreateSeedOrEphemeralFallback(generator: () -> String): SeedResolutionResult
 

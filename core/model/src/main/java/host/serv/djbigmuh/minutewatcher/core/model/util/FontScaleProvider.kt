@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model.util
+﻿package host.serv.djbigmuh.minutewatcher.core.model.util
 
 /**
  * Provides font size multipliers based on user settings.

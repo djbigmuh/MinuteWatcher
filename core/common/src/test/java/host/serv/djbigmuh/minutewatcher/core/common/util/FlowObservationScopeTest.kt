@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.util
+﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,7 +58,7 @@ class FlowObservationScopeTest {
             scope.observe(flow2) { values2.add(it) }
             runCurrent()
 
-            assertTrue("First job should be cancelled", job1.isCancelled)
+            assertTrue("First job should be canceled", job1.isCancelled)
 
             flow1.emit(1)
             flow2.emit(10)

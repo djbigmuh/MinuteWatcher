@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model
+﻿package host.serv.djbigmuh.minutewatcher.core.model
 
 import host.serv.djbigmuh.minutewatcher.core.model.util.ClampingUtils
 

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
@@ -16,7 +16,7 @@ interface DataChangeNotifier {
      * @param force Whether to force the notification regardless of throttle.
      * @return True if the operation (and optional widget update) completed successfully.
      * @throws IOException if storage access fails during related operations.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun notifyDataChanged(
         updateWidget: Boolean = true,

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.resources
+﻿package host.serv.djbigmuh.minutewatcher.core.resources
 
 import android.content.Context
 import android.graphics.Bitmap

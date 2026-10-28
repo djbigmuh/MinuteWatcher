@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.baselineprofile
+﻿package host.serv.djbigmuh.minutewatcher.baselineprofile
 
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4

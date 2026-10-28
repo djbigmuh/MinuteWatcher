@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.controller
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.controller
 
 import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger

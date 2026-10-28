@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher
+﻿package host.serv.djbigmuh.minutewatcher
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -95,7 +95,7 @@ class ReceiverAsyncTest {
             val mockPendingResult: BroadcastReceiver.PendingResult = mock()
 
             goAsyncWithScope(context, mockPendingResult, dispatcher = testDispatcher) {
-                throw CancellationException("Cancelled")
+                throw CancellationException("Canceled")
             }
 
             advanceUntilIdle()
@@ -123,7 +123,7 @@ class ReceiverAsyncTest {
         }
 
     @Test
-    fun `after block completion, created scope and supervisor job are cancelled`() =
+    fun `after block completion, created scope and supervisor job are canceled`() =
         runTest(testDispatcher) {
             val mockPendingResult: BroadcastReceiver.PendingResult = mock()
 
@@ -134,7 +134,7 @@ class ReceiverAsyncTest {
 
             advanceUntilIdle()
 
-            assertTrue("Job should be completed/cancelled after completion", job.isCompleted)
+            assertTrue("Job should be completed/canceled after completion", job.isCompleted)
             verify(mockPendingResult, times(1)).finish()
         }
 

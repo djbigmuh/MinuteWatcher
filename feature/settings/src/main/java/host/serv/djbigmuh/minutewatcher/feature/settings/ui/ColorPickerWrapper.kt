@@ -1,4 +1,4 @@
-@file:Suppress("MatchingDeclarationName")
+﻿@file:Suppress("MatchingDeclarationName")
 
 package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 

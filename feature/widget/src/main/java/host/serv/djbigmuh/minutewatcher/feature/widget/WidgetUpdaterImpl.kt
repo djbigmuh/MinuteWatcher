@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.widget
+﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
@@ -73,7 +73,7 @@ class WidgetUpdaterImpl
          * Supports coalescing: if an update is already in progress, the caller will join it.
          *
          * @return [WidgetUpdateResult] indicating the outcome of the update.
-         * @throws CancellationException if the coroutine scope is cancelled.
+         * @throws CancellationException if the coroutine scope is canceled.
          */
         override suspend fun updateAll(): WidgetUpdateResult {
             val (deferred, isCoalesced) =
@@ -131,7 +131,7 @@ class WidgetUpdaterImpl
                 tailDeferred.complete(finalRes)
                 completed = true
             } catch (e: CancellationException) {
-                AppLogger.d("WidgetUpdater: tail pass cancelled")
+                AppLogger.d("WidgetUpdater: tail pass canceled")
                 tailDeferred.complete(transientFailure(wasCoalesced = true))
                 completed = true
                 throw e

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -50,7 +50,7 @@ internal class SimIdentitySeedRepositoryImpl
          * On non-timeout storage errors, rethrows the exception to the caller.
          *
          * @throws Exception if non-timeout storage operation fails.
-         * @throws CancellationException if the coroutine is cancelled.
+         * @throws CancellationException if the coroutine is canceled.
          */
         override suspend fun setSeed(seed: String) {
             try {

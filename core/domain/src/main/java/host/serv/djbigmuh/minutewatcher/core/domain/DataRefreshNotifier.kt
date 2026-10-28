@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
@@ -30,7 +30,7 @@ interface DataRefreshNotifier {
      * @param isManual Whether the refresh was triggered manually by the user.
      * @param suppressWidgetUpdate Whether to avoid updating widgets after refresh.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun notifyRefresh(
         isManual: Boolean = false,

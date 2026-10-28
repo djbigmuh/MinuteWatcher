@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.settings.ui
+﻿package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import android.content.Context
 import android.content.res.Configuration
@@ -606,7 +606,7 @@ class WidgetSettingsScreenTest {
     }
 
     @Test
-    fun cancellingColorPickerDialogDoesNotCallUpdateSettingsAndClosesDialog() {
+    fun cancelingColorPickerDialogDoesNotCallUpdateSettingsAndClosesDialog() {
         whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
 
         composeTestRule.setContent {

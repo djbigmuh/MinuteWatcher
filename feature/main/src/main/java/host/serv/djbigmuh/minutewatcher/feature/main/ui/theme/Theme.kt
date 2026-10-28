@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.main.ui.theme
+﻿package host.serv.djbigmuh.minutewatcher.feature.main.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.common.util.firstWithTimeout
@@ -43,7 +43,7 @@ class WidgetSettingsRepository
          * @return [WidgetSettingsState] containing the aggregated widget settings.
          *
          * **Thread Safety:** Safe to call from any coroutine context.
-         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
+         * @throws kotlinx.coroutines.CancellationException if the operation is canceled.
          */
         override suspend fun load(): WidgetSettingsState =
             coroutineScope {
@@ -135,7 +135,7 @@ class WidgetSettingsRepository
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore write fails.
-         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
+         * @throws kotlinx.coroutines.CancellationException if the operation is canceled.
          */
         override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
             appSettingsRepository.updateAppSettings { current ->
@@ -165,7 +165,7 @@ class WidgetSettingsRepository
          *
          * **Thread Safety:** Safe to call from any coroutine context.
          * @throws java.io.IOException if DataStore write fails.
-         * @throws kotlinx.coroutines.CancellationException if the operation is cancelled.
+         * @throws kotlinx.coroutines.CancellationException if the operation is canceled.
          */
         override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> {
             val simSettingsMap = mutableMapOf<String, SimSettingsState>()

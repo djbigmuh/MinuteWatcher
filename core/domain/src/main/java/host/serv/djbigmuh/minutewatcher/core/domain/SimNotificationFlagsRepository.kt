@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import kotlinx.coroutines.flow.Flow
 import java.io.IOException
@@ -22,7 +22,7 @@ interface SimNotificationFlagsRepository {
      * Sets the notified state for low minutes.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setNotifiedLowMinutes(
         identity: String,
@@ -38,7 +38,7 @@ interface SimNotificationFlagsRepository {
      * Sets the notified state for low traffic.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setNotifiedLowTraffic(
         identity: String,
@@ -54,7 +54,7 @@ interface SimNotificationFlagsRepository {
      * Sets the notified state for exhausted minutes.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setNotifiedExhaustedMinutes(
         identity: String,
@@ -70,7 +70,7 @@ interface SimNotificationFlagsRepository {
      * Sets the notified state for exhausted traffic.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setNotifiedExhaustedTraffic(
         identity: String,
@@ -86,7 +86,7 @@ interface SimNotificationFlagsRepository {
      * Sets the notified state for critical minutes.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setNotifiedCriticalMinutes(
         identity: String,
@@ -102,7 +102,7 @@ interface SimNotificationFlagsRepository {
      * Sets the notified state for critical traffic.
      *
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setNotifiedCriticalTraffic(
         identity: String,

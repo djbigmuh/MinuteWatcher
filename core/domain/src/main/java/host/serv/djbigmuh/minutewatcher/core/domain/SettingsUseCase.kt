@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.flow.Flow
@@ -35,7 +35,7 @@ class SettingsUseCase
          *
          * @param theme The new theme to apply.
          * @throws IOException if storage access fails.
-         * @throws CancellationException if the coroutine is cancelled.
+         * @throws CancellationException if the coroutine is canceled.
          */
         suspend fun setTheme(theme: AppTheme) {
             appSettingsRepository.updateAppSettings { it.copy(theme = theme) }
@@ -46,7 +46,7 @@ class SettingsUseCase
          *
          * @param language The new language code to apply.
          * @throws IOException if storage access fails.
-         * @throws CancellationException if the coroutine is cancelled.
+         * @throws CancellationException if the coroutine is canceled.
          */
         suspend fun setLanguage(language: String?) {
             appSettingsRepository.updateAppSettings { it.copy(language = language) }

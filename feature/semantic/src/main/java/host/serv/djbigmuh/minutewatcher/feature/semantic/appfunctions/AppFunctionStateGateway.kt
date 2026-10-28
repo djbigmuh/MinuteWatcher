@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions
+﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.appfunctions
 
 import android.content.Context
 import android.os.Build

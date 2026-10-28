@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.feature.settings.ui
+﻿package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 
 import host.serv.djbigmuh.minutewatcher.core.domain.WidgetSettingsLoader
 import host.serv.djbigmuh.minutewatcher.core.model.WidgetSettingsState
@@ -226,13 +226,13 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
     fun `save throws CancellationException rethrows`() =
         runTest {
             initViewModel()
-            whenever(saver.save(any(), any())).thenThrow(CancellationException("Cancelled"))
+            whenever(saver.save(any(), any())).thenThrow(CancellationException("Canceled"))
 
             try {
                 viewModel.saveAndNotify()
                 advanceUntilIdle()
             } catch (e: CancellationException) {
-                assertEquals("Cancelled", e.message)
+                assertEquals("Canceled", e.message)
             }
         }
 
@@ -240,7 +240,7 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
     fun `performEmergencySave rethrows CancellationException`() =
         runTest {
             initViewModel()
-            whenever(saver.save(any(), any())).thenThrow(CancellationException("Emergency save cancelled"))
+            whenever(saver.save(any(), any())).thenThrow(CancellationException("Emergency save canceled"))
 
             org.junit.Assert.assertThrows(CancellationException::class.java) {
                 kotlinx.coroutines.runBlocking {

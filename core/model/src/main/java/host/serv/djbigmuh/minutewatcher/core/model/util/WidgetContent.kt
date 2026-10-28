@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.model.util
+﻿package host.serv.djbigmuh.minutewatcher.core.model.util
 
 import host.serv.djbigmuh.minutewatcher.core.model.SimUiState
 import host.serv.djbigmuh.minutewatcher.core.model.WidgetStrings

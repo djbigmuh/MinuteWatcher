@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.data
+﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import host.serv.djbigmuh.minutewatcher.core.model.IdentitySource
@@ -188,7 +188,7 @@ class CallTrackerResilienceTest : CallTrackerTestFixtures() {
             setupCommonMocks()
             val cancelFlow =
                 kotlinx.coroutines.flow.flow<Unit> {
-                    throw kotlinx.coroutines.CancellationException("Cancelled")
+                    throw kotlinx.coroutines.CancellationException("Canceled")
                 }
             whenever(permissionStateNotifier.changes).thenReturn(cancelFlow)
             val callTracker = createTracker()

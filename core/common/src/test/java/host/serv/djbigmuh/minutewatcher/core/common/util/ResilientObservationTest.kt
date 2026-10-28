@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.common.util
+﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -217,7 +217,7 @@ class ResilientObservationTest {
             var completedCalled = false
             val source =
                 flow<Int> {
-                    throw CancellationException("Cancelled")
+                    throw CancellationException("Canceled")
                 }
 
             try {

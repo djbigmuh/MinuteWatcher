@@ -161,7 +161,7 @@ class MainSettingsControllerTest {
     fun `cancellation is not suppressed`() {
         runTest {
             withTimeout(5.seconds) {
-                var wasCancelled = false
+                var wasCanceled = false
                 val fakeRepository =
                     object : AppSettingsRepository {
                         override fun getAppSettings() = MutableStateFlow(AppSettings())
@@ -172,7 +172,7 @@ class MainSettingsControllerTest {
                             try {
                                 delay(10_000)
                             } catch (e: CancellationException) {
-                                wasCancelled = true
+                                wasCanceled = true
                                 throw e
                             }
                         }
@@ -194,7 +194,7 @@ class MainSettingsControllerTest {
                 appJob.cancel()
                 advanceUntilIdle()
 
-                assertTrue("Cancellation should be propagated to the repository", wasCancelled)
+                assertTrue("Cancellation should be propagated to the repository", wasCanceled)
             }
         }
     }

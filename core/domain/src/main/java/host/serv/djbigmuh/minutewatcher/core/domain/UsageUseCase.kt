@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
@@ -14,7 +14,7 @@ interface UsageUseCase {
      * Refreshes operator information for all active SIMs.
      *
      * @throws IOException if system service or storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun refreshOperatorInfo()
 
@@ -24,7 +24,7 @@ interface UsageUseCase {
      * @param slot The SIM slot index.
      * @param remainingMinutes The new remaining minutes value.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun adjustMinutes(
         slot: Int,
@@ -37,7 +37,7 @@ interface UsageUseCase {
      * @param slot The SIM slot index.
      * @param remainingGb The new remaining traffic in GB.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun adjustTraffic(
         slot: Int,
@@ -49,7 +49,7 @@ interface UsageUseCase {
      *
      * @param slot The SIM slot index.
      * @throws IOException if storage access fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun resetCounters(slot: Int)
 }

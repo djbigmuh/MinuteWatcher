@@ -1,4 +1,4 @@
-package host.serv.djbigmuh.minutewatcher.core.domain
+﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingKey
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
@@ -17,7 +17,7 @@ interface TrackingStatusRepository {
      *
      * @param key The unique key of the component to recover.
      * @throws IOException if recovery fails.
-     * @throws CancellationException if the coroutine is cancelled.
+     * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun recoverTracking(key: TrackingKey)
 
