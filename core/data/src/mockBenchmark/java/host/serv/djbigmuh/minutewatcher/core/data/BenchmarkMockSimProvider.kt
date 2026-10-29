@@ -6,6 +6,9 @@ import host.serv.djbigmuh.minutewatcher.core.model.IdentitySource
 import host.serv.djbigmuh.minutewatcher.core.model.SimIdentity
 import javax.inject.Inject
 
+// Hilt entry point of the mockBenchmark build variant: instantiated via dependency injection,
+// never referenced directly from code.
+@Suppress("unused")
 class BenchmarkMockSimProvider
     @Inject
     constructor() : MockSimProvider {
