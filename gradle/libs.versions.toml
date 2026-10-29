@@ -36,6 +36,8 @@ kotlinxCoroutines = "1.11.0"
 kotlinxCoroutinesTest = "1.11.0"
 ktlint = "14.2.0"
 detekt = "2.0.0-alpha.6"
+desugarJdkLibs = "2.1.5"
+javaxInject = "1"
 
 [libraries]
 # DI - Hilt
@@ -62,7 +64,6 @@ androidxComposeBom = { group = "androidx.compose", name = "compose-bom", version
 
 # Material 3
 androidxMaterial3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
-androidxMaterial3WindowSize = { group = "androidx.compose.material3", name = "material3-window-size-class", version.ref = "material3" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
