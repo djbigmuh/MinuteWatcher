@@ -160,7 +160,6 @@ class TrafficTracker
 
         private val trafficMutex = Mutex()
         private val updateMutex = Mutex()
-        private var currentUpdateForced = false
         private val initializationFailed = AtomicBoolean(false)
         private val isInitStarted = AtomicBoolean(false)
         private val bothPermissionsGranted = AtomicBoolean(false)
@@ -476,12 +475,12 @@ class TrafficTracker
             }
         }
 
-        private suspend fun performInitializeWithRetry(): TrafficUpdateOutcome {
+    private suspend fun performInitializeWithRetry(force: Boolean = false): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             var lastException: Exception? = null
             var finalOutcome: TrafficUpdateOutcome? = null
             for (attempt in 1..MAX_INIT_ATTEMPTS) {
-                when (val result = executeInitAttempt(startElapsed)) {
+                when (val result = executeInitAttempt(startElapsed, force)) {
                     is InitAttemptResult.Success -> {
                         initializationFailed.set(false)
                         finalOutcome = result.outcome
@@ -529,9 +528,12 @@ class TrafficTracker
             ) : InitAttemptResult
         }
 
-        private suspend fun executeInitAttempt(startElapsed: Long): InitAttemptResult =
+    private suspend fun executeInitAttempt(
+        startElapsed: Long,
+        force: Boolean,
+    ): InitAttemptResult =
             try {
-                val outcome = updateTrafficUsageLogic()
+                val outcome = updateTrafficUsageLogic(force)
                 InitAttemptResult.Success(outcome)
             } catch (e: CancellationException) {
                 throw e
@@ -667,18 +669,13 @@ class TrafficTracker
                 if (intercepted) {
                     currentInitToken.compareAndSet(token, null)
                     return runCatchingTrafficUpdate(startElapsed) {
-                        performInitializeWithRetry()
+                        performInitializeWithRetry(force)
                     }
                 }
             }
 
-            currentUpdateForced = force
-            try {
-                return runCatchingTrafficUpdate(startElapsed) {
-                    updateTrafficUsageLogic()
-                }
-            } finally {
-                currentUpdateForced = false
+            return runCatchingTrafficUpdate(startElapsed) {
+                updateTrafficUsageLogic(force)
             }
         }
 
@@ -740,7 +737,7 @@ class TrafficTracker
         }
 
         @Suppress("ThrowsCount")
-        private suspend fun updateTrafficUsageLogic(): TrafficUpdateOutcome {
+        private suspend fun updateTrafficUsageLogic(force: Boolean): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             val outcome =
                 withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
@@ -765,7 +762,7 @@ class TrafficTracker
                                 )
                             }
 
-                            handleActiveSims(startElapsed, activeSims)
+                            handleActiveSims(startElapsed, activeSims, force)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: SecurityException) {
@@ -807,6 +804,7 @@ class TrafficTracker
         private suspend fun handleActiveSims(
             startElapsed: Long,
             activeSims: List<ActiveSimInfo>,
+            force: Boolean,
         ): TrafficUpdateOutcome {
             if (activeSims.isEmpty()) {
                 trafficMutex.withLock {
@@ -822,12 +820,13 @@ class TrafficTracker
                 baselineManager.cleanupRetries(activeIdentities)
             }
 
-            return processActiveSimsTraffic(startElapsed, activeSims)
+            return processActiveSimsTraffic(startElapsed, activeSims, force)
         }
 
         private suspend fun processActiveSimsTraffic(
             startElapsed: Long,
             activeSims: List<ActiveSimInfo>,
+            force: Boolean,
         ): TrafficUpdateOutcome {
             val target =
                 when (val result = targetResolver.resolve(activeSims)) {
@@ -865,12 +864,13 @@ class TrafficTracker
                 return TrafficUpdateOutcome.Skipped
             }
 
-            return executeSimChangeAndTrafficUpdate(startElapsed, target)
+            return executeSimChangeAndTrafficUpdate(startElapsed, target, force)
         }
 
         private suspend fun executeSimChangeAndTrafficUpdate(
             startElapsed: Long,
             target: TargetInfo,
+            force: Boolean,
         ): TrafficUpdateOutcome =
             try {
                 simChangeHandler.withSimChangeLock {
@@ -886,7 +886,7 @@ class TrafficTracker
                             }
                         }
                     if (targetIdentity != null) {
-                        performTrafficUpdate(startElapsed, target, targetIdentity)
+                        performTrafficUpdate(startElapsed, target, targetIdentity, force)
                     } else {
                         TrafficUpdateOutcome.Skipped
                     }
@@ -905,6 +905,7 @@ class TrafficTracker
             startElapsed: Long,
             target: TargetInfo,
             targetIdentity: String,
+            force: Boolean,
         ): TrafficUpdateOutcome {
             return trafficMutex.withLock {
                 if (!validateActiveIdentity(startElapsed, targetIdentity)) {
@@ -948,6 +949,7 @@ class TrafficTracker
                     currentRetryCount,
                     statsResult,
                     expectedLastResetDate,
+                    force,
                 )
             }
         }
@@ -1080,6 +1082,7 @@ class TrafficTracker
             currentRetryCount: Int?,
             statsResult: StatsResult,
             expectedLastResetDate: Long,
+            force: Boolean,
         ): TrafficUpdateOutcome =
             if (currentRetryCount != null) {
                 if (currentRetryCount >= TrafficBaselineManager.MAX_BASELINE_RETRIES) {
@@ -1098,6 +1101,7 @@ class TrafficTracker
                         currentRetryCount,
                         statsResult,
                         expectedLastResetDate,
+                        force,
                     )
                 }
             } else {
@@ -1107,6 +1111,7 @@ class TrafficTracker
                     targetIdentity,
                     statsResult,
                     expectedLastResetDate,
+                    force,
                 )
             }
 
@@ -1116,6 +1121,7 @@ class TrafficTracker
             targetIdentity: String,
             statsResult: StatsResult,
             expectedLastResetDate: Long,
+            force: Boolean,
         ): TrafficUpdateOutcome {
             if (statsResult !is StatsResult.Success) {
                 val message =
@@ -1143,6 +1149,7 @@ class TrafficTracker
                     statsResult.bytes,
                     lastTotalBytes,
                     expectedLastResetDate,
+                    force,
                 )
             }
         }
@@ -1154,6 +1161,7 @@ class TrafficTracker
             currentBytes: Long,
             lastTotalBytes: Long,
             expectedLastResetDate: Long,
+            force: Boolean,
         ): TrafficUpdateOutcome {
             val result =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
@@ -1177,7 +1185,7 @@ class TrafficTracker
             }
 
             lastSuccessElapsed.set(timeProvider.elapsedRealtime())
-            transitionStatus(TrackingStatus.Active, force = currentUpdateForced)
+            transitionStatus(TrackingStatus.Active, force = force)
             simChangeHandler.updateLastDataSubId(target.dataSubId)
             dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
             return if (!result) {
@@ -1198,6 +1206,7 @@ class TrafficTracker
             currentPending: Int,
             statsResult: StatsResult,
             expectedLastResetDate: Long,
+            force: Boolean,
         ): TrafficUpdateOutcome =
             if (statsResult is StatsResult.Success) {
                 handleSuccessRetryAction(
@@ -1206,6 +1215,7 @@ class TrafficTracker
                     targetIdentity,
                     statsResult,
                     expectedLastResetDate,
+                    force,
                 )
             } else {
                 handleFailedRetryAction(
@@ -1222,6 +1232,7 @@ class TrafficTracker
             targetIdentity: String,
             statsResult: StatsResult.Success,
             expectedLastResetDate: Long,
+            force: Boolean,
         ): TrafficUpdateOutcome {
             val applied =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
@@ -1241,7 +1252,7 @@ class TrafficTracker
             }
             baselineManager.removeRetry(targetIdentity)
             lastSuccessElapsed.set(timeProvider.elapsedRealtime())
-            transitionStatus(TrackingStatus.Active, force = currentUpdateForced)
+            transitionStatus(TrackingStatus.Active, force = force)
             simChangeHandler.updateLastDataSubId(target.dataSubId)
             dataChangeNotifier.notifyDataChanged(updateWidget = true, force = false)
             return if (applied) {

@@ -95,7 +95,6 @@ class AodSummaryController
                 }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         private fun processUpdate(
             snapshot: GlobalSnapshot,
             settings: AppSettings,

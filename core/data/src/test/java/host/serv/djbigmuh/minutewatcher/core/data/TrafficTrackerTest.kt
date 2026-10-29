@@ -64,9 +64,6 @@ import kotlin.time.Duration.Companion.seconds
     ExperimentalCoroutinesApi::class,
     ExperimentalForInheritanceCoroutinesApi::class,
 )
-// @Suppress("LargeClass") is required because TrafficTrackerTest
-// comprehensively tests complex tracking lifecycle and edge cases.
-@Suppress("LargeClass")
 class TrafficTrackerTest {
     private val networkStatsProvider: NetworkStatsProvider = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()

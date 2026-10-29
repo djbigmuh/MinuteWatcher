@@ -156,7 +156,6 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun handleIntent(intent: Intent?) {
         intent?.let {
             val shortcutId = it.getStringExtra(IntentExtras.SHORTCUT_ID)

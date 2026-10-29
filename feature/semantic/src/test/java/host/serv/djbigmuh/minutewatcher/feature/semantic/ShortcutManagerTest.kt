@@ -44,7 +44,6 @@ import android.content.pm.ShortcutManager as AndroidShortcutManager
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "en")
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("LargeClass")
 class ShortcutManagerTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
