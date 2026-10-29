@@ -25,9 +25,9 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 - **Artifact**: `androidx.appsearch:appsearch-platform-storage` (1.1.0)
 - **Purpose**: Enables system search integration on Android 12+ (API 31+) via `PlatformStorage`.
 
-### 5. AndroidX AppFunctions (Alpha)
+### 5. AndroidX AppFunctions (Beta)
 
-- **Version**: `1.0.0-alpha10`
+- **Version**: `1.0.0-beta01`
 - **Reason**: On-device assistant integration requires compile-time API `@AppFunctionServiceEntryPoint` and
   service/schema generation via KSP; stable release is not available yet.
 - **Plan**: Transition to the stable release once available; verify manifest contract, generated service name, and

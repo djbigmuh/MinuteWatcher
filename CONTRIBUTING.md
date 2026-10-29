@@ -96,8 +96,8 @@ to `NOT_SUPPORTED`. An error banner is not displayed for errors of type `NOT_SUP
 ## Non-Stable Dependencies
 As a general rule, we prefer stable releases. However, some non-stable versions (Beta/Alpha) are currently used for specific reasons:
 
-- **AGP (Preview)**, **Robolectric (Beta)** and **Detekt (Alpha)** are explicitly permitted until stable
-  versions with equivalent fixes are available.
+- **AGP (Preview)**, **Robolectric (Beta)**, **Detekt (Alpha)** and **AppFunctions (Beta)** are explicitly
+  permitted until stable versions with equivalent fixes are available.
 - Before introducing a new non-stable dependency, agree its addition with the project owner and document the reason in `docs/dependencies.md` and as a comment in `gradle/libs.versions.toml`.
 
 ## Version Management

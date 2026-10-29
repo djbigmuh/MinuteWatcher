@@ -2,7 +2,7 @@
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.appfunctions.AppFunction
+import androidx.appfunctions.AppFunctionDeclaration
 import androidx.appfunctions.AppFunctionService
 import androidx.appfunctions.AppFunctionServiceEntryPoint
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,6 +26,6 @@ abstract class BaseMinuteWatcherAppFunctionService : AppFunctionService() {
      *
      * @return Summary of remaining minutes and mobile data per SIM card.
      */
-    @AppFunction(isEnabled = false, isDescribedByKDoc = true)
+    @AppFunctionDeclaration(isDescribedByKDoc = true)
     suspend fun getUsageSummary(): UsageSummary = usageSummaryProvider.getUsageSummary()
 }
