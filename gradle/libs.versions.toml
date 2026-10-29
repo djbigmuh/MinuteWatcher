@@ -26,8 +26,8 @@ benchmarkMacroJunit4 = "1.5.0"
 uiautomator = "2.4.0"
 leakcanary = "2.14"
 hiltWork = "1.4.0"
-mockito = "5.23.0"
-mockitoKotlin = "6.3.0"
+mockito = "5.24.0"
+mockitoKotlin = "6.4.0"
 appsearch = "1.1.0"
 # AppFunctions (beta): required for the AppFunctionServiceEntryPoint architecture used by
 # on-device assistant integration. Update to stable when available.

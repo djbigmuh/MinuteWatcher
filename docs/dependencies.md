@@ -4,28 +4,23 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 
 ## Non-stable Dependencies
 
-### 1. Robolectric (Beta)
-- **Version**: `4.17-beta-2`
-- **Reason**: Required for Android SDK 37 support in unit tests. Standard stable versions do not yet fully support the latest platform APIs.
-- **Plan**: Upgrade to the stable `4.17.x` release when available.
-
-### 2. Android Gradle Plugin (Alpha/Beta)
+### 1. Android Gradle Plugin (Alpha/Beta)
 - **Version**: `9.4.1`
 - **Reason**: The project requires the latest build system features to support SDK 37 and experimental Gradle 9.x integrations.
 - **Plan**: Continue using the latest preview versions until a stable branch for the 9.x series is established.
 
-### 3. Detekt (Alpha)
+### 2. Detekt (Alpha)
 - **Version**: `2.0.0-alpha.6`
 - **Reason**: Required for compatibility with Gradle 9.x and modern JDKs until the stable 2.x branch is released.
 - **Plan**: Upgrade to the stable 2.x release once available; revise `config/detekt/detekt.yml` for new and deprecated
   rules; verify `buildUponDefaultConfig` behavior.
 
-### 4. AndroidX AppSearch Platform Storage
+### 3. AndroidX AppSearch Platform Storage
 
 - **Artifact**: `androidx.appsearch:appsearch-platform-storage` (1.1.0)
 - **Purpose**: Enables system search integration on Android 12+ (API 31+) via `PlatformStorage`.
 
-### 5. AndroidX AppFunctions (Beta)
+### 4. AndroidX AppFunctions (Beta)
 
 - **Version**: `1.0.0-beta01`
 - **Reason**: On-device assistant integration requires compile-time API `@AppFunctionServiceEntryPoint` and
