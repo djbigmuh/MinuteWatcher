@@ -145,7 +145,7 @@ internal class CallEndResolver
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     manager.createForSubscriptionId(subId).callStateForSubscription
                 } else {
-                    @Suppress("DEPRECATION")
+                    @Suppress("DEPRECATION") // Legacy pre-S API
                     manager.callState
                 }
             } catch (e: SecurityException) {

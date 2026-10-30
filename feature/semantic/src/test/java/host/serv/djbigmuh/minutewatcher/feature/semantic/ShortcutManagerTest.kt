@@ -68,7 +68,7 @@ class ShortcutManagerTest {
         whenever(shortcutApplier.apply(any(), any())).thenAnswer { invocation ->
             val ctx = invocation.getArgument<Context>(0)
             val shortcuts = invocation.getArgument<List<ShortcutInfoCompat>>(1)
-            androidx.core.content.pm.ShortcutManagerCompat
+            ShortcutManagerCompat
                 .setDynamicShortcuts(ctx, shortcuts)
             Unit
         }
@@ -527,8 +527,7 @@ class ShortcutManagerTest {
     @Test
     fun `failed application does not cache projection and retries on identical snapshot`() =
         runTest {
-            org.mockito.kotlin
-                .whenever(shortcutApplier.apply(any(), any()))
+            whenever(shortcutApplier.apply(any(), any()))
                 .thenThrow(RuntimeException("Apply failed"))
                 .thenAnswer { invocation ->
                     val ctx = invocation.getArgument<Context>(0)

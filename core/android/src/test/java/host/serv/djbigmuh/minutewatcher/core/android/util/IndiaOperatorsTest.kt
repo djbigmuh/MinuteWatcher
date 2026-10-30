@@ -40,8 +40,8 @@ class IndiaOperatorsTest {
 
     @Test
     fun `test BSNL PLMNs do not resolve to Airtel or Vi`() {
-        assertNotEquals("operator_airtel", resolvePlmn("40434"))
-        assertNotEquals("operator_vi", resolvePlmn("40434"))
+        assertNotEquals("operator_airtel", resolvePlmn())
+        assertNotEquals("operator_vi", resolvePlmn())
     }
 
     @Test
@@ -56,8 +56,8 @@ class IndiaOperatorsTest {
         assertEquals(R.drawable.ic_operator_bsnl, SimUtils.getOperatorIconResource("bsnl"))
     }
 
-    private fun resolvePlmn(plmn: String): String? {
-        val result = OperatorResolver.resolve(context, "", listOf(plmn), 0)
+    private fun resolvePlmn(): String? {
+        val result = OperatorResolver.resolve(context, "", listOf("40434"), 0)
         return result.brandKey
     }
 

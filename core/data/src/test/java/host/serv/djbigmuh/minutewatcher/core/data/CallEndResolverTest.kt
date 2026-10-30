@@ -189,7 +189,7 @@ class CallEndResolverTest {
     fun `resolveUnknownSubIdEnd returns all active SubIds when global callState is IDLE on SDK below 31`() =
         runTest {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
-            @Suppress("DEPRECATION")
+            @Suppress("DEPRECATION") // Legacy test API
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_IDLE)
 
             val result = resolver.resolveUnknownSubIdEnd()
@@ -203,7 +203,7 @@ class CallEndResolverTest {
     fun `resolveUnknownSubIdEnd returns single SubId when global callState not IDLE on SDK below 31`() =
         runTest {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
-            @Suppress("DEPRECATION")
+            @Suppress("DEPRECATION") // Suppressing deprecation warning for legacy telephony call state API in tests
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
 
             val result = resolver.resolveUnknownSubIdEnd()
@@ -217,7 +217,7 @@ class CallEndResolverTest {
     fun `resolveUnknownSubIdEnd returns INACCURATE_ATTRIBUTION when global callState not IDLE on SDK below 31`() =
         runTest {
             whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1, 2))
-            @Suppress("DEPRECATION")
+            @Suppress("DEPRECATION") // Suppressing deprecation warning for legacy telephony call state API in tests
             whenever(telephonyManager.callState).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
 
             val result = resolver.resolveUnknownSubIdEnd()

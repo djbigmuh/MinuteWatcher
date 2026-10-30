@@ -75,9 +75,8 @@ class DataStoreRetryHelper
                         }
                     if (emission != null) {
                         return Result.success(emission.value)
-                    } else {
-                        lastException = DataStoreReadTimeoutException(label)
                     }
+                    lastException = DataStoreReadTimeoutException(label)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

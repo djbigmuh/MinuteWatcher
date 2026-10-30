@@ -13,6 +13,8 @@ class RobolectricSdkSmokeTest {
     @Test
     fun `verify Robolectric runs on expected SDK`() {
         val application = ApplicationProvider.getApplicationContext<Application>()
-        assertEquals(application.applicationInfo.targetSdkVersion, Build.VERSION.SDK_INT)
+        val expectedSdk = application.applicationInfo.targetSdkVersion
+        val actualSdk = Build.VERSION.SDK_INT
+        assertEquals(expectedSdk, actualSdk)
     }
 }

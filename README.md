@@ -81,8 +81,6 @@ The app follows modern Android development best practices:
 ### Non-Stable Dependencies
 The project uses a few non-stable (Beta/Alpha) versions of critical libraries to access essential fixes and modern features:
 
-- **Baseline Profile (RC)**: Used to resolve critical performance profiling issues on newer Android versions.
-- **Robolectric (Beta)**: Used to ensure compatibility with the latest Jetpack Compose features in unit tests.
 - **Detekt (Alpha)**: Static analysis; the 2.x line is used ahead of its stable release for rule and Gradle
   compatibility.
 

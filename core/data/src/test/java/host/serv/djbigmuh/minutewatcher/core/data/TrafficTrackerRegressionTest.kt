@@ -122,7 +122,7 @@ class TrafficTrackerRegressionTest {
                 )
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0")))
-            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage()))
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(5000L))
             whenever(simUsageResetRepositoryDelegate.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
             whenever(simUsageResetRepositoryDelegate.getBaselineRetryCount("sim_0")).thenReturn(MutableStateFlow(1))
@@ -163,7 +163,7 @@ class TrafficTrackerRegressionTest {
                 )
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0")))
-            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage("sim_0")))
+            whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(createSimUsage()))
             whenever(simUsageResetRepositoryDelegate.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
             whenever(simUsageResetRepositoryDelegate.getBaselineRetryCount("sim_0")).thenReturn(flowOf(null))
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(5000L))
@@ -262,9 +262,9 @@ class TrafficTrackerRegressionTest {
         return TrafficTracker(deps, scope).apply { ensureStarted() }
     }
 
-    private fun createSimUsage(identity: String) =
+    private fun createSimUsage() =
         SimUsage(
-            identity = identity,
+            identity = "sim_0",
             slotIndex = 0,
             subscriptionId = 1,
             operator = "Carrier",

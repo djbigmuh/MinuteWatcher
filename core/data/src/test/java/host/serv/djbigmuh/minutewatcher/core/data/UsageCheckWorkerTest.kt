@@ -138,13 +138,13 @@ class UsageCheckWorkerTest {
     }
 
     private fun createTrafficSnapshot(
-        identity: String,
         used: Long,
-        limit: Long,
         remaining: Long,
         autoResetDay: Int = 1,
         autoReset: Boolean = true,
     ): GlobalSnapshot {
+        val limit = 1000L * 1024 * 1024
+        val identity = "sim_0"
         val entity =
             SemanticEntity(
                 id = "0_traffic",
@@ -307,21 +307,19 @@ class UsageCheckWorkerTest {
     @Test
     fun `traffic critical notification uses critical level`() =
         runTest(testDispatcher) {
-            val identity = "sim_0"
-            setupTrafficCriticalScenario(identity)
+            setupTrafficCriticalScenario()
 
             worker.doWork()
 
             verifyTrafficCriticalNotification()
         }
 
-    private suspend fun setupTrafficCriticalScenario(identity: String) {
+    private suspend fun setupTrafficCriticalScenario() {
         setupDefaultMocks()
-        val limit = 1000L * 1024 * 1024
         val used = 950L * 1024 * 1024
         val remaining = 50L * 1024 * 1024
 
-        val snapshot = createTrafficSnapshot(identity, used, limit, remaining)
+        val snapshot = createTrafficSnapshot(used, remaining)
 
         whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
     }
@@ -458,7 +456,7 @@ class UsageCheckWorkerTest {
             whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
             whenever(appSettingsRepository.getAppSettings())
                 .thenReturn(flowOf(AppSettings(notifyLowMinutes = true, notifyLowTraffic = false, isLoaded = true)))
-            val identity = "sim_stale_traf"
+            val identity = "sim_0"
             whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(false))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedMinutes(identity)).thenReturn(flowOf(false))
@@ -466,14 +464,10 @@ class UsageCheckWorkerTest {
             whenever(simNotificationFlagsRepository.getNotifiedCriticalTraffic(identity)).thenReturn(flowOf(true))
             whenever(simNotificationFlagsRepository.getNotifiedExhaustedTraffic(identity)).thenReturn(flowOf(true))
 
-            val limit = 1000L * 1024 * 1024
             val snapshot =
                 createTrafficSnapshot(
-                    identity,
                     used = 800L * 1024 * 1024,
-                    limit = limit,
-                    remaining =
-                        200L * 1024 * 1024,
+                    remaining = 200L * 1024 * 1024,
                 )
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
 

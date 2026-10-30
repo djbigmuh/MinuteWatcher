@@ -91,16 +91,16 @@ class SimIdentityConcurrencyStressTest {
             )
     }
 
-    private fun TestScope.createTestDataStore(name: String): androidx.datastore.core.DataStore<Preferences> =
+    private fun TestScope.createTestDataStore(): androidx.datastore.core.DataStore<Preferences> =
         PreferenceDataStoreFactory.create(
             scope = backgroundScope,
-            produceFile = { tmpFolder.newFile("stress_${name}_${System.currentTimeMillis()}.preferences_pb") },
+            produceFile = { tmpFolder.newFile("stress_ds_${System.currentTimeMillis()}.preferences_pb") },
         )
 
     @Test
     fun `concurrent getSimIdentity calls for same slot produce identical stable results without race condition`() =
         runTest {
-            val ds = createTestDataStore("stress_ds")
+            val ds = createTestDataStore()
             val seedRepo = SimIdentitySeedRepositoryImpl(ds)
 
             val repository =

@@ -99,7 +99,7 @@ class WidgetLimitManager
 
         fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
-        @Suppress("ThrowsCount")
+    @Suppress("ThrowsCount") // Multiple exception types
         suspend fun setWidgetLimitExceeded(value: Boolean) {
             if (cachedLimitExceeded == null) {
                 val settings =

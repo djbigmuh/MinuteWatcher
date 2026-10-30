@@ -146,15 +146,14 @@ object TrackingBannerMapper {
         status: TrackingStatus?,
         retryCount: Int,
         dismissed: Boolean,
-    ): Boolean {
-        if ((status !is TrackingStatus.Error) || dismissed) return false
-
-        return when (status.type) {
-            TrackingStatus.ErrorType.NOT_SUPPORTED -> false
-            TrackingStatus.ErrorType.DATABASE_ERROR -> retryCount < MAX_APPSEARCH_RETRY_COUNT
-            else -> true
-        }
-    }
+    ): Boolean =
+        status is TrackingStatus.Error &&
+            !dismissed &&
+            when (status.type) {
+                TrackingStatus.ErrorType.NOT_SUPPORTED -> false
+                TrackingStatus.ErrorType.DATABASE_ERROR -> retryCount < MAX_APPSEARCH_RETRY_COUNT
+                else -> true
+            }
 
     /**
      * Maximum number of user-initiated AppSearch recovery attempts before the error banner is hidden.

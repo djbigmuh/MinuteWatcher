@@ -53,7 +53,7 @@ class UsageUseCaseImplValidationTest {
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(100))
             whenever(
                 simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 0)))
+            ).thenReturn(flowOf(createSimUsage(minutesUsed = 0)))
 
             // target = -50 (clamped to 0)
             // formula: (0 - 100) + 0 = -100
@@ -70,7 +70,7 @@ class UsageUseCaseImplValidationTest {
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(0))
             whenever(
                 simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 0)))
+            ).thenReturn(flowOf(createSimUsage(minutesUsed = 0)))
 
             usageUseCase.adjustMinutes(0, Constants.MAX_MINUTES_LIMIT + 1000)
 
@@ -85,7 +85,7 @@ class UsageUseCaseImplValidationTest {
             whenever(simLimitsRepository.getTrafficLimit(identity)).thenReturn(flowOf(10240)) // 10 GB
             whenever(
                 simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 0f)))
+            ).thenReturn(flowOf(createSimUsage(trafficUsedMb = 0f)))
 
             // target = -1f (clamped to 0)
             // limitGb = 10, usedGb = 0
@@ -96,11 +96,10 @@ class UsageUseCaseImplValidationTest {
         }
 
     private fun createSimUsage(
-        id: String,
         minutesUsed: Int = 0,
         trafficUsedMb: Float = 0f,
     ) = SimUsage(
-        identity = id,
+        identity = "sim_0",
         slotIndex = 0,
         subscriptionId = 1,
         operator = "MTS",

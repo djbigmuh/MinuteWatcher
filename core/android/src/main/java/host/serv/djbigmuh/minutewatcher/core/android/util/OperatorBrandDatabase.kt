@@ -2,7 +2,7 @@
 
 import host.serv.djbigmuh.minutewatcher.core.resources.R
 
-@Suppress("LargeClass")
+@Suppress("LargeClass") // Comprehensive operator db
 object OperatorBrandDatabase {
     data class OperatorBrandRecord(
         val brandKey: String,

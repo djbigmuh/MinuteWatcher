@@ -100,7 +100,7 @@ class NotificationHelper
         /**
          * Creates or updates notification channels with localized names and descriptions.
          */
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun ensureChannels() {
             val manager = notificationManager ?: return
             val locContext = AppLocaleContexts.forAppLocale(context)
@@ -163,7 +163,7 @@ class NotificationHelper
          * Platform implementations of NotificationManager may throw various RuntimeExceptions.
          * Suppressing TooGenericExceptionCaught as RuntimeException is caught defensively.
          */
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun sendUsageNotification(
             title: String,
             message: String,
@@ -285,7 +285,7 @@ class NotificationHelper
          *
          * @return true if notification was posted successfully, false otherwise.
          */
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun sendAodSummaryNotification(
             title: String,
             contentLine: String,
@@ -348,7 +348,7 @@ class NotificationHelper
         /**
          * Checks whether the AOD summary notification is currently active in the notification manager.
          */
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun isAodSummaryNotificationActive(): Boolean {
             val manager = notificationManager ?: return false
             return try {
@@ -362,7 +362,7 @@ class NotificationHelper
             }
         }
 
-        @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun cancelAodSummaryNotification() {
             val manager = notificationManager ?: return
             try {
@@ -380,7 +380,7 @@ class NotificationHelper
          * @return true if NotificationManager is available, notification permission is granted,
          * notifications are enabled, and AOD summary channel exists and is not blocked.
          */
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun isAodSummaryAvailable(): Boolean {
             val manager = notificationManager ?: return false
             return try {
@@ -406,7 +406,7 @@ class NotificationHelper
          * Platform implementations of NotificationManagerCompat may throw various RuntimeExceptions.
          * Suppressing TooGenericExceptionCaught as RuntimeException is caught defensively.
          */
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught") // Defensive catch
         private fun areNotificationsEnabledSafe(): Boolean =
             try {
                 NotificationManagerCompat.from(context).areNotificationsEnabled()

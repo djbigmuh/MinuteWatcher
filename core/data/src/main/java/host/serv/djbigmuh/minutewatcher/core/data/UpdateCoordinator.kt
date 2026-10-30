@@ -50,7 +50,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * cycle (observeSnapshot) lives for the entire process lifetime and is started explicitly via [start].
  */
 @Singleton
-@Suppress("LargeClass")
+@Suppress("LargeClass") // Reactive update coordinator
 class UpdateCoordinator
     @Inject
     constructor(
@@ -101,7 +101,9 @@ class UpdateCoordinator
         private val stateMutex = Mutex()
 
         private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
-        private val setupJob = AtomicReference<Job?>(null)
+
+    @VisibleForTesting
+    internal val setupJob = AtomicReference<Job?>(null)
         private val monitoringJob = AtomicReference<Job?>(null)
 
         @VisibleForTesting
@@ -112,7 +114,7 @@ class UpdateCoordinator
         internal val takeoverUpdateJob = AtomicReference<Job?>(null)
 
         /**
-         * Explicitly starts observation from [Application.onCreate].
+         * Explicitly starts observation from [android.app.Application.onCreate].
          * Constructor has no side effects. Method is idempotent and thread-safe; repeated calls are ignored.
          */
         fun start() {
@@ -375,7 +377,7 @@ class UpdateCoordinator
             return firstSnapshot
         }
 
-        @Suppress("ThrowsCount")
+    @Suppress("ThrowsCount") // Terminal vs retryable errors
         private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
             try {
                 processSnapshot(snapshot)

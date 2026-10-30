@@ -396,8 +396,7 @@ class OperatorIconAssetComplianceTest {
         r2: RectF,
     ): Boolean {
         val covers = r1.left <= r2.left && r1.top <= r2.top && r1.right >= r2.right && r1.bottom >= r2.bottom
-        if (!covers) return false
-        return r1.left < r2.left || r1.top < r2.top || r1.right > r2.right || r1.bottom > r2.bottom
+        return covers && (r1.left < r2.left || r1.top < r2.top || r1.right > r2.right || r1.bottom > r2.bottom)
     }
 
     private fun checkRenderingContrast(
@@ -546,8 +545,7 @@ class OperatorIconAssetComplianceTest {
         uri: String,
         failures: MutableList<Pair<Int, String>>,
     ) {
-        val prefix = attrName.substring(6)
-        when (prefix) {
+        when (val prefix = attrName.substring(6)) {
             "android" -> {
                 if (uri != ANDROID_NS) {
                     failures.add(14 to "$resName item 14 failed: namespace prefix '$prefix' has invalid URI '$uri'")

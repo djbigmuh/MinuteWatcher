@@ -1,5 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.domain
 
+import kotlin.coroutines.cancellation.CancellationException
+
 /**
  * Use case for performing automatic reset of SIM usage statistics.
  *

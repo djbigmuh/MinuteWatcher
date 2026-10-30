@@ -89,11 +89,11 @@ class UsageStateRepositoryResilienceTest {
                     if (attempts == 1) {
                         throw IOException("Simulated failure")
                     }
-                    emit(listOf(createSimInfo("sim_1")))
+                    emit(listOf(createSimInfo()))
                 }
             whenever(simIdentityRepository.observeResolvedActiveSims()).thenAnswer { mockStateFlowFromFlow(simFlow) }
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(simFlow)
-            whenever(simUsageRepository.getSimUsage(any())).thenReturn(flow { emit(createSimUsage("sim_1")) })
+            whenever(simUsageRepository.getSimUsage(any())).thenReturn(flow { emit(createSimUsage()) })
 
             val repo = UsageStateRepositoryImpl(context, deps, backgroundScope)
 
@@ -128,14 +128,14 @@ class UsageStateRepositoryResilienceTest {
             assertEquals(TrackingStatus.ErrorType.DATABASE_ERROR, (status as TrackingStatus.Error).type)
 
             // Now recover
-            val activeFlow = flow { emit(listOf(createSimInfo("sim_1"))) }
+            val activeFlow = flow { emit(listOf(createSimInfo())) }
             whenever(
                 simIdentityRepository.observeResolvedActiveSims(),
             ).thenAnswer { mockStateFlowFromFlow(activeFlow) }
             whenever(
                 simIdentityRepository.observeActiveSims(),
             ).thenReturn(activeFlow)
-            whenever(simUsageRepository.getSimUsage(any())).thenReturn(flow { emit(createSimUsage("sim_1")) })
+            whenever(simUsageRepository.getSimUsage(any())).thenReturn(flow { emit(createSimUsage()) })
 
             advanceTimeBy(40000.milliseconds)
             runCurrent()
@@ -177,21 +177,21 @@ class UsageStateRepositoryResilienceTest {
             assertTrue(repo.status.value is TrackingStatus.Error)
         }
 
-    private fun createSimInfo(identity: String) =
+    private fun createSimInfo() =
         ActiveSimInfo(
-            identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, true),
+            identity = SimIdentity("sim_1", 1, 0, IdentitySource.ICCID, true),
             subscriptionId = 1,
             slotIndex = 0,
-            iccId = identity,
+            iccId = "sim_1",
             displayName = "SIM",
             carrierName = "Carrier",
             isDefaultData = true,
             isDefaultVoice = true,
         )
 
-    private fun createSimUsage(identity: String) =
+    private fun createSimUsage() =
         SimUsage(
-            identity = identity,
+            identity = "sim_1",
             slotIndex = 0,
             subscriptionId = 1,
             operator = "MTS",

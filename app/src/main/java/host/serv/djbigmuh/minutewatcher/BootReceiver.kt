@@ -39,7 +39,7 @@ open class BootReceiver : BroadcastReceiver() {
     }
 
     @VisibleForTesting
-    protected open fun acquirePendingResult(): BroadcastReceiver.PendingResult = goAsync()
+    protected open fun acquirePendingResult(): PendingResult = goAsync()
 
     @VisibleForTesting
     protected open fun provideWorkScheduler(): WorkScheduler = workScheduler

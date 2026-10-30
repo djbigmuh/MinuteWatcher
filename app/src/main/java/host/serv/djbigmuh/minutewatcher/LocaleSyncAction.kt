@@ -47,14 +47,14 @@ internal fun resolveLocaleSyncAction(
     supportsSystemPerAppLanguages: Boolean,
     supportedLanguageCodes: List<String>,
 ): LocaleSyncAction =
-    when {
-        currentTags == null ->
+    when (currentTags) {
+        null ->
             when {
                 savedLanguage == null -> LocaleSyncAction.None
                 supportsSystemPerAppLanguages -> LocaleSyncAction.FollowSystem
                 else -> LocaleSyncAction.RestoreSaved(savedLanguage)
             }
 
-        currentTags == savedLanguage -> LocaleSyncAction.None
+        savedLanguage -> LocaleSyncAction.None
         else -> LocaleSyncAction.AdoptSystem(normalizeToSupportedLanguageCode(currentTags, supportedLanguageCodes))
     }

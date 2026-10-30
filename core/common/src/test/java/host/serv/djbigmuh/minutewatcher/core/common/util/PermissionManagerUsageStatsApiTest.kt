@@ -20,7 +20,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Suppress("DEPRECATION")
+@Suppress("DEPRECATION") // Legacy AppOps tests
 class PermissionManagerUsageStatsApiTest {
     private val context: Context = mock()
     private val appOps: AppOpsManager = mock()

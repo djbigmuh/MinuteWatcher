@@ -100,7 +100,7 @@ sealed interface TrafficUpdateOutcome {
  * observers are started via [ensureStarted], which should be called from [android.app.Application.onCreate].
  */
 @Singleton
-@Suppress("LargeClass")
+@Suppress("LargeClass") // Data tracking orchestrator
 class TrafficTracker
     @Inject
     constructor(
@@ -551,12 +551,10 @@ class TrafficTracker
             startElapsed: Long,
             e: Exception,
         ): TrafficUpdateOutcome =
-            if (e is SecurityException) {
-                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.PERMISSION_MISSING, null)
-            } else if (e is TrafficUpdateTimeoutException) {
-                TrafficUpdateOutcome.TimedOut(startElapsed)
-            } else {
-                TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
+            when (e) {
+                is SecurityException -> TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.PERMISSION_MISSING, null)
+                is TrafficUpdateTimeoutException -> TrafficUpdateOutcome.TimedOut(startElapsed)
+                else -> TrafficUpdateOutcome.Failed(TrackingStatus.ErrorType.UNKNOWN, null)
             }
 
         private fun handleInitError(
@@ -736,7 +734,7 @@ class TrafficTracker
             transitionStatus(TrackingStatus.Error(type, message, code = code))
         }
 
-        @Suppress("ThrowsCount")
+    @Suppress("ThrowsCount") // Multiple error categories
         private suspend fun updateTrafficUsageLogic(force: Boolean): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             val outcome =

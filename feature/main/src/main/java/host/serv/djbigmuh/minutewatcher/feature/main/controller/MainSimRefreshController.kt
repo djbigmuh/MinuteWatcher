@@ -103,9 +103,8 @@ class MainSimRefreshController
         suspend fun refreshAndNotify(
             onNotifyChanged: suspend (Boolean) -> Unit,
             force: Boolean = false,
-        ): Boolean {
-            val outcome = refreshSimCardsInternal()
-            return when (outcome) {
+        ): Boolean =
+            when (val outcome = refreshSimCardsInternal()) {
                 is RefreshOutcome.SkippedAlreadyInProgress -> false
                 is RefreshOutcome.Failed -> false
                 is RefreshOutcome.Completed -> {
@@ -134,7 +133,6 @@ class MainSimRefreshController
                     }
                 }
             }
-        }
 
         /**
          * Refreshes SIM card data and notifies listeners.

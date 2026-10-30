@@ -159,9 +159,9 @@ class TrafficInitialBaselineTest {
             val tracker = createTracker()
 
             // 1. Mock SIM usage with lastResetDate = 0
-            val usageWithZero = createSimUsage(sim1Identity, 1, 0, lastResetDate = 0L)
+            val usageWithZero = createSimUsage(lastResetDate = 0L)
             val usageWithValid =
-                createSimUsage(sim1Identity, 1, 0, lastResetDate = timeProvider.now())
+                createSimUsage(lastResetDate = timeProvider.now())
             var attempts = 0
             whenever(simUsageRepository.getSimUsage(sim1Identity)).thenAnswer {
                 attempts++
@@ -194,9 +194,9 @@ class TrafficInitialBaselineTest {
                 phase1Attempts++
                 flowOf(
                     if (phase1Attempts == 1) {
-                        createSimUsage(sim1Identity, 1, 0, lastResetDate = 0L)
+                        createSimUsage(lastResetDate = 0L)
                     } else {
-                        createSimUsage(sim1Identity, 1, 0, lastResetDate = now)
+                        createSimUsage(lastResetDate = now)
                     },
                 )
             }
@@ -208,7 +208,7 @@ class TrafficInitialBaselineTest {
             // Phase 2: Consumption. Update mocks to reflect initialized state.
             whenever(
                 simUsageRepository.getSimUsage(sim1Identity),
-            ).thenReturn(flowOf(createSimUsage(sim1Identity, 1, 0, lastResetDate = now)))
+            ).thenReturn(flowOf(createSimUsage(lastResetDate = now)))
             whenever(simUsageResetRepository.getLastTotalBytes(sim1Identity)).thenReturn(flowOf(0L))
 
             // Consumer 100MB. Window [now, now]. queryMobileBytes(now, now) SHOULD be 100MB in this scenario
@@ -262,25 +262,21 @@ class TrafficInitialBaselineTest {
             assertEquals("lastResetDate should not have changed", oldNow, usageAfterSecond.lastResetDate)
         }
 
-    private fun createSimUsage(
-        id: String,
-        subId: Int,
-        slot: Int,
-        lastResetDate: Long,
-    ) = SimUsage(
-        identity = id,
-        slotIndex = slot,
-        subscriptionId = subId,
-        operator = "Op",
-        minutesUsed = 0,
-        minutesLimit = 0,
-        trafficUsedMb = 0f,
-        trafficLimitMb = 0,
-        manualAdjustment = 0,
-        trafficAdjustmentGb = 0f,
-        autoReset = true,
-        autoResetDay = 1,
-        lastResetDate = lastResetDate,
-        rolloverEnabled = false,
-    )
+    private fun createSimUsage(lastResetDate: Long) =
+        SimUsage(
+            identity = sim1Identity,
+            slotIndex = 0,
+            subscriptionId = 1,
+            operator = "Op",
+            minutesUsed = 0,
+            minutesLimit = 0,
+            trafficUsedMb = 0f,
+            trafficLimitMb = 0,
+            manualAdjustment = 0,
+            trafficAdjustmentGb = 0f,
+            autoReset = true,
+            autoResetDay = 1,
+            lastResetDate = lastResetDate,
+            rolloverEnabled = false,
+        )
 }

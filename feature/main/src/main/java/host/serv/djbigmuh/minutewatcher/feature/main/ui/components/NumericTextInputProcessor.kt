@@ -71,13 +71,13 @@ internal object NumericTextInputProcessor {
         newValue: TextFieldValue,
         typedChar: Char,
     ): TextFieldValue =
-        when {
-            typedChar in '1'..'9' -> {
+        when (typedChar) {
+            in '1'..'9' -> {
                 val newText = typedChar.toString()
                 newValue.copy(text = newText, selection = TextRange(newText.length))
             }
 
-            typedChar == '0' -> {
+            '0' -> {
                 newValue.copy(text = "0", selection = TextRange(1))
             }
 

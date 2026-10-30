@@ -42,7 +42,7 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
     }
 
     @VisibleForTesting
-    protected open fun acquirePendingResult(): BroadcastReceiver.PendingResult = goAsync()
+    protected open fun acquirePendingResult(): PendingResult = goAsync()
 
     @VisibleForTesting
     protected open fun asyncDispatcher(): CoroutineDispatcher? = null

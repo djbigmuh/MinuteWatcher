@@ -3,13 +3,13 @@
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import host.serv.djbigmuh.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
@@ -19,11 +19,12 @@ import host.serv.djbigmuh.minutewatcher.feature.settings.ui.WidgetSettingsViewMo
 
 @AndroidEntryPoint
 class WidgetSettingsActivity : AppCompatActivity() {
+    private val viewModel: WidgetSettingsViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val viewModel: WidgetSettingsViewModel = hiltViewModel()
             val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
             val isDarkTheme = rememberIsDarkTheme(appTheme)
 

@@ -562,13 +562,13 @@ class IdentityMigrationService
         ): MigrationResult {
             val existingValue = this[newKey]
             val result =
-                when {
-                    existingValue == null -> {
+                when (existingValue) {
+                    null -> {
                         this[newKey] = value
                         MigrationResult.SUCCESS
                     }
 
-                    existingValue == value -> MigrationResult.SUCCESS
+                    value -> MigrationResult.SUCCESS
                     else -> {
                         this[conflictKey] = value
                         AppLogger.w(

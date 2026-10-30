@@ -35,7 +35,7 @@ class MainResumeController
          * If monotonic clocks were reset (detected via negative time difference after reboot),
          * the debounce is considered expired and execution continues immediately.
          *
-         * **Thread Safety:** Must be invoked on the Main thread (from Activity's [onResume]).
+         * **Thread Safety:** Must be invoked on the Main thread (from Activity's `onResume`).
          * State persistence is backed by [SavedStateHandle].
          */
         fun onActivityResume(

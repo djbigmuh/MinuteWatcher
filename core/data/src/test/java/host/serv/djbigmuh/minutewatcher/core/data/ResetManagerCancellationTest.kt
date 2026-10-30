@@ -38,6 +38,10 @@ class ResetManagerCancellationTest {
     private lateinit var resetManager: ResetManager
     private val testDispatcher = StandardTestDispatcher()
 
+    companion object {
+        private const val TEST_IDENTITY = "sim_1"
+    }
+
     @Before
     fun setup() {
         initTestLogger()
@@ -55,9 +59,9 @@ class ResetManagerCancellationTest {
     @Test
     fun `performAutoReset cancellation updates cooldown and preserves state consistency`() =
         runTest(testDispatcher) {
-            val identity = "sim_1"
-            val simInfo = createSimInfo(identity)
-            val usage = createSimUsage(identity)
+            val identity = TEST_IDENTITY
+            val simInfo = createSimInfo()
+            val usage = createSimUsage()
 
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(simInfo)))
 
@@ -95,21 +99,21 @@ class ResetManagerCancellationTest {
             assertEquals("Should have fetched usage again after cooldown", 2, usageFetchCount)
         }
 
-    private fun createSimInfo(identity: String) =
+    private fun createSimInfo() =
         ActiveSimInfo(
-            identity = SimIdentity(identity, 1, 0, IdentitySource.ICCID, true),
+            identity = SimIdentity(TEST_IDENTITY, 1, 0, IdentitySource.ICCID, true),
             subscriptionId = 1,
             slotIndex = 0,
-            iccId = identity,
+            iccId = TEST_IDENTITY,
             displayName = "SIM",
             carrierName = "Carrier",
             isDefaultData = true,
             isDefaultVoice = true,
         )
 
-    private fun createSimUsage(identity: String) =
+    private fun createSimUsage() =
         SimUsage(
-            identity = identity,
+            identity = TEST_IDENTITY,
             slotIndex = 0,
             subscriptionId = 1,
             operator = "MTS",

@@ -50,7 +50,7 @@ class ResetManager
          * `false` if at least one SIM failed due to IO error or usage data timeout.
          * @throws CancellationException if the reset process is canceled.
          */
-        @Suppress("CyclomaticComplexMethod")
+        @Suppress("CyclomaticComplexMethod") // Complex auto-reset logic
         override suspend fun performAutoReset(shouldNotify: Boolean): Boolean {
             val now = timeProvider.now()
             val nowElapsed = timeProvider.elapsedRealtime()

@@ -6,6 +6,7 @@ import host.serv.djbigmuh.minutewatcher.core.common.util.firstWithTimeoutOrDefau
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 
 /**
  * Base class for DataStore repositories providing common helpers.

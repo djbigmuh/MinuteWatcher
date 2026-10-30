@@ -31,7 +31,7 @@ internal data class TileContent(
  * - No SIMs in the snapshot: every field carries the "no SIM" text, tile is inactive.
  * - Selected SIM has a minutes limit (limit > 0): subtitle, state description and
  *   content description carry the remaining-minutes text; label is the operator name,
- *   or a compact "operator: remaining" line when [supportsSubtitle] is false; tile is active.
+ *   or a compact "operator: remaining" line when `supportsSubtitle` is false; tile is active.
  * - Selected SIM has no minutes limit: subtitle and state description carry the
  *   "no data" text, content description is "operator: no data"; tile is inactive.
  *

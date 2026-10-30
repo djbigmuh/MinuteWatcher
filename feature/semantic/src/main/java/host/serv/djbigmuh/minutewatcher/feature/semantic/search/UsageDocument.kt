@@ -151,7 +151,7 @@ class UsageDocument {
         fun fromGlobalSnapshot(snapshot: GlobalSnapshot): List<UsageDocument> {
             val documents = mutableListOf<UsageDocument>()
             for (sim in snapshot.simSnapshots) {
-                for (entity in sim.entities.values) {
+                for ((_, entity) in sim.entities) {
                     documents.add(fromSemanticEntity(entity))
                 }
             }

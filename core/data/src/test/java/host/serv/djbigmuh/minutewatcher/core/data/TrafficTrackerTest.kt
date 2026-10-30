@@ -891,7 +891,7 @@ class TrafficTrackerTest {
             runCurrent()
 
             assertNotNull("initJob should be set after ensureStarted", tracker.initJob.get())
-            @Suppress("UNUSED_EXPRESSION")
+            @Suppress("UNUSED_EXPRESSION") // Mockito syntax
             verify(localPermissionNotifier, times(1)).changes
 
             // 3. Call ensureStarted() multiple times
@@ -905,7 +905,7 @@ class TrafficTrackerTest {
                 initialJob,
                 tracker.initJob.get(),
             )
-            @Suppress("UNUSED_EXPRESSION")
+            @Suppress("UNUSED_EXPRESSION") // Mockito syntax
             verify(localPermissionNotifier, times(1)).changes
         }
 

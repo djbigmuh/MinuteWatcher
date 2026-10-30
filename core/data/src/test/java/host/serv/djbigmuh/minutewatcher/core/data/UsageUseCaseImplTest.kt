@@ -73,7 +73,7 @@ class UsageUseCaseImplTest {
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flowOf(500))
             whenever(
                 simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, minutesUsed = 100)))
+            ).thenReturn(flowOf(createSimUsage(minutesUsed = 100)))
 
             // target remaining = 450
             // formula: (target - limit) + used = (450 - 500) + 100 = 50
@@ -90,7 +90,7 @@ class UsageUseCaseImplTest {
             whenever(simLimitsRepository.getTrafficLimit(identity)).thenReturn(flowOf(10240)) // 10 GB
             whenever(
                 simUsageRepository.getSimUsage(identity),
-            ).thenReturn(flowOf(createSimUsage(identity, trafficUsedMb = 2048f))) // 2 GB
+            ).thenReturn(flowOf(createSimUsage(trafficUsedMb = 2048f))) // 2 GB
 
             // target remaining = 5 GB
             // limitGb = 10, usedGb = 2
@@ -145,7 +145,7 @@ class UsageUseCaseImplTest {
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
             // Mock timeout: flow that never emits
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flow { awaitCancellation() })
-            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage(identity)))
+            whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage()))
 
             usageUseCase.adjustMinutes(0, 450)
         }
@@ -163,11 +163,10 @@ class UsageUseCaseImplTest {
         }
 
     private fun createSimUsage(
-        id: String,
         minutesUsed: Int = 0,
         trafficUsedMb: Float = 0f,
     ) = SimUsage(
-        identity = id,
+        identity = "sim_0",
         slotIndex = 0,
         subscriptionId = 1,
         operator = "MTS",

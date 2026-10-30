@@ -191,7 +191,7 @@ class MainActivity : AppCompatActivity() {
             val permanentlyDenied =
                 !granted &&
                     !shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)
-            viewModel.setPhonePermissionPermanentlyDenied(if (granted) false else permanentlyDenied)
+            viewModel.setPhonePermissionPermanentlyDenied(permanentlyDenied)
             checkPermissionChanges()
         }
 
@@ -200,13 +200,10 @@ class MainActivity : AppCompatActivity() {
             // See: https://developer.android.com/training/notify-user/runtime-permissions
             // minSdk is 26, so this branch is reachable and required.
             val permanentlyDenied =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                     !granted &&
-                        !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    false
-                }
-            viewModel.setNotificationPermissionPermanentlyDenied(if (granted) false else permanentlyDenied)
+                    !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+            viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
             checkPermissionChanges()
         }
 

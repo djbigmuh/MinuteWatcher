@@ -1,4 +1,4 @@
-﻿@file:Suppress("MatchingDeclarationName")
+﻿@file:Suppress("MatchingDeclarationName") // Multi-composable file
 
 package host.serv.djbigmuh.minutewatcher.feature.settings.ui
 

@@ -68,7 +68,7 @@ class SimIdentityDiscovery
                                         listener,
                                     )
                                 } else {
-                                    @Suppress("DEPRECATION")
+                                    @Suppress("DEPRECATION") // Legacy pre-R API
                                     manager.addOnSubscriptionsChangedListener(listener)
                                 }
                                 true

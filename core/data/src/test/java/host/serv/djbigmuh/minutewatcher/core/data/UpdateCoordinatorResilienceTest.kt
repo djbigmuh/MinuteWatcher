@@ -19,7 +19,6 @@ import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -445,9 +444,7 @@ class UpdateCoordinatorResilienceTest {
             coordinator.start()
             testScheduler.advanceUntilIdle()
 
-            val setupJobField = UpdateCoordinator::class.java.getDeclaredField("setupJob").apply { isAccessible = true }
-            val ref = setupJobField.get(coordinator) as java.util.concurrent.atomic.AtomicReference<*>
-            val job = ref.get() as Job?
+            val job = coordinator.setupJob.get()
             assertTrue("setupJob should not contain a completed job", job == null || !job.isCompleted)
         }
 
@@ -462,14 +459,12 @@ class UpdateCoordinatorResilienceTest {
             coordinator.start()
             testScheduler.runCurrent()
 
-            val setupJobField = UpdateCoordinator::class.java.getDeclaredField("setupJob").apply { isAccessible = true }
-            val ref = setupJobField.get(coordinator) as java.util.concurrent.atomic.AtomicReference<*>
-            val job1 = ref.get() as Job?
+            val job1 = coordinator.setupJob.get()
 
             coordinator.start()
             testScheduler.runCurrent()
 
-            val job2 = ref.get() as Job?
+            val job2 = coordinator.setupJob.get()
             assertTrue("setupJob reference should remain the same", job1 === job2)
         }
 
@@ -504,9 +499,7 @@ class UpdateCoordinatorResilienceTest {
             coordinator.start()
             testScheduler.runCurrent()
 
-            val setupJobField = UpdateCoordinator::class.java.getDeclaredField("setupJob").apply { isAccessible = true }
-            val ref = setupJobField.get(coordinator) as java.util.concurrent.atomic.AtomicReference<*>
-            val oldJob = ref.get() as Job?
+            val oldJob = coordinator.setupJob.get()
             assertTrue(oldJob != null && oldJob.isActive)
 
             coordinator.recover()
@@ -531,9 +524,7 @@ class UpdateCoordinatorResilienceTest {
             }
             testScheduler.runCurrent()
 
-            val setupJobField = UpdateCoordinator::class.java.getDeclaredField("setupJob").apply { isAccessible = true }
-            val ref = setupJobField.get(coordinator) as java.util.concurrent.atomic.AtomicReference<*>
-            val job = ref.get() as Job?
+            val job = coordinator.setupJob.get()
             assertTrue("setupJob should be active", job != null && job.isActive)
         }
 
