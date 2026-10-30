@@ -1,5 +1,5 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
+    base
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.androidLibrary) apply false
     alias(libs.plugins.androidTest) apply false
@@ -31,16 +31,35 @@ val verifyVersionCatalogConsistency =
                 val versions = mutableMapOf<String, String>()
                 var inVersionsSection = false
                 file.forEachLine { rawLine ->
-                    val line = rawLine.trim()
-                    if (line.startsWith("[") && line.endsWith("]")) {
-                        inVersionsSection = line == "[versions]"
-                    } else if (inVersionsSection && line.contains("=")) {
-                        val parts =
-                            line
-                                .split("=", limit = 2)
-                                .map { it.trim().removeSurrounding("\"").removeSurrounding("'") }
-                        if (parts.size == 2) {
-                            versions[parts[0]] = parts[1]
+                    val trimmed = rawLine.trim()
+                    if (trimmed.startsWith("#")) {
+                        return@forEachLine
+                    }
+                    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                        inVersionsSection = trimmed == "[versions]"
+                    } else if (inVersionsSection && trimmed.contains("=")) {
+                        val eqIndex = trimmed.indexOf('=')
+                        if (eqIndex != -1) {
+                            val key = trimmed.substring(0, eqIndex).trim().removeSurrounding("\"").removeSurrounding("'")
+                            var valuePart = trimmed.substring(eqIndex + 1).trim()
+                            var inQuotes = false
+                            var commentIndex = -1
+                            for (i in 0 until valuePart.length) {
+                                val c = valuePart[i]
+                                if (c == '"' || c == '\'') {
+                                    inQuotes = !inQuotes
+                                } else if (c == '#' && !inQuotes) {
+                                    commentIndex = i
+                                    break
+                                }
+                            }
+                            if (commentIndex != -1) {
+                                valuePart = valuePart.substring(0, commentIndex).trim()
+                            }
+                            val value = valuePart.removeSurrounding("\"").removeSurrounding("'")
+                            if (key.isNotEmpty()) {
+                                versions[key] = value
+                            }
                         }
                     }
                 }
@@ -74,6 +93,6 @@ val verifyVersionCatalogConsistency =
         }
     }
 
-tasks.matching { it.name == "check" }.configureEach {
+tasks.named("check") {
     dependsOn(verifyVersionCatalogConsistency)
 }
