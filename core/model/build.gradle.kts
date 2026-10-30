@@ -1,15 +1,6 @@
 // core:model is a pure Kotlin JVM module containing data classes and business logic.
 plugins {
-    `java-library`
-    kotlin("jvm")
-    id("minutewatcher.static-analysis")
-    id("minutewatcher.test-infrastructure")
-}
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    }
+    id("minutewatcher.pure-jvm-library")
 }
 
 dependencies {

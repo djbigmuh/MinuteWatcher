@@ -1,7 +1,3 @@
-plugins {
-    id("jacoco")
-}
-
 tasks.withType<Test>().configureEach {
     // Allow Mockito to self-attach on JDK 17+
     jvmArgs("-Dnet.bytebuddy.experimental=true")
@@ -12,24 +8,20 @@ tasks.withType<Test>().configureEach {
         "minutewatcher.coreResourcesResDir",
         rootProject.layout.projectDirectory.dir("core/resources/src/main/res").asFile.absolutePath,
     )
-    systemProperty(
-        "minutewatcher.appResDir",
-        rootProject.layout.projectDirectory.dir("app/src/main/res").asFile.absolutePath,
-    )
 
     val moduleCacheName = project.path.removePrefix(":").replace(':', '.').ifEmpty { "root" }
-    val roboUserHome = rootProject.layout.projectDirectory.dir(".robolectric/$moduleCacheName/home")
-    val testTmpDir = project.layout.buildDirectory.dir("tmp")
+    val roboUserHomeFile = rootProject.layout.projectDirectory.dir(".robolectric/$moduleCacheName/home").asFile
+    val testTmpDirFile = project.layout.buildDirectory.dir("tmp").get().asFile
 
     doFirst {
-        roboUserHome.asFile.mkdirs()
-        testTmpDir.get().asFile.mkdirs()
+        roboUserHomeFile.mkdirs()
+        testTmpDirFile.mkdirs()
     }
 
     systemProperty("robolectric.dependency.repo.id", "central")
     systemProperty("robolectric.dependency.repo.url", "https://repo1.maven.org/maven2/")
-    systemProperty("user.home", roboUserHome.asFile.absolutePath)
-    systemProperty("java.io.tmpdir", testTmpDir.get().asFile.absolutePath)
+    systemProperty("user.home", roboUserHomeFile.absolutePath)
+    systemProperty("java.io.tmpdir", testTmpDirFile.absolutePath)
     systemProperty("robolectric.logging.enabled", "true")
 
     // Policy: Reliability over speed.
