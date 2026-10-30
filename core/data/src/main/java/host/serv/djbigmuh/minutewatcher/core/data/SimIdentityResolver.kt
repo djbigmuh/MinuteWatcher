@@ -78,13 +78,13 @@ internal class SimIdentityResolver
             }
         }
 
-    private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): Pair<String, Boolean>? =
-        when (
-            val seed =
-                withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                    seedFlow.firstOrNull()
-                }
-        ) {
+        private suspend fun resolveSeedInternal(seedFlow: Flow<SeedResult>): Pair<String, Boolean>? =
+            when (
+                val seed =
+                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
+                        seedFlow.firstOrNull()
+                    }
+            ) {
                 is SeedResult.Real -> seed.value to seed.isStable
                 is SeedResult.Fallback -> seed.seed to false
                 null -> null

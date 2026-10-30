@@ -475,7 +475,7 @@ class TrafficTracker
             }
         }
 
-    private suspend fun performInitializeWithRetry(force: Boolean = false): TrafficUpdateOutcome {
+        private suspend fun performInitializeWithRetry(force: Boolean = false): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             var lastException: Exception? = null
             var finalOutcome: TrafficUpdateOutcome? = null
@@ -528,10 +528,10 @@ class TrafficTracker
             ) : InitAttemptResult
         }
 
-    private suspend fun executeInitAttempt(
-        startElapsed: Long,
-        force: Boolean,
-    ): InitAttemptResult =
+        private suspend fun executeInitAttempt(
+            startElapsed: Long,
+            force: Boolean,
+        ): InitAttemptResult =
             try {
                 val outcome = updateTrafficUsageLogic(force)
                 InitAttemptResult.Success(outcome)
@@ -734,7 +734,7 @@ class TrafficTracker
             transitionStatus(TrackingStatus.Error(type, message, code = code))
         }
 
-    @Suppress("ThrowsCount") // Multiple error categories
+        @Suppress("ThrowsCount") // Multiple error categories
         private suspend fun updateTrafficUsageLogic(force: Boolean): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             val outcome =

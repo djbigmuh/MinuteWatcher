@@ -102,8 +102,8 @@ class UpdateCoordinator
 
         private val observationScope = FlowObservationScope<GlobalSnapshot>(scope, "UpdateCoordinator")
 
-    @VisibleForTesting
-    internal val setupJob = AtomicReference<Job?>(null)
+        @VisibleForTesting
+        internal val setupJob = AtomicReference<Job?>(null)
         private val monitoringJob = AtomicReference<Job?>(null)
 
         @VisibleForTesting
@@ -377,7 +377,7 @@ class UpdateCoordinator
             return firstSnapshot
         }
 
-    @Suppress("ThrowsCount") // Terminal vs retryable errors
+        @Suppress("ThrowsCount") // Terminal vs retryable errors
         private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
             try {
                 processSnapshot(snapshot)
