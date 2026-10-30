@@ -83,6 +83,8 @@ For local project dump preparation and auditing, we use `MAKE_AUDIT_DUMP.bat` (o
 - **DI:** Use Hilt for dependency injection and provide specific qualifiers (`@IoDispatcher`, etc.) instead of hardcoded dispatchers.
 - **Dispatchers:** All components must use injected dispatchers via Hilt qualifiers (`@IoDispatcher`, `@MainImmediateDispatcher`). Direct usage of `Dispatchers.IO` or `Dispatchers.Default` is STRICTLY FORBIDDEN everywhere except in `DispatchersModule` and the infrastructure class `AppLogger`.
 - **Machine-readable Errors:** When classifying errors in `TrackingStatus.Error`, always use `type` and `code`. Branching logic based on message text (`message`) is STRICTLY FORBIDDEN, as messages are intended only for logs and the user.
+- **Resource Dependencies:** Dependency on `:core:resources` is mandatory if module sources or its manifest reference resources of that module, because resource merging is not reflected in source-based dependency analysis.
+- **Dependency Declarations:** Dependency declarations must not be removed based on analysis reports that consider only source code references, without verifying resource references, manifest, and test source sets' classpath.
 
 ---
 

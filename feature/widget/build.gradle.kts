@@ -35,6 +35,5 @@ dependencies {
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinxCoroutinesTesting)
-    testImplementation(testFixtures(project(":core:android")))
     testImplementation(testFixtures(project(":core:common")))
 }

@@ -40,7 +40,6 @@ dependencies {
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.androidxJunit)
     testImplementation(testFixtures(project(":core:common")))
-    testImplementation(testFixtures(project(":core:resources")))
 
     testFixturesApi(libs.junit)
     testFixturesImplementation(testFixtures(project(":core:common")))
