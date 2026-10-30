@@ -18,10 +18,10 @@ configure<ApplicationExtension> {
         testInstrumentationRunner = "host.serv.djbigmuh.minutewatcher.HiltTestRunner"
     }
 
-    val keystoreFile = rootProject.file("release.keystore")
-    val envStorePassword = System.getenv("MINUTEWATCHER_STORE_PASSWORD")
-    val envKeyAlias = System.getenv("MINUTEWATCHER_KEY_ALIAS")
-    val envKeyPassword = System.getenv("MINUTEWATCHER_KEY_PASSWORD")
+    val keystoreFile = layout.projectDirectory.file("release.keystore").asFile
+    val envStorePassword = providers.environmentVariable("MINUTEWATCHER_STORE_PASSWORD").orNull
+    val envKeyAlias = providers.environmentVariable("MINUTEWATCHER_KEY_ALIAS").orNull
+    val envKeyPassword = providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull
 
     val hasReleaseSigning =
         keystoreFile.exists() &&
