@@ -1,0 +1,42 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="EditorConfigUnknownProperty" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Project Files" level="WARNING" enabled="false">
+        <pattern value="file:.editorconfig" />
+      </scope>
+    </inspection_tool>
+    <inspection_tool class="RedundantSuppression" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Project Files" level="WARNING" enabled="false">
+        <pattern value="file:**/build//*|file:**/.gradle//*|file:**/kotlin-dsl-accessors//*|file:**/kotlin-dsl//*|file:**/.kotlin//*" />
+      </scope>
+    </inspection_tool>
+    <inspection_tool class="XmlUnregisteredNs" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Project Files" level="WARNING" enabled="false">
+        <pattern value="file:core/resources/src/main/res/drawable//*|file:**/core/resources/src/main/res/drawable//*" />
+      </scope>
+    </inspection_tool>
+    <inspection_tool class="UnusedDeclaration" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ADD_MAINS_TO_ENTRIES" value="true" />
+      <option name="ADD_APPLET_TO_ENTRIES" value="true" />
+      <option name="ADD_SERVLET_TO_ENTRIES" value="true" />
+      <option name="ADD_NONJAVA_TO_ENTRIES" value="true" />
+      <option name="ADD_ENTRY_POINT_ANNOTATIONS">
+        <value>
+          <list size="10">
+            <item index="0" class="java.lang.String" itemvalue="org.junit.Test" />
+            <item index="1" class="java.lang.String" itemvalue="org.junit.runner.RunWith" />
+            <item index="2" class="java.lang.String" itemvalue="org.junit.Rule" />
+            <item index="3" class="java.lang.String" itemvalue="dagger.Module" />
+            <item index="4" class="java.lang.String" itemvalue="dagger.hilt.InstallIn" />
+            <item index="5" class="java.lang.String" itemvalue="dagger.hilt.android.HiltAndroidApp" />
+            <item index="6" class="java.lang.String" itemvalue="dagger.hilt.android.AndroidEntryPoint" />
+            <item index="7" class="java.lang.String" itemvalue="androidx.hilt.work.HiltWorker" />
+            <item index="8" class="java.lang.String" itemvalue="javax.inject.Inject" />
+            <item index="9" class="java.lang.String" itemvalue="androidx.appfunctions.AppFunctionServiceEntryPoint" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
