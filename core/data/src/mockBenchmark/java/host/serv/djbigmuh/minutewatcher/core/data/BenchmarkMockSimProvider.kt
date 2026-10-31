@@ -6,6 +6,11 @@ import host.serv.djbigmuh.minutewatcher.core.model.IdentitySource
 import host.serv.djbigmuh.minutewatcher.core.model.SimIdentity
 import javax.inject.Inject
 
+/**
+ * Benchmark implementation of [MockSimProvider] for performance and load testing variants.
+ *
+ * Generates the requested number of simulated SIM cards, clamped to the maximum supported slot count.
+ */
 // Hilt entry point of the mockBenchmark build variant: instantiated via dependency injection,
 // never referenced directly from code.
 @Suppress("unused")

@@ -75,6 +75,15 @@ For local project dump preparation and auditing, we use `MAKE_AUDIT_DUMP.bat` (o
 - **Freshness:** A dump is only valid when taken immediately after a successful (or complete) `VERIFY.bat` run. If source files have changed since the last report generation, the dump will show `STALE REPORT` warnings.
 - **Reporting:** Reports are parsed from `**/build/reports/` (ktlint, detekt, lint) and `**/build/test-results/` (unit tests).
 
+### False-Positive Analysis Warning Justification Rule
+An analysis warning identified as a false positive is permitted to be preserved only if accompanied by an English comment formulating the justification criterion. Suppressions must have the minimum possible scope. File-level suppressions and baseline files are strictly prohibited.
+
+Permitted categories of false-positive suppressions include:
+- Hilt production bindings with single implementations
+- Hilt entry points without direct class references
+- Variant-specific implementations selected via Hilt source set bindings
+- Declarations utilized solely through code generation (e.g., KSP processors or annotation processors)
+
 ---
 
 ## Architectural Guidelines
