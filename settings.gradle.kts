@@ -15,8 +15,7 @@ pluginManagement {
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
-// dependencyResolutionManagement is @Incubating in Gradle 9.x but is the supported way to
-// centralize repository configuration for all modules. Suppression is intentional and documented.
+// Suppress UnstableApiUsage for org.gradle.api.initialization.dsl.DependencyResolutionManagement @Incubating in Gradle 9.x
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)

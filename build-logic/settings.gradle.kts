@@ -1,13 +1,12 @@
-@file:Suppress("UnstableApiUsage")
-// VersionCatalogsExtension is @Incubating in Gradle 9.x but is the only supported
-// way to share a version catalog with build-logic. This is a known Gradle limitation,
-// not a heuristic choice. Suppression is intentional and documented.
+// Suppress UnstableApiUsage for org.gradle.api.initialization.dsl.DependencyResolutionManagement and VersionCatalogsExtension @Incubating in Gradle 9.x
+@Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
         gradlePluginPortal()
     }
+    @Suppress("UnstableApiUsage")
     versionCatalogs {
         create("libs") {
             from(files("../gradle/build-logic.versions.toml"))

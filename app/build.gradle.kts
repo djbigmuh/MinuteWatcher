@@ -78,14 +78,19 @@ configure<ApplicationExtension> {
         isCoreLibraryDesugaringEnabled = true
     }
 
+    lint {
+        // ObsoleteSdkInt is disabled for mipmap-anydpi-v26 required for adaptive icons on minSdk 26
+        disable.add("ObsoleteSdkInt")
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
     }
 
-    // The bundle language DSL is incubating in Gradle. Disabling language splits is the
-    // documented requirement for per-app language support on API 26-32: all locales must
-    // remain in the base APK. Suppression is intentional and documented.
+    // This Android Gradle Plugin DSL block manages app bundle configurations.
+    // Disabling language splits is required for app language selection support on API 26-32.
+    // Suppression is intentional and documented.
     @Suppress("UnstableApiUsage")
     bundle {
         language {
