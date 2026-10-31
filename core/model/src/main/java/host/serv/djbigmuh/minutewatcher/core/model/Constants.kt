@@ -132,8 +132,6 @@ object Constants {
          */
         const val MAX_SELECTABLE_LAYOUT_MODE = 3
 
-        /** Upper bound for effective render layout modes (0..4), including internal fallback SIMPLE (4). */
-        const val MAX_LAYOUT_MODE = 4
         const val DEFAULT_LAYOUT_MODE = 2
         const val MIN_SIM_ARRANGEMENT = SIM_ARRANGEMENT_HORIZONTAL
         const val MAX_SIM_ARRANGEMENT = SIM_ARRANGEMENT_VERTICAL
@@ -333,18 +331,6 @@ object Constants {
 
     /** Low remaining threshold in percent (integer, 20%). */
     const val LOW_THRESHOLD_PERCENT_INT = 20
-
-    /**
-     * Critical remaining threshold as a fraction (0.10f).
-     * Derived from [CRITICAL_THRESHOLD_PERCENT_INT].
-     */
-    const val CRITICAL_REMAINING_THRESHOLD_FRACTION = CRITICAL_THRESHOLD_PERCENT_INT / 100f
-
-    /**
-     * Low remaining threshold as a fraction (0.20f).
-     * Derived from [LOW_THRESHOLD_PERCENT_INT].
-     */
-    const val LOW_REMAINING_THRESHOLD_FRACTION = LOW_THRESHOLD_PERCENT_INT / 100f
 
     /**
      * Maximum minutes limit (44640 = 31 days × 24 hours × 60 minutes).

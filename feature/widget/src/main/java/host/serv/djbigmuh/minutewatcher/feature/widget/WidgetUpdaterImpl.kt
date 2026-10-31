@@ -1,7 +1,6 @@
 ﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import android.content.Context
-import androidx.annotation.VisibleForTesting
 import dagger.hilt.android.qualifiers.ApplicationContext
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
@@ -386,9 +385,6 @@ class WidgetUpdaterImpl
                 // Operation must complete without propagating exception.
                 errorClassifier.classifyUpdateError(e, isFullAttempt)
             }
-
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal fun isRemoteViewsLimitException(e: Throwable): Boolean = errorClassifier.isRemoteViewsLimitException(e)
 
         override suspend fun recover() {
             limitExceededHandled.set(false)

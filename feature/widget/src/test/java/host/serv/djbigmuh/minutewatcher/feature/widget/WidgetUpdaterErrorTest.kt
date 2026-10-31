@@ -1,59 +1,24 @@
 ﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import android.content.Context
-import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
-import host.serv.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
+import android.os.TransactionTooLargeException
+import host.serv.djbigmuh.minutewatcher.core.domain.WidgetUpdateResult
 import host.serv.djbigmuh.minutewatcher.core.model.AppSettings
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.mockito.kotlin.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetUpdaterErrorTest {
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
-
-    private lateinit var context: Context
-    private val appSettingsRepository: AppSettingsRepository = mock()
-    private val renderer: WidgetRenderer = mock()
-    private val retryManager = WidgetUpdateRetryManager()
-    private val errorClassifier = WidgetErrorClassifier()
-
-    @Before
-    fun setup() {
-        context = mock()
-        val mockSettings = MutableStateFlow(AppSettings(widgetLimitExceeded = false))
-        whenever(appSettingsRepository.observeAppSettings()).thenReturn(mockSettings)
-        whenever(appSettingsRepository.getAppSettings()).thenReturn(mockSettings)
-    }
-
-    private fun createUpdater(
-        scope: CoroutineScope,
-        customRenderer: WidgetRenderer = renderer,
-    ): WidgetUpdaterImpl {
-        val limitManager = WidgetLimitManager(appSettingsRepository, scope)
-        return WidgetUpdaterImpl(
-            context = context,
-            appSettingsRepository = appSettingsRepository,
-            renderer = customRenderer,
-            retryManager = retryManager,
-            limitManager = limitManager,
-            errorClassifier = errorClassifier,
-            scope = scope,
-        )
-    }
-
+class WidgetUpdaterErrorTest : BaseWidgetUpdaterFixture() {
     @Test(timeout = 10000)
     fun `OutOfMemoryError thrown by renderer propagates out of updateAll`() =
         runTest {
@@ -111,5 +76,27 @@ class WidgetUpdaterErrorTest {
             }
 
             assertEquals(2, renderCount.get())
+        }
+
+    @Test
+    fun `renderer throwing IllegalStateException with TransactionTooLargeException triggers limit exceeded`() =
+        runTest {
+            whenever(renderer.renderAll(any(), any()))
+                .thenThrow(IllegalStateException("Binder", TransactionTooLargeException()))
+                .thenReturn(Unit)
+            val updater = createUpdater(backgroundScope, renderer)
+            appSettingsRepository.settingsFlow.value = AppSettings(widgetLimitExceeded = false)
+
+            val result =
+                withTimeout(5.seconds) {
+                    updater.updateAll()
+                }
+
+            assertTrue("Update should succeed on retry in simplified mode", result is WidgetUpdateResult.Success)
+            assertTrue(
+                "Widget limit exceeded flag should be set",
+                appSettingsRepository.settingsFlow.value.widgetLimitExceeded,
+            )
+            verify(renderer, times(2)).renderAll(any(), any())
         }
 }
