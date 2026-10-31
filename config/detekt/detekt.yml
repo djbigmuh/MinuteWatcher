@@ -54,10 +54,6 @@ exceptions:
   active: true
   TooGenericExceptionCaught:
     active: true
-    exceptionNames:
-      - Error
-      - RuntimeException
-      - Throwable
   TooGenericExceptionThrown:
       active: false # Disabled to allow mock and test fixture exception throws
 

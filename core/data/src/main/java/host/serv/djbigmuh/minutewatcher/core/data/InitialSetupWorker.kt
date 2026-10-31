@@ -46,6 +46,7 @@ class InitialSetupWorker
             }
 
         private suspend fun executeWork(): Result =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 performSetupSteps()
             } catch (e: CancellationException) {
@@ -54,6 +55,7 @@ class InitialSetupWorker
                 AppLogger.w("InitialSetupWorker: Network or storage error, retrying. ${e.message}")
                 Result.retry()
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for worker result.
                 AppLogger.e("InitialSetupWorker failed due to unexpected error", e)
                 Result.failure()
             }
@@ -91,11 +93,13 @@ class InitialSetupWorker
             deps.usageStateRepository.refresh()
             deps.dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
 
+            @Suppress("TooGenericExceptionCaught")
             try {
                 deps.workScheduler.schedulePeriodicUsageCheck()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Converts unexpected exception to IOException for retry handling.
                 throw IOException("Periodic check scheduling failed", e)
             }
 
@@ -106,11 +110,13 @@ class InitialSetupWorker
         }
 
         private suspend fun performCleanupSafe(block: suspend () -> Unit) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 block()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for cleanup step.
                 AppLogger.w("InitialSetupWorker: cleanup step failed", e)
             }
         }

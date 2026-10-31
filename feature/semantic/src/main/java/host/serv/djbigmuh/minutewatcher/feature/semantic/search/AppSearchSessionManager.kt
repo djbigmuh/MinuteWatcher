@@ -60,24 +60,29 @@ class AppSearchSessionManager
             forceOverride: Boolean,
         ): Result<Unit> {
             var newSession: AppSearchSessionWrapper? = null
-            return try {
-                newSession = appSearchWrapper.createSearchSession(context, AppSearchConstants.DATABASE_NAME)
-                newSession.setSchema(appSearchWrapper.createSchemaRequest(forceOverride))
-                session = newSession
-                updateStatus(TrackingStatus.Active)
-                Result.success(Unit)
-            } catch (e: CancellationException) {
-                newSession?.close()
-                throw e
-            } catch (e: AppSearchException) {
-                newSession?.close()
-                updateStatus(errorHandler.handleSchemaException(e, forceOverride, TrackingStatus.Idle))
-                Result.failure(e)
-            } catch (e: Exception) {
-                newSession?.close()
-                updateStatus(errorHandler.handleInitializationError(e))
-                Result.failure(e)
-            }
+
+            @Suppress("TooGenericExceptionCaught")
+            val result =
+                try {
+                    newSession = appSearchWrapper.createSearchSession(context, AppSearchConstants.DATABASE_NAME)
+                    newSession.setSchema(appSearchWrapper.createSchemaRequest(forceOverride))
+                    session = newSession
+                    updateStatus(TrackingStatus.Active)
+                    Result.success(Unit)
+                } catch (e: CancellationException) {
+                    newSession?.close()
+                    throw e
+                } catch (e: AppSearchException) {
+                    newSession?.close()
+                    updateStatus(errorHandler.handleSchemaException(e, forceOverride, TrackingStatus.Idle))
+                    Result.failure(e)
+                } catch (e: Exception) {
+                    // Operation must complete without propagating exception for AppSearch session initialization.
+                    newSession?.close()
+                    updateStatus(errorHandler.handleInitializationError(e))
+                    Result.failure(e)
+                }
+            return result
         }
 
         suspend fun closeSession() {

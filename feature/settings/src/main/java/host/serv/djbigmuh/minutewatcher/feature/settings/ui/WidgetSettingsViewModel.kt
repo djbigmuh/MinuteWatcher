@@ -143,12 +143,14 @@ class WidgetSettingsViewModel
          */
         fun refreshAodSummaryAvailability() {
             viewModelScope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val available = aodSummaryAvailability.isAodSummaryAvailable()
                     _aodSummaryAvailable.value = available
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for AOD summary availability check.
                     AppLogger.e("WidgetSettingsViewModel: failed to check AOD summary availability", e)
                     _aodSummaryAvailable.value = false
                 }
@@ -179,6 +181,7 @@ class WidgetSettingsViewModel
             loadJob?.cancel()
             loadJob =
                 viewModelScope.launch {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         val loaded =
                             withTimeoutOrNull(timeout = LOAD_TIMEOUT) {
@@ -194,6 +197,7 @@ class WidgetSettingsViewModel
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for widget settings load.
                         AppLogger.e("Failed to load widget settings", e)
                         reduce { copy(isLoadError = true) }
                     }
@@ -306,6 +310,7 @@ class WidgetSettingsViewModel
          */
         suspend fun saveAndNotify() {
             saveMutex.withLock {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val currentState = updateAndGet { copy(saveResult = null, isSaving = true) }
                     val settingsToSave = currentState.settings
@@ -327,14 +332,17 @@ class WidgetSettingsViewModel
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for save and notify stability.
                     AppLogger.e("Failed to save widget settings", e)
                     currentCoroutineContext().ensureActive()
                     reduce { copy(saveResult = SaveResult.Failed(SaveFailureReason.GENERAL)) }
                 } finally {
                     withContext(NonCancellable) {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             reduce { copy(isSaving = false) }
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for state reduction.
                             AppLogger.e("WidgetSettingsViewModel: Failed to update isSaving status", e)
                         }
                     }
@@ -392,6 +400,7 @@ class WidgetSettingsViewModel
 
         @VisibleForTesting
         internal suspend fun performEmergencySave(currentSettings: WidgetSettingsState) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 withTimeoutOrNull(FLUSH_TIMEOUT) {
                     saveMutex.withLock {
@@ -402,6 +411,7 @@ class WidgetSettingsViewModel
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for emergency save stability.
                 AppLogger.e("WidgetSettingsViewModel: Emergency save failed", e)
             }
         }
@@ -415,11 +425,13 @@ class WidgetSettingsViewModel
 
             if (currentSettings != null && baseline != null && currentSettings != baseline) {
                 appScope.launch {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         performEmergencySave(currentSettings)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for emergency save coroutine.
                         AppLogger.e("WidgetSettingsViewModel: Emergency save background coroutine failed", e)
                     }
                 }

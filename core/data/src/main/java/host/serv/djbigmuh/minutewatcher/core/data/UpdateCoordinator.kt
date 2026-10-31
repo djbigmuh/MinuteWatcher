@@ -232,6 +232,7 @@ class UpdateCoordinator
 
                 val newSetupJob =
                     scope.launch(start = CoroutineStart.LAZY) {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             val success =
                                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
@@ -249,6 +250,7 @@ class UpdateCoordinator
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for observation setup.
                             AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
                             transitionStatus(
                                 TrackingStatus.Error(
@@ -277,6 +279,7 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
 
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val firstSnapshot = waitForInitialSnapshot()
 
@@ -324,6 +327,7 @@ class UpdateCoordinator
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for setup observation.
                 AppLogger.e("UpdateCoordinator: Failed to setup observation", e)
                 transitionStatus(
                     TrackingStatus.Error(
@@ -379,6 +383,7 @@ class UpdateCoordinator
 
         @Suppress("ThrowsCount") // Terminal vs retryable errors
         private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 processSnapshot(snapshot)
             } catch (e: TerminalUpdateException) {
@@ -389,6 +394,7 @@ class UpdateCoordinator
             } catch (
                 e: Exception,
             ) {
+                // Operation must complete without propagating exception before rethrow for logging.
                 AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
                 val newHash = runCatching { SnapshotUtils.calculateContentHash(snapshot) }.getOrDefault(0)
                 handleUpdateResult(
@@ -592,11 +598,13 @@ class UpdateCoordinator
             }
 
         private suspend fun performWidgetUpdate(): WidgetUpdateResult =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 widgetUpdater.updateAll()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for widget update execution.
                 AppLogger.e("UpdateCoordinator: unexpected widget update failure", e)
                 WidgetUpdateResult.Failure(
                     isRetryable = false,
@@ -755,41 +763,45 @@ class UpdateCoordinator
             // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)
             widgetUpdater.recover()
 
-            return try {
-                // Snapshot that is guaranteed to be not newer than what the renderer will see.
-                val snapshotBefore = usageStateRepository.observeSnapshot().value
-                val hashBefore = SnapshotUtils.calculateContentHash(snapshotBefore)
+            @Suppress("TooGenericExceptionCaught")
+            val res =
+                try {
+                    // Snapshot that is guaranteed to be not newer than what the renderer will see.
+                    val snapshotBefore = usageStateRepository.observeSnapshot().value
+                    val hashBefore = SnapshotUtils.calculateContentHash(snapshotBefore)
 
-                val result = widgetUpdater.updateAll()
+                    val result = widgetUpdater.updateAll()
 
-                val hashAfter = SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
+                    val hashAfter = SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
 
-                stateMutex.withLock {
-                    when (result) {
-                        is WidgetUpdateResult.Success -> processForcedSuccessResult(result, hashBefore, hashAfter)
-                        is WidgetUpdateResult.Failure -> {
-                            processFailureResult(result)
-                            ForcedUpdateOutcome(success = false, contentChangedDuringUpdate = false)
+                    stateMutex.withLock {
+                        when (result) {
+                            is WidgetUpdateResult.Success -> processForcedSuccessResult(result, hashBefore, hashAfter)
+                            is WidgetUpdateResult.Failure -> {
+                                processFailureResult(result)
+                                ForcedUpdateOutcome(success = false, contentChangedDuringUpdate = false)
+                            }
                         }
                     }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.w(
-                    "UpdateCoordinator: forced widget update failed with unexpected exception, " +
-                        "treating as terminal failure",
-                    e,
-                )
-                stateMutex.withLock {
-                    processFailureResult(
-                        WidgetUpdateResult.Failure(
-                            reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                        ),
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Operation must complete without propagating exception for forced widget update.
+                    AppLogger.w(
+                        "UpdateCoordinator: forced widget update failed with unexpected exception, " +
+                            "treating as terminal failure",
+                        e,
                     )
+                    stateMutex.withLock {
+                        processFailureResult(
+                            WidgetUpdateResult.Failure(
+                                reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                            ),
+                        )
+                    }
+                    ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
                 }
-                ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
-            }
+            return res
         }
 
         private fun processForcedSuccessResult(

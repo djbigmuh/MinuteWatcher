@@ -223,6 +223,7 @@ internal class SimIdentityObserver
                                 var loopAttempts = 0
                                 while (shouldContinue && loopAttempts < MAX_DISCOVERY_LOOP_ATTEMPTS) {
                                     loopAttempts++
+                                    @Suppress("TooGenericExceptionCaught")
                                     try {
                                         val result = fetcher.fetchActiveSimsWithRetry(seed)
                                         if (result is SimDiscoveryResult.Available) {
@@ -245,6 +246,7 @@ internal class SimIdentityObserver
                                     } catch (e: IOException) {
                                         throw e
                                     } catch (e: Exception) {
+                                        // Operation must complete without propagating exception for discovery loop.
                                         AppLogger.e("SimIdentityObserver: fetchActiveSimsWithRetry failed", e)
                                         transitionStatus(
                                             TrackingStatus.Error(
@@ -491,6 +493,7 @@ internal class SimIdentityObserver
 
                     AppLogger.d("SimIdentityObserver: triggering migration from ephemeral seed to persistent seed")
                     scope.launch {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             val outcome = migrationService.migrateFromEphemeralSeed(fallbackSeedValue, sims)
                             AppLogger.d(
@@ -507,6 +510,7 @@ internal class SimIdentityObserver
                             }
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
+                            // Operation must complete without propagating exception for ephemeral seed migration retry.
                             AppLogger.e("SimIdentityObserver: migration failed with unexpected error, will retry", e)
                             // Reset trigger on exception to allow retry
                             migrationTriggered.set(false)
@@ -526,6 +530,7 @@ internal class SimIdentityObserver
          */
         private suspend fun generateSeedWithRetry(): SeedResolutionResult {
             repeat(2) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val result =
                         withTimeoutOrNull(Constants.Flow.SEED_GENERATION_TIMEOUT_MS.milliseconds) {
@@ -535,6 +540,7 @@ internal class SimIdentityObserver
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for seed resolution retry.
                     AppLogger.e("SimIdentityObserver: seed resolution attempt failed", e)
                 }
             }

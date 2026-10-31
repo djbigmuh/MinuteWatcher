@@ -64,6 +64,7 @@ class UsageCheckWorker
             }
 
         private suspend fun executeWork(): Result =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
                     deps.usageUseCase.refreshOperatorInfo()
@@ -80,6 +81,7 @@ class UsageCheckWorker
                 AppLogger.e("UsageCheckWorker: Permission error (unexpected)", e)
                 Result.failure()
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for worker execution.
                 AppLogger.e("UsageCheckWorker failed due to unexpected error", e)
                 Result.failure()
             }
@@ -128,6 +130,7 @@ class UsageCheckWorker
         }
 
         private suspend fun tryPerformAutoReset() {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val allReset = deps.autoResetUseCase.performAutoReset(shouldNotify = false)
                 if (!allReset) {
@@ -136,6 +139,7 @@ class UsageCheckWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for auto reset step.
                 AppLogger.e("UsageCheckWorker: Auto-reset failed with error, continuing", e)
             }
         }
@@ -178,6 +182,7 @@ class UsageCheckWorker
             simSnapshot: SimSnapshot,
             appSettings: AppSettings,
         ) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     processSimSnapshot(simSnapshot, appSettings)
@@ -187,6 +192,7 @@ class UsageCheckWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for SIM snapshot processing.
                 AppLogger.e("UsageCheckWorker: error processing SIM slot ${simSnapshot.slot}", e)
             }
         }

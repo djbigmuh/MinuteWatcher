@@ -90,6 +90,7 @@ object OperatorResolver {
      * Loads the MCC/MNC database from assets.
      */
     private fun loadDbInternal(context: Context): Map<String, String> =
+        @Suppress("TooGenericExceptionCaught")
         try {
             val jsonString =
                 context.assets.open("mcc_mnc_db.json").use { input ->
@@ -106,6 +107,7 @@ object OperatorResolver {
             AppLogger.e("Failed to load MCC/MNC database from assets", e)
             emptyMap()
         } catch (e: Exception) {
+            // Operation must complete without propagating exception to ensure system stability and fault tolerance.
             // Catches all other exceptions to ensure db is set to emptyMap
             AppLogger.e("Unexpected error loading MCC/MNC database", e)
             emptyMap()

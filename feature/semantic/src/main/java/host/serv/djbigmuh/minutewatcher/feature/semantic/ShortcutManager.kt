@@ -108,6 +108,7 @@ class ShortcutManager
 
         @OptIn(FlowPreview::class)
         @VisibleForTesting
+        @Suppress("TooGenericExceptionCaught")
         internal suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
                 if (isCurrentObservationActive(snapshotFlow)) return
@@ -117,6 +118,7 @@ class ShortcutManager
                         if (snapshot.isManualUpdate) 0L else Constants.Semantic.THROTTLE_MS
                     },
                 ) { snapshot ->
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         withContext(ioDispatcher) {
                             updateShortcuts(snapshot)
@@ -125,6 +127,7 @@ class ShortcutManager
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for shortcut observation stability.
                         AppLogger.e("Failed to update dynamic shortcuts", e)
                         val type = classifyShortcutError(e)
                         transitionStatus(TrackingStatus.Error(type, e.message))
@@ -170,6 +173,7 @@ class ShortcutManager
          * removing all dynamic shortcuts during cold start.
          */
         suspend fun updateShortcutsSync(snapshot: GlobalSnapshot): Boolean =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
                     AppLogger.d("ShortcutManager: snapshot not loaded, skipping shortcut update (no removal)")
@@ -185,6 +189,7 @@ class ShortcutManager
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception to ensure system stability and fault tolerance.
                 AppLogger.e("Failed to update dynamic shortcuts", e)
                 val type = classifyShortcutError(e)
                 transitionStatus(TrackingStatus.Error(type, e.message))

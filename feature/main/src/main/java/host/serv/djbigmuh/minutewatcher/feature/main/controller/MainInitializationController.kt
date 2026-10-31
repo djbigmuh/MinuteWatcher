@@ -57,6 +57,7 @@ class MainInitializationController
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         private suspend fun runInitializationLoop(
             lastRefreshAt: Long,
             onUpdateLastRefreshAt: (Long) -> Unit,
@@ -67,6 +68,7 @@ class MainInitializationController
 
             var attempt = 0
             while (attempt < MAX_INIT_RETRIES && !isSuccess && !isTerminal) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     performInitializationTasks()
                     val outcome = refreshController.refreshSimCardsInternal()
@@ -82,6 +84,7 @@ class MainInitializationController
                     AppLogger.e("initializeApp: SecurityException encountered, stopping initialization", e)
                     isTerminal = true
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for initialization loop attempt.
                     AppLogger.e("initializeApp: attempt ${attempt + 1} failed with exception", e)
                 }
 

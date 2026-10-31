@@ -37,6 +37,7 @@ class TrafficSimChangeHandler
 
         suspend fun ensureInMemoryLastDataSubId() {
             if (!lastDataSubIdLoaded.get()) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val loaded =
                         callSessionRepository
@@ -55,6 +56,7 @@ class TrafficSimChangeHandler
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for SIM change handler load.
                     AppLogger.e("TrafficSimChangeHandler: Failed to load lastDataSubId", e)
                 }
             }
@@ -126,6 +128,7 @@ class TrafficSimChangeHandler
             if (!isSimChanged) return
 
             AppLogger.d("Default data SIM changed from $savedLastDataSubId to $currentDataSubId. Resetting baseline.")
+            @Suppress("TooGenericExceptionCaught")
             try {
                 // Update the last seen data subId immediately to "commit" the detection of the SIM change.
                 // This prevents the same SIM change from being repeatedly detected if the baseline
@@ -144,6 +147,7 @@ class TrafficSimChangeHandler
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for SIM change handling.
                 AppLogger.e("Failed to handle SIM change", e)
                 updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
             }
@@ -157,11 +161,13 @@ class TrafficSimChangeHandler
             if (lastDataSubIdLoaded.get() && dataSubId == inMemoryLastDataSubId.get()) return
             inMemoryLastDataSubId.set(dataSubId)
             lastDataSubIdLoaded.set(true)
+            @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository.setLastDataSubId(dataSubId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for persisting last data subId.
                 AppLogger.e("TrafficSimChangeHandler: Failed to persist last data subId $dataSubId", e)
                 // in-memory value remains: detecting SIM change is more important than persistence
             }

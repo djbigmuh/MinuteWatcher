@@ -160,10 +160,12 @@ class MainActivity : AppCompatActivity() {
         intent?.let {
             val shortcutId = it.getStringExtra(IntentExtras.SHORTCUT_ID)
             if (!shortcutId.isNullOrEmpty()) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     androidx.core.content.pm.ShortcutManagerCompat
                         .reportShortcutUsed(this, shortcutId)
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for UI interaction stability.
                     AppLogger.w("Failed to report shortcut used: $shortcutId", e)
                 }
             }

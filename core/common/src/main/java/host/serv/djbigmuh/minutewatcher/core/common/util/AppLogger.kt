@@ -276,6 +276,7 @@ object AppLogger {
         logChannel.trySend(LogEntry(level, message))
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun openWriter(dir: File): BufferedWriter? =
         try {
             val logFile = File(dir, LOG_FILE_NAME)
@@ -285,6 +286,7 @@ object AppLogger {
             }
             bw
         } catch (e: Exception) {
+            // Operation must complete without propagating exception for logging infrastructure reliability.
             Log.e(TAG, "AppLogger: failed to open log file writer", e)
             null
         }
@@ -299,8 +301,10 @@ object AppLogger {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun processLogEntry(entry: LogEntry) {
         val drainedEntries = mutableListOf<LogEntry>()
+        @Suppress("TooGenericExceptionCaught")
         synchronized(this) {
             val dir = logDir
             if (!isFileLoggingEnabled || isShutdown || dir == null) return
@@ -325,6 +329,7 @@ object AppLogger {
                     consecutiveWriteFailures = 0
                 }
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for stability.
                 closeWriter()
                 consecutiveWriteFailures++
                 drainedEntries.add(entry)

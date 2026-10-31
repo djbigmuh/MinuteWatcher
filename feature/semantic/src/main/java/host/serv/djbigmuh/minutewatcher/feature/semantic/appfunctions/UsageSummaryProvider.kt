@@ -24,12 +24,14 @@ class UsageSummaryProvider
         private suspend fun fetchAndValidateSnapshot(): GlobalSnapshot {
             var snapshot = usageStateRepository.observeSnapshot().value
             if (snapshot.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     usageStateRepository.refresh()
                     snapshot = usageStateRepository.observeSnapshot().value
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for AppFunction provider stability.
                     AppLogger.w("UsageSummaryProvider: refresh failed during getUsageSummary", e)
                 }
             }

@@ -284,6 +284,7 @@ internal fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
  * @param bgColor Background color.
  * @return Modifier for widget.
  */
+@Suppress("TooGenericExceptionCaught")
 internal fun getWidgetModifier(
     context: Context,
     navigationProvider: NavigationProvider?,
@@ -297,6 +298,7 @@ internal fun getWidgetModifier(
 
     val className = navigationProvider?.mainActivityClassName.orEmpty()
     if (className.isNotEmpty()) {
+        @Suppress("TooGenericExceptionCaught")
         try {
             val launchIntent =
                 Intent(Intent.ACTION_MAIN).apply {
@@ -306,6 +308,7 @@ internal fun getWidgetModifier(
                 }
             modifier = modifier.clickable(actionStartActivity(launchIntent))
         } catch (e: Exception) {
+            // Operation must complete without propagating exception for stability.
             AppLogger.e("Failed to attach click action to widget", e)
         }
     }

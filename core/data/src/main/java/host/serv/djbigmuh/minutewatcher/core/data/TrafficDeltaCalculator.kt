@@ -25,6 +25,7 @@ class TrafficDeltaCalculator
             target: TargetInfo,
             expectedLastResetDate: Long,
         ): Boolean {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
                     val applied =
@@ -54,6 +55,7 @@ class TrafficDeltaCalculator
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for traffic delta update logging.
                 AppLogger.e(
                     "TrafficDeltaCalculator: Critical error updating baseline/usage for $targetIdentity",
                     e,
@@ -69,6 +71,7 @@ class TrafficDeltaCalculator
             slot: Int,
             expectedLastResetDate: Long,
         ): Boolean {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val deltaBytes = currentBytes - lastTotalBytes
                 if (deltaBytes > 0L) {
@@ -96,6 +99,7 @@ class TrafficDeltaCalculator
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for traffic delta handling logging.
                 AppLogger.e(
                     "TrafficDeltaCalculator: Error calculating/persisting delta for $identity",
                     e,

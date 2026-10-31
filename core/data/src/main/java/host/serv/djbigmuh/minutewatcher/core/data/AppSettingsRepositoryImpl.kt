@@ -116,14 +116,17 @@ class AppSettingsRepositoryImpl
          * @throws IOException if DataStore write operation fails.
          * @throws CancellationException if the update process is canceled.
          */
+        @Suppress("TooGenericExceptionCaught")
         override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
             updateMutex.withLock {
                 dataStore.edit { prefs ->
                     val current = prefs.toAppSettings()
                     val updated =
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             transform(current)
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception.
                             AppLogger.e("updateAppSettings: transform failed", e)
                             throw e
                         }

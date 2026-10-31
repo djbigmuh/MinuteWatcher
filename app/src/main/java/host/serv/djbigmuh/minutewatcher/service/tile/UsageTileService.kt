@@ -58,17 +58,20 @@ class UsageTileService : TileService() {
 
     private var job: Job? = null
 
+    @Suppress("TooGenericExceptionCaught")
     override fun onStartListening() {
         super.onStartListening()
         updateTile()
 
         if (semanticRepository.snapshot.value.timestamp == Constants.Data.EMPTY_TIMESTAMP) {
             applicationScope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     usageStateRepository.refresh()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for tile service reliability.
                     AppLogger.e("Failed to force refresh snapshot for tile", e)
                 }
             }
@@ -79,11 +82,13 @@ class UsageTileService : TileService() {
             applicationScope.launch(mainImmediateDispatcher) {
                 semanticRepository.snapshot
                     .collectLatest {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             updateTile()
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for tile service reliability.
                             AppLogger.e("Failed to update quick settings tile", e)
                         }
                     }

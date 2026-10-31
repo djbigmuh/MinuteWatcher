@@ -52,47 +52,55 @@ class TrafficTargetResolver
                 return TargetResult.NoActiveSims
             }
 
-            return try {
-                val currentDataSubId =
-                    try {
-                        permissionManager.getDefaultDataSubscriptionId()
-                    } catch (e: Exception) {
-                        AppLogger.e("Error getting default data SIM", e)
-                        -1
+            @Suppress("TooGenericExceptionCaught")
+            val res =
+                try {
+                    @Suppress("TooGenericExceptionCaught")
+                    val currentDataSubId =
+                        try {
+                            permissionManager.getDefaultDataSubscriptionId()
+                        } catch (e: Exception) {
+                            // Operation must complete without propagating exception for default data sub ID read.
+                            AppLogger.e("Error getting default data SIM", e)
+                            -1
+                        }
+
+                    if (currentDataSubId == -1) {
+                        val simClaimsDefault = activeSims.any { it.isDefaultData }
+                        return if (simClaimsDefault) {
+                            AppLogger.w(
+                                "TrafficTargetResolver: Stale input - " +
+                                    "system says no default sub, but a SIM claims default status.",
+                            )
+                            TargetResult.StaleInput
+                        } else {
+                            AppLogger.d("TrafficTargetResolver: No default data SIM selected (likely data off)")
+                            TargetResult.NoDefaultData
+                        }
                     }
 
-                if (currentDataSubId == -1) {
-                    val simClaimsDefault = activeSims.any { it.isDefaultData }
-                    return if (simClaimsDefault) {
+                    val targetSim = activeSims.find { it.subscriptionId == currentDataSubId }?.slotIndex ?: -1
+
+                    if (targetSim == -1) {
                         AppLogger.w(
-                            "TrafficTargetResolver: Stale input - " +
-                                "system says no default sub, but a SIM claims default status.",
+                            "TrafficTargetResolver: Stale input - subId $currentDataSubId not found in active SIMs",
                         )
-                        TargetResult.StaleInput
-                    } else {
-                        AppLogger.d("TrafficTargetResolver: No default data SIM selected (likely data off)")
-                        TargetResult.NoDefaultData
+                        return TargetResult.StaleInput
                     }
+
+                    if (targetSim !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                        val message = "simSlotIndex $targetSim out of supported range"
+                        AppLogger.e("TrafficTargetResolver: $message")
+                        return TargetResult.Failed(message)
+                    }
+
+                    AppLogger.d("TrafficTargetResolver: Resolved target SIM slot $targetSim (subId $currentDataSubId)")
+                    TargetResult.Success(TargetInfo(targetSim, currentDataSubId))
+                } catch (e: Exception) {
+                    // Operation must complete without propagating exception for target resolution.
+                    AppLogger.e("TrafficTargetResolver: Unexpected error during resolution", e)
+                    TargetResult.Failed(e.message)
                 }
-
-                val targetSim = activeSims.find { it.subscriptionId == currentDataSubId }?.slotIndex ?: -1
-
-                if (targetSim == -1) {
-                    AppLogger.w("TrafficTargetResolver: Stale input - subId $currentDataSubId not found in active SIMs")
-                    return TargetResult.StaleInput
-                }
-
-                if (targetSim !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                    val message = "simSlotIndex $targetSim out of supported range"
-                    AppLogger.e("TrafficTargetResolver: $message")
-                    return TargetResult.Failed(message)
-                }
-
-                AppLogger.d("TrafficTargetResolver: Resolved target SIM to slot $targetSim (subId $currentDataSubId)")
-                TargetResult.Success(TargetInfo(targetSim, currentDataSubId))
-            } catch (e: Exception) {
-                AppLogger.e("TrafficTargetResolver: Unexpected error during resolution", e)
-                TargetResult.Failed(e.message)
-            }
+            return res
         }
     }

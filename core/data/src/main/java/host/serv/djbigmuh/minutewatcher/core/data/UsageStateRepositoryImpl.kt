@@ -299,11 +299,13 @@ class UsageStateRepositoryImpl
             val timeout = Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds
 
             // Trigger notification.
+            @Suppress("TooGenericExceptionCaught")
             try {
                 deps.dataRefreshNotifier.notifyRefresh(isManual = true)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for data refresh notification.
                 AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
             }
 

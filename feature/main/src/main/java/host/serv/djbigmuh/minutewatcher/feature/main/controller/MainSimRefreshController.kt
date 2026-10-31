@@ -65,13 +65,16 @@ class MainSimRefreshController
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException].
          */
+        @Suppress("TooGenericExceptionCaught")
         suspend fun refreshSimCardsInternal(): RefreshOutcome =
             withContext(ioDispatcher) {
                 if (!simCheckMutex.tryLock()) {
                     AppLogger.d("Refresh already in progress, skipping")
                     return@withContext RefreshOutcome.SkippedAlreadyInProgress
                 }
+                @Suppress("TooGenericExceptionCaught")
                 try {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         usageUseCase.refreshOperatorInfo()
                     } catch (e: CancellationException) {
@@ -80,6 +83,7 @@ class MainSimRefreshController
                         AppLogger.e("refreshSimCardsInternal: SecurityException in refreshOperatorInfo", e)
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for operator info refresh.
                         AppLogger.e("refreshSimCardsInternal: refreshOperatorInfo failed, continuing", e)
                     }
                     val result = usageStateRepository.refresh()
@@ -90,6 +94,7 @@ class MainSimRefreshController
                     AppLogger.e("SecurityException refreshing SIM cards", e)
                     RefreshOutcome.Failed(e)
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for SIM cards refresh.
                     AppLogger.e("Error refreshing SIM cards", e)
                     RefreshOutcome.Failed(e)
                 } finally {
@@ -145,6 +150,7 @@ class MainSimRefreshController
             onComplete: () -> Unit = {},
         ) {
             scope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     if (refreshAndNotify(onNotifyChanged, force = false)) {
                         onSuccess()
@@ -152,6 +158,7 @@ class MainSimRefreshController
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for SIM cards manual refresh.
                     AppLogger.e("refreshSimCardsNow failed", e)
                 } finally {
                     onComplete()

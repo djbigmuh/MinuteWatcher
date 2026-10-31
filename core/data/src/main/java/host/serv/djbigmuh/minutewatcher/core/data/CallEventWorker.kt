@@ -27,6 +27,7 @@ class CallEventWorker
             } ?: handleTotalTimeout()
 
         private suspend fun processCallEvent(): Result =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val state = inputData.getString(EXTRA_STATE)
                 val subId = inputData.getInt(EXTRA_SUB_ID, -1)

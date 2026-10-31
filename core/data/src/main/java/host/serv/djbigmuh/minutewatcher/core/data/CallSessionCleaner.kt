@@ -24,6 +24,7 @@ internal class CallSessionCleaner
             subId: Int,
             context: CallTrackingContext,
         ) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository.clearCallSession(subId)
             } catch (e: CancellationException) {
@@ -109,6 +110,7 @@ internal class CallSessionCleaner
             }
 
         private suspend fun readStartTime(subId: Int): Long? =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository
                     .getCallStartTime(subId)
@@ -121,6 +123,7 @@ internal class CallSessionCleaner
             }
 
         private suspend fun readElapsedRealtime(subId: Int): Long? =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository
                     .getElapsedRealtime(subId)
@@ -137,6 +140,7 @@ internal class CallSessionCleaner
             context: CallTrackingContext,
             criterion: String,
         ): Boolean =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository.clearCallSession(subId)
                 attributionResolver.clearFailures(subId)

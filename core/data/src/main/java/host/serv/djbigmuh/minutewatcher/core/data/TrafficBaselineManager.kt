@@ -106,6 +106,7 @@ class TrafficBaselineManager
             incrementRetryOnFailure: Boolean = false,
             onSuccess: suspend () -> Unit = {},
         ) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 // Ensure tracking window is initialized. If lastResetDate was 0, it becomes 'now'.
                 simUsageResetRepository.ensureTrackingWindowInitialized(identity)

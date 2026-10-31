@@ -79,9 +79,11 @@ class NotificationHelper
         }
 
         private val notificationManager: NotificationManager? =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 context.getSystemService(NotificationManager::class.java)
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for notification manager acquisition.
                 AppLogger.w("Failed to obtain NotificationManager: ${e.message}")
                 null
             }
@@ -141,9 +143,11 @@ class NotificationHelper
                     manager.createNotificationChannel(aodChannel)
 
                     if (!legacyChannelDeleted) {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             manager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for legacy channel deletion.
                             AppLogger.w("Failed to delete legacy AOD summary notification channel: ${e.message}")
                         }
                         legacyChannelDeleted = true

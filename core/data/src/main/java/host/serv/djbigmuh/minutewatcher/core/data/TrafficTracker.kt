@@ -281,6 +281,7 @@ class TrafficTracker
 
         private suspend fun runPermissionObserver() {
             var attempt = 0
+            @Suppress("TooGenericExceptionCaught")
             try {
                 bothPermissionsGranted.set(
                     permissionManager.hasPhoneStatePermission() &&
@@ -295,6 +296,7 @@ class TrafficTracker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for permission observer.
                 AppLogger.e("TrafficTracker: Permission observer terminated", e)
             }
         }
@@ -333,11 +335,13 @@ class TrafficTracker
         }
 
         private suspend fun handlePermissionChangeSafe() {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 handlePermissionChange()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for permission change handling.
                 AppLogger.e("TrafficTracker: Error handling permission change", e)
                 transitionStatus(
                     TrackingStatus.Error(
@@ -358,11 +362,13 @@ class TrafficTracker
                 if (!previousGranted) {
                     AppLogger.d("TrafficTracker: permissions granted transition detected, updating traffic")
                     scope.launch {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             updateTrafficUsage(force = true)
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for permission traffic update.
                             AppLogger.e("TrafficTracker: Traffic update after permissions granted transition failed", e)
                         }
                     }
@@ -376,11 +382,13 @@ class TrafficTracker
 
         private fun launchTrafficUpdate() {
             scope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     updateTrafficUsage()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for permission revoked traffic update.
                     AppLogger.e("TrafficTracker: traffic update after permissions revoked transition failed", e)
                 }
             }
@@ -402,6 +410,7 @@ class TrafficTracker
 
         private suspend fun runSimObserver() {
             var attempt = 0
+            @Suppress("TooGenericExceptionCaught")
             try {
                 lastObservedDataSubId = null
                 simIdentityRepository
@@ -414,17 +423,20 @@ class TrafficTracker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for SIM observer loop.
                 AppLogger.e("TrafficTracker: SIM observer terminated", e)
             }
         }
 
         private suspend fun handleSimChangeSafe(sims: List<ActiveSimInfo>) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 checkAndScheduleAutoRecovery("SIM change")
                 handleDefaultDataChange(sims)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for SIM change event handling.
                 AppLogger.e("TrafficTracker: Error handling SIM change event", e)
                 transitionStatus(
                     TrackingStatus.Error(
@@ -450,11 +462,13 @@ class TrafficTracker
             }
 
             AppLogger.d("TrafficTracker: default data SIM changed ($previous -> $currentDataSubId), updating traffic")
+            @Suppress("TooGenericExceptionCaught")
             try {
                 updateTrafficUsage()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for SIM change traffic update.
                 AppLogger.e("TrafficTracker: SIM-change triggered update failed", e)
             }
         }
@@ -532,6 +546,7 @@ class TrafficTracker
             startElapsed: Long,
             force: Boolean,
         ): InitAttemptResult =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val outcome = updateTrafficUsageLogic(force)
                 InitAttemptResult.Success(outcome)
@@ -681,6 +696,7 @@ class TrafficTracker
             startElapsed: Long,
             block: suspend () -> TrafficUpdateOutcome,
         ): TrafficUpdateOutcome =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val outcome = block()
                 val currentStatus = statusMachine.current
@@ -740,6 +756,7 @@ class TrafficTracker
             val outcome =
                 withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
                     updateMutex.withLock {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             val activeSims = fetchActiveSims()
                             if (activeSims == null) {

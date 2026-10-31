@@ -103,6 +103,7 @@ class PermissionManager
             return granted
         }
 
+        @Suppress("TooGenericExceptionCaught")
         fun hasUsageStatsPermission(): Boolean {
             val appOps = context.getSystemService(AppOpsManager::class.java)
             val mode =
@@ -126,6 +127,7 @@ class PermissionManager
                         )
                     }
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception.
                     AppLogger.e("PermissionManager: Failed to check GET_USAGE_STATS op", e)
                     AppOpsManager.MODE_IGNORED
                 }

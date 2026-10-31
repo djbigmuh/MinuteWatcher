@@ -37,6 +37,7 @@ internal class CallEndHandler
             context: CallTrackingContext,
         ) {
             var shouldRefreshStatus = false
+            @Suppress("TooGenericExceptionCaught")
             try {
                 if (!context.checkPermissions()) {
                     shouldRefreshStatus = true
@@ -80,11 +81,13 @@ internal class CallEndHandler
             context: CallTrackingContext,
         ) {
             // Force refresh before rethrowing so status is consistent
+            @Suppress("TooGenericExceptionCaught")
             try {
                 context.refreshStatus(true)
             } catch (e2: CancellationException) {
                 throw e2
             } catch (e2: Exception) {
+                // Operation must complete without propagating exception for fatal error status refresh.
                 AppLogger.w("CallEndHandler: refreshStatus failed after fatal error", e2)
             }
             val code = if (e is DataStoreTimeoutException) TrackingStatus.ErrorCode.TIMEOUT else null
@@ -139,6 +142,7 @@ internal class CallEndHandler
             var firstStorageOrPermissionException: Exception? = null
 
             subIdsToEnd.forEach { id ->
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     endCall(id, eventElapsedRealtime, notifyEach, context)
                 } catch (e: CancellationException) {
@@ -154,6 +158,7 @@ internal class CallEndHandler
                         firstStorageOrPermissionException = e
                     }
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for multi-SIM call end resolution.
                     AppLogger.e("Failed to end call for subId $id during resolution", e)
                 }
             }
@@ -176,11 +181,13 @@ internal class CallEndHandler
             // CallTracker.updateStatus handle this.
             context.updateStatus(error)
             if (subId != -1) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     sessionCleaner.cleanupCounters(subId, context)
                 } catch (ex: CancellationException) {
                     throw ex
                 } catch (ex: Exception) {
+                    // Operation must complete without propagating exception for session counter cleanup.
                     AppLogger.e("Cleanup failed in onCallEnded catch block", ex)
                 }
             }
@@ -199,9 +206,11 @@ internal class CallEndHandler
         ) {
             if (!shouldRefreshStatus) return
             withContext(NonCancellable) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     context.refreshStatus(false)
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for finalize call end.
                     AppLogger.w("CallTracker: refreshStatus failed in finalizeCallEnd", e)
                 }
             }

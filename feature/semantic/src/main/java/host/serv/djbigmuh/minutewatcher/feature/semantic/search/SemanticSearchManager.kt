@@ -157,6 +157,7 @@ class SemanticSearchManager
             } ?: false
 
         @OptIn(FlowPreview::class)
+        @Suppress("TooGenericExceptionCaught")
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
                 val acquired =
@@ -164,6 +165,7 @@ class SemanticSearchManager
                         indexMutex.withLock {
                             lastSnapshotHash = null
                             lastSnapshotVersion = null
+                            @Suppress("TooGenericExceptionCaught")
                             try {
                                 indexer.cleanupStalePackageTypes(sessionManager) { newStatus ->
                                     transitionStatus(newStatus)
@@ -171,6 +173,8 @@ class SemanticSearchManager
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
+                                // Operation must complete without propagating exception
+                                // for search manager initialization.
                                 AppLogger.e("SemanticSearchManager: stale package types cleanup failed during init", e)
                             }
                         }
@@ -203,6 +207,7 @@ class SemanticSearchManager
             job?.isActive == true && (lastSnapshotFlow === snapshotFlow)
 
         private suspend fun processSnapshotInternal(snapshot: GlobalSnapshot) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val result =
                     try {
@@ -210,6 +215,7 @@ class SemanticSearchManager
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for indexing pipeline stability.
                         AppLogger.e("SemanticSearchManager: unexpected error during indexing", e)
                         IndexResult.ActualFailure(e.message)
                     }
@@ -218,6 +224,7 @@ class SemanticSearchManager
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for snapshot processing pipeline stability.
                 AppLogger.e("SemanticSearchManager: error processing snapshot in collect", e)
                 transitionStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
             }
@@ -253,6 +260,7 @@ class SemanticSearchManager
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         internal suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
             if (!indexMutex.tryLock()) {
                 val count = consecutiveMutexContention.incrementAndGet()
@@ -304,6 +312,7 @@ class SemanticSearchManager
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): IndexResult {
             val hasSims = snapshot.simSnapshots.isNotEmpty()
             val currentHash = if (hasSims) SnapshotUtils.calculateContentHash(snapshot) else null
@@ -320,23 +329,27 @@ class SemanticSearchManager
                 return IndexResult.ActualFailure("Failed to ensure AppSearch session")
             }
 
-            return try {
-                executeIndexingInternal(snapshot, currentHash)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: AppSearchException) {
-                if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
-                    tryHandleSchemaMismatch(snapshot, currentHash)
-                } else {
-                    AppLogger.e("AppSearch indexing failed", e)
+            @Suppress("TooGenericExceptionCaught")
+            val res =
+                try {
+                    executeIndexingInternal(snapshot, currentHash)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: AppSearchException) {
+                    if (e.resultCode == AppSearchResult.RESULT_INVALID_SCHEMA) {
+                        tryHandleSchemaMismatch(snapshot, currentHash)
+                    } else {
+                        AppLogger.e("AppSearch indexing failed", e)
+                        resetLastSnapshotState()
+                        IndexResult.ActualFailure(e.message)
+                    }
+                } catch (e: Exception) {
+                    // Operation must complete without propagating exception for search indexing resilience.
+                    AppLogger.e("AppSearch non-AppSearch error during indexing", e)
                     resetLastSnapshotState()
                     IndexResult.ActualFailure(e.message)
                 }
-            } catch (e: Exception) {
-                AppLogger.e("AppSearch non-AppSearch error during indexing", e)
-                resetLastSnapshotState()
-                IndexResult.ActualFailure(e.message)
-            }
+            return res
         }
 
         private suspend fun tryHandleSchemaMismatch(
@@ -346,6 +359,7 @@ class SemanticSearchManager
             AppLogger.w("AppSearch schema mismatch, retrying with force override")
             sessionManager.closeSession()
             return if (sessionManager.ensureSession({ transitionStatus(it) }, forceOverride = true)) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     executeIndexingInternal(snapshot, currentHash)
                 } catch (e: CancellationException) {
@@ -355,6 +369,7 @@ class SemanticSearchManager
                     resetLastSnapshotState()
                     IndexResult.ActualFailure(e.message)
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for schema recovery stability.
                     AppLogger.e("Unexpected error after schema reset", e)
                     resetLastSnapshotState()
                     IndexResult.ActualFailure(e.message)
@@ -382,6 +397,7 @@ class SemanticSearchManager
                         return@withContext IndexResult.ActualFailure("AppSearch session is null")
                     }
 
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val removeFailed =
                         indexer.performIndexUpdate(currentSession, snapshot) { status ->
@@ -400,6 +416,7 @@ class SemanticSearchManager
                 } catch (e: AppSearchException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception.
                     AppLogger.e("AppSearch indexing error", e)
                     resetLastSnapshotState()
                     IndexResult.ActualFailure(e.message)

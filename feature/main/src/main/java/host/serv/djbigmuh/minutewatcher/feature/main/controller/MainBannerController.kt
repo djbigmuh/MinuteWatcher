@@ -171,12 +171,14 @@ class MainBannerController
             if (isObservationStarted.get()) return
             scope.launch {
                 if (isObservationStarted.compareAndSet(false, true)) {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         setupObservation()
                     } catch (e: CancellationException) {
                         isObservationStarted.set(false)
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for banner observation setup.
                         isObservationStarted.set(false)
                         AppLogger.e("MainBannerController: Failed to setup observation", e)
                     }

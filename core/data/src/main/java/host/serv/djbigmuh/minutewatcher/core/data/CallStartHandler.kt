@@ -45,6 +45,7 @@ internal class CallStartHandler
             context: CallTrackingContext,
         ) {
             var shouldRefreshStatus = false
+            @Suppress("TooGenericExceptionCaught")
             try {
                 if (!context.checkPermissions()) {
                     shouldRefreshStatus = true
@@ -217,11 +218,13 @@ internal class CallStartHandler
 
             if (isStale) {
                 AppLogger.w("CallTracker: clearing stale session for subId $targetSubId")
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     sessionCleaner.cleanupCounters(targetSubId, context)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for stale session cleanup.
                     AppLogger.e("Non-fatal error clearing stale session", e)
                 }
             }
@@ -242,9 +245,11 @@ internal class CallStartHandler
         ) {
             if (!shouldRefreshStatus) return
             withContext(NonCancellable) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     context.refreshStatus(false)
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for status refresh finally block.
                     AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)
                 }
             }

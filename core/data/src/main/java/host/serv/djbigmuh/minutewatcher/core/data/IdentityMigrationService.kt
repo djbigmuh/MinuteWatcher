@@ -80,6 +80,7 @@ class IdentityMigrationService
          * @throws CancellationException if the operation is canceled.
          */
         suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean? =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val appPrefs =
                     appDataStore.data.firstWithTimeout(Constants.Flow.LONG_TIMEOUT_MS)
@@ -107,6 +108,7 @@ class IdentityMigrationService
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for legacy data check.
                 AppLogger.e("IdentityMigrationService: Error checking for legacy data", e)
                 null
             }
@@ -143,6 +145,7 @@ class IdentityMigrationService
          * @throws CancellationException if the operation is canceled.
          */
         suspend fun markSchemaCurrent() {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                     appDataStore.edit { prefs ->
@@ -152,6 +155,7 @@ class IdentityMigrationService
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for schema version update.
                 AppLogger.e("IdentityMigrationService: Failed to mark schema current", e)
             }
         }
@@ -175,11 +179,13 @@ class IdentityMigrationService
          */
         suspend fun migrateLegacyData(activeIdentity: SimIdentity): MigrationOutcome =
             migrationMutex.withLock {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     performMigration(activeIdentity)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for migration logging before rethrow.
                     AppLogger.e("IdentityMigrationService: Fatal error during migration execution", e)
                     throw e
                 }
@@ -341,6 +347,7 @@ class IdentityMigrationService
             var failureCount = 0
             var partialFailure = false
 
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val success =
                     withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
@@ -367,6 +374,7 @@ class IdentityMigrationService
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for batch migration.
                 AppLogger.e("IdentityMigrationService: Batch migration failed for $storeName", e)
                 failureCount = mappings.size
                 partialFailure = true

@@ -76,18 +76,22 @@ class MinutesGlanceWidget(
      * Called by system on widget update.
      * Shows FallbackContent on any exception.
      */
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun provideGlance(
         context: Context,
         id: GlanceId,
     ) {
+        @Suppress("TooGenericExceptionCaught")
         try {
             val uiState = getUiState(context)
             val navigationProvider =
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     getNavigationProvider(context)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for widget navigation.
                     AppLogger.e("Widget: failed to get NavigationProvider", e)
                     null
                 }
@@ -100,6 +104,7 @@ class MinutesGlanceWidget(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            // Operation must complete without propagating exception for widget fallback rendering.
             AppLogger.e("Widget provideGlance failed, showing fallback", e)
             provideContent {
                 GlanceTheme {
@@ -171,12 +176,14 @@ class MinutesGlanceWidget(
         coroutineScope {
             val settingsDeferred =
                 async {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         val loaded = widgetSettingsLoader.load()
                         if (forceFullRender) loaded.copy(widgetLimitExceeded = false) else loaded
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for widget settings load.
                         AppLogger.e("Failed to load widget settings, using defaults", e)
                         WidgetSettingsState(settingsLoadFailed = true)
                     }
@@ -221,6 +228,7 @@ class MinutesGlanceWidget(
     /**
      * Gets snapshot for widget.
      */
+    @Suppress("TooGenericExceptionCaught")
     internal suspend fun getSnapshot(
         usageRepository: UsageStateRepository,
         timeProvider: TimeProvider,
@@ -234,13 +242,17 @@ class MinutesGlanceWidget(
                 .Success(initialSnapshot)
         }
 
-        return try {
-            usageRepository.refresh()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            AppLogger.e("Widget refresh failed", e)
-            RefreshResult.Failure(initialSnapshot, e)
-        }
+        @Suppress("TooGenericExceptionCaught")
+        val res =
+            try {
+                usageRepository.refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Operation must complete without propagating exception for widget refresh.
+                AppLogger.e("Widget refresh failed", e)
+                RefreshResult.Failure(initialSnapshot, e)
+            }
+        return res
     }
 }

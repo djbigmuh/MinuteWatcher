@@ -192,11 +192,13 @@ class MainSettingsController
             block: suspend () -> Unit,
         ) {
             scope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     block()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for settings task.
                     AppLogger.e("MainSettingsController: $operationName failed", e)
                 }
             }

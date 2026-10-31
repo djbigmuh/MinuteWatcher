@@ -26,6 +26,7 @@ object SimUtils {
      * @param slot SIM slot index.
      * @return Full resolved operator name or generic fallback.
      */
+    @Suppress("TooGenericExceptionCaught")
     fun getShortOperatorName(
         context: Context,
         operatorName: String,
@@ -36,6 +37,7 @@ object SimUtils {
         if (OperatorResolver.isValidSpecificName(trimmed)) {
             return trimmed
         }
+        @Suppress("TooGenericExceptionCaught")
         return try {
             val resId = OperatorResolver.getOperatorResourceId(operatorName)
             when {
@@ -44,6 +46,7 @@ object SimUtils {
                 else -> genericOperatorName(localizedContext, slot)
             }
         } catch (e: Exception) {
+            // Operation must complete without propagating exception to ensure system stability and fault tolerance.
             AppLogger.e("Error resolving short operator name for: $operatorName", e)
             if (operatorName.isNotEmpty()) trimmed else genericOperatorName(localizedContext, slot)
         }
@@ -59,9 +62,11 @@ object SimUtils {
         resId: Int,
         default: String,
     ): String =
+        @Suppress("TooGenericExceptionCaught")
         try {
             context.getString(resId)
         } catch (e: Exception) {
+            // Operation must complete without propagating exception to ensure system stability and fault tolerance.
             AppLogger.w("Resource not found or failed to load: $resId. Using default: $default", e)
             default
         }

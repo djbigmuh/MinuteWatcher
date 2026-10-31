@@ -99,11 +99,13 @@ class AodSummaryController
             snapshot: GlobalSnapshot,
             settings: AppSettings,
         ) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 updateSummaryState(snapshot, settings)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for AOD summary update.
                 AppLogger.e("AodSummaryController: error processing update", e)
             }
         }

@@ -33,10 +33,12 @@ interface ShortcutApplier {
 class SystemShortcutApplier
     @Inject
     constructor() : ShortcutApplier {
+        @Suppress("TooGenericExceptionCaught")
         override fun apply(
             context: Context,
             shortcuts: List<ShortcutInfoCompat>,
         ) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 if (shortcuts.isEmpty()) {
                     ShortcutManagerCompat.removeAllDynamicShortcuts(context)
@@ -63,6 +65,7 @@ class SystemShortcutApplier
                     }
                 }
             } catch (e: Exception) {
+                // Operation must complete without propagating exception.
                 if (e !is IllegalStateException && e !is UnsupportedOperationException) {
                     AppLogger.e("Failed to update dynamic shortcuts: ${e.javaClass.simpleName}", e)
                 }

@@ -66,20 +66,24 @@ class RealNetworkStatsProvider
         ): StatsResult {
             val manager = networkStatsManager ?: return StatsResult.Unavailable
 
-            return try {
-                val bucket =
-                    manager.querySummaryForDevice(
-                        NetworkCapabilities.TRANSPORT_CELLULAR,
-                        null,
-                        startTime,
-                        endTime,
-                    )
-                parseNetworkStatsBytes(bucket.rxBytes, bucket.txBytes)
-            } catch (e: SecurityException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("Error querying NetworkStatsManager", e)
-                StatsResult.Error(e)
-            }
+            @Suppress("TooGenericExceptionCaught")
+            val res =
+                try {
+                    val bucket =
+                        manager.querySummaryForDevice(
+                            NetworkCapabilities.TRANSPORT_CELLULAR,
+                            null,
+                            startTime,
+                            endTime,
+                        )
+                    parseNetworkStatsBytes(bucket.rxBytes, bucket.txBytes)
+                } catch (e: SecurityException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Operation must complete without propagating exception for NetworkStats querying.
+                    AppLogger.e("Error querying NetworkStatsManager", e)
+                    StatsResult.Error(e)
+                }
+            return res
         }
     }

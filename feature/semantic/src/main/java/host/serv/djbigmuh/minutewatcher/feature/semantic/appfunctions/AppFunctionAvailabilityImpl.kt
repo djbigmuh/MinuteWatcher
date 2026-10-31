@@ -23,6 +23,7 @@ internal class AppFunctionAvailabilityImpl
             if (!isAppFunctionApiAvailable()) {
                 return
             }
+            @Suppress("TooGenericExceptionCaught")
             try {
                 gateway.setAppFunctionEnabled(
                     MinuteWatcherAppFunctionService.FUNCTION_ID_GET_USAGE_SUMMARY,
@@ -31,6 +32,7 @@ internal class AppFunctionAvailabilityImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception to ensure system stability and fault tolerance.
                 AppLogger.w(
                     "AppFunctionAvailabilityImpl: Failed to set assistant access enabled = $enabled",
                     e,

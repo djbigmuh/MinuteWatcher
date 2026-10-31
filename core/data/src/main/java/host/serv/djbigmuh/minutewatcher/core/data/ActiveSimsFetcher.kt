@@ -58,6 +58,7 @@ internal class ActiveSimsFetcher
             return SimDiscoveryResult.Failed(SimDiscoveryFailureReason.STORAGE_ERROR)
         }
 
+        @Suppress("TooGenericExceptionCaught")
         private suspend fun getActiveSimsInternal(seed: SeedResult): SimDiscoveryResult {
             val (seedValue, isStable) =
                 when (seed) {
@@ -82,11 +83,13 @@ internal class ActiveSimsFetcher
 
             persistence.retainMigrated(identities.asSequence().map { it.stableId }.toSet())
 
+            @Suppress("TooGenericExceptionCaught")
             try {
                 persistence.saveSimIdentitiesInfo(identities)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for active SIMs fetcher stability.
                 AppLogger.e("ActiveSimsFetcher: non-terminal error saving identities, continuing", e)
             }
 

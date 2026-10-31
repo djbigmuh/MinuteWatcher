@@ -27,6 +27,7 @@ class BenchmarkPopulateWorker
         private val benchmarkUseCase: BenchmarkUseCase,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : CoroutineWorker(context, params) {
+        @Suppress("TooGenericExceptionCaught")
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
                 val buildType = BuildConfig.BUILD_TYPE
@@ -45,6 +46,7 @@ class BenchmarkPopulateWorker
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception.
                     AppLogger.e("BenchmarkPopulateWorker failed to populate mock data", e)
                     Result.failure()
                 }

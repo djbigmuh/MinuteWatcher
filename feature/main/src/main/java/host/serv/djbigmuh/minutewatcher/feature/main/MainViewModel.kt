@@ -190,11 +190,13 @@ class MainViewModel
 
         fun retryWidgetObservation() {
             viewModelScope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     controllers.widgetObservationRecovery.get().recover()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for widget observation recovery.
                     AppLogger.e("MainViewModel: retryWidgetObservation failed", e)
                 }
             }

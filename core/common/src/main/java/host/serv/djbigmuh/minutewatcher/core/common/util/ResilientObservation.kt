@@ -23,6 +23,7 @@ private const val MAX_BACKOFF_EXPONENT = 5
  * @param onRecovered Callback invoked once upon the first emission after a series of errors.
  * @param onSourceCompleted Callback invoked if the source flow completes normally without throwing.
  */
+@Suppress("TooGenericExceptionCaught")
 fun <T> Flow<T>.observeWithRetry(
     label: String,
     logThreshold: Int,
@@ -48,6 +49,7 @@ fun <T> Flow<T>.observeWithRetry(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception to ensure system stability and fault tolerance.
                 consecutiveErrors++
                 val exponent = (consecutiveErrors - 1).coerceIn(0, MAX_BACKOFF_EXPONENT)
                 val delayMs = (INITIAL_RETRY_DELAY_MS * (1L shl exponent)).coerceAtMost(MAX_RETRY_DELAY_MS)

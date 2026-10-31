@@ -20,6 +20,7 @@ import kotlinx.coroutines.guava.await
 import java.util.concurrent.TimeUnit
 
 open class UsageMonitorReceiver : BroadcastReceiver() {
+    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -31,11 +32,13 @@ open class UsageMonitorReceiver : BroadcastReceiver() {
         }
 
         goAsyncWithScope(context, acquirePendingResult(), dispatcher = asyncDispatcher()) { appContext ->
+            @Suppress("TooGenericExceptionCaught")
             try {
                 processPhoneStateChange(appContext, intent)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for receiver reliability.
                 AppLogger.e("UsageMonitorReceiver: Failed to enqueue CallEventWorker", e)
             }
         }

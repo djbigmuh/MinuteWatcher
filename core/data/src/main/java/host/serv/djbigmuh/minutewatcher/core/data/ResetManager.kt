@@ -50,7 +50,7 @@ class ResetManager
          * `false` if at least one SIM failed due to IO error or usage data timeout.
          * @throws CancellationException if the reset process is canceled.
          */
-        @Suppress("CyclomaticComplexMethod") // Complex auto-reset logic
+        @Suppress("CyclomaticComplexMethod", "LongMethod") // Complex auto-reset logic
         override suspend fun performAutoReset(shouldNotify: Boolean): Boolean {
             val now = timeProvider.now()
             val nowElapsed = timeProvider.elapsedRealtime()
@@ -74,6 +74,7 @@ class ResetManager
             val allProcessed =
                 withTimeoutOrNull(RESET_TOTAL_TIMEOUT_MS.milliseconds) {
                     for (simInfo in activeSims) {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             if (processSingleSimReset(simInfo, now, nowElapsed, resetIdentities)) {
                                 successCount++
@@ -90,6 +91,7 @@ class ResetManager
                             ioException = e
                             skippedCount++
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for SIM reset iteration.
                             AppLogger.e("ResetManager: Unexpected error resetting SIM ${simInfo.identity.stableId}", e)
                             skippedCount++
                         }
@@ -104,11 +106,13 @@ class ResetManager
 
             if (resetIdentities.isNotEmpty()) {
                 resetIdentities.forEach { identity ->
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         trafficTracker.resetBaseline(identity)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for traffic baseline reset.
                         AppLogger.e("ResetManager: failed to reset traffic baseline for $identity", e)
                     }
                 }

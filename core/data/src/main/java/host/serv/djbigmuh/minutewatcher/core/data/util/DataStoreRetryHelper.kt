@@ -68,6 +68,7 @@ class DataStoreRetryHelper
             var currentDelay = retryDelayMs
 
             for (attempt in 1..attempts) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val emission =
                         withTimeoutOrNull(attemptTimeoutMillis.milliseconds) {
@@ -80,6 +81,7 @@ class DataStoreRetryHelper
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for DataStore read retry attempt.
                     lastException = e
                 }
 

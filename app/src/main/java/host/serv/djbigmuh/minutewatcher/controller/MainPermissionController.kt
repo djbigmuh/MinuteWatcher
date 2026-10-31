@@ -48,6 +48,7 @@ class MainPermissionController
          * @param onRequestPhonePermission Callback to request phone state permission.
          * @param onCheckNotifications Callback to check for notification permission.
          */
+        @Suppress("TooGenericExceptionCaught")
         fun checkPermissionsAndInit(
             scope: CoroutineScope,
             isInitialSetupCompleted: Flow<Boolean>,
@@ -61,9 +62,11 @@ class MainPermissionController
             previous?.cancel()
             val newJob =
                 scope.launch {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         if (permissionManager.hasPhoneStatePermission()) {
                             launch(ioDispatcher) {
+                                @Suppress("TooGenericExceptionCaught")
                                 try {
                                     val setupCompleted =
                                         isInitialSetupCompleted.firstWithTimeout(
@@ -77,6 +80,8 @@ class MainPermissionController
                                 } catch (e: CancellationException) {
                                     throw e
                                 } catch (e: Exception) {
+                                    // Operation must complete without propagating exception
+                                    // for permission flow stability.
                                     AppLogger.e("MainPermissionController: Failed to schedule work during init", e)
                                 }
                             }
@@ -98,6 +103,7 @@ class MainPermissionController
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for permission flow stability.
                         AppLogger.e("MainPermissionController: Failed during checkPermissionsAndInit", e)
                     } finally {
                         checkJob.compareAndSet(currentCoroutineContext().job, null)
@@ -121,6 +127,7 @@ class MainPermissionController
             previous?.cancel()
             val newJob =
                 scope.launch {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         if (!permissionManager.hasNotificationPermission()) {
                             val settings = readLoadedSettings(appSettingsLoaded, "checkNotifications")
@@ -131,6 +138,7 @@ class MainPermissionController
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for permission flow stability.
                         AppLogger.e("MainPermissionController: Failed during checkNotifications", e)
                     } finally {
                         notificationJob.compareAndSet(currentCoroutineContext().job, null)

@@ -54,12 +54,15 @@ class AutoResetScheduler
         suspend fun checkOnStart() {
             if (!isCheckStarted.compareAndSet(false, true)) return
 
+            @Suppress("TooGenericExceptionCaught")
             try {
                 performCheckInternal()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for auto-reset initialization.
                 AppLogger.e("Auto-reset failed during initialization", e)
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                         val currentFailCount = scheduleRepository.getFailureCount()
@@ -68,6 +71,7 @@ class AutoResetScheduler
                 } catch (e2: CancellationException) {
                     throw e2
                 } catch (e2: Exception) {
+                    // Operation must complete without propagating exception for failure count update.
                     AppLogger.w("Failed to update failure count during auto-reset error handling", e2)
                 }
             } finally {

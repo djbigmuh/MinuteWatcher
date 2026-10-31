@@ -53,6 +53,7 @@ internal class SimIdentitySeedRepositoryImpl
          * @throws CancellationException if the coroutine is canceled.
          */
         override suspend fun setSeed(seed: String) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val writeResult =
                     withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
@@ -68,6 +69,7 @@ internal class SimIdentitySeedRepositoryImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for setSeed rethrow logging.
                 AppLogger.e("SimIdentitySeedRepositoryImpl: Failed to set seed", e)
                 throw e
             }
@@ -101,6 +103,7 @@ internal class SimIdentitySeedRepositoryImpl
         private suspend fun tryGetPersistentSeed(generator: () -> String): SeedResolutionResult? {
             var attempt = 0
             while (attempt < MAX_RETRIES) {
+                @Suppress("TooGenericExceptionCaught")
                 val result =
                     try {
                         val currentSeed = readPersistentSeed()
@@ -112,6 +115,7 @@ internal class SimIdentitySeedRepositoryImpl
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for persistent seed read retry.
                         handlePersistentSeedError(attempt, e)
                         null
                     }

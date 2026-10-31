@@ -17,6 +17,7 @@ open class BootReceiver : BroadcastReceiver() {
     @Inject
     lateinit var workScheduler: WorkScheduler
 
+    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -25,6 +26,7 @@ open class BootReceiver : BroadcastReceiver() {
 
         val pendingResult = acquirePendingResult()
         goAsyncWithScope(context, pendingResult, dispatcher = asyncDispatcher()) { _ ->
+            @Suppress("TooGenericExceptionCaught")
             try {
                 // Force REPLACE on boot to ensure fresh initialization after restart.
                 // We await the enqueue operation to ensure it persists before finish().
@@ -33,6 +35,7 @@ open class BootReceiver : BroadcastReceiver() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for boot receiver reliability.
                 AppLogger.e("BootReceiver: Failed to schedule InitialSetup", e)
             }
         }

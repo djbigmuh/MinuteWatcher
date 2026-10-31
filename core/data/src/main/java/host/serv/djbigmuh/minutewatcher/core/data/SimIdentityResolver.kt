@@ -109,6 +109,7 @@ internal class SimIdentityResolver
             slot: Int,
             identity: SimIdentity,
         ) {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
                     persistence.saveSimIdentitiesInfo(listOf(identity))
@@ -118,6 +119,7 @@ internal class SimIdentityResolver
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for SIM identity persistence save.
                 AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
             }
         }

@@ -138,11 +138,13 @@ class SimIdentityPersistence
             if (toMigrate.isEmpty()) return emptySet()
             val failed = mutableSetOf<String>()
             toMigrate.forEach { identity ->
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     migrateSingle(identity)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for identity migration iteration.
                     AppLogger.e("Migration failed for ${identity.stableId} in SimIdentityPersistence", e)
                     failed.add(identity.stableId)
                 }

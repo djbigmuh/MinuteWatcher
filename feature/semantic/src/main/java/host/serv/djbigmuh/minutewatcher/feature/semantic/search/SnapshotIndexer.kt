@@ -44,6 +44,7 @@ class SnapshotIndexer
          * and must retry on the next attempt); `false` if the update completed fully or was
          * skipped because the snapshot is not loaded yet.
          */
+        @Suppress("TooGenericExceptionCaught")
         suspend fun performIndexUpdate(
             session: AppSearchSessionWrapper,
             snapshot: GlobalSnapshot,
@@ -69,11 +70,13 @@ class SnapshotIndexer
 
             var putException: Exception? = null
             if (documents.isNotEmpty()) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     session.putDocuments(appSearchWrapper.createPutRequest(documents))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for document indexing reliability.
                     AppLogger.e("SnapshotIndexer: failure during putDocuments", e)
                     putException = e
                 }
@@ -83,11 +86,13 @@ class SnapshotIndexer
 
             var removeFailed = false
             if (staleIds.isNotEmpty()) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     session.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for document indexing reliability.
                     AppLogger.e("SnapshotIndexer: failure during removeByDocumentId", e)
                     removeFailed = true
                     updateStatus(
@@ -124,11 +129,13 @@ class SnapshotIndexer
                 if (sessionManager.ensureSession(updateStatus)) {
                     val staleIds = getStaleIds(currentTypes, savedTypes)
                     if (staleIds.isNotEmpty()) {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             sessionManager.session?.removeByDocumentId(appSearchWrapper.createRemoveRequest(staleIds))
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for package type cleanup.
                             AppLogger.w("SnapshotIndexer: failed to remove stale documents", e)
                         }
                     }
@@ -143,6 +150,7 @@ class SnapshotIndexer
             savedTypes: Set<String>,
         ) {
             if (savedTypes != currentTypes) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val updated =
                         withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
@@ -156,6 +164,7 @@ class SnapshotIndexer
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for DataStore write stability.
                     AppLogger.w("SnapshotIndexer: DataStore write failed during updateSavedTypes", e)
                 }
             }

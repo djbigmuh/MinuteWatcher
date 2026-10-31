@@ -77,9 +77,11 @@ class SimIdentityDiscovery
                                 false
                             }
                     } else if (!hasPermission && isListenerRegistered) {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             manager.removeOnSubscriptionsChangedListener(listener)
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for subscription listener cleanup.
                             AppLogger.w("Failed to unregister SubscriptionsChangedListener", e)
                         }
                         isListenerRegistered = false
@@ -141,6 +143,7 @@ class SimIdentityDiscovery
                 manager == null -> SimDiscoveryResult.Unsupported
                 !hasPermission -> SimDiscoveryResult.PermissionMissing
                 else -> {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         val subscriptions = getActiveSubscriptions()
                         val defaultDataSubId = getDefaultDataSubscriptionId()
@@ -165,6 +168,7 @@ class SimIdentityDiscovery
                         AppLogger.w("Sim discovery failed: security restriction", e)
                         SimDiscoveryResult.PermissionMissing
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for SIM discovery.
                         AppLogger.e("Sim discovery failed", e)
                         SimDiscoveryResult.Failed(SimDiscoveryFailureReason.UNKNOWN)
                     }

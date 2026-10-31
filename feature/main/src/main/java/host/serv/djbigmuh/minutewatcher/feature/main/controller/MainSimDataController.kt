@@ -195,9 +195,11 @@ internal class MainSimDataController
             slot: Int,
             operationName: String,
             block: suspend () -> Unit,
-        ): OperationError? =
-            try {
+        ): OperationError? {
+            @Suppress("TooGenericExceptionCaught")
+            return try {
                 performBlockWithRetry(slot, operationName, block)
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     val widgetSuccess = notifyDataChanged(updateWidget = true, force = true)
                     if (!widgetSuccess) {
@@ -206,14 +208,17 @@ internal class MainSimDataController
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for widget refresh.
                     AppLogger.e("MainSimDataController: refresh after $operationName failed", e)
                 }
                 null
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for SIM operation execution.
                 handleOperationException(e, slot, operationName)
             }
+        }
 
         /**
          * Updates limits for the SIM in the specified slot.
@@ -375,11 +380,13 @@ internal class MainSimDataController
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         private suspend fun performBlockWithRetry(
             slot: Int,
             operationName: String,
             block: suspend () -> Unit,
         ) {
+            @Suppress("TooGenericExceptionCaught")
             val firstTryException =
                 try {
                     val success =
@@ -389,6 +396,7 @@ internal class MainSimDataController
                         }
                     if (success == null) IOException("Initial attempt timed out") else null
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for retry logic.
                     if (e is CancellationException || e !is IOException) throw e
                     e
                 }
@@ -457,11 +465,13 @@ internal class MainSimDataController
             updateWidget: Boolean = true,
             force: Boolean = false,
         ): Boolean =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 dataChangeNotifier.notifyDataChanged(updateWidget = updateWidget, force = force)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception to ensure system stability and fault tolerance.
                 AppLogger.e("MainSimDataController: notifyDataChanged failed", e)
                 false
             }
@@ -471,11 +481,13 @@ internal class MainSimDataController
             block: suspend () -> Unit,
         ) {
             scope.launch {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     block()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for SIM data controller background task.
                     AppLogger.e("MainSimDataController: $operationName failed", e)
                 }
             }

@@ -101,7 +101,9 @@ class WidgetUpdaterImpl
             return result
         }
 
+        @Suppress("TooGenericExceptionCaught")
         private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val res =
                     withTimeoutOrNull(Constants.Time.WIDGET_UPDATE_TIMEOUT_MS.milliseconds) {
@@ -113,6 +115,7 @@ class WidgetUpdaterImpl
                 deferred.complete(transientFailure(wasCoalesced = false))
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for widget updater stability.
                 AppLogger.e("WidgetUpdater: update failed", e)
                 val failure = terminalFailure()
                 deferred.complete(failure)
@@ -126,6 +129,7 @@ class WidgetUpdaterImpl
 
         private suspend fun runTailPass(tailDeferred: CompletableDeferred<WidgetUpdateResult>) {
             var completed = false
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val finalRes = executeTailUpdate()
                 tailDeferred.complete(finalRes)
@@ -136,6 +140,7 @@ class WidgetUpdaterImpl
                 completed = true
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for widget updater tail pass.
                 AppLogger.e("WidgetUpdater: tail pass failed", e)
                 tailDeferred.complete(transientFailure(wasCoalesced = true))
                 completed = true
@@ -213,17 +218,20 @@ class WidgetUpdaterImpl
             )
 
         private suspend fun executeUpdateProcess(): WidgetUpdateResult =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 limitExceededHandled.set(false)
                 var lastOutcome: UpdateOutcome? = null
                 val success =
                     retryManager.updateWithRetry { attempt ->
+                        @Suppress("TooGenericExceptionCaught")
                         val outcome =
                             try {
                                 performSingleUpdate(attempt)
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
+                                // Operation must complete without propagating exception for single update attempt.
                                 AppLogger.e("WidgetUpdater: attempt $attempt threw exception", e)
                                 UpdateOutcome.Retry
                             }
@@ -255,6 +263,7 @@ class WidgetUpdaterImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for widget update process.
                 AppLogger.e("WidgetUpdater: update process failed", e)
                 terminalFailure()
             }
@@ -367,12 +376,14 @@ class WidgetUpdaterImpl
             isFullAttempt: Boolean,
             isProbe: Boolean,
         ): UpdateResult =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 renderer.renderAll(context, forceFull = isFullAttempt || isProbe)
                 UpdateResult.Success(wasFull = isFullAttempt)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception.
                 errorClassifier.classifyUpdateError(e, isFullAttempt)
             }
 

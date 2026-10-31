@@ -114,12 +114,14 @@ class CallTracker
                 }
 
             if (shouldStart) {
+                @Suppress("TooGenericExceptionCaught")
                 try {
                     startPermissionObserver()
                     val previousInit = initJob.getAndSet(null)
                     previousInit?.cancel()
                     val newInitJob =
                         scope.launch {
+                            @Suppress("TooGenericExceptionCaught")
                             try {
                                 initMutex.withLock {
                                     refreshStatus(force = true)
@@ -132,6 +134,7 @@ class CallTracker
                                 AppLogger.d("CallTracker: Initialization canceled")
                                 throw e
                             } catch (e: Exception) {
+                                // Operation must complete without propagating exception for call tracker init.
                                 AppLogger.e("CallTracker: Failed to initialize call tracking", e)
                                 trackerState.set(State.FAILED)
                                 initDeferred.completeExceptionally(e)
@@ -141,6 +144,7 @@ class CallTracker
                         newInitJob.cancel()
                     }
                 } catch (e: Exception) {
+                    // Operation must complete without propagating exception for call tracker init start.
                     AppLogger.e("CallTracker: Failed to start initialization", e)
                     trackerState.set(State.FAILED)
                     updateStatus(TrackingStatus.Error(TrackingStatus.ErrorType.UNKNOWN, e.message))
@@ -191,6 +195,7 @@ class CallTracker
                                         )
                                     },
                                 ).collect {
+                                    @Suppress("TooGenericExceptionCaught")
                                     try {
                                         initMutex.withLock {
                                             refreshStatus(force = true)
@@ -198,6 +203,7 @@ class CallTracker
                                     } catch (e: CancellationException) {
                                         throw e
                                     } catch (e: Exception) {
+                                        // Operation must complete without propagating exception.
                                         AppLogger.e("CallTracker: Failed to refresh status on permission change", e)
                                     }
                                 }
@@ -262,6 +268,7 @@ class CallTracker
         }
 
         private suspend fun awaitInitialization() {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 initDeferred.await()
             } catch (_: CallTrackerStoppedException) {
@@ -269,6 +276,7 @@ class CallTracker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for initialization wait.
                 AppLogger.w("CallTracker: init failed, proceeding anyway", e)
             }
         }
@@ -293,6 +301,7 @@ class CallTracker
          */
         override suspend fun refreshStatus(force: Boolean) {
             AppLogger.d("CallTracker: refreshStatus called (force=$force)")
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val currentStatus = statusMachine.current
                 if (!force) {
@@ -359,6 +368,7 @@ class CallTracker
 
         private suspend fun clearSessionsAndRefresh(tag: String) {
             var operationCompleted = false
+            @Suppress("TooGenericExceptionCaught")
             try {
                 callMutexHolder.mutex.withLock {
                     val count = sessionCleaner.clearStaleSessions(this)
@@ -368,13 +378,16 @@ class CallTracker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for session cleanup.
                 AppLogger.e("Error during $tag", e)
             } finally {
                 if (operationCompleted) {
                     withContext(NonCancellable) {
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             refreshStatus(force = true)
                         } catch (e: Exception) {
+                            // Operation must complete without propagating exception for status refresh finally block.
                             AppLogger.e("CallTracker: Failed to refresh status in finally during $tag", e)
                         }
                     }
@@ -395,6 +408,7 @@ class CallTracker
          */
         suspend fun onBootAwaited() {
             ensureStarted()
+            @Suppress("TooGenericExceptionCaught")
             try {
                 // Waits for initMutex holding critical sections before performing cleanup.
                 initMutex.withLock {
@@ -403,6 +417,7 @@ class CallTracker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for boot cleanup.
                 AppLogger.e("CallTracker: boot cleanup failed", e)
             }
         }
@@ -410,6 +425,7 @@ class CallTracker
         override suspend fun recover() {
             ensureStarted()
             startPermissionObserver()
+            @Suppress("TooGenericExceptionCaught")
             try {
                 initMutex.withLock {
                     clearSessionsAndRefresh("recovery")
@@ -417,6 +433,7 @@ class CallTracker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for recovery.
                 AppLogger.e("CallTracker: recovery failed", e)
             }
         }

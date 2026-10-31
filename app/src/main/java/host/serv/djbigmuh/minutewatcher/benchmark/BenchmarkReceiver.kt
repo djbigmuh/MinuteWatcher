@@ -19,6 +19,7 @@ import kotlinx.coroutines.guava.await
  * Usage: adb shell am broadcast -a host.serv.djbigmuh.minutewatcher.benchmark.POPULATE_DATA --ei sim_count 2
  */
 open class BenchmarkReceiver : BroadcastReceiver() {
+    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -27,6 +28,7 @@ open class BenchmarkReceiver : BroadcastReceiver() {
 
         val pendingResult = acquirePendingResult()
         goAsyncWithScope(context, pendingResult, dispatcher = asyncDispatcher()) { _ ->
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val simCount = intent.getIntExtra(EXTRA_SIM_COUNT, 1)
 
@@ -46,6 +48,7 @@ open class BenchmarkReceiver : BroadcastReceiver() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for benchmark receiver reliability.
                 AppLogger.e("BenchmarkReceiver: Failed to enqueue benchmark populate work", e)
             }
         }

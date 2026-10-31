@@ -44,11 +44,13 @@ class SemanticInitializerWorker
         private val appFunctionAvailability: AppFunctionAvailability,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 executeSemanticInit()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for worker entry point reliability.
                 AppLogger.e("SemanticInitializerWorker: unexpected error in doWork", e)
                 if (runAttemptCount < MAX_SEMANTIC_INIT_ATTEMPTS) {
                     Result.retry()
@@ -60,6 +62,7 @@ class SemanticInitializerWorker
         private suspend fun executeSemanticInit(): Result {
             AppLogger.d("SemanticInitializerWorker: Starting initialization")
 
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val settings =
                     appSettingsRepository
@@ -71,6 +74,7 @@ class SemanticInitializerWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for worker execution stability.
                 AppLogger.w("SemanticInitializerWorker: Failed to synchronize AppFunction availability", e)
             }
 
@@ -113,21 +117,25 @@ class SemanticInitializerWorker
         }
 
         private suspend fun indexInitialSnapshotSafely(snapshot: GlobalSnapshot): SemanticSearchManager.IndexResult =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 searchManager.indexInitialSnapshot(snapshot)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for worker reliability.
                 AppLogger.e("SemanticInitializerWorker: initial AppSearch indexing failed with exception", e)
                 SemanticSearchManager.IndexResult.ActualFailure()
             }
 
         private suspend fun updateShortcutsSyncSafely(snapshot: GlobalSnapshot): Boolean =
+            @Suppress("TooGenericExceptionCaught")
             try {
                 shortcutManager.updateShortcutsSync(snapshot)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for worker reliability.
                 AppLogger.e("SemanticInitializerWorker: initial shortcut update failed with exception", e)
                 false
             }

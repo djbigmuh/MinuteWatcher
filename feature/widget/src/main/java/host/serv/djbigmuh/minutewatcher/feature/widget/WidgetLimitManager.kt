@@ -99,9 +99,10 @@ class WidgetLimitManager
 
         fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
-        @Suppress("ThrowsCount") // Multiple exception types
+        @Suppress("ThrowsCount")
         suspend fun setWidgetLimitExceeded(value: Boolean) {
             if (cachedLimitExceeded == null) {
+                @Suppress("TooGenericExceptionCaught")
                 val settings =
                     try {
                         appSettingsRepository
@@ -110,6 +111,7 @@ class WidgetLimitManager
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for widget limit manager.
                         AppLogger.w("WidgetLimitManager: error reading app settings", e)
                         null
                     }
@@ -118,6 +120,7 @@ class WidgetLimitManager
                 } else {
                     AppLogger.w("WidgetLimitManager: timeout reading app settings when cache was null")
                     cachedLimitExceeded = value
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         appSettingsRepository.updateAppSettings {
                             it.copy(widgetLimitExceeded = value)
@@ -125,6 +128,7 @@ class WidgetLimitManager
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for widget limit manager.
                         AppLogger.e("Failed to set widget limit exceeded flag to $value", e)
                     }
                     return
@@ -136,6 +140,7 @@ class WidgetLimitManager
             }
 
             cachedLimitExceeded = value
+            @Suppress("TooGenericExceptionCaught")
             try {
                 appSettingsRepository.updateAppSettings {
                     it.copy(widgetLimitExceeded = value)
@@ -143,6 +148,7 @@ class WidgetLimitManager
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for widget limit manager.
                 AppLogger.e("Failed to set widget limit exceeded flag to $value", e)
             }
         }
@@ -163,6 +169,7 @@ class WidgetLimitManager
             context: Context,
             updateBlock: suspend (Context, Boolean) -> UpdateResult,
         ): UpdateResult {
+            @Suppress("TooGenericExceptionCaught")
             try {
                 val isFullAttempt = true
                 val probeResult = updateBlock(context, isFullAttempt)
@@ -185,6 +192,7 @@ class WidgetLimitManager
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for widget limit manager probe logging.
                 AppLogger.e("Widget: performProbeUpdate failed", e)
                 throw e
             }

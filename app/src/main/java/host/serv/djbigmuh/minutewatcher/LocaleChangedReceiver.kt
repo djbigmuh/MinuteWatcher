@@ -20,6 +20,7 @@ open class LocaleChangedReceiver : BroadcastReceiver() {
     @Inject
     lateinit var dataChangeNotifier: DataChangeNotifier
 
+    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -28,6 +29,7 @@ open class LocaleChangedReceiver : BroadcastReceiver() {
 
         val pendingResult = acquirePendingResult()
         goAsyncWithScope(context, pendingResult, dispatcher = asyncDispatcher()) { _ ->
+            @Suppress("TooGenericExceptionCaught")
             try {
                 provideNotificationHelper().ensureChannels()
                 provideDataChangeNotifier().notifyDataChanged(updateWidget = true, force = true)
@@ -35,6 +37,7 @@ open class LocaleChangedReceiver : BroadcastReceiver() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Operation must complete without propagating exception for broadcast receiver reliability.
                 AppLogger.e("LocaleChangedReceiver: Failed to notify data change", e)
             }
         }

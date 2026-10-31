@@ -25,12 +25,14 @@ class WidgetUpdateRetryManager
 
             var attempt = 1
             while ((attempt <= Constants.Widget.MAX_UPDATE_ATTEMPTS) && !success && !shouldStop) {
+                @Suppress("TooGenericExceptionCaught")
                 val outcome =
                     try {
                         updateBlock(attempt)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // Operation must complete without propagating exception for widget update retry attempt.
                         AppLogger.e("WidgetUpdateRetryManager: attempt $attempt failed with exception", e)
                         UpdateOutcome.Retry
                     }
