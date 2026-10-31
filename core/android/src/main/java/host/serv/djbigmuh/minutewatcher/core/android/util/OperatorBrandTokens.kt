@@ -1,4 +1,6 @@
-﻿package host.serv.djbigmuh.minutewatcher.core.android.util
+﻿@file:Suppress("StringLiteralDuplication")
+
+package host.serv.djbigmuh.minutewatcher.core.android.util
 
 /**
  * Internal storage for operator brand search tokens.

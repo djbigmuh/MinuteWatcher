@@ -248,6 +248,7 @@ object OperatorResolver {
      * Lowercases query once, eliminates redundant checks, checks exact/normalized map lookup first,
      * and checks diacritics fallback only on cache/lowercase miss.
      */
+    @Suppress("ReturnCount")
     fun getOperatorBrandKey(operatorName: String): String? {
         val normalized = operatorName.lowercase(Locale.ROOT)
         tokenToResKey[normalized]?.let { return it }

@@ -1,17 +1,17 @@
 comments:
-    active: true
-    UndocumentedPublicClass:
-        active: false # Disabled to avoid requiring KDoc comments on every public class
-    UndocumentedPublicFunction:
-        active: false # Disabled to avoid requiring KDoc comments on every public function
-    UndocumentedPublicProperty:
-        active: false # Disabled to avoid requiring KDoc comments on every public property
-    DocumentationOverPrivateFunction:
-        active: false # Disabled to allow inline documentation comments over private functions
-    DocumentationOverPrivateProperty:
-        active: false # Disabled to allow inline documentation comments over private properties
-    OutdatedDocumentation:
-        active: false # Disabled for optional inline doc tags in KDoc
+  active: true
+  UndocumentedPublicClass:
+    active: false # Disabled as KDoc is not mandatory for every public class
+  UndocumentedPublicFunction:
+    active: false # Disabled as KDoc is not mandatory for every public function
+  UndocumentedPublicProperty:
+    active: false # Disabled as KDoc is not mandatory for every public property
+  DocumentationOverPrivateFunction:
+    active: false # Disabled to allow inline documentation comments over private functions
+  DocumentationOverPrivateProperty:
+    active: false # Disabled to allow inline documentation comments over private properties
+  OutdatedDocumentation:
+    active: false # Disabled for optional inline doc tags in KDoc
 
 complexity:
   active: true
@@ -19,26 +19,31 @@ complexity:
     active: true
     allowedComplexity: 15
   CognitiveComplexMethod:
-      active: false # Disabled to allow complex domain state machine and tracking logic
+    active: true
+    allowedComplexity: 30
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   LongMethod:
     active: true
     allowedLines: 60
-    excludes: [ '**/*Test.kt', '**/*Test*.kt', '**/SimCardScreen.kt', '**/WidgetSettingsScreen.kt' ]
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    ignoreAnnotated: [ 'Composable', 'androidx.compose.runtime.Composable' ]
   LargeClass:
-      active: true
-      excludes: [ '**/*Test.kt', '**/*Test*.kt' ]
+    active: true
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   LongParameterList:
     active: true
     allowedFunctionParameters: 10
     allowedConstructorParameters: 10
   TooManyFunctions:
-      active: false # Disabled to allow coordinator and test fixture classes without arbitrary function count limits
+    active: false # Disabled to allow coordinator and test fixture classes without arbitrary function count limits
   ComplexInterface:
-      active: false # Disabled to allow repository interfaces defining full data contracts
+    active: false # Disabled to allow repository interfaces defining full data contracts
   StringLiteralDuplication:
-      active: false # Disabled to allow repeating string keys and labels across methods
+    active: true
+    allowedDuplications: 5
+    ignoreStringsRegex: '^[A-Z][A-Z0-9_]*$'
   LabeledExpression:
-      active: false # Disabled to allow labeled returns/breaks in coroutine and DataStore blocks
+    active: false # Disabled to allow labeled returns/breaks in coroutine and DataStore blocks
 
 coroutines:
   active: true
@@ -55,7 +60,8 @@ exceptions:
   TooGenericExceptionCaught:
     active: true
   TooGenericExceptionThrown:
-      active: false # Disabled to allow mock and test fixture exception throws
+    active: true
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
 
 naming:
   active: true
@@ -67,9 +73,13 @@ naming:
       - 'androidx.compose.runtime.Composable'
       - 'Composable'
   FunctionNameMaxLength:
-      active: false # Disabled for descriptive backtick unit test function names across test files
+    active: true
+    maximumFunctionNameLength: 50
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   FunctionNameMinLength:
-      active: false # Disabled to allow standard Android logger method names like d, e, w, i, v
+    active: true
+    minimumFunctionNameLength: 3
+    excludes: [ '**/core/common/util/AppLogger.kt', '**/core/common/util/Logger.kt', '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   VariableNaming:
     active: true
     variablePattern: '[a-z][A-Za-z0-9]*'
@@ -82,40 +92,42 @@ style:
   MaxLineLength:
     active: true
     maxLineLength: 120
-    excludes: [ '**/*Test.kt', '**/*Test*.kt' ]
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   UnusedImport:
     active: true
   MagicNumber:
     active: true
-    excludes: ['**/*Test.kt', '**/*Test*.kt']
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
     ignorePropertyDeclaration: true
     ignoreAnnotated:
       - 'androidx.compose.runtime.Composable'
       - 'Composable'
-      - 'org.junit.Test'
-      - 'Test'
   UnnecessaryParentheses:
-      active: false # Disabled to allow explicit grouping parentheses for clarity in arithmetic/boolean logic
+    active: false # Disabled to allow explicit grouping parentheses for clarity in arithmetic/boolean logic
   UnderscoresInNumericLiterals:
-      active: false # Disabled to allow standard numeric literals without mandatory underscores
+    active: false # Disabled to allow standard numeric literals without mandatory underscores
   CascadingCallWrapping:
-      active: false # Disabled to allow flexible call chain formatting matching ktlint rules
+    active: false # Disabled to allow flexible call chain formatting matching ktlint rules
   ClassOrdering:
-      active: false # Disabled to allow logical grouping of members inside classes
+    active: false # Disabled to allow logical grouping of members inside classes
   BracesOnWhenStatements:
-      active: false # Disabled to allow concise single-line when branch entries
+    active: false # Disabled to allow concise single-line when branch entries
   UseIfInsteadOfWhen:
-      active: false # Disabled to allow when expressions for binary conditions
+    active: false # Disabled to allow when expressions for binary conditions
   CollapsibleIfStatements:
-      active: false # Disabled to allow nested if statements for explicit condition separation
+    active: false # Disabled to allow nested if statements for explicit condition separation
   DataClassContainsFunctions:
-      active: false # Disabled to allow utility extension/helper methods on value data classes
+    active: false # Disabled to allow utility extension/helper methods on value data classes
   MultilineRawStringIndentation:
-      active: false # Disabled to allow raw string test fixtures matching exact expected multiline output
+    active: true
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   ReturnCount:
-      active: false # Disabled to allow early guard returns in defensive functions
+    active: true
+    max: 4
+    excludeGuardClauses: true
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   UseLet:
-      active: false # Disabled to allow explicit null checking
+    active: false # Disabled to allow explicit null checking
 
 potential-bugs:
   active: true
@@ -124,4 +136,7 @@ potential-bugs:
   InvalidRange:
     active: true
   LateinitUsage:
-      active: false # Disabled for Hilt dependency injection fields
+    active: true
+    ignoreAnnotated:
+      - 'dagger.hilt.android.HiltAndroidApp'
+      - 'dagger.hilt.android.AndroidEntryPoint'
