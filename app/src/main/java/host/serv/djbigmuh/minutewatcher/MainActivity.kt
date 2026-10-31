@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -162,7 +163,7 @@ class MainActivity : AppCompatActivity() {
             if (!shortcutId.isNullOrEmpty()) {
                 @Suppress("TooGenericExceptionCaught")
                 try {
-                    androidx.core.content.pm.ShortcutManagerCompat
+                    ShortcutManagerCompat
                         .reportShortcutUsed(this, shortcutId)
                 } catch (e: Exception) {
                     // Operation must complete without propagating exception for UI interaction stability.

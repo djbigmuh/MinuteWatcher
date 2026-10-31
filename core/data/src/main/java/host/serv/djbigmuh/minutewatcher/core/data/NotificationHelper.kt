@@ -1,5 +1,6 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.data
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -65,14 +66,14 @@ class NotificationHelper
              * Invariant: Must be outside the range of usage notifications and group summary notifications
              * to prevent ID collisions.
              */
-            const val AOD_SUMMARY_NOTIFICATION_ID = 900
-            const val AOD_SUMMARY_REQUEST_CODE = 90
+            internal const val AOD_SUMMARY_NOTIFICATION_ID = 900
+            internal const val AOD_SUMMARY_REQUEST_CODE = 90
 
             /**
              * ID for usage group summary notification.
              * Invariant: Must be in a unique range distinct from individual usage notifications and AOD summary.
              */
-            const val GROUP_SUMMARY_NOTIFICATION_ID = 950
+            internal const val GROUP_SUMMARY_NOTIFICATION_ID = 950
             internal const val GROUP_SUMMARY_REQUEST_CODE = 95
 
             internal const val GROUP_KEY = "usage_monitor_group"
@@ -225,7 +226,7 @@ class NotificationHelper
             message: String,
             simSlot: Int,
             type: UsageNotificationType,
-        ): android.app.Notification {
+        ): Notification {
             val intent =
                 Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -254,7 +255,7 @@ class NotificationHelper
                 .build()
         }
 
-        private fun buildGroupSummaryNotification(): android.app.Notification {
+        private fun buildGroupSummaryNotification(): Notification {
             val locContext = AppLocaleContexts.forAppLocale(context)
             val summaryIntent =
                 Intent().setClassName(context.packageName, navigationProvider.mainActivityClassName).apply {

@@ -1,6 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.app.LocaleManager
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -182,11 +183,11 @@ class NotificationHelperTest {
         val title =
             notification!!
                 .extras
-                .getCharSequence(android.app.Notification.EXTRA_TITLE)
+                .getCharSequence(Notification.EXTRA_TITLE)
                 .toString()
         val text =
             notification.extras
-                .getCharSequence(android.app.Notification.EXTRA_TEXT)
+                .getCharSequence(Notification.EXTRA_TEXT)
                 .toString()
         assertEquals("Title", title)
         assertEquals("Message", text)
@@ -210,11 +211,11 @@ class NotificationHelperTest {
 
         val title =
             summaryNotification.extras
-                .getCharSequence(android.app.Notification.EXTRA_TITLE)
+                .getCharSequence(Notification.EXTRA_TITLE)
                 .toString()
         val text =
             summaryNotification.extras
-                .getCharSequence(android.app.Notification.EXTRA_TEXT)
+                .getCharSequence(Notification.EXTRA_TEXT)
                 .toString()
 
         assertEquals(context.getString(R.string.notification_channel_name), title)
@@ -227,11 +228,11 @@ class NotificationHelperTest {
 
         helper.sendUsageNotification("Slot 0 Minutes", "Msg 1", 0, UsageNotificationType.MINUTES)
         val summary1 = shadowOf(notificationManager).getNotification(NotificationHelper.GROUP_SUMMARY_NOTIFICATION_ID)
-        val text1 = summary1!!.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString()
+        val text1 = summary1!!.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
 
         helper.sendUsageNotification("Slot 1 Traffic", "Msg 2", 1, UsageNotificationType.TRAFFIC)
         val summary2 = shadowOf(notificationManager).getNotification(NotificationHelper.GROUP_SUMMARY_NOTIFICATION_ID)
-        val text2 = summary2!!.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString()
+        val text2 = summary2!!.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
 
         assertEquals(context.getString(R.string.notification_channel_desc), text1)
         assertEquals(context.getString(R.string.notification_channel_desc), text2)
@@ -281,21 +282,21 @@ class NotificationHelperTest {
         val notification = shadowNotificationManager.allNotifications[0]
         val title =
             notification.extras
-                .getCharSequence(android.app.Notification.EXTRA_TITLE)
+                .getCharSequence(Notification.EXTRA_TITLE)
                 .toString()
         val text =
             notification.extras
-                .getCharSequence(android.app.Notification.EXTRA_TEXT)
+                .getCharSequence(Notification.EXTRA_TEXT)
                 .toString()
         val bigText =
             notification.extras
-                .getCharSequence(android.app.Notification.EXTRA_BIG_TEXT)
+                .getCharSequence(Notification.EXTRA_BIG_TEXT)
                 .toString()
         assertEquals("AOD Title", title)
         assertEquals("AOD Line", text)
         assertEquals("Expanded text", bigText)
-        assertTrue((notification.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0)
-        assertEquals(android.app.Notification.VISIBILITY_PUBLIC, notification.visibility)
+        assertTrue((notification.flags and Notification.FLAG_ONGOING_EVENT) != 0)
+        assertEquals(Notification.VISIBILITY_PUBLIC, notification.visibility)
     }
 
     @Test
