@@ -31,5 +31,23 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 
 ---
 
+## Disabled Android Lint Checks
+
+The following Android Lint checks are globally disabled in `minutewatcher.android.lint.gradle.kts`:
+
+1. **`GradleDependency`**
+   - **Criteria**: Dependency versions are managed centrally across the project via version catalogs (`libs.versions.toml`).
+   - **Replacement Mechanism**: Centralized version catalog inspection and automated dependency update policies.
+
+2. **`AndroidGradlePluginVersion`**
+   - **Criteria**: AGP version is managed centrally via version catalogs and convention plugins.
+   - **Replacement Mechanism**: Build-logic convention configuration enforcing uniform AGP versioning across all modules.
+
+3. **`VectorPath`**
+   - **Criteria**: Complex vector icon paths used for operator brand icons.
+   - **Replacement Mechanism**: Validated via automated compliance tests (`OperatorIconAssetComplianceTest` in `:core:resources`).
+
+---
+
 > [!NOTE]
 > All non-stable dependencies are carefully selected to meet project requirements (targetSdk 37, Gradle 9.x). Downgrading is prohibited.

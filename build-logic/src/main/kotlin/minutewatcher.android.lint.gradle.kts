@@ -10,8 +10,7 @@ extension.apply {
     lint.fatal.add("MissingTranslation")
     lint.fatal.add("UnusedResources")
     lint.ignoreTestSources = true
-    lint.disable.add("GradleDependency") // Version catalog manages dependency versions centrally
-    lint.disable.add("AndroidGradlePluginVersion") // AGP version is managed via version catalog and build-logic conventions
-    lint.disable.add("ObsoleteSdkInt") // Explicit SDK checks are required for minSdk 26 compatibility with modern platform APIs
-    lint.disable.add("VectorPath") // Complex operator brand vector icon paths are validated via custom compliance tests
+    lint.disable.add("GradleDependency") // Versions managed centrally by version catalog
+    lint.disable.add("AndroidGradlePluginVersion") // AGP version managed centrally by version catalog and conventions
+    lint.disable.add("VectorPath") // Validated by automated OperatorIconAssetComplianceTest in core:resources
 }
