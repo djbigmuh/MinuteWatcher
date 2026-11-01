@@ -15,6 +15,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -101,15 +102,16 @@ class UsageUseCaseImplTest {
             verify(simUsageAdjustmentRepository).setTrafficAdjustment(identity, -3f)
         }
 
-    @Test(expected = InvalidSlotException::class)
+    @Test
     fun `adjustMinutes rethrows InvalidSlotException from repository`() =
         runTest {
             whenever(simIdentityRepository.getIdentity(99)).thenThrow(InvalidSlotException(99))
 
-            usageUseCase.adjustMinutes(99, 100)
+            val result = runCatching { usageUseCase.adjustMinutes(99, 100) }
+            assertTrue(result.exceptionOrNull() is InvalidSlotException)
         }
 
-    @Test(expected = IOException::class)
+    @Test
     fun `resetCounters rethrows IOException from repository`() =
         runTest {
             val identity = "sim_0"
@@ -118,10 +120,11 @@ class UsageUseCaseImplTest {
                 throw IOException("Storage error")
             }
 
-            usageUseCase.resetCounters(0)
+            val result = runCatching { usageUseCase.resetCounters(0) }
+            assertTrue(result.exceptionOrNull() is IOException)
         }
 
-    @Test(expected = IOException::class)
+    @Test
     fun `refreshOperatorInfo rethrows IOException from repository`() =
         runTest {
             val subInfo = mock<SubscriptionInfo>()
@@ -135,10 +138,11 @@ class UsageUseCaseImplTest {
                 throw IOException("Write error")
             }
 
-            usageUseCase.refreshOperatorInfo()
+            val result = runCatching { usageUseCase.refreshOperatorInfo() }
+            assertTrue(result.exceptionOrNull() is IOException)
         }
 
-    @Test(expected = IOException::class)
+    @Test
     fun `adjustMinutes fails on limit read timeout`() =
         runTest {
             val identity = "sim_0"
@@ -147,10 +151,11 @@ class UsageUseCaseImplTest {
             whenever(simLimitsRepository.getMonthlyLimit(identity)).thenReturn(flow { awaitCancellation() })
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flowOf(createSimUsage()))
 
-            usageUseCase.adjustMinutes(0, 450)
+            val result = runCatching { usageUseCase.adjustMinutes(0, 450) }
+            assertTrue(result.exceptionOrNull() is IOException)
         }
 
-    @Test(expected = IOException::class)
+    @Test
     fun `adjustTraffic fails on usage read timeout`() =
         runTest {
             val identity = "sim_0"
@@ -159,7 +164,8 @@ class UsageUseCaseImplTest {
             // Mock timeout: flow that never emits
             whenever(simUsageRepository.getSimUsage(identity)).thenReturn(flow { awaitCancellation() })
 
-            usageUseCase.adjustTraffic(0, 5f)
+            val result = runCatching { usageUseCase.adjustTraffic(0, 5f) }
+            assertTrue(result.exceptionOrNull() is IOException)
         }
 
     private fun createSimUsage(

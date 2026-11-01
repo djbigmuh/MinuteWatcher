@@ -71,11 +71,12 @@ class AppFunctionAvailabilityImplTest {
             assertTrue(fakeGateway.calls.isEmpty())
         }
 
-    @Test(expected = CancellationException::class)
+    @Test
     @Config(sdk = [36]) // behavior-specific SDK
     fun `setAssistantAccessEnabled rethrows CancellationException from gateway`() =
         runTest {
             fakeGateway.exceptionToThrow = CancellationException("Canceled")
-            availability.setAssistantAccessEnabled(true)
+            val result = runCatching { availability.setAssistantAccessEnabled(true) }
+            assertTrue(result.exceptionOrNull() is CancellationException)
         }
 }

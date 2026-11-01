@@ -17,15 +17,6 @@ class FastlaneMetadataConsistencyTest {
         return File(System.getProperty("user.dir") ?: ".")
     }
 
-    private fun parseVersionCodeFromBuildGradle(root: File): Int {
-        val gradleFile = File(root, "app/build.gradle.kts")
-        assertTrue("app/build.gradle.kts must exist", gradleFile.exists())
-        val regex = Regex("""versionCode\s*=\s*(\d+)""")
-        val match = regex.find(gradleFile.readText())
-        assertTrue("versionCode must be present in app/build.gradle.kts", match != null)
-        return match!!.groupValues[1].toInt()
-    }
-
     private fun getPngDimensionsFromIhdr(file: File): Pair<Int, Int> {
         val bytes = file.readBytes()
         assertTrue("PNG file must be at least 24 bytes long", bytes.size >= 24)
@@ -52,7 +43,7 @@ class FastlaneMetadataConsistencyTest {
         val fastlaneDir = File(root, "fastlane/metadata/android")
         assertTrue("fastlane/metadata/android directory must exist", fastlaneDir.exists())
 
-        val versionCode = parseVersionCodeFromBuildGradle(root)
+        val versionCode = BuildConfig.VERSION_CODE
         val locales = listOf("en-US", "ru")
 
         locales.forEach { locale ->

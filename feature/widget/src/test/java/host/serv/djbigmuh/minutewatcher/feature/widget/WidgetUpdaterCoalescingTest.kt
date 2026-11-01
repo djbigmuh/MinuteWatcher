@@ -192,7 +192,7 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
             assertTrue((result as WidgetUpdateResult.Success).wasCoalesced)
         }
 
-    @Test(expected = CancellationException::class)
+    @Test
     fun `cancellation of one waiting caller propagates CancellationException to it without affecting passes`() =
         runTest {
             val startBarrier1 = CompletableDeferred<Unit>()
@@ -222,6 +222,28 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
             finishBarrier1.complete(Unit)
             advanceUntilIdle()
 
-            waitingJob.await()
+            val result = runCatching { waitingJob.await() }
+            assertTrue(result.exceptionOrNull() is CancellationException)
+            assertEquals(1, renderCount)
+
+            // Verify slot is freed and subsequent call succeeds
+            val finishBarrier2 = CompletableDeferred<Unit>()
+            val startBarrier2 = CompletableDeferred<Unit>()
+            val renderer2 =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(
+                        context: Context,
+                        forceFull: Boolean,
+                    ) {
+                        startBarrier2.complete(Unit)
+                        withTimeoutOrNull(30.seconds) { finishBarrier2.await() }
+                    }
+                }
+            val updater2 = createUpdater(backgroundScope, renderer2)
+            val subsequentDeferred = async { updater2.updateAll() }
+            withTimeoutOrNull(30.seconds) { startBarrier2.await() }
+            finishBarrier2.complete(Unit)
+            val subResult = subsequentDeferred.await()
+            assertTrue(subResult.isSuccess)
         }
 }

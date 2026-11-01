@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -170,7 +171,7 @@ class SimIdentityRepositoryImplResolutionTest {
             assertEquals(id1, id2)
         }
 
-    @Test(expected = IllegalStateException::class)
+    @Test
     fun `getSimIdentity throws when permissions missing`() =
         runTest(testDispatcher) {
             val ds = createTestDataStore()
@@ -189,7 +190,8 @@ class SimIdentityRepositoryImplResolutionTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(false)
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
-            identityRepo.getSimIdentity(0)
+            val result = runCatching { identityRepo.getSimIdentity(0) }
+            assertTrue(result.exceptionOrNull() is IllegalStateException)
         }
 
     @Test
@@ -228,7 +230,7 @@ class SimIdentityRepositoryImplResolutionTest {
             assertEquals(0, sims.first().slotIndex)
         }
 
-    @Test(expected = InvalidSlotException::class)
+    @Test
     fun `getSimIdentity with invalid slot throws InvalidSlotException`() =
         runTest(testDispatcher) {
             val ds = createTestDataStore()
@@ -244,6 +246,7 @@ class SimIdentityRepositoryImplResolutionTest {
                     scope = appScope,
                 )
 
-            identityRepo.getSimIdentity(-1)
+            val result = runCatching { identityRepo.getSimIdentity(-1) }
+            assertTrue(result.exceptionOrNull() is InvalidSlotException)
         }
 }

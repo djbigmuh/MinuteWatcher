@@ -458,9 +458,15 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    fun `migrateLegacyData does not crash on Exception`() =
+    fun `migrateLegacyData reports failure and releases mutex on datastore exception`() =
         testScope.runTest {
             val corruptedDataStore: DataStore<Preferences> = mock()
+            val legacyKey = stringPreferencesKey("test_key_sim_0")
+            val prefs =
+                androidx.datastore.preferences.core.emptyPreferences().toMutablePreferences().apply {
+                    this[legacyKey] = "legacy_value"
+                }
+            whenever(corruptedDataStore.data).thenReturn(kotlinx.coroutines.flow.flowOf(prefs))
             whenever(corruptedDataStore.edit(any())).thenThrow(RuntimeException("Write failed"))
 
             val service = IdentityMigrationService(corruptedDataStore, simDataStore)
@@ -473,11 +479,14 @@ class IdentityMigrationServiceTest {
                     isStable = false,
                 )
 
-            try {
-                service.migrateLegacyData(activeIdentity)
-            } catch (_: Exception) {
-                // Expected
-            }
+            val outcome = service.migrateLegacyData(activeIdentity)
+            assertTrue(outcome.partialFailure)
+            assertEquals(1, outcome.failures)
+
+            // Verify mutex is released: subsequent call (with a working store) succeeds without blocking
+            val service2 = IdentityMigrationService(appDataStore, simDataStore)
+            val outcome2 = service2.migrateLegacyData(activeIdentity)
+            assertTrue(!outcome2.partialFailure)
         }
 
     @Test

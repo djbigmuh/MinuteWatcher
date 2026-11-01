@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -244,7 +245,7 @@ class SemanticInitializerWorkerTest {
             assertEquals(ListenableWorker.Result.failure(), result)
         }
 
-    @Test(expected = kotlinx.coroutines.CancellationException::class)
+    @Test
     fun `doWork propagates CancellationException during app settings read`() =
         runTest {
             val hangingFlow =
@@ -259,7 +260,8 @@ class SemanticInitializerWorkerTest {
             runCurrent()
 
             deferred.cancel()
-            deferred.await()
+            val result = runCatching { deferred.await() }
+            assertTrue(result.exceptionOrNull() is kotlinx.coroutines.CancellationException)
         }
 
     private fun createEmptySnapshot() =

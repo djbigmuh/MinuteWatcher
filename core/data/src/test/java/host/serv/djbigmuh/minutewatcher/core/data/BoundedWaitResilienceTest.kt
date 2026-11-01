@@ -36,7 +36,7 @@ class BoundedWaitResilienceTest {
     @get:Rule
     val loggerResetRule = AppLoggerResetRule()
 
-    @Test(expected = IOException::class)
+    @Test
     fun `saveSimIdentitiesInfo throws IOException on DataStore hang`() =
         runTest {
             val hangingDataStore: DataStore<Preferences> = mock()
@@ -46,7 +46,8 @@ class BoundedWaitResilienceTest {
             val identities = listOf(SimIdentity("id", 1, 0, IdentitySource.ICCID, isStable = true))
 
             // Act
-            persistence.saveSimIdentitiesInfo(identities)
+            val result = runCatching { persistence.saveSimIdentitiesInfo(identities) }
+            assertTrue(result.exceptionOrNull() is IOException)
         }
 
     @Test
@@ -61,7 +62,7 @@ class BoundedWaitResilienceTest {
             Assert.assertNull(result)
         }
 
-    @Test(expected = IOException::class)
+    @Test
     fun `migrateLegacyData rethrows IOException when internal ops hang`() =
         runTest {
             val hangingSimDataStore: DataStore<Preferences> = mock()
@@ -70,7 +71,8 @@ class BoundedWaitResilienceTest {
             val service = IdentityMigrationService(mock(), hangingSimDataStore)
             val identity = SimIdentity("id", 1, 0, IdentitySource.SUBSCRIPTION_ID, isStable = true)
 
-            service.migrateLegacyData(identity)
+            val result = runCatching { service.migrateLegacyData(identity) }
+            assertTrue(result.exceptionOrNull() is IOException)
         }
 
     @Test

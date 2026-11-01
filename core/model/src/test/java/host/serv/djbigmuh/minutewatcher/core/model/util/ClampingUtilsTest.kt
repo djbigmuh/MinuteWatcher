@@ -1,6 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.model.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ClampingUtilsTest {
@@ -37,9 +38,10 @@ class ClampingUtilsTest {
         assertEquals(hardLimitFloat, ClampingUtils.clamp(Float.MAX_VALUE, 0f, hardLimitFloat))
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun `clamp throws if min gt max`() {
-        ClampingUtils.clamp(10, 100, 0)
+        val result = runCatching { ClampingUtils.clamp(10, 100, 0) }
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
     }
 
     @Test

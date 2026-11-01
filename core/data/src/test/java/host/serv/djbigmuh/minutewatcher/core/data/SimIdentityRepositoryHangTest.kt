@@ -111,7 +111,7 @@ class SimIdentityRepositoryHangTest {
             },
         )
 
-    @Test(expected = SeedUnavailableException::class)
+    @Test
     fun `getSimIdentity throws error when activeSimsCache hangs`() =
         runTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -147,7 +147,8 @@ class SimIdentityRepositoryHangTest {
                 )
 
             // Act
-            identityRepo.getSimIdentity(0)
+            val result = runCatching { identityRepo.getSimIdentity(0) }
+            assertTrue(result.exceptionOrNull() is SeedUnavailableException)
         }
 
     @Test

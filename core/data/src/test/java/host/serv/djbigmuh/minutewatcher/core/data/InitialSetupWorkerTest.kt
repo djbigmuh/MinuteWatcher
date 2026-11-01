@@ -27,6 +27,7 @@ import host.serv.djbigmuh.minutewatcher.core.model.SchemaVersion
 import host.serv.djbigmuh.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -38,8 +39,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,7 +54,6 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 import java.io.IOException
-import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -581,7 +581,7 @@ class InitialSetupWorkerTest {
             verify(migrationFlagsRepository).setInitialSetupCompleted(true)
         }
 
-    @Test(expected = CancellationException::class)
+    @Test
     fun `doWork propagates external cancellation`() =
         runTest {
             val testDeps =
@@ -618,15 +618,14 @@ class InitialSetupWorkerTest {
                     ).build()
 
             val job =
-                launch {
+                async {
                     worker.doWork()
                 }
 
             runCurrent()
             job.cancel()
-            withTimeoutOrNull(30.seconds) { job.join() }
-                ?: throw AssertionError("Timed out waiting for canceled worker job to finish")
-            throw CancellationException("Simulated external cancellation")
+            val result = runCatching { job.await() }
+            assertTrue(result.exceptionOrNull() is CancellationException)
         }
 
     @Test

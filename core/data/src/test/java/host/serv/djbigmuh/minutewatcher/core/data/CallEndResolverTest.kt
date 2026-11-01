@@ -227,11 +227,13 @@ class CallEndResolverTest {
             assertEquals(TrackingStatus.ErrorType.INACCURATE_ATTRIBUTION, error.type)
         }
 
-    @Test(expected = SecurityException::class)
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.R]) // behavior-specific SDK
     fun `resolveUnknownSubIdEnd rethrows SecurityException during fetchActiveSubIds`() =
         runTest {
             whenever(callSessionRepository.getActiveCallSubIds()).thenThrow(SecurityException("Permission revoked"))
 
-            resolver.resolveUnknownSubIdEnd()
+            val result = runCatching { resolver.resolveUnknownSubIdEnd() }
+            assertTrue(result.exceptionOrNull() is SecurityException)
         }
 }

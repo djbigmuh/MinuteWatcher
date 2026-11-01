@@ -7,8 +7,10 @@ import host.serv.djbigmuh.minutewatcher.core.domain.AutoResetUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -210,20 +212,23 @@ class AutoResetSchedulerTest {
             assertEquals(0, fakeRepository.failCount)
         }
 
-    @Test(expected = CancellationException::class)
+    @Test
     fun `checkOnStart rethrows CancellationException and resets flag for retry`() =
         runTest {
             whenever(autoResetUseCase.performAutoReset(any())).thenAnswer { throw CancellationException("Cancel") }
 
-            try {
-                scheduler.checkOnStart()
-            } catch (e: CancellationException) {
-                // Retry attempt
-                whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
-                scheduler.checkOnStart()
-                verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(false))
-                throw e
-            }
+            val exception =
+                org.junit.Assert.assertThrows(CancellationException::class.java) {
+                    runBlocking {
+                        scheduler.checkOnStart()
+                    }
+                }
+            assertTrue(exception is CancellationException)
+
+            // Retry attempt
+            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
+            scheduler.checkOnStart()
+            verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(false))
         }
 
     @Test
