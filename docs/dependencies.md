@@ -47,6 +47,12 @@ The following Android Lint checks are globally disabled in `minutewatcher.androi
    - **Criteria**: Complex vector icon paths used for operator brand icons.
    - **Replacement Mechanism**: Validated via automated compliance tests (`OperatorIconAssetComplianceTest` in `:core:resources`).
 
+4. **`ObsoleteSdkInt`**
+    - **Criteria**: False positive on `mipmap-anydpi-v26` resource directory naming required for adaptive icons (minSdk
+      26).
+    - **Replacement Mechanism**: Ignored globally via `lint.ignore` in `minutewatcher.android.lint.gradle.kts`; adaptive
+      icon resources are validated by AGP resource merging during release builds.
+
 ---
 
 > [!NOTE]

@@ -33,7 +33,6 @@ interface ShortcutApplier {
 class SystemShortcutApplier
     @Inject
     constructor() : ShortcutApplier {
-        @Suppress("TooGenericExceptionCaught")
         override fun apply(
             context: Context,
             shortcuts: List<ShortcutInfoCompat>,

@@ -157,7 +157,6 @@ class SemanticSearchManager
             } ?: false
 
         @OptIn(FlowPreview::class)
-        @Suppress("TooGenericExceptionCaught")
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
                 val acquired =
@@ -260,7 +259,6 @@ class SemanticSearchManager
             }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         internal suspend fun indexSnapshot(snapshot: GlobalSnapshot): IndexResult {
             if (!indexMutex.tryLock()) {
                 val count = consecutiveMutexContention.incrementAndGet()
@@ -312,7 +310,6 @@ class SemanticSearchManager
             }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): IndexResult {
             val hasSims = snapshot.simSnapshots.isNotEmpty()
             val currentHash = if (hasSims) SnapshotUtils.calculateContentHash(snapshot) else null
@@ -343,7 +340,9 @@ class SemanticSearchManager
                         resetLastSnapshotState()
                         IndexResult.ActualFailure(e.message)
                     }
-                } catch (e: Exception) {
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") e: Exception,
+                ) {
                     // Operation must complete without propagating exception for search indexing resilience.
                     AppLogger.e("AppSearch non-AppSearch error during indexing", e)
                     resetLastSnapshotState()

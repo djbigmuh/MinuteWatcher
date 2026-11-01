@@ -76,7 +76,6 @@ class MinutesGlanceWidget(
      * Called by system on widget update.
      * Shows FallbackContent on any exception.
      */
-    @Suppress("TooGenericExceptionCaught")
     override suspend fun provideGlance(
         context: Context,
         id: GlanceId,
@@ -228,7 +227,6 @@ class MinutesGlanceWidget(
     /**
      * Gets snapshot for widget.
      */
-    @Suppress("TooGenericExceptionCaught")
     internal suspend fun getSnapshot(
         usageRepository: UsageStateRepository,
         timeProvider: TimeProvider,

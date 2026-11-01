@@ -380,7 +380,6 @@ internal class MainSimDataController
             }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         private suspend fun performBlockWithRetry(
             slot: Int,
             operationName: String,

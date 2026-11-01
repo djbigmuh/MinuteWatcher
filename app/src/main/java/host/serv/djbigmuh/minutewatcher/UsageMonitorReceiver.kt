@@ -11,6 +11,7 @@ import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import host.serv.djbigmuh.minutewatcher.UsageMonitorReceiver.Companion.UNIQUE_WORK_NAME
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.data.CallEventWorker
 import kotlinx.coroutines.CancellationException
@@ -19,7 +20,6 @@ import kotlinx.coroutines.guava.await
 import java.util.concurrent.TimeUnit
 
 open class UsageMonitorReceiver : BroadcastReceiver() {
-    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(
         context: Context,
         intent: Intent,

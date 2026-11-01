@@ -19,7 +19,6 @@ import kotlinx.coroutines.guava.await
  * Usage: adb shell am broadcast -a host.serv.djbigmuh.minutewatcher.benchmark.POPULATE_DATA --ei sim_count 2
  */
 open class BenchmarkReceiver : BroadcastReceiver() {
-    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(
         context: Context,
         intent: Intent,

@@ -108,7 +108,6 @@ class ShortcutManager
 
         @OptIn(FlowPreview::class)
         @VisibleForTesting
-        @Suppress("TooGenericExceptionCaught")
         internal suspend fun setupObservation(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
                 if (isCurrentObservationActive(snapshotFlow)) return

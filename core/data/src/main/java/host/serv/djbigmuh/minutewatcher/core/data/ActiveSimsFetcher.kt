@@ -58,7 +58,6 @@ internal class ActiveSimsFetcher
             return SimDiscoveryResult.Failed(SimDiscoveryFailureReason.STORAGE_ERROR)
         }
 
-        @Suppress("TooGenericExceptionCaught")
         private suspend fun getActiveSimsInternal(seed: SeedResult): SimDiscoveryResult {
             val (seedValue, isStable) =
                 when (seed) {

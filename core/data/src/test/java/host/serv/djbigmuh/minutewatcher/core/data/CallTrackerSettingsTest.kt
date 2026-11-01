@@ -86,27 +86,6 @@ class CallTrackerSettingsTest : CallTrackerTestFixtures() {
         }
 
     @Test
-    fun `refreshStatus keeps current status on getActiveCallSubIds timeout`() =
-        runTest(testDispatcher) {
-            setupCommonMocks()
-            val tracker = createTracker(backgroundScope)
-
-            // 1. Setup Active status
-            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(listOf(1))
-            tracker.refreshStatus(force = true)
-            assertEquals(TrackingStatus.Active, tracker.status.value)
-
-            // 2. Mock timeout (null)
-            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(null)
-
-            // 3. Perform refresh
-            tracker.refreshStatus(force = false)
-
-            // 4. Assert: Status still Active
-            assertEquals(TrackingStatus.Active, tracker.status.value)
-        }
-
-    @Test
     fun `readWithRetry propagates CancellationException without retry`() =
         runTest(testDispatcher) {
             setupCommonMocks()

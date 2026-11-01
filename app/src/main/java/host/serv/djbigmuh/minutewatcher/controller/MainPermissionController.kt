@@ -48,7 +48,7 @@ class MainPermissionController
          * @param onRequestPhonePermission Callback to request phone state permission.
          * @param onCheckNotifications Callback to check for notification permission.
          */
-        @Suppress("TooGenericExceptionCaught", "CognitiveComplexMethod")
+        @Suppress("CognitiveComplexMethod")
         fun checkPermissionsAndInit(
             scope: CoroutineScope,
             isInitialSetupCompleted: Flow<Boolean>,

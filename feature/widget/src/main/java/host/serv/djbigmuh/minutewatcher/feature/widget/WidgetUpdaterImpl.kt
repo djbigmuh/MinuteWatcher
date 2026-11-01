@@ -100,7 +100,6 @@ class WidgetUpdaterImpl
             return result
         }
 
-        @Suppress("TooGenericExceptionCaught")
         private suspend fun startNewUpdate(deferred: CompletableDeferred<WidgetUpdateResult>): WidgetUpdateResult {
             @Suppress("TooGenericExceptionCaught")
             try {

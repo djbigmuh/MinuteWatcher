@@ -44,7 +44,6 @@ class SnapshotIndexer
          * and must retry on the next attempt); `false` if the update completed fully or was
          * skipped because the snapshot is not loaded yet.
          */
-        @Suppress("TooGenericExceptionCaught")
         suspend fun performIndexUpdate(
             session: AppSearchSessionWrapper,
             snapshot: GlobalSnapshot,

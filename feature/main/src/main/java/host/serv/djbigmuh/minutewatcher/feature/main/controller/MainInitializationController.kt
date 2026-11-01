@@ -57,7 +57,6 @@ class MainInitializationController
             }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         private suspend fun runInitializationLoop(
             lastRefreshAt: Long,
             onUpdateLastRefreshAt: (Long) -> Unit,

@@ -17,7 +17,6 @@ open class BootReceiver : BroadcastReceiver() {
     @Inject
     lateinit var workScheduler: WorkScheduler
 
-    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(
         context: Context,
         intent: Intent,

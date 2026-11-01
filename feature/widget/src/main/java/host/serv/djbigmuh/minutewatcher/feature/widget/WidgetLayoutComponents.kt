@@ -284,7 +284,6 @@ internal fun getNoDataColor(uiState: WidgetUiState): IColorProvider {
  * @param bgColor Background color.
  * @return Modifier for widget.
  */
-@Suppress("TooGenericExceptionCaught")
 internal fun getWidgetModifier(
     context: Context,
     navigationProvider: NavigationProvider?,
@@ -307,7 +306,9 @@ internal fun getWidgetModifier(
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 }
             modifier = modifier.clickable(actionStartActivity(launchIntent))
-        } catch (e: Exception) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
             // Operation must complete without propagating exception for stability.
             AppLogger.e("Failed to attach click action to widget", e)
         }

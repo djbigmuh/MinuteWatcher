@@ -93,7 +93,6 @@ object AppLogger {
             .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
             .withZone(cachedZoneId)
 
-    @VisibleForTesting
     internal fun getFormatter(): DateTimeFormatter {
         val currentZone = ZoneId.systemDefault()
         if (currentZone != cachedZoneId) {
@@ -146,23 +145,11 @@ object AppLogger {
             oldJob.cancel()
             if (blocking) {
                 runBlocking {
-                    val joined =
-                        withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS) {
-                            oldJob.join()
-                        }
-                    if (joined == null) {
-                        Log.w(TAG, "AppLogger: worker join timed out after $WORKER_JOIN_TIMEOUT_MS ms")
-                    }
+                    joinAndWarnTimeout(oldJob)
                 }
             } else {
                 logScope.launch {
-                    val joined =
-                        withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS) {
-                            oldJob.join()
-                        }
-                    if (joined == null) {
-                        Log.w(TAG, "AppLogger: worker join timed out after $WORKER_JOIN_TIMEOUT_MS ms")
-                    }
+                    joinAndWarnTimeout(oldJob)
                     if (startNew) {
                         synchronized(this@AppLogger) {
                             if (isWorkerStartAllowed(newGen)) {
@@ -186,6 +173,21 @@ object AppLogger {
                             runWorker(newGen)
                         }
                 }
+            }
+        }
+    }
+
+    private suspend fun joinAndWarnTimeout(oldJob: Job) {
+        val joined =
+            withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS) {
+                oldJob.join()
+            }
+        if (joined == null) {
+            runCatching {
+                logger.w(
+                    TAG,
+                    "AppLogger: worker join timed out after $WORKER_JOIN_TIMEOUT_MS ms",
+                )
             }
         }
     }
@@ -276,7 +278,6 @@ object AppLogger {
         logChannel.trySend(LogEntry(level, message))
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun openWriter(dir: File): BufferedWriter? =
         try {
             val logFile = File(dir, LOG_FILE_NAME)
@@ -285,7 +286,9 @@ object AppLogger {
                 writer = bw
             }
             bw
-        } catch (e: Exception) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
             // Operation must complete without propagating exception for logging infrastructure reliability.
             Log.e(TAG, "AppLogger: failed to open log file writer", e)
             null
@@ -301,7 +304,6 @@ object AppLogger {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun processLogEntry(entry: LogEntry) {
         val drainedEntries = mutableListOf<LogEntry>()
         @Suppress("TooGenericExceptionCaught")

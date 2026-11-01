@@ -80,10 +80,11 @@ class NotificationHelper
         }
 
         private val notificationManager: NotificationManager? =
-            @Suppress("TooGenericExceptionCaught")
             try {
                 context.getSystemService(NotificationManager::class.java)
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception,
+            ) {
                 // Operation must complete without propagating exception for notification manager acquisition.
                 AppLogger.w("Failed to obtain NotificationManager: ${e.message}")
                 null
@@ -103,7 +104,6 @@ class NotificationHelper
         /**
          * Creates or updates notification channels with localized names and descriptions.
          */
-        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun ensureChannels() {
             val manager = notificationManager ?: return
             val locContext = AppLocaleContexts.forAppLocale(context)
@@ -144,10 +144,11 @@ class NotificationHelper
                     manager.createNotificationChannel(aodChannel)
 
                     if (!legacyChannelDeleted) {
-                        @Suppress("TooGenericExceptionCaught")
                         try {
                             manager.deleteNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID)
-                        } catch (e: Exception) {
+                        } catch (
+                            @Suppress("TooGenericExceptionCaught") e: Exception,
+                        ) {
                             // Operation must complete without propagating exception for legacy channel deletion.
                             AppLogger.w("Failed to delete legacy AOD summary notification channel: ${e.message}")
                         }
@@ -155,7 +156,9 @@ class NotificationHelper
                     }
 
                     initializedLocaleTag = currentLocaleTag
-                } catch (e: RuntimeException) {
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+                ) {
                     AppLogger.e("Failed to create or update notification channels", e)
                 }
             }
@@ -168,7 +171,6 @@ class NotificationHelper
          * Platform implementations of NotificationManager may throw various RuntimeExceptions.
          * Suppressing TooGenericExceptionCaught as RuntimeException is caught defensively.
          */
-        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun sendUsageNotification(
             title: String,
             message: String,
@@ -215,7 +217,9 @@ class NotificationHelper
             } catch (e: SecurityException) {
                 AppLogger.w("Notification permission denied: ${e.message}")
                 false
-            } catch (e: RuntimeException) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+            ) {
                 AppLogger.e("Failed to send notification (runtime error)", e)
                 false
             }
@@ -290,7 +294,6 @@ class NotificationHelper
          *
          * @return true if notification was posted successfully, false otherwise.
          */
-        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun sendAodSummaryNotification(
             title: String,
             contentLine: String,
@@ -344,7 +347,9 @@ class NotificationHelper
             } catch (e: SecurityException) {
                 AppLogger.w("AOD summary notification permission denied: ${e.message}")
                 false
-            } catch (e: RuntimeException) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+            ) {
                 AppLogger.e("Failed to send AOD summary notification (runtime error)", e)
                 false
             }
@@ -353,7 +358,6 @@ class NotificationHelper
         /**
          * Checks whether the AOD summary notification is currently active in the notification manager.
          */
-        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun isAodSummaryNotificationActive(): Boolean {
             val manager = notificationManager ?: return false
             return try {
@@ -361,20 +365,23 @@ class NotificationHelper
             } catch (e: SecurityException) {
                 AppLogger.w("Error checking active AOD notifications: SecurityException: ${e.message}")
                 false
-            } catch (e: RuntimeException) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+            ) {
                 AppLogger.w("Error checking active AOD notifications: RuntimeException: ${e.message}")
                 false
             }
         }
 
-        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun cancelAodSummaryNotification() {
             val manager = notificationManager ?: return
             try {
                 manager.cancel(AOD_SUMMARY_NOTIFICATION_ID)
             } catch (e: SecurityException) {
                 AppLogger.w("Failed to cancel AOD summary notification: ${e.message}")
-            } catch (e: RuntimeException) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+            ) {
                 AppLogger.e("Failed to cancel AOD summary notification (runtime error)", e)
             }
         }
@@ -385,7 +392,6 @@ class NotificationHelper
          * @return true if NotificationManager is available, notification permission is granted,
          * notifications are enabled, and AOD summary channel exists and is not blocked.
          */
-        @Suppress("TooGenericExceptionCaught") // Defensive catch
         fun isAodSummaryAvailable(): Boolean {
             val manager = notificationManager ?: return false
             return try {
@@ -398,7 +404,9 @@ class NotificationHelper
             } catch (e: SecurityException) {
                 AppLogger.w("Error checking AOD summary availability: SecurityException: ${e.message}")
                 false
-            } catch (e: RuntimeException) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+            ) {
                 AppLogger.w("Error checking AOD summary availability: RuntimeException: ${e.message}")
                 false
             }
@@ -411,14 +419,15 @@ class NotificationHelper
          * Platform implementations of NotificationManagerCompat may throw various RuntimeExceptions.
          * Suppressing TooGenericExceptionCaught as RuntimeException is caught defensively.
          */
-        @Suppress("TooGenericExceptionCaught") // Defensive catch
         private fun areNotificationsEnabledSafe(): Boolean =
             try {
                 NotificationManagerCompat.from(context).areNotificationsEnabled()
             } catch (e: SecurityException) {
                 AppLogger.w("Error checking notification status: SecurityException: ${e.message}")
                 false
-            } catch (e: RuntimeException) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+            ) {
                 AppLogger.w("Error checking notification status: RuntimeException: ${e.message}")
                 false
             }

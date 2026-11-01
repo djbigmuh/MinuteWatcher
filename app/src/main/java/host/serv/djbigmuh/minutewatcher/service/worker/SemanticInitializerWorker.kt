@@ -103,8 +103,8 @@ class SemanticInitializerWorker
             val searchResult = indexInitialSnapshotSafely(initialSnapshot)
             val shortcutSuccess = updateShortcutsSyncSafely(initialSnapshot)
 
-            val searchStatus = runCatching { searchManager.status.value }.getOrNull()
-            val shortcutsStatus = runCatching { shortcutManager.status.value }.getOrNull()
+            val searchStatus = searchManager.status.value
+            val shortcutsStatus = shortcutManager.status.value
 
             if (searchResult !is SemanticSearchManager.IndexResult.Success) {
                 AppLogger.w("SemanticInitializerWorker: initial AppSearch indexing failed: $searchResult")

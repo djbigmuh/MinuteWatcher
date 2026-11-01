@@ -20,7 +20,6 @@ open class LocaleChangedReceiver : BroadcastReceiver() {
     @Inject
     lateinit var dataChangeNotifier: DataChangeNotifier
 
-    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(
         context: Context,
         intent: Intent,

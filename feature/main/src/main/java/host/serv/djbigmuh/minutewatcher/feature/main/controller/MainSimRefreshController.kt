@@ -65,7 +65,6 @@ class MainSimRefreshController
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException].
          */
-        @Suppress("TooGenericExceptionCaught")
         suspend fun refreshSimCardsInternal(): RefreshOutcome =
             withContext(ioDispatcher) {
                 if (!simCheckMutex.tryLock()) {

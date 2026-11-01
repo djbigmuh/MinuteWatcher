@@ -15,7 +15,6 @@ configure<ApplicationExtension> {
         applicationId = "host.serv.djbigmuh.minutewatcher"
         versionCode = 413
         versionName = "4.3.0"
-        testInstrumentationRunner = "host.serv.djbigmuh.minutewatcher.HiltTestRunner"
     }
 
     val keystoreFile = layout.projectDirectory.file("release.keystore").asFile
@@ -70,17 +69,11 @@ configure<ApplicationExtension> {
             matchingFallbacks += listOf("release")
             signingConfig = signingConfigs.getByName("debug")
             manifestPlaceholders["benchmarkReceiverEnabled"] = true
-            proguardFiles("benchmark-rules.pro")
         }
     }
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
-    }
-
-    lint {
-        // ObsoleteSdkInt is disabled for mipmap-anydpi-v26 required for adaptive icons on minSdk 26
-        disable.add("ObsoleteSdkInt")
     }
 
     buildFeatures {
@@ -138,8 +131,6 @@ dependencies {
     implementation(libs.androidxLifecycleProcess)
 
     // Hilt Testing
-    androidTestImplementation(libs.daggerHiltAndroidTesting)
-    kspAndroidTest(libs.daggerHiltCompiler)
     testImplementation(libs.daggerHiltAndroidTesting)
     kspTest(libs.daggerHiltCompiler)
 
@@ -170,10 +161,5 @@ dependencies {
     testImplementation(libs.androidxWorkTesting)
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.robolectric)
-    androidTestImplementation(platform(libs.androidxComposeBom))
-    androidTestImplementation(libs.androidxJunit)
-    androidTestImplementation(libs.androidxTestRunner)
-    androidTestImplementation(libs.androidxUiTestJunit4)
     debugImplementation(libs.androidxUiTooling)
-    debugImplementation(libs.androidxUiTestManifest)
 }

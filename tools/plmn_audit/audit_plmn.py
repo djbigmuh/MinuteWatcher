@@ -224,6 +224,8 @@ def generate_markdown_report(project_db, missing, project_only, conflicts, exclu
         "",
         "### Audit Totals",
         "",
+        "<!-- Generated data-export table: cells contain long unbreakable values; alignment padding is impractical. -->",
+        "<!--suppress MarkdownIncorrectTableFormatting -->",
         "| Category | Count | Description |",
         "|---|---|---|",
         f"| **MISSING (INCLUDE_MNO)** | {inc_mno} | Active public mobile network operators missing in project DB |",
@@ -244,6 +246,8 @@ def generate_markdown_report(project_db, missing, project_only, conflicts, exclu
         "",
         "## Missing Operational PLMNs (Candidates for Addition)",
         "",
+        "<!-- Generated data-export table: cells contain long unbreakable values; alignment padding is impractical. -->",
+        "<!--suppress MarkdownIncorrectTableFormatting -->",
         "| PLMN | Country | MCC | Brand | Operator | Category | Suggested BrandKey | Source | Date |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
@@ -257,6 +261,8 @@ def generate_markdown_report(project_db, missing, project_only, conflicts, exclu
         "",
         "## Project-Only PLMNs",
         "",
+        "<!-- Generated data-export table: cells contain long unbreakable values; alignment padding is impractical. -->",
+        "<!--suppress MarkdownIncorrectTableFormatting -->",
         "| PLMN | Current BrandKey | Verification Result | Source | Date |",
         "|---|---|---|---|---|",
     ])
@@ -270,6 +276,8 @@ def generate_markdown_report(project_db, missing, project_only, conflicts, exclu
         "",
         "## Brand Conflicts",
         "",
+        "<!-- Generated data-export table: cells contain long unbreakable values; alignment padding is impractical. -->",
+        "<!--suppress MarkdownIncorrectTableFormatting -->",
         "| PLMN | Project BrandKey | Dataset Brand / Operator | Source | Recommended Action |",
         "|---|---|---|---|---|",
     ])

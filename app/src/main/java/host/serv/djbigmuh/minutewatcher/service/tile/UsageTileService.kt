@@ -58,7 +58,6 @@ class UsageTileService : TileService() {
 
     private var job: Job? = null
 
-    @Suppress("TooGenericExceptionCaught")
     override fun onStartListening() {
         super.onStartListening()
         updateTile()

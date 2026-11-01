@@ -26,7 +26,6 @@ object SimUtils {
      * @param slot SIM slot index.
      * @return Full resolved operator name or generic fallback.
      */
-    @Suppress("TooGenericExceptionCaught")
     fun getShortOperatorName(
         context: Context,
         operatorName: String,
@@ -45,7 +44,9 @@ object SimUtils {
                 operatorName.isNotEmpty() -> trimmed
                 else -> genericOperatorName(localizedContext, slot)
             }
-        } catch (e: Exception) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
             // Operation must complete without propagating exception to ensure system stability and fault tolerance.
             AppLogger.e("Error resolving short operator name for: $operatorName", e)
             if (operatorName.isNotEmpty()) trimmed else genericOperatorName(localizedContext, slot)

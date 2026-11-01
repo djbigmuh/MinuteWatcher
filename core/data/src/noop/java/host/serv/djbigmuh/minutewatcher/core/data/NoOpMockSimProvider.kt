@@ -12,7 +12,6 @@ import javax.inject.Inject
  * Hilt entry point of the noop build variant: instantiated via dependency injection,
  * never referenced directly from code.
  */
-@Suppress("unused")
 class NoOpMockSimProvider
     @Inject
     constructor() : MockSimProvider {

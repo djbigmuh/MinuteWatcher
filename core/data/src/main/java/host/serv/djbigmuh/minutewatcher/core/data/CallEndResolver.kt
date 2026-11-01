@@ -117,26 +117,26 @@ internal class CallEndResolver
             }
         }
 
-        private suspend fun fetchActiveSubIds(): List<Int>? {
-            @Suppress("TooGenericExceptionCaught")
-            return try {
+    private suspend fun fetchActiveSubIds(): List<Int>? =
+        try {
                 callSessionRepository.getActiveCallSubIds()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SecurityException) {
                 throw e
-            } catch (e: Exception) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
                 AppLogger.e("Failed to read active call sessions on unknown subId end", e)
                 null
             }
-        }
 
         /**
          * Queries call state for a subscription ID.
          * Suppressing MissingPermission and TooGenericExceptionCaught due to permission check
          * and runtime exception handling.
          */
-        @Suppress("MissingPermission", "TooGenericExceptionCaught")
+        @Suppress("MissingPermission")
         private fun getCallStateForSub(subId: Int): Int? {
             val manager = telephonyManager ?: return null
             if (!permissionManager.hasPhoneStatePermission()) {
@@ -153,7 +153,9 @@ internal class CallEndResolver
             } catch (e: SecurityException) {
                 AppLogger.w("SecurityException while querying call state for subId $subId", e)
                 null
-            } catch (e: RuntimeException) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+            ) {
                 AppLogger.w("RuntimeException from telephony service for subId $subId", e)
                 null
             }
