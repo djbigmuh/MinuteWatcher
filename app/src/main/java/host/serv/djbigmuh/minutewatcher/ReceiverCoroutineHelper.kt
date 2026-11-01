@@ -35,7 +35,6 @@ private const val RECEIVER_ASYNC_TIMEOUT_MS = 8_000L
  * @param block The suspend block to execute. Receives application context.
  * @return The launched [Job] for deterministic tracking and scope completion.
  */
-@Suppress("TooGenericExceptionCaught")
 fun goAsyncWithScope(
     context: Context,
     pendingResult: BroadcastReceiver.PendingResult,
@@ -48,7 +47,11 @@ fun goAsyncWithScope(
         if (finished.compareAndSet(false, true)) {
             try {
                 pendingResult.finish()
-            } catch (e: Exception) {
+            } catch (
+                // Catch Exception to ensure finish completes without crashing the runtime.
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e("ReceiverCoroutineHelper: finish failed", e)
             }
         }
@@ -64,7 +67,11 @@ fun goAsyncWithScope(
                         appContext,
                         CommonEntryPoint::class.java,
                     ).ioDispatcher()
-            } catch (e: Throwable) {
+            } catch (
+                // Catch Exception to fall back gracefully if Hilt entry point is unavailable during broadcast handling.
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
                 AppLogger.e(
                     "ReceiverCoroutineHelper: CommonEntryPoint access failed, using IO dispatcher fallback",
                     e,
@@ -90,7 +97,11 @@ fun goAsyncWithScope(
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
+                } catch (
+                    // Catch Exception to log asynchronous execution failures without unhandled exception propagation.
+                    @Suppress("TooGenericExceptionCaught")
+                    e: Exception,
+                ) {
                     AppLogger.e("Receiver async block failed", e)
                 } finally {
                     try {

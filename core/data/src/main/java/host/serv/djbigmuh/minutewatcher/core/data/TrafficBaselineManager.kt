@@ -175,24 +175,51 @@ class TrafficBaselineManager
             setRetryCount(identity, count + 1)
         }
 
+        /**
+         * Synchronizes the last data subscription ID if needed.
+         *
+         * Synchronization is an optional reconciliation operation; its failure does not cancel
+         * a successfully recorded baseline or affect tracking status.
+         */
         private suspend fun syncLastDataSubIdIfNeeded(
             identity: String,
             onSync: suspend () -> Unit,
         ) {
-            val currentDataSubId =
-                try {
-                    permissionManager.getDefaultDataSubscriptionId()
-                } catch (_: Exception) {
-                    -1
-                }
-            if (currentDataSubId != -1) {
-                val info = permissionManager.getActiveSubscriptions().find { it.subscriptionId == currentDataSubId }
-                if (info != null) {
-                    val currentIdentity = simIdentityRepository.getIdentity(info.simSlotIndex)
-                    if (currentIdentity == identity) {
-                        onSync()
+            try {
+                val currentDataSubId =
+                    try {
+                        permissionManager.getDefaultDataSubscriptionId()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (
+                        // Catch Exception to fall back safely if telephony manager query fails.
+                        @Suppress("TooGenericExceptionCaught")
+                        e: Exception,
+                    ) {
+                        AppLogger.w("TrafficBaselineManager: getDefaultDataSubscriptionId failed", e)
+                        -1
+                    }
+                if (currentDataSubId != -1) {
+                    val info =
+                        permissionManager
+                            .getActiveSubscriptions()
+                            .find { it.subscriptionId == currentDataSubId }
+                    if (info != null) {
+                        val currentIdentity = simIdentityRepository.getIdentity(info.simSlotIndex)
+                        if (currentIdentity == identity) {
+                            onSync()
+                        }
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                // Synchronization is non-critical; catch Exception to prevent secondary
+                // telemetry/permission errors from aborting successful baseline reset.
+                @Suppress("TooGenericExceptionCaught")
+                e: Exception,
+            ) {
+                AppLogger.w("TrafficBaselineManager: syncLastDataSubIdIfNeeded failed", e)
             }
         }
 

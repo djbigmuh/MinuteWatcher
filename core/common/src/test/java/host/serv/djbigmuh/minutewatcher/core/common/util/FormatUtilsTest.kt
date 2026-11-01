@@ -107,6 +107,12 @@ class FormatUtilsTest {
     @Test
     fun `formatMinutesDisplay adds space after remaining_text`() {
         val context = mock<Context>()
+        val resources = mock<Resources>()
+        val config = mock<Configuration>()
+        val localeList = LocaleList(Locale.US)
+        whenever(context.resources).thenReturn(resources)
+        whenever(resources.configuration).thenReturn(config)
+        whenever(config.locales).thenReturn(localeList)
         whenever(context.getString(R.string.remaining_text)).thenReturn("Remaining:")
         whenever(context.getString(R.string.minutes_abbr)).thenReturn("min.")
         whenever(context.getString(R.string.traffic_remaining_with_limit_format)).thenReturn("%1\$s / %2\$s %3\$s")
@@ -152,8 +158,12 @@ class FormatUtilsTest {
     fun `getLocale falls back to default on exception`() {
         val context = mock<Context>()
         val resources = mock<Resources>()
+        val config = mock<Configuration>()
+        val localeList = mock<LocaleList>()
         whenever(context.resources).thenReturn(resources)
-        whenever(resources.configuration).thenThrow(RuntimeException("Config error"))
+        whenever(resources.configuration).thenReturn(config)
+        whenever(config.locales).thenReturn(localeList)
+        whenever(localeList.get(0)).thenThrow(IndexOutOfBoundsException("Index out of bounds"))
 
         val locale = FormatUtils.getLocale(context)
         assertEquals(Locale.getDefault(), locale)

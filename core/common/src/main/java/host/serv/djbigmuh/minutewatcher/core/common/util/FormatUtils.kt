@@ -147,14 +147,17 @@ object FormatUtils {
     ): String = context.resources.getQuantityString(R.plurals.days_plurals, days, days)
 
     fun getLocale(context: Context): Locale =
-        @Suppress("TooGenericExceptionCaught")
         try {
             context.resources
                 .configuration
                 .locales
                 .get(0)
-        } catch (e: Exception) {
-            // Operation must complete without propagating exception to ensure system stability and fault tolerance.
+        } catch (
+            // Configuration locales list is documented as throwing IndexOutOfBoundsException
+            // when accessing an absent index; fall back to default locale in that case.
+            @Suppress("TooGenericExceptionCaught")
+            e: IndexOutOfBoundsException,
+        ) {
             AppLogger.w("FormatUtils: Failed to get locale from context, using default", e)
             Locale.getDefault()
         }

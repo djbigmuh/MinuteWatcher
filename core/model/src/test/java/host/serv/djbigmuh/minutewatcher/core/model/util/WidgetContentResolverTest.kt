@@ -96,6 +96,48 @@ class WidgetContentResolverTest {
         assertEquals("MTS: 100 min, 5 GB", summary)
     }
 
+    @Test
+    fun `buildSimSummary falls back on insufficient arguments`() {
+        val strings =
+            WidgetStrings(
+                usedText = "Used",
+                minutesAbbr = "min",
+                limitText = "Limit",
+                gbAbbr = "GB",
+                simStatusSummaryFormat = "%s %s %s %s %s %s",
+                locale = Locale.US,
+            )
+        val sim =
+            createSimUiState(showSim = true, operatorName = "MTS").copy(
+                minutesText = "100 min",
+                trafficText = "5 GB",
+            )
+
+        val summary = buildSimSummary(strings, sim)
+        assertEquals("MTS: 100 min, 5 GB", summary)
+    }
+
+    @Test
+    fun `buildSimSummary falls back on incompatible specifiers`() {
+        val strings =
+            WidgetStrings(
+                usedText = "Used",
+                minutesAbbr = "min",
+                limitText = "Limit",
+                gbAbbr = "GB",
+                simStatusSummaryFormat = "%d %d %d",
+                locale = Locale.US,
+            )
+        val sim =
+            createSimUiState(showSim = true, operatorName = "MTS").copy(
+                minutesText = "100 min",
+                trafficText = "5 GB",
+            )
+
+        val summary = buildSimSummary(strings, sim)
+        assertEquals("MTS: 100 min, 5 GB", summary)
+    }
+
     private fun createUiState(
         refreshFailed: Boolean = false,
         isSnapshotEmpty: Boolean = false,

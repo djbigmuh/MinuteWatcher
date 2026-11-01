@@ -61,7 +61,10 @@ fun buildSimSummary(
                 sim.minutesText,
                 sim.trafficText,
             )
-        } catch (_: Exception) {
+        } catch (_: java.util.IllegalFormatException) {
+            // Format string from translations may contain incompatible specifiers or arguments;
+            // fall back to unformatted representation.
+            @Suppress("SwallowedException")
             "${sim.operatorName}: ${sim.minutesText}, ${sim.trafficText}"
         }
     } else {
