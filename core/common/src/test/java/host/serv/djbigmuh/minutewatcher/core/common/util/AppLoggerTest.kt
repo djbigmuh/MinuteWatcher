@@ -422,12 +422,15 @@ class AppLoggerTest {
                 on { filesDir } doReturn dir
             }
 
-        testScope.launch {
-            AppLogger.init(mockContext)
-            AppLogger.d("Non-blocking test log")
+        try {
+            testScope.launch {
+                AppLogger.init(mockContext)
+                AppLogger.d("Non-blocking test log")
+            }
+            waitForLogMarker("Non-blocking test log", targetDir = dir)
+        } finally {
+            singleDispatcher.close()
         }
-        waitForLogMarker("Non-blocking test log", targetDir = dir)
-        singleDispatcher.close()
     }
 
     @Test
