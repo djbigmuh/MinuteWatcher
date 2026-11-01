@@ -11,9 +11,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Handles the initialization and recording of call start events.
@@ -247,7 +249,15 @@ internal class CallStartHandler
             withContext(NonCancellable) {
                 @Suppress("TooGenericExceptionCaught")
                 try {
-                    context.refreshStatus(false)
+                    val startTime = System.currentTimeMillis()
+                    val result =
+                        withTimeoutOrNull(Constants.Flow.NON_CANCELLABLE_CLEANUP_TIMEOUT_MS.milliseconds) {
+                            context.refreshStatus(false)
+                        }
+                    if (result == null) {
+                        val duration = System.currentTimeMillis() - startTime
+                        AppLogger.w("CallStartHandler: finalizeCallStart timed out after ${duration}ms")
+                    }
                 } catch (e: Exception) {
                     // Operation must complete without propagating exception for status refresh finally block.
                     AppLogger.w("CallTracker: refreshStatus failed in onCallStarted finally block", e)

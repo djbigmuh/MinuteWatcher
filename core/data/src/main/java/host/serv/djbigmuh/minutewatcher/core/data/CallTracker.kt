@@ -9,6 +9,7 @@ import host.serv.djbigmuh.minutewatcher.core.common.util.observeWithRetry
 import host.serv.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import host.serv.djbigmuh.minutewatcher.core.domain.TrackingStatusProvider
+import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingKey
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatusMachine
@@ -23,10 +24,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Implementation of call tracking logic that monitors call events and records duration.
@@ -385,7 +388,20 @@ class CallTracker
                     withContext(NonCancellable) {
                         @Suppress("TooGenericExceptionCaught")
                         try {
-                            refreshStatus(force = true)
+                            val startTime = System.currentTimeMillis()
+                            val timeout =
+                                Constants.Flow
+                                    .NON_CANCELLABLE_CLEANUP_TIMEOUT_MS.milliseconds
+                            val result =
+                                withTimeoutOrNull(timeout) {
+                                    refreshStatus(force = true)
+                                }
+                            if (result == null) {
+                                val duration = System.currentTimeMillis() - startTime
+                                AppLogger.w(
+                                    "CallTracker: refreshStatus timed out after ${duration}ms in finally during $tag",
+                                )
+                            }
                         } catch (e: Exception) {
                             // Operation must complete without propagating exception for status refresh finally block.
                             AppLogger.e("CallTracker: Failed to refresh status in finally during $tag", e)

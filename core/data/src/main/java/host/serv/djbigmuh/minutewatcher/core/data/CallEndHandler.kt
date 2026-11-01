@@ -13,6 +13,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -208,7 +209,15 @@ internal class CallEndHandler
             withContext(NonCancellable) {
                 @Suppress("TooGenericExceptionCaught")
                 try {
-                    context.refreshStatus(false)
+                    val startTime = System.currentTimeMillis()
+                    val result =
+                        withTimeoutOrNull(Constants.Flow.NON_CANCELLABLE_CLEANUP_TIMEOUT_MS) {
+                            context.refreshStatus(false)
+                        }
+                    if (result == null) {
+                        val duration = System.currentTimeMillis() - startTime
+                        AppLogger.w("CallEndHandler: finalizeCallEnd timed out after ${duration}ms")
+                    }
                 } catch (e: Exception) {
                     // Operation must complete without propagating exception for finalize call end.
                     AppLogger.w("CallTracker: refreshStatus failed in finalizeCallEnd", e)

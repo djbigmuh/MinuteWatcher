@@ -8,9 +8,10 @@ import javax.inject.Inject
  *
  * The production build variant without simulation does not provide test SIM cards
  * regardless of the requested count, as simulation is disabled in production.
+ *
+ * Hilt entry point of the noop build variant: instantiated via dependency injection,
+ * never referenced directly from code.
  */
-// Hilt entry point of the noop build variant: instantiated via dependency injection,
-// never referenced directly from code.
 @Suppress("unused")
 class NoOpMockSimProvider
     @Inject

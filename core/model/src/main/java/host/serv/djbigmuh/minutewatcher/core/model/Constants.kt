@@ -250,6 +250,18 @@ object Constants {
          * Adjusted to accommodate sequential DataStore operations.
          */
         const val TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS = 25_000L
+
+        /**
+         * Timeout for non-cancellable cleanup operations in finally blocks.
+         * Covers worst-case sequential repository operations during call end/start cleanup.
+         */
+        const val NON_CANCELLABLE_CLEANUP_TIMEOUT_MS = 3_000L
+
+        /**
+         * Timeout for acquiring tail pass mutex lock in WidgetUpdater.
+         * Prevents indefinite suspension when concurrent updates are congested.
+         */
+        const val MUTEX_ACQUIRE_TIMEOUT_MS = 2_000L
     }
 
     /**

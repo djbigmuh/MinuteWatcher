@@ -178,24 +178,36 @@ class WidgetUpdaterImpl
          * Must be invoked from a NonCancellable context.
          */
         private suspend fun scheduleNextTailPass(owner: CompletableDeferred<WidgetUpdateResult>) {
+            val startTime = System.currentTimeMillis()
             val nextTail =
-                coalescingMutex.withLock {
-                    if (rerunRequested) {
-                        rerunRequested = false
-                        val d = pendingPass
-                        pendingPass = null
-                        if (d != null) {
-                            activeUpdate.set(d)
+                withTimeoutOrNull(Constants.Flow.MUTEX_ACQUIRE_TIMEOUT_MS.milliseconds) {
+                    coalescingMutex.withLock {
+                        if (rerunRequested) {
+                            rerunRequested = false
+                            val d = pendingPass
+                            pendingPass = null
+                            if (d != null) {
+                                activeUpdate.set(d)
+                            } else {
+                                activeUpdate.compareAndSet(owner, null)
+                            }
+                            d
                         } else {
                             activeUpdate.compareAndSet(owner, null)
+                            null
                         }
-                        d
-                    } else {
-                        activeUpdate.compareAndSet(owner, null)
-                        null
                     }
                 }
-            if (nextTail != null) {
+            if (nextTail == null) {
+                val duration = System.currentTimeMillis() - startTime
+                AppLogger.e("WidgetUpdater: scheduleNextTailPass timed out after ${duration}ms while acquiring mutex")
+                val pending = pendingPass
+                if (pending != null && !pending.isCompleted) {
+                    pending.complete(transientFailure(wasCoalesced = true))
+                    pendingPass = null
+                }
+                activeUpdate.compareAndSet(owner, null)
+            } else {
                 scope.launch(start = CoroutineStart.ATOMIC) {
                     runTailPass(nextTail)
                 }
