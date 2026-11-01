@@ -7,7 +7,6 @@ import host.serv.djbigmuh.minutewatcher.core.domain.AutoResetUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -217,16 +216,14 @@ class AutoResetSchedulerTest {
         runTest {
             whenever(autoResetUseCase.performAutoReset(any())).thenAnswer { throw CancellationException("Cancel") }
 
-            val exception =
-                org.junit.Assert.assertThrows(CancellationException::class.java) {
-                    runBlocking {
-                        scheduler.checkOnStart()
-                    }
-                }
-            assertTrue(exception is CancellationException)
+            val result = runCatching { scheduler.checkOnStart() }
+            assertTrue(result.exceptionOrNull() is CancellationException)
 
             // Retry attempt
-            whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
+            org.mockito.kotlin
+                .doReturn(true)
+                .whenever(autoResetUseCase)
+                .performAutoReset(any())
             scheduler.checkOnStart()
             verify(autoResetUseCase, times(2)).performAutoReset(shouldNotify = eq(false))
         }
