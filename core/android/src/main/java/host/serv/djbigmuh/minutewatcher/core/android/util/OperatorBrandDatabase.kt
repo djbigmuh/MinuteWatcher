@@ -1,5 +1,6 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.android.util
 
+import androidx.annotation.VisibleForTesting
 import host.serv.djbigmuh.minutewatcher.core.resources.R
 
 @Suppress("LargeClass") // Comprehensive operator db
@@ -1126,7 +1127,8 @@ object OperatorBrandDatabase {
         brandRecords.associate { it.brandKey to it.nameResId }
     }
 
-    val operatorIconMap: Map<Int, Int> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal val operatorIconMap: Map<Int, Int> by lazy(LazyThreadSafetyMode.PUBLICATION) {
         brandRecords.associate { it.nameResId to it.iconResId }
     }
 

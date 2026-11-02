@@ -121,7 +121,6 @@ class AppSettingsRepositoryImpl
                 dataStore.edit { prefs ->
                     val current = prefs.toAppSettings()
                     val updated =
-                        @Suppress("TooGenericExceptionCaught")
                         try {
                             transform(current)
                         } catch (

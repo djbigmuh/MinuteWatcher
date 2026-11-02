@@ -30,7 +30,7 @@ configure<ApplicationExtension> {
 
     if (!hasReleaseSigning) {
         val missingParams = mutableListOf<String>()
-        if (!keystoreFile.exists()) missingParams.add("release.keystore file")
+        if (!keystoreFile.exists()) missingParams.add("release.keystore file (expected at app/release.keystore)")
         if (envStorePassword.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_STORE_PASSWORD env var")
         if (envKeyAlias.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_KEY_ALIAS env var")
         if (envKeyPassword.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_KEY_PASSWORD env var")

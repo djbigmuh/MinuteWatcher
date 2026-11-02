@@ -203,8 +203,8 @@ External task files, instruction documents, and audit requirements must never be
 
 ## Release Signing
 
-- **Generating Key:** To generate a release key, run:
-  `keytool -genkeypair -v -keystore release.keystore -alias <alias> -keyalg RSA -keysize 4096 -validity 10000`
+- **Generating Key:** To generate a release key, run the following command from the repository root:
+  `keytool -genkeypair -v -keystore app/release.keystore -alias <alias> -keyalg RSA -keysize 4096 -validity 10000`
 - **Environment Variables:** Release signing requires three environment variables:
     - `MINUTEWATCHER_STORE_PASSWORD`
     - `MINUTEWATCHER_KEY_ALIAS`

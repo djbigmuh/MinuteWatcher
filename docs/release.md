@@ -13,7 +13,7 @@ clean-clone build verification, store publishing procedures, and release prohibi
 
 ## 2. Release Signing
 
-- **Keystore File**: `release.keystore` located in project root (excluded from VCS via `.gitignore`).
+- **Keystore File**: `app/release.keystore` located in the `app` module directory (excluded from VCS via `.gitignore`).
 - **Environment Variables**:
     - `MINUTEWATCHER_STORE_PASSWORD`: Keystore store password.
     - `MINUTEWATCHER_KEY_ALIAS`: Key alias.

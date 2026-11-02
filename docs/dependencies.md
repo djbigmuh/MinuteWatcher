@@ -57,3 +57,16 @@ The following Android Lint checks are globally disabled in `minutewatcher.androi
 
 > [!NOTE]
 > All non-stable dependencies are carefully selected to meet project requirements (targetSdk 37, Gradle 9.x). Downgrading is prohibited.
+
+## Module Dependency Notes
+
+- `implementation(project(":core:resources"))` edges are required in every module that imports
+  `host.serv.djbigmuh.minutewatcher.core.resources.R` for shared drawables and strings. With
+  `android.nonTransitiveRClass=true`, R classes are not re-exported transitively, so each
+  consumer must declare the dependency directly.
+- Test-only edges (`testImplementation(project(...))`, `testFixtures(project(...))`) are required
+  to compile shared fixtures and cross-module unit tests.
+- The IDE inspection "Unnecessary module dependency" does not resolve generated R classes and
+  reports false positives on the edges above; it is disabled in the committed project inspection
+  profile (`.idea/inspectionProfiles/Project_Default.xml`).
+

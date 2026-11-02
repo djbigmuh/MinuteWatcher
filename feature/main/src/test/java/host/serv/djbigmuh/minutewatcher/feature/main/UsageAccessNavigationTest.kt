@@ -123,7 +123,7 @@ class UsageAccessNavigationTest {
         val dialogController = MainDialogController(savedStateHandle)
         val appInfoProvider: host.serv.djbigmuh.minutewatcher.core.domain.AppInfoProvider = mock()
         whenever(appInfoProvider.versionName).thenReturn("1.0.0")
-        whenever(appInfoProvider.code).thenReturn(1)
+        whenever(appInfoProvider.versionCode).thenReturn(1)
 
         return MainViewModel(
             controllers = controllers,

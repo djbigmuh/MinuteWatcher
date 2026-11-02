@@ -1,5 +1,6 @@
 ﻿package host.serv.djbigmuh.minutewatcher
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
@@ -16,6 +17,13 @@ import host.serv.djbigmuh.minutewatcher.feature.widget.WidgetLimitManager
 import host.serv.djbigmuh.minutewatcher.service.worker.SemanticInitScheduler
 import javax.inject.Inject
 
+// False positive of RemoveWorkManagerInitializer: the default initializer is removed via the
+// tools:node="remove" meta-data on androidx.startup.InitializationProvider in the app manifest,
+// and this class provides on-demand initialization through Configuration.Provider. The IDE
+// evaluates the merged manifest, where the removal directive is already resolved, so the issue
+// is reported erroneously. Command-line Android Lint reports no findings, and
+// WorkManagerOnDemandInitializationTest guards the manifest contract.
+@SuppressLint("RemoveWorkManagerInitializer")
 @HiltAndroidApp
 class MinuteWatcherApp :
     Application(),

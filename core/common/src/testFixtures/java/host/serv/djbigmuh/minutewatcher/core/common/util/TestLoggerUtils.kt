@@ -3,7 +3,6 @@
 import android.content.Context
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import java.io.File
 
 /**
  * Utility for initializing [AppLogger] in unit tests with [NoOpLogger].
@@ -20,11 +19,4 @@ fun initTestLogger(context: Context = mock()) {
  */
 fun resetAppLoggerForTest() {
     AppLogger.resetForTest()
-}
-
-/**
- * Public testFixtures utility to initialize [AppLogger] for tests across module boundaries.
- */
-fun initAppLoggerForTest(dir: File) {
-    AppLogger.initForTest(dir)
 }

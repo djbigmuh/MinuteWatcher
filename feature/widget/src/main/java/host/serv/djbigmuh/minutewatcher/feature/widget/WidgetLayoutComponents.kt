@@ -297,7 +297,6 @@ internal fun getWidgetModifier(
 
     val className = navigationProvider?.mainActivityClassName.orEmpty()
     if (className.isNotEmpty()) {
-        @Suppress("TooGenericExceptionCaught")
         try {
             val launchIntent =
                 Intent(Intent.ACTION_MAIN).apply {

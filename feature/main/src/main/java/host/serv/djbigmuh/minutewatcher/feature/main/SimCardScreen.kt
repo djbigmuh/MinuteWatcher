@@ -121,7 +121,7 @@ fun SimCardScreen(
             showOnboardingDialog = showOnboardingDialog,
             showAboutDialog = showAboutDialog,
             versionName = viewModel.versionName,
-            versionCode = viewModel.code,
+            versionCode = viewModel.versionCode,
             onDismissLimitDialog = { viewModel.setLimitDialog(null) },
             onConfirmLimits = { slot, min, traf, rollover ->
                 viewModel.updateLimits(slot, min, traf, rollover)

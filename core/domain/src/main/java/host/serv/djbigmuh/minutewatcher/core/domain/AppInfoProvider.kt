@@ -11,5 +11,5 @@ interface AppInfoProvider {
     val versionName: String
 
     /** Application version code integer. */
-    val code: Int
+    val versionCode: Int
 }

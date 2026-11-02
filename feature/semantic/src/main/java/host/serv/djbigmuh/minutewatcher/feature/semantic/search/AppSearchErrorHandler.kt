@@ -1,6 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.feature.semantic.search
 
 import android.os.DeadObjectException
+import androidx.annotation.VisibleForTesting
 import androidx.appsearch.app.AppSearchResult
 import androidx.appsearch.exceptions.AppSearchException
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
@@ -19,8 +20,11 @@ import javax.inject.Singleton
 class AppSearchErrorHandler
     @Inject
     constructor() {
+    @Suppress("ktlint:standard:backing-property-naming")
         private val _consecutiveIndexFailures = AtomicInteger(0)
-        val consecutiveIndexFailures: Int get() = _consecutiveIndexFailures.get()
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal val consecutiveIndexFailures: Int get() = _consecutiveIndexFailures.get()
 
         fun resetFailures() {
             _consecutiveIndexFailures.set(0)

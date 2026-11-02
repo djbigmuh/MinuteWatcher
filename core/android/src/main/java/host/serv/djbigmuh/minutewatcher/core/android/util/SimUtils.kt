@@ -36,7 +36,6 @@ object SimUtils {
         if (OperatorResolver.isValidSpecificName(trimmed)) {
             return trimmed
         }
-        @Suppress("TooGenericExceptionCaught")
         return try {
             val resId = OperatorResolver.getOperatorResourceId(operatorName)
             when {
@@ -63,10 +62,11 @@ object SimUtils {
         resId: Int,
         default: String,
     ): String =
-        @Suppress("TooGenericExceptionCaught")
         try {
             context.getString(resId)
-        } catch (e: Exception) {
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: Exception,
+        ) {
             // Operation must complete without propagating exception to ensure system stability and fault tolerance.
             AppLogger.w("Resource not found or failed to load: $resId. Using default: $default", e)
             default

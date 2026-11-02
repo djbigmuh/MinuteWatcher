@@ -26,20 +26,39 @@
       <option name="ADD_NONJAVA_TO_ENTRIES" value="true" />
       <option name="ADD_ENTRY_POINT_ANNOTATIONS">
         <value>
-          <list size="10">
-            <item index="0" class="java.lang.String" itemvalue="org.junit.Test" />
-            <item index="1" class="java.lang.String" itemvalue="org.junit.runner.RunWith" />
-            <item index="2" class="java.lang.String" itemvalue="org.junit.Rule" />
-            <item index="3" class="java.lang.String" itemvalue="dagger.Module" />
+          <list size="20">
+            <item index="0" class="java.lang.String" itemvalue="javax.inject.Inject" />
+            <item index="1" class="java.lang.String" itemvalue="dagger.Provides" />
+            <item index="2" class="java.lang.String" itemvalue="dagger.Binds" />
+            <item index="3" class="java.lang.String" itemvalue="dagger.hilt.EntryPoint" />
             <item index="4" class="java.lang.String" itemvalue="dagger.hilt.InstallIn" />
-            <item index="5" class="java.lang.String" itemvalue="dagger.hilt.android.HiltAndroidApp" />
+            <item index="5" class="java.lang.String" itemvalue="dagger.hilt.Module" />
             <item index="6" class="java.lang.String" itemvalue="dagger.hilt.android.AndroidEntryPoint" />
-            <item index="7" class="java.lang.String" itemvalue="androidx.hilt.work.HiltWorker" />
-            <item index="8" class="java.lang.String" itemvalue="javax.inject.Inject" />
-            <item index="9" class="java.lang.String" itemvalue="androidx.appfunctions.AppFunctionServiceEntryPoint" />
+            <item index="7" class="java.lang.String" itemvalue="dagger.hilt.android.HiltAndroidApp" />
+            <item index="8" class="java.lang.String" itemvalue="dagger.hilt.android.HiltWorker" />
+            <item index="9" class="java.lang.String" itemvalue="androidx.hilt.work.HiltWorker" />
+            <item index="10" class="java.lang.String" itemvalue="dagger.hilt.android.lifecycle.HiltViewModel" />
+            <item index="11" class="java.lang.String" itemvalue="androidx.compose.ui.tooling.preview.Preview" />
+            <item index="12" class="java.lang.String" itemvalue="org.junit.Test" />
+            <item index="13" class="java.lang.String" itemvalue="org.junit.Before" />
+            <item index="14" class="java.lang.String" itemvalue="org.junit.After" />
+            <item index="15" class="java.lang.String" itemvalue="org.junit.BeforeClass" />
+            <item index="16" class="java.lang.String" itemvalue="org.junit.AfterClass" />
+            <item index="17" class="java.lang.String" itemvalue="org.junit.Rule" />
+            <item index="18" class="java.lang.String" itemvalue="org.junit.runner.RunWith" />
+            <item index="19" class="java.lang.String" itemvalue="androidx.appfunctions.AppFunctionServiceEntryPoint" />
+          </list>
+        </value>
+      </option>
+      <option name="ADD_WRITTEN_ANNOTATIONS">
+        <value>
+          <list size="2">
+            <item index="0" class="java.lang.String" itemvalue="javax.inject.Inject" />
+            <item index="1" class="java.lang.String" itemvalue="org.junit.Rule" />
           </list>
         </value>
       </option>
     </inspection_tool>
+    <inspection_tool class="UnnecessaryModuleDependency" enabled="false" level="WARNING" enabled_by_default="false" />
   </profile>
 </component>
