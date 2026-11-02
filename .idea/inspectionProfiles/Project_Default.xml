@@ -59,6 +59,11 @@
         </value>
       </option>
     </inspection_tool>
+    <!-- Disabled project-wide: the inspection cannot observe usages of the resource-only
+         module :core:resources (merged resources and generated R artifacts leave no
+         source-level references) and flags unitTest/androidTest/testFixtures source sets
+         that automatically inherit the main compile classpath from AGP. Every reported
+         edge is required for the build. See docs/dependencies.md, "Module Dependency Notes". -->
     <inspection_tool class="UnnecessaryModuleDependency" enabled="false" level="WARNING" enabled_by_default="false" />
   </profile>
 </component>
