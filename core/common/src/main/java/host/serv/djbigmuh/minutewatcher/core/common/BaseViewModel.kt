@@ -29,7 +29,7 @@ open class BaseViewModel<S>(
     /**
      * Updates the state.
      */
-    protected fun reduce(reducer: S.() -> S) = _state.update { it.reducer() }
+    protected fun reduce(reducer: S.() -> S) = _state.update { reducer(it) }
 
     /**
      * Atomically updates the state and returns the result.
