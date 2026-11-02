@@ -71,7 +71,7 @@ class NotificationHelperTest {
     private fun createContextWithMockManager(mockManager: NotificationManager): Context =
         object : android.content.ContextWrapper(context) {
             override fun getSystemService(name: String): Any? =
-                if (name == Context.NOTIFICATION_SERVICE) {
+                if (name == NOTIFICATION_SERVICE) {
                     mockManager
                 } else {
                     super.getSystemService(name)
@@ -79,7 +79,7 @@ class NotificationHelperTest {
 
             override fun getSystemServiceName(serviceClass: Class<*>): String? =
                 if (serviceClass == NotificationManager::class.java) {
-                    Context.NOTIFICATION_SERVICE
+                    NOTIFICATION_SERVICE
                 } else {
                     super.getSystemServiceName(serviceClass)
                 }

@@ -707,9 +707,7 @@ class UpdateCoordinator
             updateWidget: Boolean,
             force: Boolean,
         ): Boolean {
-            if (!updateWidget) return true
-
-            return if (force) {
+            return !updateWidget || if (force) {
                 val outcome = performForcedUpdate()
                 if (outcome.success) {
                     dataRefreshNotifier.notifyRefresh(

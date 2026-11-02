@@ -70,8 +70,8 @@ internal class SnapshotAssembler {
         // If this event has already been used for a snapshot, clear its flags.
         // This makes isManual/suppressWidgetUpdate one-shot.
         val isNewEvent = lastProcessedEventId.getAndSet(event.eventId) != event.eventId
-        val isManual = if (isNewEvent) event.isManual else false
-        val suppress = if (isNewEvent) event.suppressWidgetUpdate else false
+        val isManual = isNewEvent && event.isManual
+        val suppress = isNewEvent && event.suppressWidgetUpdate
 
         return GlobalSnapshot(
             version = semanticVersion.getVersion(),

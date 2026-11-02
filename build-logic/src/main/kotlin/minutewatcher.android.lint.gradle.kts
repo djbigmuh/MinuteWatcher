@@ -13,6 +13,6 @@ extension.apply {
     lint.disable.add("GradleDependency") // Versions managed centrally by version catalog
     lint.disable.add("AndroidGradlePluginVersion") // AGP version managed centrally by version catalog and conventions
     lint.disable.add("VectorPath") // Validated by automated OperatorIconAssetComplianceTest in core:resources
-    lint.ignore.add("ObsoleteSdkInt") // Ignored for false positive on mipmap-anydpi-v26 resource directory naming
+    lint.disable.add("ObsoleteSdkInt") // Ignored for false positive on mipmap-anydpi-v26 resource directory naming
 
 }

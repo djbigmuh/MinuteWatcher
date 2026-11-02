@@ -140,7 +140,7 @@ class TrafficTracker
                     currentStatus.type == TrackingStatus.ErrorType.PERMISSION_MISSING &&
                     newStatus !is TrackingStatus.Error
 
-            val effectiveForce = if (isPermissionMissingRecovery) true else force
+            val effectiveForce = isPermissionMissingRecovery || force
 
             if (!effectiveForce) {
                 val isStickyDbError =

@@ -193,8 +193,7 @@ object AppLogger {
     }
 
     private fun isWorkerStartAllowed(newGen: Long): Boolean {
-        if (!isFileLoggingEnabled || isShutdown) return false
-        return logDir != null && workerGeneration == newGen
+        return !(!isFileLoggingEnabled || isShutdown) && logDir != null && workerGeneration == newGen
     }
 
     private suspend fun runWorker(myGeneration: Long) {

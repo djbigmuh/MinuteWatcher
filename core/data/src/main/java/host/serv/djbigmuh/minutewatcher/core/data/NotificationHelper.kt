@@ -188,7 +188,7 @@ class NotificationHelper
 
             return try {
                 val hasPermission = permissionManager.hasNotificationPermission()
-                val areEnabled = if (hasPermission) areNotificationsEnabledSafe() else false
+                val areEnabled = hasPermission && areNotificationsEnabledSafe()
 
                 if (!hasPermission || !areEnabled) {
                     val reason =

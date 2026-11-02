@@ -172,14 +172,12 @@ class OperatorIconUniquenessTest {
      * of axis-aligned rectangles (solid rectangle or rectangular ring).
      */
     private fun isPlaceholderGlyph(glyphs: List<String>): Boolean {
-        if (glyphs.isEmpty()) return false
-        return glyphs.any { isAxisAlignedRectangleGlyph(it) }
+        return glyphs.isNotEmpty() && glyphs.any { isAxisAlignedRectangleGlyph(it) }
     }
 
     private fun isAxisAlignedRectangleGlyph(pathData: String): Boolean {
         val subpaths = splitIntoSubpaths(pathData)
-        if (subpaths.isEmpty()) return false
-        return subpaths.all { isAxisAlignedRectangleSubpath(it) }
+        return subpaths.isNotEmpty() && subpaths.all { isAxisAlignedRectangleSubpath(it) }
     }
 
     private fun splitIntoSubpaths(pathData: String): List<String> {

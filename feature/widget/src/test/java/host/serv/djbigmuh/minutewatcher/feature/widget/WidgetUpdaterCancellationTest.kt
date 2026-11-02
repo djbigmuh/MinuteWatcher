@@ -95,10 +95,8 @@ class WidgetUpdaterCancellationTest {
 
             // 3. Immediately call updateAll again.
             // If activeUpdate was cleared, this should be a NEW update (not coalesced).
-            val result = testUpdater.updateAll()
-
             val wasCoalesced =
-                when (result) {
+                when (val result = testUpdater.updateAll()) {
                     is WidgetUpdateResult.Success -> result.wasCoalesced
                     is WidgetUpdateResult.Failure -> result.wasCoalesced
                 }

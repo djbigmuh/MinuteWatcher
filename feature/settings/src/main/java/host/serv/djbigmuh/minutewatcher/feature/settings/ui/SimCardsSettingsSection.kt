@@ -139,7 +139,7 @@ private fun SimDetailsSettings(
             onUpdate {
                 it.copy(
                     showMinutes = v,
-                    showMinutesLimit = if (!v) false else it.showMinutesLimit,
+                    showMinutesLimit = v && it.showMinutesLimit,
                 )
             }
         },
@@ -160,7 +160,7 @@ private fun SimDetailsSettings(
             onUpdate {
                 it.copy(
                     showTraffic = v,
-                    showTrafficLimit = if (!v) false else it.showTrafficLimit,
+                    showTrafficLimit = v && it.showTrafficLimit,
                 )
             }
         },

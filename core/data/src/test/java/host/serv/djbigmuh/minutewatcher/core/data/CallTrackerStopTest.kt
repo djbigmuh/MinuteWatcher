@@ -79,7 +79,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
                     scope = backgroundScope,
                     repo =
                         object : CallSessionRepository by callSessionRepository {
-                            override suspend fun getActiveCallSubIds(): List<Int>? {
+                            override suspend fun getActiveCallSubIds(): List<Int> {
                                 initLock.withLock { return emptyList() }
                             }
 
@@ -141,7 +141,7 @@ class CallTrackerStopTest : CallTrackerTestFixtures() {
                     scope = backgroundScope,
                     repo =
                         object : CallSessionRepository by callSessionRepository {
-                            override suspend fun getActiveCallSubIds(): List<Int>? {
+                            override suspend fun getActiveCallSubIds(): List<Int> {
                                 initLock.withLock { return emptyList() }
                             }
 

@@ -28,7 +28,7 @@ class PermissionManagerTest {
     fun setup() {
         initTestLogger(context)
         whenever(context.packageName).thenReturn("host.serv.djbigmuh.minutewatcher")
-        whenever(context.getOpPackageName()).thenReturn("host.serv.djbigmuh.minutewatcher")
+        whenever(context.opPackageName).thenReturn("host.serv.djbigmuh.minutewatcher")
         whenever(context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)).thenReturn(subscriptionManager)
         whenever(context.getSystemService(Context.APP_OPS_SERVICE)).thenReturn(appOps)
         whenever(context.getSystemService(AppOpsManager::class.java)).thenReturn(appOps)

@@ -96,9 +96,8 @@ internal class SimIdentityResolver
             isStable: Boolean,
         ): SimIdentity =
             withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                val result = discovery.discoverSims(seedValue, isStable)
                 val sims =
-                    when (result) {
+                    when (val result = discovery.discoverSims(seedValue, isStable)) {
                         is SimDiscoveryResult.Available -> result.sims
                         else -> emptyList()
                     }

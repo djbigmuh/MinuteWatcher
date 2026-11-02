@@ -196,8 +196,7 @@ class BackupRulesConsistencyTest {
         currentSection: String?,
         builder: DataExtractionRulesBuilder,
     ): String? {
-        val tagName = parser.name
-        return when (tagName) {
+        return when (val tagName = parser.name) {
             "cloud-backup", "device-transfer" -> tagName
             "exclude", "include" -> {
                 parser.readBackupRule()?.let { rule ->

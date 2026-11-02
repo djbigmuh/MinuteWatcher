@@ -225,8 +225,8 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
                 MutableStateFlow(
                     mapOf(
                         TrackingKey.TRAFFIC to
-                            host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus.Error(
-                                host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus.ErrorType.UNKNOWN,
+                            TrackingStatus.Error(
+                                TrackingStatus.ErrorType.UNKNOWN,
                                 "Some error",
                             ),
                     ),

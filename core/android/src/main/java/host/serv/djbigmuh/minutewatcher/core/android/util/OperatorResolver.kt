@@ -313,9 +313,7 @@ object OperatorResolver {
         val normalized = lowercase(Locale.ROOT)
         val target = targetToken.lowercase(Locale.ROOT)
 
-        if (normalized == target) return true
-
-        return if (target.contains(" ")) {
+        return normalized == target || if (target.contains(" ")) {
             hasMultiWordToken(normalized, target)
         } else {
             val regex = if (target.contains("-")) tokenSplitWithDashRegex else tokenSplitWithoutDashRegex
@@ -330,9 +328,7 @@ object OperatorResolver {
         val targetParts = targetToken.split(" ").filter { it.isNotEmpty() }
         val tokens = normalizedName.split(tokenSplitWithoutDashRegex).filter { it.isNotEmpty() }
 
-        if (tokens.size < targetParts.size) return false
-
-        return (0..tokens.size - targetParts.size).any { i ->
+        return tokens.size >= targetParts.size && (0..tokens.size - targetParts.size).any { i ->
             targetParts.indices.all { j -> tokens[i + j] == targetParts[j] }
         }
     }

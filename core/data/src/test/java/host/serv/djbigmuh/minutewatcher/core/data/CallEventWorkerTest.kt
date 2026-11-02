@@ -55,11 +55,11 @@ class CallEventWorkerTest {
             val worker =
                 TestListenableWorkerBuilder<CallEventWorker>(context)
                     .setWorkerFactory(
-                        object : androidx.work.WorkerFactory() {
+                        object : WorkerFactory() {
                             override fun createWorker(
                                 appContext: Context,
                                 workerClassName: String,
-                                workerParameters: androidx.work.WorkerParameters,
+                                workerParameters: WorkerParameters,
                             ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
                         },
                     ).setInputData(inputData)
@@ -87,11 +87,11 @@ class CallEventWorkerTest {
             val worker =
                 TestListenableWorkerBuilder<CallEventWorker>(context)
                     .setWorkerFactory(
-                        object : androidx.work.WorkerFactory() {
+                        object : WorkerFactory() {
                             override fun createWorker(
                                 appContext: Context,
                                 workerClassName: String,
-                                workerParameters: androidx.work.WorkerParameters,
+                                workerParameters: WorkerParameters,
                             ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
                         },
                     ).setInputData(inputData)
