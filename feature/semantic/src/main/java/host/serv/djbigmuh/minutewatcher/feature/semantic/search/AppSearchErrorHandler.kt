@@ -20,11 +20,11 @@ import javax.inject.Singleton
 class AppSearchErrorHandler
     @Inject
     constructor() {
-    @Suppress("ktlint:standard:backing-property-naming")
+        @Suppress("ktlint:standard:backing-property-naming")
         private val _consecutiveIndexFailures = AtomicInteger(0)
 
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    internal val consecutiveIndexFailures: Int get() = _consecutiveIndexFailures.get()
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal val consecutiveIndexFailures: Int get() = _consecutiveIndexFailures.get()
 
         fun resetFailures() {
             _consecutiveIndexFailures.set(0)

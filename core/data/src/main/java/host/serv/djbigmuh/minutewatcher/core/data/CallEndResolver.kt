@@ -117,16 +117,16 @@ internal class CallEndResolver
             }
         }
 
-    private suspend fun fetchActiveSubIds(): List<Int>? =
-        try {
+        private suspend fun fetchActiveSubIds(): List<Int>? =
+            try {
                 callSessionRepository.getActiveCallSubIds()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SecurityException) {
                 throw e
-        } catch (
-            @Suppress("TooGenericExceptionCaught") e: Exception,
-        ) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception,
+            ) {
                 AppLogger.e("Failed to read active call sessions on unknown subId end", e)
                 null
             }

@@ -58,7 +58,7 @@ class MainViewModel
         val showUsageAccessDialog = dialogController.showUsageAccessDialog
         val showAboutDialog = dialogController.showAboutDialog
         val versionName: String get() = appInfoProvider.versionName
-    val versionCode: Int get() = appInfoProvider.versionCode
+        val versionCode: Int get() = appInfoProvider.versionCode
         val showOnboardingDialog: StateFlow<Boolean> get() = dialogController.showOnboardingDialog
         val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings

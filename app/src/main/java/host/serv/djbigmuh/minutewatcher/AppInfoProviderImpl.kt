@@ -15,7 +15,7 @@ import javax.inject.Singleton
 class AppInfoProviderImpl
     @Inject
     constructor() : AppInfoProvider {
-    override val versionName: String = BuildConfig.VERSION_NAME
+        override val versionName: String = BuildConfig.VERSION_NAME
 
-    override val versionCode: Int = BuildConfig.VERSION_CODE
+        override val versionCode: Int = BuildConfig.VERSION_CODE
     }
