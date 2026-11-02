@@ -34,5 +34,5 @@ open class BaseViewModel<S>(
     /**
      * Atomically updates the state and returns the result.
      */
-    protected fun updateAndGet(reducer: S.() -> S): S = _state.updateAndGet { it.reducer() }
+    protected fun updateAndGet(reducer: S.() -> S): S = _state.updateAndGet { reducer(it) }
 }
