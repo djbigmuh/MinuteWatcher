@@ -55,10 +55,13 @@ class WidgetUpdaterImpl
         @param:ApplicationScope private val scope: CoroutineScope,
     ) : WidgetUpdater {
         private val coalescingMutex = Mutex()
+
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal val pendingPass = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal val rerunRequested = AtomicBoolean(false)
 

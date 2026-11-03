@@ -279,6 +279,8 @@ class UpdateCoordinator
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
 
+            // Operation must complete without propagating exception for observation setup;
+            // failures are handled by the restart and recovery path.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val firstSnapshot = waitForInitialSnapshot()

@@ -304,6 +304,8 @@ class CallTracker
          */
         override suspend fun refreshStatus(force: Boolean) {
             AppLogger.d("CallTracker: refreshStatus called (force=$force)")
+            // Operation must complete without propagating exception for status refresh;
+            // refresh is best-effort and must not reach callers.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val currentStatus = statusMachine.current

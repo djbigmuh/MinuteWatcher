@@ -157,6 +157,8 @@ class NotificationHelper
 
                     initializedLocaleTag = currentLocaleTag
                 } catch (
+                    // Operation must complete without propagating exception for notification channel creation;
+                    // channels are retried on the next notification.
                     @Suppress("TooGenericExceptionCaught") e: RuntimeException,
                 ) {
                     AppLogger.e("Failed to create or update notification channels", e)
@@ -348,6 +350,8 @@ class NotificationHelper
                 AppLogger.w("AOD summary notification permission denied: ${e.message}")
                 false
             } catch (
+                // Operation must complete without propagating exception for AOD summary delivery;
+                // it is best-effort and must not reach the tracking pipeline.
                 @Suppress("TooGenericExceptionCaught") e: RuntimeException,
             ) {
                 AppLogger.e("Failed to send AOD summary notification (runtime error)", e)
@@ -366,6 +370,8 @@ class NotificationHelper
                 AppLogger.w("Error checking active AOD notifications: SecurityException: ${e.message}")
                 false
             } catch (
+                // Operation must complete without propagating exception for the AOD notification state query;
+                // it is best-effort and degrades to false.
                 @Suppress("TooGenericExceptionCaught") e: RuntimeException,
             ) {
                 AppLogger.w("Error checking active AOD notifications: RuntimeException: ${e.message}")
@@ -380,6 +386,8 @@ class NotificationHelper
             } catch (e: SecurityException) {
                 AppLogger.w("Failed to cancel AOD summary notification: ${e.message}")
             } catch (
+                // Operation must complete without propagating exception for AOD notification cancellation;
+                // it is best-effort.
                 @Suppress("TooGenericExceptionCaught") e: RuntimeException,
             ) {
                 AppLogger.e("Failed to cancel AOD summary notification (runtime error)", e)
@@ -405,6 +413,8 @@ class NotificationHelper
                 AppLogger.w("Error checking AOD summary availability: SecurityException: ${e.message}")
                 false
             } catch (
+                // Operation must complete without propagating exception for the AOD availability probe;
+                // it is best-effort and degrades to false.
                 @Suppress("TooGenericExceptionCaught") e: RuntimeException,
             ) {
                 AppLogger.w("Error checking AOD summary availability: RuntimeException: ${e.message}")

@@ -24,6 +24,8 @@ internal class CallSessionCleaner
             subId: Int,
             context: CallTrackingContext,
         ) {
+            // Operation must complete without propagating exception for call session counter
+            // cleanup; a stale session must not block subsequent cleanup cycles.
             @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository.clearCallSession(subId)
@@ -110,6 +112,8 @@ internal class CallSessionCleaner
             }
 
         private suspend fun readStartTime(subId: Int): Long? =
+            // Operation must complete without propagating exception for reading session start time;
+            // unreadable session data must not block cleanup.
             @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository
@@ -123,6 +127,8 @@ internal class CallSessionCleaner
             }
 
         private suspend fun readElapsedRealtime(subId: Int): Long? =
+            // Operation must complete without propagating exception for reading elapsed realtime;
+            // unreadable session data must not block cleanup.
             @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository
@@ -140,6 +146,8 @@ internal class CallSessionCleaner
             context: CallTrackingContext,
             criterion: String,
         ): Boolean =
+            // Operation must complete without propagating exception for session clearing;
+            // failure to clear one session must not block the rest.
             @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository.clearCallSession(subId)

@@ -47,6 +47,8 @@ internal class CallStartHandler
             context: CallTrackingContext,
         ) {
             var shouldRefreshStatus = false
+            // Operation must complete without propagating exception for call start processing;
+            // the phone-state listener path must not receive exceptions.
             @Suppress("TooGenericExceptionCaught")
             try {
                 if (!context.checkPermissions()) {

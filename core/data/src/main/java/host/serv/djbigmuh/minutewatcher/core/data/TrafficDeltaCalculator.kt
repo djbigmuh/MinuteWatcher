@@ -25,6 +25,8 @@ class TrafficDeltaCalculator
             target: TargetInfo,
             expectedLastResetDate: Long,
         ): Boolean {
+            // Operation must complete without propagating exception for baseline and usage update;
+            // failure degrades to a skipped update.
             @Suppress("TooGenericExceptionCaught")
             try {
                 if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
@@ -71,6 +73,8 @@ class TrafficDeltaCalculator
             slot: Int,
             expectedLastResetDate: Long,
         ): Boolean {
+            // Operation must complete without propagating exception for delta handling;
+            // failure degrades to a skipped update.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val deltaBytes = currentBytes - lastTotalBytes

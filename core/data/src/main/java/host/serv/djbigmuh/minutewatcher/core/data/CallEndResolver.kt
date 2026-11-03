@@ -125,6 +125,8 @@ internal class CallEndResolver
             } catch (e: SecurityException) {
                 throw e
             } catch (
+                // Operation must complete without propagating exception for active sub-id
+                // enumeration; failure degrades to null instead of aborting call-end processing.
                 @Suppress("TooGenericExceptionCaught") e: Exception,
             ) {
                 AppLogger.e("Failed to read active call sessions on unknown subId end", e)

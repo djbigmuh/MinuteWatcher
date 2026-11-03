@@ -27,6 +27,8 @@ class CallEventWorker
             } ?: handleTotalTimeout()
 
         private suspend fun processCallEvent(): Result =
+            // Operation must complete without propagating exception for WorkManager execution;
+            // the worker must return a Result instead of crashing.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val state = inputData.getString(EXTRA_STATE)

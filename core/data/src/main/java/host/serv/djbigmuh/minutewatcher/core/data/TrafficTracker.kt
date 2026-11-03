@@ -546,6 +546,8 @@ class TrafficTracker
             startElapsed: Long,
             force: Boolean,
         ): InitAttemptResult =
+            // Operation must complete without propagating exception for init attempt handling;
+            // failures are classified into retryable and terminal results instead of propagating raw.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val outcome = updateTrafficUsageLogic(force)
@@ -696,6 +698,8 @@ class TrafficTracker
             startElapsed: Long,
             block: suspend () -> TrafficUpdateOutcome,
         ): TrafficUpdateOutcome =
+            // Operation must complete without propagating exception for update outcome reporting;
+            // pipeline failures are converted into typed outcomes for status reporting.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val outcome = block()
@@ -756,6 +760,8 @@ class TrafficTracker
             val outcome =
                 withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
                     updateMutex.withLock {
+                        // Operation must complete without propagating exception for traffic update execution;
+                        // failures are reported via TrackingStatus and typed outcomes.
                         @Suppress("TooGenericExceptionCaught")
                         try {
                             val activeSims = fetchActiveSims()

@@ -37,6 +37,8 @@ class SystemShortcutApplier
             context: Context,
             shortcuts: List<ShortcutInfoCompat>,
         ) {
+            // Operation must complete without propagating exception for shortcut publication;
+            // it is best-effort and must not reach callers.
             @Suppress("TooGenericExceptionCaught")
             try {
                 if (shortcuts.isEmpty()) {

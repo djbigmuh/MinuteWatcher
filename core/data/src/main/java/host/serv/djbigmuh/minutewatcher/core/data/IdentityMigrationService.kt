@@ -80,6 +80,8 @@ class IdentityMigrationService
          * @throws CancellationException if the operation is canceled.
          */
         suspend fun hasLegacyData(activeIdentities: Set<String> = emptySet()): Boolean? =
+            // Operation must complete without propagating exception for the legacy data probe;
+            // failure degrades to null and must not block startup.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val appPrefs =
@@ -347,6 +349,8 @@ class IdentityMigrationService
             var failureCount = 0
             var partialFailure = false
 
+            // Operation must complete without propagating exception for batch migration;
+            // failures are recorded in the migration result instead of crashing app startup.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val success =
