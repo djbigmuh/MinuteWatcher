@@ -334,11 +334,11 @@ class AppLoggerTest {
         targetDir: File = logDir,
         timeoutMs: Long = 10000L,
     ) {
+        kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) }
         val logFile = File(targetDir, "logs.txt")
         pollUntil(timeoutMs, "Log marker '$marker' in ${targetDir.name}/logs.txt") {
             logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
         }
-        kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) }
     }
 
     private fun waitForChannelDrain(timeoutMs: Long = 10000L) {

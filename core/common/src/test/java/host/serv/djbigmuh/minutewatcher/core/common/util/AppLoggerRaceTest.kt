@@ -39,12 +39,12 @@ class AppLoggerRaceTest {
     ) {
         if (marker != null) {
             AppLogger.d(marker)
+            kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) }
             val logFile = File(logDir, "logs.txt")
             pollUntil(timeoutMs, "Log marker '$marker' in logs.txt") {
                 logFile.exists() && runCatching { logFile.readText() }.getOrDefault("").contains(marker)
             }
         }
-        kotlinx.coroutines.runBlocking { AppLogger.awaitQuiescent(timeoutMs) }
     }
 
     @Test

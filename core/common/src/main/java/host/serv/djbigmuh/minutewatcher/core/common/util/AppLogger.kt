@@ -4,8 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import host.serv.djbigmuh.minutewatcher.core.common.BuildConfig
-import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger.WORKER_JOIN_TIMEOUT_MS
-import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,6 +22,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Centralized logging utility.
@@ -32,12 +31,15 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * **Invariants:**
  * - Single worker coroutine consumes log channel sequentially in FIFO order.
- * - Worker lifecycle changes ([init], [initForTest], [resetForTest], [shutdown]) synchronously stop
- *   previous worker with a time-limited join ([WORKER_JOIN_TIMEOUT_MS]) performed outside state lock.
+ * - New worker is registered synchronously under state lock (`init`, `initForTest`);
+ *   previous worker is cancelled and completes on generation check, returning
+ *   unprocessed entries to the channel; teardown paths (`resetForTest`, `shutdown`)
+ *   additionally perform a time-limited join (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
  * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
  * - In-flight entries counter ([hasPendingLogs]) tracks logs currently
  *   being processed by worker.
  * - Entries are enqueued only if file logging is enabled, not shutdown, and log directory is set.
+ * - Queue capacity is `LOG_QUEUE_CAPACITY` with `DROP_OLDEST` policy; evictions are counted (`droppedEntries`, approximate) and reported via throttled warning through [logger].
  * - Failed file writes and drained entries on write failure threshold are routed to [logger] with `[DRAIN]` prefix
  *   outside state lock, guaranteeing no silent log losses.
  * - Rotation and file write operations are serialized using `synchronized(this)` monitor.
@@ -51,6 +53,7 @@ object AppLogger {
     private const val LOG_BUFFER_SIZE = 8192
     private const val MAX_WRITE_FAILURES = 3
     private const val WORKER_JOIN_TIMEOUT_MS = 2_000L
+    private const val DROP_WARNING_INTERVAL = 100L
 
     @Volatile
     private var isFileLoggingEnabled = BuildConfig.DEBUG
@@ -70,7 +73,20 @@ object AppLogger {
     private var consecutiveWriteFailures = 0
 
     private val inFlightCount = AtomicInteger(0)
+    private val droppedEntryCount = AtomicLong(0)
+    private val queuedCount = AtomicInteger(0)
     private var workerGeneration = 0L
+
+    /**
+     * Approximate total of entries evicted by the DROP_OLDEST policy when the queue was full.
+     * Approximate because the fullness check and the send are not a single atomic operation.
+     */
+    @VisibleForTesting
+    internal val droppedEntries: Long get() = droppedEntryCount.get()
+
+    @Suppress("UnusedReceiverParameter")
+    private val Channel<*>.isFull: Boolean
+        get() = queuedCount.get() >= LOG_QUEUE_CAPACITY
 
     private val logChannel =
         Channel<LogEntry>(
@@ -116,8 +132,12 @@ object AppLogger {
         val filesDir = context.filesDir
         synchronized(this) {
             if (isShutdown) return
-            if (logDir == filesDir && logger == customLogger && isFileLoggingEnabled == BuildConfig.DEBUG) {
-                return
+            // Stateless logger implementations; equality of class along with dir
+            // and flag defines configuration identity.
+            if (logDir == filesDir && logger::class == customLogger::class) {
+                if (isFileLoggingEnabled == BuildConfig.DEBUG && workerJob?.isActive == true) {
+                    return
+                }
             }
             closeWriter()
             consecutiveWriteFailures = 0
@@ -125,55 +145,36 @@ object AppLogger {
             logger = customLogger
             isFileLoggingEnabled = BuildConfig.DEBUG
         }
-        stopWorkerAndStartNewIfNeeded(startNew = true, blocking = false)
+        restartWorker()
     }
 
-    private fun stopWorkerAndStartNewIfNeeded(
-        startNew: Boolean,
-        blocking: Boolean = false,
-    ) {
+    private fun restartWorker() {
         val oldJob: Job?
         val newGen: Long
         synchronized(this) {
             workerGeneration++
             newGen = workerGeneration
             oldJob = workerJob
+            workerJob =
+                if (isWorkerStartAllowed(newGen)) {
+                    logScope.launch { runWorker(newGen) }
+                } else {
+                    null
+                }
+        }
+        oldJob?.cancel()
+    }
+
+    private fun stopWorkerBlocking() {
+        val oldJob: Job?
+        synchronized(this) {
+            workerGeneration++
+            oldJob = workerJob
             workerJob = null
         }
-
+        oldJob?.cancel()
         if (oldJob != null) {
-            oldJob.cancel()
-            if (blocking) {
-                runBlocking {
-                    joinAndWarnTimeout(oldJob)
-                }
-            } else {
-                logScope.launch {
-                    joinAndWarnTimeout(oldJob)
-                    if (startNew) {
-                        synchronized(this@AppLogger) {
-                            if (isWorkerStartAllowed(newGen)) {
-                                workerJob =
-                                    logScope.launch {
-                                        runWorker(newGen)
-                                    }
-                            }
-                        }
-                    }
-                }
-                return
-            }
-        }
-
-        if (startNew) {
-            synchronized(this) {
-                if (isWorkerStartAllowed(newGen)) {
-                    workerJob =
-                        logScope.launch {
-                            runWorker(newGen)
-                        }
-                }
-            }
+            runBlocking { joinAndWarnTimeout(oldJob) }
         }
     }
 
@@ -192,9 +193,8 @@ object AppLogger {
         }
     }
 
-    private fun isWorkerStartAllowed(newGen: Long): Boolean {
-        return !(!isFileLoggingEnabled || isShutdown) && logDir != null && workerGeneration == newGen
-    }
+    private fun isWorkerStartAllowed(newGen: Long): Boolean =
+        !(!isFileLoggingEnabled || isShutdown) && logDir != null && workerGeneration == newGen
 
     private suspend fun runWorker(myGeneration: Long) {
         while (isCurrentGeneration(myGeneration)) {
@@ -207,6 +207,7 @@ object AppLogger {
         entry: LogEntry,
         myGeneration: Long,
     ) {
+        queuedCount.updateAndGet { maxOf(0, it - 1) }
         inFlightCount.incrementAndGet()
         try {
             if (!isCurrentGeneration(myGeneration)) {
@@ -274,6 +275,14 @@ object AppLogger {
         message: String,
     ) {
         if (!isFileLoggingEnabled || isShutdown || logDir == null) return
+        if (logChannel.isFull) {
+            val total = droppedEntryCount.incrementAndGet()
+            if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
+                runCatching {
+                    logger.w(TAG, "AppLogger: log queue full, oldest entry dropped (total dropped: $total)")
+                }
+            }
+        }
         logChannel.trySend(LogEntry(level, message))
     }
 
@@ -420,7 +429,7 @@ object AppLogger {
             isFileLoggingEnabled = false
             closeWriter()
         }
-        stopWorkerAndStartNewIfNeeded(startNew = false, blocking = true)
+        stopWorkerBlocking()
     }
 
     @VisibleForTesting
@@ -429,6 +438,8 @@ object AppLogger {
             isShutdown = false
             isFileLoggingEnabled = BuildConfig.DEBUG
             consecutiveWriteFailures = 0
+            droppedEntryCount.set(0)
+            queuedCount.set(0)
             closeWriter()
             logDir = null
             logger = AndroidLogger()
@@ -436,7 +447,7 @@ object AppLogger {
                 // Drain channel
             }
         }
-        stopWorkerAndStartNewIfNeeded(startNew = false, blocking = true)
+        stopWorkerBlocking()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -455,6 +466,8 @@ object AppLogger {
             isShutdown = false
             closeWriter()
             consecutiveWriteFailures = 0
+            droppedEntryCount.set(0)
+            queuedCount.set(0)
             logDir = dir
             logger = AndroidLogger()
             isFileLoggingEnabled = true
@@ -462,6 +475,6 @@ object AppLogger {
                 // Drain channel
             }
         }
-        stopWorkerAndStartNewIfNeeded(startNew = true, blocking = false)
+        restartWorker()
     }
 }
