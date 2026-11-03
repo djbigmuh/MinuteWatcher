@@ -246,4 +246,44 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
             val subResult = subsequentDeferred.await()
             assertTrue(subResult.isSuccess)
         }
+
+    @Test
+    fun `handleTailScheduleTimeout completes tail pass with transient failure and preserves rerunRequested`() =
+        runTest {
+            val updater = createUpdater(backgroundScope)
+            val owner = CompletableDeferred<WidgetUpdateResult>()
+            val tail = CompletableDeferred<WidgetUpdateResult>()
+
+            updater.activeUpdate.set(owner)
+            updater.pendingPass.set(tail)
+            updater.rerunRequested.set(true)
+
+            updater.handleTailScheduleTimeout(owner)
+
+            assertTrue(tail.isCompleted)
+            val failure = tail.await() as WidgetUpdateResult.Failure
+            assertFalse(failure.isSuccess)
+            assertTrue(failure.isRetryable)
+            assertEquals(WidgetUpdateResult.FailureReason.TRANSIENT, failure.reason)
+            assertTrue(failure.wasCoalesced)
+
+            assertEquals(null, updater.pendingPass.get())
+            assertEquals(null, updater.activeUpdate.get())
+            assertTrue(updater.rerunRequested.get())
+        }
+
+    @Test
+    fun `handleTailScheduleTimeout does not reset other owner`() =
+        runTest {
+            val updater = createUpdater(backgroundScope)
+            val owner = CompletableDeferred<WidgetUpdateResult>()
+            val otherOwner = CompletableDeferred<WidgetUpdateResult>()
+
+            updater.activeUpdate.set(otherOwner)
+            updater.pendingPass.set(null)
+
+            updater.handleTailScheduleTimeout(owner)
+
+            assertEquals(otherOwner, updater.activeUpdate.get())
+        }
 }

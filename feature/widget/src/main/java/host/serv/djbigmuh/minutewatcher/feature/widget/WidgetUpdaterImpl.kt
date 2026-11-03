@@ -1,6 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.feature.widget
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import dagger.hilt.android.qualifiers.ApplicationContext
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
@@ -54,9 +55,12 @@ class WidgetUpdaterImpl
         @param:ApplicationScope private val scope: CoroutineScope,
     ) : WidgetUpdater {
         private val coalescingMutex = Mutex()
-        private val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
-        private var pendingPass: CompletableDeferred<WidgetUpdateResult>? = null
-        private var rerunRequested: Boolean = false
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal val activeUpdate = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal val pendingPass = AtomicReference<CompletableDeferred<WidgetUpdateResult>?>(null)
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal val rerunRequested = AtomicBoolean(false)
 
         /**
          * Tracks whether a LimitExceeded error has been handled within the CURRENT update call.
@@ -78,14 +82,17 @@ class WidgetUpdaterImpl
             val (deferred, isCoalesced) =
                 coalescingMutex.withLock {
                     val active = activeUpdate.get()
-                    val tailScheduled = pendingPass != null
+                    val tailScheduled = pendingPass.get() != null
                     if (active == null && !tailScheduled) {
                         val new = CompletableDeferred<WidgetUpdateResult>()
                         activeUpdate.set(new)
                         new to false
                     } else {
-                        rerunRequested = true
-                        val tailDef = pendingPass ?: CompletableDeferred<WidgetUpdateResult>().also { pendingPass = it }
+                        rerunRequested.set(true)
+                        val tailDef =
+                            pendingPass.get() ?: CompletableDeferred<WidgetUpdateResult>().also {
+                                pendingPass.set(it)
+                            }
                         tailDef to true
                     }
                 }
@@ -181,10 +188,8 @@ class WidgetUpdaterImpl
             val nextTail =
                 withTimeoutOrNull(Constants.Flow.MUTEX_ACQUIRE_TIMEOUT_MS.milliseconds) {
                     coalescingMutex.withLock {
-                        if (rerunRequested) {
-                            rerunRequested = false
-                            val d = pendingPass
-                            pendingPass = null
+                        if (rerunRequested.compareAndSet(true, false)) {
+                            val d = pendingPass.getAndSet(null)
                             if (d != null) {
                                 activeUpdate.set(d)
                             } else {
@@ -200,17 +205,31 @@ class WidgetUpdaterImpl
             if (nextTail == null) {
                 val duration = System.currentTimeMillis() - startTime
                 AppLogger.e("WidgetUpdater: scheduleNextTailPass timed out after ${duration}ms while acquiring mutex")
-                val pending = pendingPass
-                if (pending != null && !pending.isCompleted) {
-                    pending.complete(transientFailure(wasCoalesced = true))
-                    pendingPass = null
-                }
-                activeUpdate.compareAndSet(owner, null)
+                handleTailScheduleTimeout(owner)
             } else {
                 scope.launch(start = CoroutineStart.ATOMIC) {
                     runTailPass(nextTail)
                 }
             }
+        }
+
+        /**
+         * Fallback for the coalescing mutex acquisition timeout: releases the owner slot and
+         * completes the registered tail pass (if any) with a transient failure so that its
+         * awaiter is never left waiting forever.
+         *
+         * The identity CAS guarantees that a tail pass concurrently consumed or replaced under
+         * the mutex is never completed or discarded by this path. [rerunRequested] is
+         * intentionally left untouched: a stale true flag is consumed safely by the next
+         * scheduleNextTailPass under the mutex.
+         */
+        @VisibleForTesting
+        internal fun handleTailScheduleTimeout(owner: CompletableDeferred<WidgetUpdateResult>) {
+            val pending = pendingPass.getAndSet(null)
+            if (pending != null && !pending.isCompleted) {
+                pending.complete(transientFailure(wasCoalesced = true))
+            }
+            activeUpdate.compareAndSet(owner, null)
         }
 
         private fun transientFailure(wasCoalesced: Boolean): WidgetUpdateResult.Failure =
