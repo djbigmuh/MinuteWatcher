@@ -706,25 +706,25 @@ class UpdateCoordinator
         override suspend fun notifyDataChanged(
             updateWidget: Boolean,
             force: Boolean,
-        ): Boolean {
-            return !updateWidget || if (force) {
-                val outcome = performForcedUpdate()
-                if (outcome.success) {
-                    dataRefreshNotifier.notifyRefresh(
-                        isManual = true,
-                        // Suppress reactive update ONLY if data DID NOT change during render.
-                        // If it did — let the reactive cycle immediately finish updating the widget.
-                        suppressWidgetUpdate = !outcome.contentChangedDuringUpdate,
-                    )
+        ): Boolean =
+            !updateWidget ||
+                if (force) {
+                    val outcome = performForcedUpdate()
+                    if (outcome.success) {
+                        dataRefreshNotifier.notifyRefresh(
+                            isManual = true,
+                            // Suppress reactive update ONLY if data DID NOT change during render.
+                            // If it did — let the reactive cycle immediately finish updating the widget.
+                            suppressWidgetUpdate = !outcome.contentChangedDuringUpdate,
+                        )
+                    }
+                    outcome.success
+                } else {
+                    dataRefreshNotifier.notifyRefresh(isManual = false, suppressWidgetUpdate = false)
+                    // Reactive path in init will handle the update if data changed.
+                    // We return true as the notification was successfully sent.
+                    true
                 }
-                outcome.success
-            } else {
-                dataRefreshNotifier.notifyRefresh(isManual = false, suppressWidgetUpdate = false)
-                // Reactive path in init will handle the update if data changed.
-                // We return true as the notification was successfully sent.
-                true
-            }
-        }
 
         private data class ForcedUpdateOutcome(
             val success: Boolean,
