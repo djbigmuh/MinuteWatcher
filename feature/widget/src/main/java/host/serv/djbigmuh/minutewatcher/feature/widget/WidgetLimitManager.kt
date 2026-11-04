@@ -99,7 +99,6 @@ class WidgetLimitManager
 
         fun isLimitExceeded(): Boolean? = cachedLimitExceeded
 
-        @Suppress("ThrowsCount")
         suspend fun setWidgetLimitExceeded(value: Boolean) {
             if (cachedLimitExceeded == null) {
                 @Suppress("TooGenericExceptionCaught")
@@ -120,17 +119,7 @@ class WidgetLimitManager
                 } else {
                     AppLogger.w("WidgetLimitManager: timeout reading app settings when cache was null")
                     cachedLimitExceeded = value
-                    @Suppress("TooGenericExceptionCaught")
-                    try {
-                        appSettingsRepository.updateAppSettings {
-                            it.copy(widgetLimitExceeded = value)
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // Operation must complete without propagating exception for widget limit manager.
-                        AppLogger.e("Failed to set widget limit exceeded flag to $value", e)
-                    }
+                    persistLimitExceededFlag(value)
                     return
                 }
             }
@@ -140,6 +129,10 @@ class WidgetLimitManager
             }
 
             cachedLimitExceeded = value
+            persistLimitExceededFlag(value)
+        }
+
+        private suspend fun persistLimitExceededFlag(value: Boolean) {
             @Suppress("TooGenericExceptionCaught")
             try {
                 appSettingsRepository.updateAppSettings {
