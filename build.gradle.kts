@@ -93,6 +93,26 @@ val verifyVersionCatalogConsistency =
         }
     }
 
+val allUnitTests =
+    tasks.register("allUnitTests") {
+        group = "verification"
+        description = "Runs unit tests of every module: testDebugUnitTest for Android modules, test for pure-JVM modules."
+    }
+
+subprojects {
+    val modulePath = path
+    val aggregate = allUnitTests
+    plugins.withId("com.android.application") {
+        aggregate.configure { dependsOn("$modulePath:testDebugUnitTest") }
+    }
+    plugins.withId("com.android.library") {
+        aggregate.configure { dependsOn("$modulePath:testDebugUnitTest") }
+    }
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        aggregate.configure { dependsOn("$modulePath:test") }
+    }
+}
+
 tasks.named("check") {
     dependsOn(verifyVersionCatalogConsistency)
 }
