@@ -20,7 +20,7 @@ This document describes the testing strategy for the MinuteWatcher project.
 
 Unit tests and local Compose UI tests run on JVM using Robolectric. They are located in `src/test`.
 
-```bash
+```powershell
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew test
 ```
 
@@ -28,13 +28,13 @@ $env:ANDROID_PREFS_ROOT=$null; ./gradlew test
 
 Instrumented Compose UI tests requiring a real device or emulator are located in `src/androidTest`.
 
-```bash
+```powershell
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew connectedDebugAndroidTest
 ```
 
 ### Static Analysis
 
-```bash
+```powershell
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew detekt ktlintCheck
 ```
 
@@ -56,6 +56,6 @@ To maintain test execution speed and minimize overhead, we follow a strict SDK c
 
 The following command must pass locally before completing a task and committing:
 
-```bash
+```powershell
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew ktlintCheck detekt lintDebug testDebugUnitTest :app:assembleDebug
 ```
