@@ -37,3 +37,9 @@ The generated report `reports/plmn_audit_report.md` contains:
 4. **Project-Only PLMNs Table:** Existing project PLMNs and their verification status against ITU-T E.212 and regulators.
 5. **Brand Conflicts Table:** Mappings requiring brand name resolution or re-alignment.
 6. **Excluded Networks Summary:** Classification breakdown of non-target networks.
+
+## Data Provenance
+
+- **Dataset:** P1sec MCC_MNC dataset (`p1_mnc.json`)
+- **Source:** [P1sec MCC_MNC repository](https://raw.githubusercontent.com/P1sec/MCC_MNC/master/src/mcc_mnc_lut/p1_mnc.json)
+- **Retrieved At:** 2026-10-25 12:00:00 UTC

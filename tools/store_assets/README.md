@@ -21,3 +21,7 @@ To regenerate store images:
 ```powershell
 python tools/store_assets/generate_store_assets.py
 ```
+
+## Data Provenance
+
+- **Source Assets:** Canonical application vector drawables (`app/src/main/res/drawable/ic_launcher_foreground.xml`, `ic_launcher_monochrome.xml`)

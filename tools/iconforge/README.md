@@ -22,3 +22,8 @@ When creating new operator vector drawables:
    ```powershell
    $env:ANDROID_PREFS_ROOT=$null; ./gradlew :core:resources:testDebugUnitTest :core:android:testDebugUnitTest
    ```
+
+## Data Provenance
+
+- **Simple Icons Catalog:** Version 16.35.0 (CC0-1.0)
+- **Liberation Sans Bold Glyphs Cache:** Cached glyph outlines for Liberation Sans Bold typeface (SIL OFL 1.1)
