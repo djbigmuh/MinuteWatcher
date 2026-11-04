@@ -243,48 +243,26 @@ object OperatorResolver {
         return nfd.replace(Regex("\\p{M}+"), "")
     }
 
+    private fun findBestTokenMatch(candidate: String): String? =
+        tokenToResKey.entries
+            .filter { (token, _) -> candidate.hasToken(token) }
+            .maxWithOrNull(
+                compareBy<Map.Entry<String, String>> { (token, _) ->
+                    token.split(" ").filter { it.isNotEmpty() }.size
+                }.thenBy { (token, _) -> token.length },
+            )?.value
+
     /**
      * Resolves the operator brand key from the given operator name.
-     * Lowercases query once, eliminates redundant checks, checks exact/normalized map lookup first,
-     * and checks diacritics fallback only on cache/lowercase miss.
+     * Lowercases query once, checks exact/normalized map lookup first,
+     * and checks diacritics fallback variant when stripped differs from normalized.
      */
-    @Suppress("ReturnCount")
     fun getOperatorBrandKey(operatorName: String): String? {
         val normalized = operatorName.lowercase(Locale.ROOT)
-        tokenToResKey[normalized]?.let { return it }
-
         val stripped = operatorName.stripDiacritics().lowercase(Locale.ROOT)
-        if (stripped != normalized) {
-            tokenToResKey[stripped]?.let { return it }
-        }
-
-        val match =
-            tokenToResKey.entries
-                .filter { (token, _) ->
-                    normalized.hasToken(token)
-                }.maxWithOrNull(
-                    compareBy<Map.Entry<String, String>> { (token, _) ->
-                        token.split(" ").filter { it.isNotEmpty() }.size
-                    }.thenBy { (token, _) ->
-                        token.length
-                    },
-                )?.value
-
-        if (match != null) return match
-
-        if (stripped != normalized) {
-            return tokenToResKey.entries
-                .filter { (token, _) ->
-                    stripped.hasToken(token)
-                }.maxWithOrNull(
-                    compareBy<Map.Entry<String, String>> { (token, _) ->
-                        token.split(" ").filter { it.isNotEmpty() }.size
-                    }.thenBy { (token, _) ->
-                        token.length
-                    },
-                )?.value
-        }
-        return null
+        val candidates = if (stripped == normalized) listOf(normalized) else listOf(normalized, stripped)
+        return candidates.firstNotNullOfOrNull { tokenToResKey[it] }
+            ?: candidates.firstNotNullOfOrNull { findBestTokenMatch(it) }
     }
 
     /**
@@ -313,12 +291,13 @@ object OperatorResolver {
         val normalized = lowercase(Locale.ROOT)
         val target = targetToken.lowercase(Locale.ROOT)
 
-        return normalized == target || if (target.contains(" ")) {
-            hasMultiWordToken(normalized, target)
-        } else {
-            val regex = if (target.contains("-")) tokenSplitWithDashRegex else tokenSplitWithoutDashRegex
-            normalized.split(regex).filter { it.isNotEmpty() }.contains(target)
-        }
+        return normalized == target ||
+            if (target.contains(" ")) {
+                hasMultiWordToken(normalized, target)
+            } else {
+                val regex = if (target.contains("-")) tokenSplitWithDashRegex else tokenSplitWithoutDashRegex
+                normalized.split(regex).filter { it.isNotEmpty() }.contains(target)
+            }
     }
 
     private fun hasMultiWordToken(
@@ -328,8 +307,9 @@ object OperatorResolver {
         val targetParts = targetToken.split(" ").filter { it.isNotEmpty() }
         val tokens = normalizedName.split(tokenSplitWithoutDashRegex).filter { it.isNotEmpty() }
 
-        return tokens.size >= targetParts.size && (0..tokens.size - targetParts.size).any { i ->
-            targetParts.indices.all { j -> tokens[i + j] == targetParts[j] }
-        }
+        return tokens.size >= targetParts.size &&
+            (0..tokens.size - targetParts.size).any { i ->
+                targetParts.indices.all { j -> tokens[i + j] == targetParts[j] }
+            }
     }
 }
