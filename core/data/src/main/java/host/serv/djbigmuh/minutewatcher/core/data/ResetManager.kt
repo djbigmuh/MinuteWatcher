@@ -50,7 +50,6 @@ class ResetManager
          * `false` if at least one SIM failed due to IO error or usage data timeout.
          * @throws CancellationException if the reset process is canceled.
          */
-        @Suppress("CyclomaticComplexMethod", "LongMethod") // Complex auto-reset logic
         override suspend fun performAutoReset(shouldNotify: Boolean): Boolean {
             val now = timeProvider.now()
             val nowElapsed = timeProvider.elapsedRealtime()
@@ -67,6 +66,34 @@ class ResetManager
             }
 
             val resetIdentities = mutableSetOf<String>()
+            val outcome = processAllSimResets(activeSims, now, nowElapsed, resetIdentities)
+
+            cleanupStaleCheckTimestamps(activeSims)
+
+            if (resetIdentities.isNotEmpty()) {
+                resetTrafficBaselines(resetIdentities, shouldNotify)
+            }
+
+            return outcome.allProcessed &&
+                handleAutoResetResult(outcome.ioException, outcome.skippedCount, outcome.successCount, activeSims.size)
+        }
+
+        private data class SimsResetOutcome(
+            val allProcessed: Boolean,
+            val ioException: IOException?,
+            val successCount: Int,
+            val skippedCount: Int,
+        )
+
+        /**
+         * Processes automatic reset checks for all active SIMs within a global timeout.
+         */
+        private suspend fun processAllSimResets(
+            activeSims: List<ActiveSimInfo>,
+            now: Long,
+            nowElapsed: Long,
+            resetIdentities: MutableSet<String>,
+        ): SimsResetOutcome {
             var ioException: IOException? = null
             var successCount = 0
             var skippedCount = 0
@@ -102,24 +129,29 @@ class ResetManager
                     false
                 }
 
-            cleanupStaleCheckTimestamps(activeSims)
+            return SimsResetOutcome(allProcessed, ioException, successCount, skippedCount)
+        }
 
-            if (resetIdentities.isNotEmpty()) {
-                resetIdentities.forEach { identity ->
-                    @Suppress("TooGenericExceptionCaught")
-                    try {
-                        trafficTracker.resetBaseline(identity)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // Operation must complete without propagating exception for traffic baseline reset.
-                        AppLogger.e("ResetManager: failed to reset traffic baseline for $identity", e)
-                    }
+        /**
+         * Resets traffic baselines for all accumulated reset identities and
+         * triggers data change notification if requested.
+         */
+        private suspend fun resetTrafficBaselines(
+            resetIdentities: Set<String>,
+            shouldNotify: Boolean,
+        ) {
+            resetIdentities.forEach { identity ->
+                @Suppress("TooGenericExceptionCaught")
+                try {
+                    trafficTracker.resetBaseline(identity)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Operation must complete without propagating exception for traffic baseline reset.
+                    AppLogger.e("ResetManager: failed to reset traffic baseline for $identity", e)
                 }
-                if (shouldNotify) dataChangeNotifier.notifyDataChanged()
             }
-
-            return allProcessed && handleAutoResetResult(ioException, skippedCount, successCount, activeSims.size)
+            if (shouldNotify) dataChangeNotifier.notifyDataChanged()
         }
 
         /**
