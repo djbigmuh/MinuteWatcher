@@ -48,7 +48,6 @@ class MainPermissionController
          * @param onRequestPhonePermission Callback to request phone state permission.
          * @param onCheckNotifications Callback to check for notification permission.
          */
-        @Suppress("CognitiveComplexMethod")
         fun checkPermissionsAndInit(
             scope: CoroutineScope,
             isInitialSetupCompleted: Flow<Boolean>,
@@ -65,40 +64,16 @@ class MainPermissionController
                     @Suppress("TooGenericExceptionCaught")
                     try {
                         if (permissionManager.hasPhoneStatePermission()) {
-                            launch(ioDispatcher) {
-                                @Suppress("TooGenericExceptionCaught")
-                                try {
-                                    val setupCompleted =
-                                        isInitialSetupCompleted.firstWithTimeout(
-                                            Constants.Flow.LONG_TIMEOUT_MS,
-                                        )
-                                    if (setupCompleted != true ||
-                                        lastPermissionState == -1
-                                    ) {
-                                        workScheduler.scheduleInitialSetup(force = false)
-                                    }
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (e: Exception) {
-                                    // Operation must complete without propagating exception
-                                    // for permission flow stability.
-                                    AppLogger.e("MainPermissionController: Failed to schedule work during init", e)
-                                }
-                            }
-
-                            if (!permissionManager.hasUsageStatsPermission()) {
-                                val settings = readLoadedSettings(appSettingsLoaded, "init")
-                                if (settings != null && !settings.usageAccessDialogShown) {
-                                    onShowUsageAccessDialog(true)
-                                }
-                            } else {
-                                onCheckNotifications(true)
-                            }
+                            handlePhoneStateGranted(
+                                this,
+                                isInitialSetupCompleted,
+                                appSettingsLoaded,
+                                lastPermissionState,
+                                onShowUsageAccessDialog,
+                                onCheckNotifications,
+                            )
                         } else {
-                            val settings = readLoadedSettings(appSettingsLoaded, "init")
-                            if (settings != null && !settings.wasPhonePermissionRequestedBefore) {
-                                onRequestPhonePermission()
-                            }
+                            handlePhoneStateDenied(appSettingsLoaded, onRequestPhonePermission)
                         }
                     } catch (e: CancellationException) {
                         throw e
@@ -111,6 +86,71 @@ class MainPermissionController
                 }
             if (!checkJob.compareAndSet(null, newJob)) {
                 newJob.cancel()
+            }
+        }
+
+        /**
+         * Launches background scheduling for initial setup if setup is not completed or state is reset.
+         */
+        private fun CoroutineScope.launchInitialSetupScheduling(
+            isInitialSetupCompleted: Flow<Boolean>,
+            lastPermissionState: Int,
+        ) {
+            launch(ioDispatcher) {
+                @Suppress("TooGenericExceptionCaught")
+                try {
+                    val setupCompleted =
+                        isInitialSetupCompleted.firstWithTimeout(
+                            Constants.Flow.LONG_TIMEOUT_MS,
+                        )
+                    if (setupCompleted != true ||
+                        lastPermissionState == -1
+                    ) {
+                        workScheduler.scheduleInitialSetup(force = false)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Operation must complete without propagating exception
+                    // for permission flow stability.
+                    AppLogger.e("MainPermissionController: Failed to schedule work during init", e)
+                }
+            }
+        }
+
+        /**
+         * Handles actions when phone state permission is granted.
+         */
+        private suspend fun handlePhoneStateGranted(
+            scope: CoroutineScope,
+            isInitialSetupCompleted: Flow<Boolean>,
+            appSettingsLoaded: Flow<AppSettings>,
+            lastPermissionState: Int,
+            onShowUsageAccessDialog: (Boolean) -> Unit,
+            onCheckNotifications: (Boolean) -> Unit,
+        ) {
+            scope.launchInitialSetupScheduling(isInitialSetupCompleted, lastPermissionState)
+
+            if (!permissionManager.hasUsageStatsPermission()) {
+                val settings = readLoadedSettings(appSettingsLoaded, "init")
+                if (settings != null && !settings.usageAccessDialogShown) {
+                    onShowUsageAccessDialog(true)
+                }
+            } else {
+                onCheckNotifications(true)
+            }
+        }
+
+        /**
+         * Handles actions when phone state permission is denied.
+         */
+        private suspend fun handlePhoneStateDenied(
+            appSettingsLoaded: Flow<AppSettings>,
+            onRequestPhonePermission: () -> Unit,
+        ) {
+            val settings = readLoadedSettings(appSettingsLoaded, "init")
+            if (settings != null && !settings.wasPhonePermissionRequestedBefore) {
+                onRequestPhonePermission()
             }
         }
 
