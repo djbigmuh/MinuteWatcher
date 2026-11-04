@@ -30,7 +30,7 @@ tasks.withType<Test>().configureEach {
     forkEvery = 1
 
     // Disable JaCoCo agent by default to speed up test execution.
-    // Enable only when -Pcoverage is passed (e.g., in CI coverage jobs).
+    // Enable only when -Pcoverage is passed (e.g., during a dedicated coverage run).
     extensions.findByType(JacocoTaskExtension::class.java)?.isEnabled =
         providers.gradleProperty("coverage").isPresent
 
