@@ -22,7 +22,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -36,7 +35,6 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
@@ -48,9 +46,12 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * Coordinator is a Singleton and uses ApplicationScope, so the observation
  * cycle (observeSnapshot) lives for the entire process lifetime and is started explicitly via [start].
+ *
+ * Single-owner reactive lifecycle state machine: observation jobs, generations and
+ * update/takeover slots are mutated together under one ownership and one mutex.
  */
 @Singleton
-@Suppress("LargeClass") // Reactive update coordinator
+@Suppress("LargeClass")
 class UpdateCoordinator
     @Inject
     constructor(
@@ -111,7 +112,48 @@ class UpdateCoordinator
         private val currentUpdateJob = AtomicReference<Job?>(null)
 
         @VisibleForTesting
-        internal val takeoverUpdateJob = AtomicReference<Job?>(null)
+        internal val takeoverUpdateJob get() = forcedUpdateFlow.takeoverUpdateJob
+
+        private val restartScheduler =
+            ObservationRestartScheduler(
+                scope = scope,
+                stateMutex = stateMutex,
+                currentObservationJob = currentObservationJob,
+                getObservationGeneration = { observationGeneration },
+                transitionStatus = { status, force -> transitionStatus(status, force) },
+                ensureObservationStarted = { ensureObservationStarted() },
+                getObservationRestartCount = { observationRestartCount },
+                setObservationRestartCount = { observationRestartCount = it },
+                getDegradedCycleCount = { degradedCycleCount },
+                setDegradedCycleCount = { degradedCycleCount = it },
+                resetRestartState = {
+                    lastSnapshotHash = null
+                    consecutiveUpdateFailures = 0
+                },
+            )
+
+        private val forcedUpdateFlow =
+            ForcedUpdateFlow(
+                stateMutex = stateMutex,
+                currentUpdateJob = currentUpdateJob,
+                takeoverUpdateJob = AtomicReference(null),
+                widgetUpdater = widgetUpdater,
+                usageStateRepository = usageStateRepository,
+                getConsecutiveUpdateFailures = { consecutiveUpdateFailures },
+                setConsecutiveUpdateFailures = { consecutiveUpdateFailures = it },
+                processFailureResult = { failure -> processFailureResult(failure) },
+                processSuccessResult = { result, hashBefore, hashAfter ->
+                    consecutiveUpdateFailures = 0
+                    observationRestartCount = 0
+                    degradedCycleCount = 0
+                    if (result.wasCoalesced) {
+                        ForcedUpdateOutcome(success = true, contentChangedDuringUpdate = true)
+                    } else {
+                        lastSnapshotHash = hashBefore
+                        ForcedUpdateOutcome(success = true, contentChangedDuringUpdate = hashAfter != hashBefore)
+                    }
+                },
+            )
 
         /**
          * Explicitly starts observation from [android.app.Application.onCreate].
@@ -416,121 +458,7 @@ class UpdateCoordinator
         private fun launchMonitoringJob(
             newJob: Job,
             generation: Long = observationGeneration,
-        ): Job {
-            /**
-             * Monitoring completion: if observation job fails (due to terminal error or unexpected exception)
-             * this monitoring job will perform a restart with exponential delay.
-             *
-             * Invariant: Generation counter and observation job identity ([generation] + [newJob])
-             * form the sole criterion for currency, ensuring independence from registration order.
-             *
-             * Note: external cancellations (takeover, recover, shutdown) are handled via join()
-             * and ensureActive() to avoid restarting when deliberately stopped.
-             */
-            return scope.launch {
-                newJob.join()
-
-                currentCoroutineContext().ensureActive()
-
-                // Atomically check if this job is still current using generation and job identity
-                val isCurrent =
-                    stateMutex.withLock {
-                        observationGeneration == generation &&
-                            currentObservationJob.get() === newJob
-                    }
-                if (!isCurrent) return@launch
-
-                val (restartCount, cycles, isEnteringDegraded) =
-                    stateMutex.withLock {
-                        val count = ++observationRestartCount
-                        var currentCycles = degradedCycleCount
-                        var enteringDegraded = false
-                        if (count >= MAX_OBSERVATION_RESTARTS) {
-                            currentCycles = ++degradedCycleCount
-                            enteringDegraded = true
-                        }
-                        Triple(count, currentCycles, enteringDegraded)
-                    }
-
-                val delayMs =
-                    if (isEnteringDegraded) {
-                        handleDegradedMode(restartCount, cycles)
-                    } else {
-                        calculateRestartDelay(restartCount)
-                    }
-
-                if (delayMs < 0) return@launch // Permanent stop
-
-                AppLogger.w(
-                    "UpdateCoordinator: observation terminated unexpectedly, " +
-                        "scheduling restart #$restartCount in ${delayMs}ms",
-                )
-                delay(delayMs.milliseconds)
-
-                // Re-check current generation and job before initiating restart
-                val shouldInitiateRestart =
-                    stateMutex.withLock {
-                        observationGeneration == generation &&
-                            currentObservationJob.get() === newJob
-                    }
-
-                if (shouldInitiateRestart) {
-                    stateMutex.withLock {
-                        lastSnapshotHash = null
-                        consecutiveUpdateFailures = 0
-                        // In degraded mode keep Error status for UI info
-                        if (restartCount < MAX_OBSERVATION_RESTARTS) {
-                            transitionStatus(TrackingStatus.Idle)
-                        }
-                    }
-                    ensureObservationStarted()
-                }
-            }
-        }
-
-        private suspend fun handleDegradedMode(
-            restartCount: Int,
-            cycles: Int,
-        ): Long {
-            if (cycles >= MAX_DEGRADED_CYCLES) {
-                AppLogger.e(
-                    "UpdateCoordinator: observation restart limit reached ($restartCount) " +
-                        "and max degraded cycles reached ($cycles). Permanent stop.",
-                )
-                transitionStatus(
-                    TrackingStatus.Error(
-                        TrackingStatus.ErrorType.UNKNOWN,
-                        "Widget observation permanently stopped after $cycles degraded cycles",
-                        code = TrackingStatus.ErrorCode.RENDER_FAILURE,
-                    ),
-                    force = true,
-                )
-                return -1 // Signal to stop
-            }
-
-            AppLogger.e(
-                "UpdateCoordinator: observation restart limit reached ($restartCount), " +
-                    "entering degraded mode (cycle $cycles)",
-            )
-            transitionStatus(
-                TrackingStatus.Error(
-                    TrackingStatus.ErrorType.UNKNOWN,
-                    "Widget observation failed after $restartCount restarts. " +
-                        "Retrying in ${MAX_RESTART_COOLDOWN_MS / Constants.Time.MILLIS_IN_SECOND}s",
-                    code = TrackingStatus.ErrorCode.RENDER_FAILURE,
-                ),
-                force = true,
-            )
-            stateMutex.withLock {
-                observationRestartCount = 0
-            }
-            return MAX_RESTART_COOLDOWN_MS
-        }
-
-        private fun calculateRestartDelay(restartCount: Int): Long {
-            val exponent = (restartCount - 1).coerceAtMost(MAX_RESTART_DELAY_EXPONENT)
-            return (INITIAL_RESTART_DELAY_MS * (1 shl exponent)).coerceAtMost(MAX_RESTART_DELAY_MS)
-        }
+        ): Job = restartScheduler.launchMonitoringJob(newJob, generation)
 
         private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
             currentCoroutineContext().ensureActive()
@@ -728,112 +656,9 @@ class UpdateCoordinator
                     true
                 }
 
-        private data class ForcedUpdateOutcome(
-            val success: Boolean,
-            val contentChangedDuringUpdate: Boolean,
-        )
-
-        private suspend fun performForcedUpdate(): ForcedUpdateOutcome {
-            val suppressed =
-                stateMutex.withLock {
-                    consecutiveUpdateFailures >= Constants.Widget.MAX_CONSECUTIVE_UPDATE_FAILURES
-                }
-            if (suppressed) {
-                AppLogger.w(
-                    "UpdateCoordinator: forced widget update suppressed due to too many failures " +
-                        "($consecutiveUpdateFailures)",
-                )
-                return ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
-            }
-
-            // Cancel current reactive update if it's in progress.
-            val oldJob = currentUpdateJob.getAndSet(null)
-            if (oldJob != null) {
-                takeoverUpdateJob.set(oldJob)
-                oldJob.cancel()
-                // Wait for the canceled job to finish to avoid coalescing in WidgetUpdater
-                withContext(NonCancellable) {
-                    withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
-                        oldJob.join()
-                    }
-                }
-                takeoverUpdateJob.compareAndSet(oldJob, null)
-            }
-
-            // Reset updater state before forced update (e.g. to clear LimitExceededHandled flag)
-            widgetUpdater.recover()
-
-            @Suppress("TooGenericExceptionCaught")
-            val res =
-                try {
-                    // Snapshot that is guaranteed to be not newer than what the renderer will see.
-                    val snapshotBefore = usageStateRepository.observeSnapshot().value
-                    val hashBefore = SnapshotUtils.calculateContentHash(snapshotBefore)
-
-                    val result = widgetUpdater.updateAll()
-
-                    val hashAfter = SnapshotUtils.calculateContentHash(usageStateRepository.observeSnapshot().value)
-
-                    stateMutex.withLock {
-                        when (result) {
-                            is WidgetUpdateResult.Success -> processForcedSuccessResult(result, hashBefore, hashAfter)
-                            is WidgetUpdateResult.Failure -> {
-                                processFailureResult(result)
-                                ForcedUpdateOutcome(success = false, contentChangedDuringUpdate = false)
-                            }
-                        }
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // Operation must complete without propagating exception for forced widget update.
-                    AppLogger.w(
-                        "UpdateCoordinator: forced widget update failed with unexpected exception, " +
-                            "treating as terminal failure",
-                        e,
-                    )
-                    stateMutex.withLock {
-                        processFailureResult(
-                            WidgetUpdateResult.Failure(
-                                reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                            ),
-                        )
-                    }
-                    ForcedUpdateOutcome(false, contentChangedDuringUpdate = false)
-                }
-            return res
-        }
-
-        private fun processForcedSuccessResult(
-            result: WidgetUpdateResult.Success,
-            hashBefore: Int,
-            hashAfter: Int,
-        ): ForcedUpdateOutcome {
-            consecutiveUpdateFailures = 0
-            observationRestartCount = 0
-            degradedCycleCount = 0
-
-            return if (result.wasCoalesced) {
-                ForcedUpdateOutcome(
-                    success = true,
-                    contentChangedDuringUpdate = true,
-                )
-            } else {
-                lastSnapshotHash = hashBefore
-                ForcedUpdateOutcome(
-                    success = true,
-                    contentChangedDuringUpdate = hashAfter != hashBefore,
-                )
-            }
-        }
+        private suspend fun performForcedUpdate(): ForcedUpdateOutcome = forcedUpdateFlow.performForcedUpdate()
 
         private companion object {
-            private const val MAX_RESTART_DELAY_EXPONENT = 4
-            private const val MAX_OBSERVATION_RESTARTS = 5
-            private const val MAX_DEGRADED_CYCLES = 3
-            private const val INITIAL_RESTART_DELAY_MS = 5000L
-            private const val MAX_RESTART_DELAY_MS = 80_000L
-            private const val MAX_RESTART_COOLDOWN_MS = 300_000L
             private const val MAX_INITIAL_SNAPSHOT_ATTEMPTS = 3
         }
     }
