@@ -3,7 +3,9 @@
 import androidx.annotation.VisibleForTesting
 import host.serv.djbigmuh.minutewatcher.core.resources.R
 
-@Suppress("LargeClass") // Comprehensive operator db
+// Pure declarative data catalog: constant maps only, no functions. The line count
+// reflects the volume of operator reference data, not logic complexity.
+@Suppress("LargeClass")
 object OperatorBrandDatabase {
     data class OperatorBrandRecord(
         val brandKey: String,

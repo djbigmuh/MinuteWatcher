@@ -98,9 +98,13 @@ sealed interface TrafficUpdateOutcome {
  *
  * **Lifecycle:** Construction of [TrafficTracker] has no side effects. Explicit initialization and recovery
  * observers are started via [ensureStarted], which should be called from [android.app.Application.onCreate].
+ *
+ * Single-owner concurrency state machine: initialization tokens, status transitions,
+ * update mutexes and retry counters are mutated together under one ownership. Splitting
+ * the class would scatter shared mutable state across collaborators without reducing it.
  */
 @Singleton
-@Suppress("LargeClass") // Data tracking orchestrator
+@Suppress("LargeClass")
 class TrafficTracker
     @Inject
     constructor(
