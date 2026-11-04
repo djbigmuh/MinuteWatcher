@@ -22,6 +22,7 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -337,9 +338,9 @@ class OperatorResolverTest {
     @Test
     fun `concurrent load from multiple threads is thread safe`() =
         runBlocking {
-            var openCount = 0
+            val openCount = AtomicInteger(0)
             whenever(assets.open(any())).thenAnswer {
-                openCount++
+                openCount.incrementAndGet()
                 Thread.sleep(5)
                 ByteArrayInputStream(json.toByteArray(Charsets.UTF_8))
             }
@@ -358,7 +359,7 @@ class OperatorResolverTest {
                     }
                 }
             }
-            assertTrue("Open count should be at most 3, was $openCount", openCount <= 3)
+            assertTrue("Open count should be at most 3, was ${openCount.get()}", openCount.get() <= 3)
         }
 
     @Test
