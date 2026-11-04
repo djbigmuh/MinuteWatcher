@@ -171,9 +171,8 @@ class OperatorIconUniquenessTest {
      * Checks if any glyph in the list is a banned placeholder marker composed solely
      * of axis-aligned rectangles (solid rectangle or rectangular ring).
      */
-    private fun isPlaceholderGlyph(glyphs: List<String>): Boolean {
-        return glyphs.isNotEmpty() && glyphs.any { isAxisAlignedRectangleGlyph(it) }
-    }
+    private fun isPlaceholderGlyph(glyphs: List<String>): Boolean =
+        glyphs.isNotEmpty() && glyphs.any { isAxisAlignedRectangleGlyph(it) }
 
     private fun isAxisAlignedRectangleGlyph(pathData: String): Boolean {
         val subpaths = splitIntoSubpaths(pathData)

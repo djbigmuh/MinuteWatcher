@@ -195,8 +195,8 @@ class BackupRulesConsistencyTest {
         parser: XmlResourceParser,
         currentSection: String?,
         builder: DataExtractionRulesBuilder,
-    ): String? {
-        return when (val tagName = parser.name) {
+    ): String? =
+        when (val tagName = parser.name) {
             "cloud-backup", "device-transfer" -> tagName
             "exclude", "include" -> {
                 parser.readBackupRule()?.let { rule ->
@@ -207,7 +207,6 @@ class BackupRulesConsistencyTest {
 
             else -> currentSection
         }
-    }
 
     private fun parseFullBackupContent(parser: XmlResourceParser): FullBackupContent {
         val excludes = mutableSetOf<BackupRule>()
