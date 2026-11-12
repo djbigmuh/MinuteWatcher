@@ -146,7 +146,10 @@ class AppLoggerTest {
 
             assertTrue("logs.old.txt must exist after rotation", oldFile.exists())
             assertTrue("logs.txt must exist after rotation", newFile.exists())
-            assertTrue("logs.old.txt should contain pre-rotation logs", oldFile.readText().contains("Pre-rotation chunk 0"))
+            assertTrue(
+                "logs.old.txt should contain pre-rotation logs",
+                oldFile.readText().contains("Pre-rotation chunk 0"),
+            )
             assertTrue("logs.txt should contain post-rotation marker", newFile.readText().contains(postRotationMarker))
         }
 

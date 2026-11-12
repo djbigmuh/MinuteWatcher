@@ -9,6 +9,7 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.common.util.Logger
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
@@ -36,10 +37,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before

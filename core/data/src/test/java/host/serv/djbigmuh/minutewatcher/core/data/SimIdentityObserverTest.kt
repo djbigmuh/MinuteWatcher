@@ -9,9 +9,7 @@ import host.serv.djbigmuh.minutewatcher.core.domain.SeedResolutionResult
 import host.serv.djbigmuh.minutewatcher.core.domain.SimIdentitySeedRepository
 import host.serv.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import host.serv.djbigmuh.minutewatcher.core.model.AppSettings
-import host.serv.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import host.serv.djbigmuh.minutewatcher.core.model.IdentitySource
-import host.serv.djbigmuh.minutewatcher.core.model.SchemaVersion
 import host.serv.djbigmuh.minutewatcher.core.model.SimDiscoveryResult
 import host.serv.djbigmuh.minutewatcher.core.model.SimIdentity
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus

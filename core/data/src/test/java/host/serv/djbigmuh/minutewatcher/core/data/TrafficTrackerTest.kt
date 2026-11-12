@@ -13,7 +13,6 @@ import host.serv.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
 import host.serv.djbigmuh.minutewatcher.core.model.ActiveSimInfo
-import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.IdentitySource
 import host.serv.djbigmuh.minutewatcher.core.model.SimIdentity
 import host.serv.djbigmuh.minutewatcher.core.model.SimUsage
@@ -29,23 +28,17 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.lenient
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
-import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(RobolectricTestRunner::class)
