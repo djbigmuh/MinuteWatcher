@@ -1,5 +1,6 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
+import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
@@ -9,7 +10,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -24,16 +24,14 @@ class ResilientObservationTest {
         runTest {
             val source = flowOf(1, 2, 3)
             val result =
-                withTimeout(5.seconds) {
-                    source
-                        .observeWithRetry(
-                            label = "test",
-                            logThreshold = 5,
-                            onPersistentFailure = {},
-                            onRecovered = {},
-                            onSourceCompleted = {},
-                        ).toList()
-                }
+                source
+                    .observeWithRetry(
+                        label = "test",
+                        logThreshold = 5,
+                        onPersistentFailure = {},
+                        onRecovered = {},
+                        onSourceCompleted = {},
+                    ).toList()
             assertEquals(listOf(1, 2, 3), result)
         }
 
@@ -66,7 +64,7 @@ class ResilientObservationTest {
             runCurrent()
             assertEquals(0, emitted.size)
 
-            advanceTimeBy(1000.milliseconds)
+            advanceTimeBy(Constants.Flow.RETRY_DELAY_MS.milliseconds)
             runCurrent()
 
             assertEquals(listOf("success"), emitted)
@@ -98,7 +96,7 @@ class ResilientObservationTest {
 
             var stepCount = 0
             while ((attemptCount < 31) && (stepCount < 1000)) {
-                advanceTimeBy(1.seconds)
+                advanceTimeBy(Constants.Flow.RETRY_DELAY_MS.milliseconds)
                 runCurrent()
                 stepCount++
             }
@@ -141,9 +139,9 @@ class ResilientObservationTest {
                 }
 
             runCurrent()
-            advanceTimeBy(1000.milliseconds)
+            advanceTimeBy(Constants.Flow.RETRY_DELAY_MS.milliseconds)
             runCurrent()
-            advanceTimeBy(2000.milliseconds)
+            advanceTimeBy(Constants.Flow.RETRY_DELAY_MS.milliseconds * 2)
             runCurrent()
 
             assertEquals(1, recoveredCalls)
@@ -175,13 +173,13 @@ class ResilientObservationTest {
                 }
 
             runCurrent()
-            advanceTimeBy(1000.milliseconds)
+            advanceTimeBy(Constants.Flow.RETRY_DELAY_MS.milliseconds)
             runCurrent()
-            advanceTimeBy(2000.milliseconds)
+            advanceTimeBy(Constants.Flow.RETRY_DELAY_MS.milliseconds * 2)
             runCurrent()
-            advanceTimeBy(4000.milliseconds)
+            advanceTimeBy(Constants.Flow.RETRY_DELAY_MS.milliseconds * 4)
             runCurrent()
-            advanceTimeBy(8000.milliseconds)
+            advanceTimeBy(Constants.Flow.RETRY_DELAY_MS.milliseconds * 8)
             runCurrent()
 
             assertEquals(3, failures.size)
@@ -195,16 +193,14 @@ class ResilientObservationTest {
             val source = flowOf(1, 2)
 
             val result =
-                withTimeout(5.seconds) {
-                    source
-                        .observeWithRetry(
-                            label = "test",
-                            logThreshold = 5,
-                            onPersistentFailure = {},
-                            onRecovered = {},
-                            onSourceCompleted = { completedCalls++ },
-                        ).toList()
-                }
+                source
+                    .observeWithRetry(
+                        label = "test",
+                        logThreshold = 5,
+                        onPersistentFailure = {},
+                        onRecovered = {},
+                        onSourceCompleted = { completedCalls++ },
+                    ).toList()
 
             assertEquals(listOf(1, 2), result)
             assertEquals(1, completedCalls)

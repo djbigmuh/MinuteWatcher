@@ -1,24 +1,29 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.common.di
 
 import android.content.Context
+import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.common.util.Logger
 import host.serv.djbigmuh.minutewatcher.core.common.util.NoOpLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ApplicationScopeModuleTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private class CapturingLogger : Logger by NoOpLogger() {
         val errorLogs = mutableListOf<Triple<String, String, Throwable?>>()
 
@@ -50,15 +55,14 @@ class ApplicationScopeModuleTest {
     @Test
     fun `uncaught exception in ApplicationScope is logged and scope remains active`() =
         runTest {
-            val testDispatcher = StandardTestDispatcher(testScheduler)
-            val scope = ApplicationScopeModule.provideApplicationScope(testDispatcher)
+            val scope = ApplicationScopeModule.provideApplicationScope(mainDispatcherRule.testDispatcher)
 
             val exception = RuntimeException("Test exception in child coroutine")
             scope.launch {
                 throw exception
             }
 
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
 
             assertEquals(1, capturingLogger.errorLogs.size)
             val log = capturingLogger.errorLogs[0]
@@ -72,7 +76,7 @@ class ApplicationScopeModuleTest {
                 secondExecuted = true
             }
 
-            testScheduler.advanceUntilIdle()
+            advanceUntilIdle()
             assertTrue("Subsequent coroutines must execute in active scope", secondExecuted)
         }
 }

@@ -1,5 +1,6 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
+import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -11,8 +12,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -20,7 +19,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FlowObservationScopeTest {
@@ -78,7 +76,7 @@ class FlowObservationScopeTest {
 
             scope.observe(flow) { value ->
                 startCount.incrementAndGet()
-                delay(100.milliseconds) // Simulate long processing
+                delay(Constants.Flow.DEBOUNCE_MS.milliseconds) // Simulate long processing
                 processedValues.add(value)
             }
 
@@ -91,7 +89,7 @@ class FlowObservationScopeTest {
             flow.emit(3)
             runCurrent()
 
-            advanceTimeBy(500.milliseconds)
+            advanceTimeBy(Constants.Flow.DEBOUNCE_MS.milliseconds * 2)
             runCurrent()
 
             assertEquals(listOf(3), processedValues)
@@ -114,85 +112,78 @@ class FlowObservationScopeTest {
 
     @Test
     fun `second observe waits for first collector to complete before receiving values`() =
-        runTest {
-            withTimeout(5000.milliseconds) {
-                val scope = FlowObservationScope<Int>(backgroundScope, "test")
-                val flow1 = MutableSharedFlow<Int>(replay = 1)
-                val flow2 = MutableSharedFlow<Int>(replay = 1)
-                val collector1Blocked = CompletableDeferred<Unit>()
-                val collector1CanFinish = CompletableDeferred<Unit>()
-                val collector2Values = mutableListOf<Int>()
+        runTest(timeout = Constants.Flow.DEFAULT_READ_TIMEOUT_MS.milliseconds * 2) {
+            val scope = FlowObservationScope<Int>(backgroundScope, "test")
+            val flow1 = MutableSharedFlow<Int>(replay = 1)
+            val flow2 = MutableSharedFlow<Int>(replay = 1)
+            val collector1Blocked = CompletableDeferred<Unit>()
+            val collector1CanFinish = CompletableDeferred<Unit>()
+            val collector2Values = mutableListOf<Int>()
 
-                scope.observe(flow1) {
-                    collector1Blocked.complete(Unit)
-                    try {
-                        delay(10000)
-                    } finally {
-                        withContext(NonCancellable) {
-                            withTimeoutOrNull(30.seconds) { collector1CanFinish.await() }
-                        }
+            scope.observe(flow1) {
+                collector1Blocked.complete(Unit)
+                try {
+                    delay(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
+                } finally {
+                    withContext(NonCancellable) {
+                        collector1CanFinish.await()
                     }
                 }
-                runCurrent()
-                flow1.emit(1)
-                runCurrent()
-                withTimeoutOrNull(30.seconds) { collector1Blocked.await() }
-                    ?: throw AssertionError("Timed out waiting for collector1Blocked")
-
-                flow2.emit(10)
-                var observe2Job: Job? = null
-                val secondObserveLaunch =
-                    launch {
-                        observe2Job = scope.observe(flow2) { collector2Values.add(it) }
-                    }
-                runCurrent()
-
-                assertTrue(
-                    "Second collector must not receive values while first is blocked",
-                    collector2Values.isEmpty(),
-                )
-
-                collector1CanFinish.complete(Unit)
-                runCurrent()
-                withTimeoutOrNull(30.seconds) { secondObserveLaunch.join() }
-                    ?: throw AssertionError("Timed out waiting for secondObserveLaunch")
-                runCurrent()
-
-                assertEquals(listOf(10), collector2Values)
-                assertNotNull(observe2Job)
             }
+            runCurrent()
+            flow1.emit(1)
+            runCurrent()
+            collector1Blocked.await()
+
+            flow2.emit(10)
+            var observe2Job: Job? = null
+            val secondObserveLaunch =
+                launch {
+                    observe2Job = scope.observe(flow2) { collector2Values.add(it) }
+                }
+            runCurrent()
+
+            assertTrue(
+                "Second collector must not receive values while first is blocked",
+                collector2Values.isEmpty(),
+            )
+
+            collector1CanFinish.complete(Unit)
+            runCurrent()
+            secondObserveLaunch.join()
+            runCurrent()
+
+            assertEquals(listOf(10), collector2Values)
+            assertNotNull(observe2Job)
         }
 
     @Test
     fun `second observe proceeds and launches new job if first collector ignores cancellation and times out`() =
-        runTest {
-            withTimeout(15000.milliseconds) {
-                val scope = FlowObservationScope<Int>(backgroundScope, "test")
-                val flow1 = MutableSharedFlow<Int>(replay = 1)
-                val flow2 = MutableSharedFlow<Int>(replay = 1)
+        runTest(timeout = Constants.Flow.LONG_TIMEOUT_MS.milliseconds * 2) {
+            val scope = FlowObservationScope<Int>(backgroundScope, "test")
+            val flow1 = MutableSharedFlow<Int>(replay = 1)
+            val flow2 = MutableSharedFlow<Int>(replay = 1)
 
-                flow1.emit(1)
-                scope.observe(flow1) {
-                    withContext(NonCancellable) {
-                        delay(10000.milliseconds)
-                    }
+            flow1.emit(1)
+            scope.observe(flow1) {
+                withContext(NonCancellable) {
+                    delay(Constants.Flow.LONG_TIMEOUT_MS.milliseconds)
                 }
-                runCurrent()
-
-                flow2.emit(20)
-                var newJob: Job? = null
-                val secondObserveLaunch =
-                    launch {
-                        newJob = scope.observe(flow2) { }
-                    }
-
-                advanceTimeBy(3500.milliseconds)
-                runCurrent()
-                withTimeoutOrNull(30.seconds) { secondObserveLaunch.join() }
-                    ?: throw AssertionError("Timed out waiting for secondObserveLaunch")
-
-                assertNotNull("New job must be launched after timeout even if previous stuck", newJob)
             }
+            runCurrent()
+
+            flow2.emit(20)
+            var newJob: Job? = null
+            val secondObserveLaunch =
+                launch {
+                    newJob = scope.observe(flow2) { }
+                }
+
+            advanceTimeBy(Constants.Flow.NON_CANCELLABLE_CLEANUP_TIMEOUT_MS.milliseconds + 500.milliseconds)
+            runCurrent()
+            secondObserveLaunch.join()
+
+            assertNotNull("New job must be launched after timeout even if previous stuck", newJob)
         }
 
     @Test
