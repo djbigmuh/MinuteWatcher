@@ -30,7 +30,7 @@ val widgetStrings =
 fun buildBasicSnapshot() =
     GlobalSnapshot(
         version = SchemaVersion(1, 0, 0),
-        timestamp = System.currentTimeMillis(),
+        timestamp = 1_000_000L,
         simSnapshots =
             listOf(
                 SimSnapshot(
@@ -110,7 +110,7 @@ fun verifyBasicUiState(uiState: WidgetUiState) {
 fun buildManualAdjustmentSnapshot() =
     GlobalSnapshot(
         version = SchemaVersion(1, 0, 0),
-        timestamp = System.currentTimeMillis(),
+        timestamp = 1_000_000L,
         simSnapshots =
             listOf(
                 SimSnapshot(
@@ -144,7 +144,7 @@ fun buildManualAdjustmentSnapshot() =
 fun buildEmptyTrafficSnapshot() =
     GlobalSnapshot(
         version = SchemaVersion(1, 0, 0),
-        timestamp = System.currentTimeMillis(),
+        timestamp = 1_000_000L,
         simSnapshots =
             listOf(
                 SimSnapshot(

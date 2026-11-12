@@ -6,7 +6,7 @@ import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import host.serv.djbigmuh.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -115,8 +115,8 @@ class SimCardMapperTest {
     }
 
     @Test
-    fun `concurrent map calls with different identities do not corrupt cache`() {
-        runBlocking {
+    fun `concurrent map calls with different identities do not corrupt cache`() =
+        runTest {
             val identities = List(TEST_IDENTITIES_COUNT) { "$TEST_IDENTITY_PREFIX$it" }
 
             val jobs =
@@ -145,7 +145,6 @@ class SimCardMapperTest {
             val results = jobs.awaitAll()
             assertTrue("Results should not be empty", results.isNotEmpty())
         }
-    }
 
     companion object {
         private const val TEST_SLOT_0 = 0

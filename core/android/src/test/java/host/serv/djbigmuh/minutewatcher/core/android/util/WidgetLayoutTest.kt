@@ -253,7 +253,7 @@ class WidgetLayoutTest {
     private fun buildSnapshot(entities: Map<PackageType, SemanticEntity>) =
         GlobalSnapshot(
             version = SchemaVersion(1, 0, 0),
-            timestamp = System.currentTimeMillis(),
+            timestamp = 1_000_000L,
             simSnapshots = listOf(SimSnapshot(0, "MTS", "MTS", entities, autoResetDay = 1)),
             capabilities = emptyList(),
         )

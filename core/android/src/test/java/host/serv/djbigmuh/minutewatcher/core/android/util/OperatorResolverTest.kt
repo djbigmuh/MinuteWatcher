@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.res.AssetManager
 import host.serv.djbigmuh.minutewatcher.core.android.testing.SingletonResetRule
 import host.serv.djbigmuh.minutewatcher.core.resources.R
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -337,28 +339,20 @@ class OperatorResolverTest {
 
     @Test
     fun `concurrent load from multiple threads is thread safe`() =
-        runBlocking {
+        runTest {
             val openCount = AtomicInteger(0)
             whenever(assets.open(any())).thenAnswer {
                 openCount.incrementAndGet()
-                Thread.sleep(5)
                 ByteArrayInputStream(json.toByteArray(Charsets.UTF_8))
             }
 
-            val threads =
+            val jobs =
                 List(10) {
-                    Thread {
+                    launch(Dispatchers.Default) {
                         OperatorResolver.resolve(context, "", listOf("25001"), 0)
                     }
                 }
-            threads.forEach { it.start() }
-            withTimeout(5.seconds) {
-                threads.forEach {
-                    while (it.isAlive) {
-                        kotlinx.coroutines.delay(10.milliseconds)
-                    }
-                }
-            }
+            jobs.joinAll()
             assertTrue("Open count should be at most 3, was ${openCount.get()}", openCount.get() <= 3)
         }
 

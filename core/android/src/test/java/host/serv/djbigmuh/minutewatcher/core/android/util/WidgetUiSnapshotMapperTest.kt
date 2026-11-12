@@ -107,7 +107,7 @@ class WidgetUiSnapshotMapperTest {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
-                timestamp = System.currentTimeMillis(),
+                timestamp = 1_000_000L,
                 simSnapshots =
                     listOf(
                         SimSnapshot(0, "sim_0", "Operator", emptyMap(), 1),
@@ -170,7 +170,7 @@ class WidgetUiSnapshotMapperTest {
 
     @Test
     fun `transparency mapping`() {
-        val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList())
+        val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1_000_000L, emptyList(), emptyList())
         val settings =
             WidgetSettingsState(
                 layoutMode = 1,
@@ -208,7 +208,7 @@ class WidgetUiSnapshotMapperTest {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
-                timestamp = System.currentTimeMillis(),
+                timestamp = 1_000_000L,
                 simSnapshots =
                     listOf(
                         SimSnapshot(
@@ -265,7 +265,7 @@ class WidgetUiSnapshotMapperTest {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
-                timestamp = System.currentTimeMillis(),
+                timestamp = 1_000_000L,
                 simSnapshots =
                     listOf(
                         SimSnapshot(

@@ -22,7 +22,7 @@ class WidgetUiSimVisibilityMapperTest {
         val snapshot =
             GlobalSnapshot(
                 version = SchemaVersion(1, 0, 0),
-                timestamp = System.currentTimeMillis(),
+                timestamp = 1_000_000L,
                 simSnapshots =
                     listOf(
                         SimSnapshot(0, "sim_0", "Operator", emptyMap(), 1),

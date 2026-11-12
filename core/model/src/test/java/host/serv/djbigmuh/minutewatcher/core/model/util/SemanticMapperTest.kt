@@ -10,6 +10,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class SemanticMapperTest {
+    private val testTimestamp = 1_627_812_000_000L
+
     @Test
     fun `getDocumentId returns correct format`() {
         assertEquals("sim_0_minutes", SemanticMapper.getDocumentId(0, PackageType.MINUTES))
@@ -19,9 +21,8 @@ class SemanticMapperTest {
     @Test
     fun `mapMinutes converts MinutesModel to SemanticEntity correctly`() {
         val model = MinutesModel.calculate(used = 50, limit = 100, manualAdjustment = 0)
-        val now = 1627812000000L // 2021-08-01 10:00:00 UTC
 
-        val entity = SemanticMapper.mapMinutes(0, "Test Op", model, 1, now)
+        val entity = SemanticMapper.mapMinutes(0, "Test Op", model, 1, testTimestamp)
 
         assertEquals("sim_0_minutes", entity.id)
         assertEquals(0, entity.simSlot)
@@ -31,23 +32,22 @@ class SemanticMapperTest {
         assertEquals(50L, entity.used)
         assertEquals(50L, entity.remaining)
         assertEquals(MeasurementUnit.MINUTES, entity.unit)
-        assertEquals(now, entity.lastUpdateTime)
+        assertEquals(testTimestamp, entity.lastUpdateTime)
         assertEquals(DataSourceType.SYSTEM, entity.sourceType)
     }
 
     @Test
     fun `mapMinutes marks as MANUAL when adjustment is present`() {
         val model = MinutesModel.calculate(used = 50, limit = 100, manualAdjustment = 10)
-        val entity = SemanticMapper.mapMinutes(0, "Op", model, 1, System.currentTimeMillis())
+        val entity = SemanticMapper.mapMinutes(0, "Op", model, 1, testTimestamp)
         assertEquals(DataSourceType.MANUAL, entity.sourceType)
     }
 
     @Test
     fun `mapTraffic converts TrafficModel to SemanticEntity correctly`() {
         val model = TrafficModel.calculate(usedMb = 1024f, limitMb = 2048, manualAdjustmentGb = 0f)
-        val now = 1627812000000L
 
-        val entity = SemanticMapper.mapTraffic(1, "Test Op", model, 1, now)
+        val entity = SemanticMapper.mapTraffic(1, "Test Op", model, 1, testTimestamp)
 
         assertEquals("sim_1_data", entity.id)
         assertEquals(1, entity.simSlot)
@@ -62,7 +62,7 @@ class SemanticMapperTest {
     @Test
     fun `mapTraffic marks as MANUAL when adjustment is present`() {
         val model = TrafficModel.calculate(usedMb = 100f, limitMb = 1000, manualAdjustmentGb = 1.0f)
-        val entity = SemanticMapper.mapTraffic(0, "Op", model, 1, System.currentTimeMillis())
+        val entity = SemanticMapper.mapTraffic(0, "Op", model, 1, testTimestamp)
         assertEquals(DataSourceType.MANUAL, entity.sourceType)
     }
 }
