@@ -30,6 +30,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -94,7 +95,7 @@ class SimIdentityConcurrencyStressTest {
     private fun TestScope.createTestDataStore(): androidx.datastore.core.DataStore<Preferences> =
         PreferenceDataStoreFactory.create(
             scope = backgroundScope,
-            produceFile = { tmpFolder.newFile("stress_ds_${System.currentTimeMillis()}.preferences_pb") },
+            produceFile = { tmpFolder.newFile("stress_ds_${UUID.randomUUID()}.preferences_pb") },
         )
 
     @Test

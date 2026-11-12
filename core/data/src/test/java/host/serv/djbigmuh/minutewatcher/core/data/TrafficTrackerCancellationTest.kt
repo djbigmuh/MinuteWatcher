@@ -139,7 +139,7 @@ class TrafficTrackerCancellationTest {
             secondInit.cancel()
         }
 
-    private fun createTrackerDeps() =
+    private suspend fun createTrackerDeps() =
         createTrafficTrackerDependencies(
             simIdentityRepository,
             simUsageRepository,
@@ -155,7 +155,7 @@ class TrafficTrackerCancellationTest {
             timeProvider,
         )
 
-    private fun TestScope.runPhase1InitializationFailure(): Int {
+    private suspend fun TestScope.runPhase1InitializationFailure(): Int {
         var attempts = 0
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(
             flow {

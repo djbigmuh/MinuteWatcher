@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -86,22 +85,22 @@ class TrafficTrackerRegressionTest {
         )
 
     private var hasUsageStatsPermission = true
+    private val testDispatcher get() = mainDispatcherRule.testDispatcher
 
     @Before
-    fun setup() {
-        initTestLogger()
-        hasUsageStatsPermission = true
-        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-        whenever(permissionManager.hasUsageStatsPermission()).thenAnswer { hasUsageStatsPermission }
-        whenever(permissionManager.isTelephonySupported()).thenReturn(true)
-        whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
-        whenever(permissionStateNotifier.changes).thenReturn(MutableStateFlow(Unit))
-        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flow { delay(Long.MAX_VALUE) })
-        runBlocking {
+    fun setup() =
+        runTest(testDispatcher) {
+            initTestLogger()
+            hasUsageStatsPermission = true
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.hasUsageStatsPermission()).thenAnswer { hasUsageStatsPermission }
+            whenever(permissionManager.isTelephonySupported()).thenReturn(true)
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+            whenever(permissionStateNotifier.changes).thenReturn(MutableStateFlow(Unit))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flow { delay(Long.MAX_VALUE) })
             whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))
             whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_0")
         }
-    }
 
     @Test
     fun `handleRetryAction baseline write timeout sets TIMEOUT error and preserves retry state`() =
@@ -223,7 +222,7 @@ class TrafficTrackerRegressionTest {
             )
         }
 
-    private fun createTracker(scope: CoroutineScope): TrafficTracker {
+    private suspend fun createTracker(scope: CoroutineScope): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
                 simIdentityRepository,

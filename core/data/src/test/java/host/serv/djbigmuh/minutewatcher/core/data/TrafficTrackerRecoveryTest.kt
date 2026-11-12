@@ -49,7 +49,7 @@ class TrafficTrackerRecoveryTest {
         whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
     }
 
-    private fun createTracker(scope: TestScope): TrafficTracker {
+    private suspend fun createTracker(scope: TestScope): TrafficTracker {
         val deps =
             createTrafficTrackerDependencies(
                 simIdentityRepository = simIdentityRepository,

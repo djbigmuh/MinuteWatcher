@@ -13,10 +13,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
+import java.io.File
+import java.util.UUID
 
-@RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimUsageMapperTest {
     @get:Rule
@@ -31,7 +30,7 @@ class SimUsageMapperTest {
             val dataStore: DataStore<Preferences> =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
-                ) { tmpFolder.newFile("test_sim_usage_${System.currentTimeMillis()}.preferences_pb") }
+                ) { File(tmpFolder.root, "test_sim_usage_${UUID.randomUUID()}.preferences_pb") }
             val mapper = SimUsageMapper()
             val identity = "test_sim"
             dataStore.edit { prefs ->
@@ -53,7 +52,7 @@ class SimUsageMapperTest {
             val dataStore: DataStore<Preferences> =
                 PreferenceDataStoreFactory.create(
                     scope = backgroundScope,
-                ) { tmpFolder.newFile("test_sim_usage_${System.currentTimeMillis()}.preferences_pb") }
+                ) { File(tmpFolder.root, "test_sim_usage_${UUID.randomUUID()}.preferences_pb") }
             val mapper = SimUsageMapper()
             val identity = "test_sim_legacy"
             dataStore.edit { prefs ->

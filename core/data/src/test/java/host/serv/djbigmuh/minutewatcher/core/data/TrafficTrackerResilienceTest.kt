@@ -78,7 +78,7 @@ class TrafficTrackerResilienceTest {
         reset(simIdentityRepository)
     }
 
-    private fun createTracker(scope: TestScope): TrafficTracker {
+    private suspend fun createTracker(scope: TestScope): TrafficTracker {
         val deps =
             createTrafficTrackerDependencies(
                 simIdentityRepository = simIdentityRepository,

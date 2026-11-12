@@ -2,6 +2,7 @@
 
 import android.telephony.SubscriptionInfo
 import host.serv.djbigmuh.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
+import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -16,19 +17,16 @@ import host.serv.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.IdentitySource
 import host.serv.djbigmuh.minutewatcher.core.model.SimIdentity
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -41,13 +39,15 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficOvercountTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val networkStatsProvider: NetworkStatsProvider = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val callSessionRepository: CallSessionRepository = mock()
     private val permissionManager: PermissionManager = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()
-    private val testDispatcher = StandardTestDispatcher()
     private val timeProvider = FixedTimeProvider(currentTime = 2000000000000L)
 
     private lateinit var simUsageResetRepository: SimUsageResetRepository
@@ -56,23 +56,22 @@ class TrafficOvercountTest {
     private val sim1Identity = "sim_1"
     private val sim2Identity = "sim_2"
 
-    private val appScope = CoroutineScope(testDispatcher + Job())
+    private val testDispatcher get() = mainDispatcherRule.testDispatcher
 
     @Before
-    fun setup() {
-        initTestLogger()
-        val ds = InMemoryPreferencesDataStore()
-        val repo = SimUsageRepositoryImpl(ds, timeProvider, SimUsageMapper(), SimUsageResetLogic())
-        simUsageResetRepository = repo
-        simUsageRepository = repo
+    fun setup() =
+        runTest(testDispatcher) {
+            initTestLogger()
+            val ds = InMemoryPreferencesDataStore()
+            val repo = SimUsageRepositoryImpl(ds, timeProvider, SimUsageMapper(), SimUsageResetLogic())
+            simUsageResetRepository = repo
+            simUsageRepository = repo
 
-        setupPermissionMocks()
-        setupIdentityMocks()
-        whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow())
-        runBlocking {
+            setupPermissionMocks()
+            setupIdentityMocks()
+            whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow())
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
         }
-    }
 
     private fun setupPermissionMocks() {
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -92,39 +91,38 @@ class TrafficOvercountTest {
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo1, mockSubInfo2))
     }
 
-    private fun setupIdentityMocks() =
-        runBlocking {
-            whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(sim1Identity)
-            whenever(simIdentityRepository.getIdentity(1)).thenReturn(sim2Identity)
-            val activeSims =
-                listOf(
-                    ActiveSimInfo(
-                        identity = SimIdentity(sim1Identity, 1, 0, IdentitySource.ICCID, isStable = true),
-                        slotIndex = 0,
-                        subscriptionId = 1,
-                        iccId = "icc_1",
-                        displayName = "SIM 1",
-                        carrierName = "C1",
-                        isDefaultData = true,
-                        isDefaultVoice = true,
-                    ),
-                    ActiveSimInfo(
-                        identity = SimIdentity(sim2Identity, 2, 1, IdentitySource.ICCID, isStable = true),
-                        slotIndex = 1,
-                        subscriptionId = 2,
-                        iccId = "icc_2",
-                        displayName = "SIM 2",
-                        carrierName = "C2",
-                        isDefaultData = false,
-                        isDefaultVoice = false,
-                    ),
-                )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
-            whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(sim1Identity, sim2Identity)))
-        }
+    private suspend fun setupIdentityMocks() {
+        whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))
+        whenever(simIdentityRepository.getIdentity(0)).thenReturn(sim1Identity)
+        whenever(simIdentityRepository.getIdentity(1)).thenReturn(sim2Identity)
+        val activeSims =
+            listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity(sim1Identity, 1, 0, IdentitySource.ICCID, isStable = true),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    iccId = "icc_1",
+                    displayName = "SIM 1",
+                    carrierName = "C1",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                ),
+                ActiveSimInfo(
+                    identity = SimIdentity(sim2Identity, 2, 1, IdentitySource.ICCID, isStable = true),
+                    slotIndex = 1,
+                    subscriptionId = 2,
+                    iccId = "icc_2",
+                    displayName = "SIM 2",
+                    carrierName = "C2",
+                    isDefaultData = false,
+                    isDefaultVoice = false,
+                ),
+            )
+        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+        whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(sim1Identity, sim2Identity)))
+    }
 
-    private fun TestScope.createTracker(): TrafficTracker {
+    private suspend fun TestScope.createTracker(): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
                 simIdentityRepository,
@@ -144,7 +142,7 @@ class TrafficOvercountTest {
                 baselineManager,
             )
         val deps =
-            createTrafficTrackerDependencies(
+            TrafficTrackerDependencies(
                 simIdentityRepository,
                 simUsageRepository,
                 simUsageResetRepository,
@@ -158,12 +156,12 @@ class TrafficOvercountTest {
                 dataChangeNotifier,
                 timeProvider,
             )
-        return TrafficTracker(deps, appScope).apply { ensureStarted() }
+        return TrafficTracker(deps, backgroundScope).apply { ensureStarted() }
     }
 
-    private fun TestScope.startTracker(): TrafficTracker {
+    private suspend fun TestScope.startTracker(): TrafficTracker {
         val t = createTracker()
-        advanceUntilIdle()
+        testDispatcher.scheduler.advanceUntilIdle()
         clearInvocations(
             simIdentityRepository,
             permissionManager,
@@ -192,7 +190,7 @@ class TrafficOvercountTest {
             )
 
             tracker.updateTrafficUsage()
-            advanceUntilIdle()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Should increment SIM 1 by 400MB
             val usage1 = simUsageRepository.getSimUsage(sim1Identity).first()
@@ -214,7 +212,7 @@ class TrafficOvercountTest {
             )
 
             tracker.updateTrafficUsage()
-            advanceUntilIdle()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Verify baseline for SIM 2 was set correctly.
             val baseline2 = simUsageResetRepository.getLastTotalBytes(sim2Identity).first()
@@ -228,7 +226,7 @@ class TrafficOvercountTest {
             )
 
             tracker.updateTrafficUsage()
-            advanceUntilIdle()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Correct! Delta = 1050 - 1000 = 50MB.
             val usage2 = simUsageRepository.getSimUsage(sim2Identity).first()
@@ -253,7 +251,7 @@ class TrafficOvercountTest {
             )
 
             tracker.updateTrafficUsage()
-            advanceUntilIdle()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // 3. Verify that baseline was set to 1000MB.
             val baseline = simUsageResetRepository.getLastTotalBytes(identity).first()
@@ -286,7 +284,7 @@ class TrafficOvercountTest {
             )
 
             tracker.updateTrafficUsage()
-            advanceUntilIdle()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // 3. Verify lastTotalBytes remains B, trafficUsedMb remains U
             val usageAfterRewind = simUsageRepository.getSimUsage(identity).first()
@@ -302,7 +300,7 @@ class TrafficOvercountTest {
             )
 
             tracker.updateTrafficUsage()
-            advanceUntilIdle()
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // 5. Verify trafficUsedMb == U + 50 MB, lastTotalBytes == B + 50 MB
             val usageAfterAdvance = simUsageRepository.getSimUsage(identity).first()

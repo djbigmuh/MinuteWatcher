@@ -14,7 +14,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -257,10 +256,8 @@ class ResetManagerTest {
             val d1 = async { resetManager.performAutoReset() }
             val d2 = async { resetManager.performAutoReset() }
 
-            withTimeoutOrNull(30.seconds) { d1.await() }
-                ?: throw AssertionError("Timed out waiting for d1")
-            withTimeoutOrNull(30.seconds) { d2.await() }
-                ?: throw AssertionError("Timed out waiting for d2")
+            d1.await()
+            d2.await()
 
             // Verify only one repository call happened despite concurrent high-level calls
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), eq(1), any())
@@ -285,10 +282,8 @@ class ResetManagerTest {
             val d1 = async { resetManager.performAutoReset() }
             val d2 = async { resetManager.performAutoReset() }
 
-            withTimeoutOrNull(30.seconds) { d1.await() }
-                ?: throw AssertionError("Timed out waiting for d1")
-            withTimeoutOrNull(30.seconds) { d2.await() }
-                ?: throw AssertionError("Timed out waiting for d2")
+            d1.await()
+            d2.await()
 
             // Verify exactly one reset call per SIM
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(id0), any(), any())
@@ -363,19 +358,14 @@ class ResetManagerTest {
             // but since d1 "hangs" in the mock (if we added delay), d2 should return immediately.
 
             whenever(simUsageResetRepository.resetSimUsageIfDue(any(), any(), any())).thenAnswer {
-                // We cannot easily suspend in Mockito thenAnswer for Robolectric without runBlocking,
-                // so we just check that calls are not duplicated during normal execution.
-                // Atomicity is guaranteed by ConcurrentHashMap.add in the implementation.
                 true
             }
 
             val d1 = async { resetManager.performAutoReset() }
             val d2 = async { resetManager.performAutoReset() }
 
-            withTimeoutOrNull(30.seconds) { d1.await() }
-                ?: throw AssertionError("Timed out waiting for d1")
-            withTimeoutOrNull(30.seconds) { d2.await() }
-                ?: throw AssertionError("Timed out waiting for d2")
+            d1.await()
+            d2.await()
 
             // Verify the repository is called once
             verify(simUsageResetRepository, times(1)).resetSimUsageIfDue(eq(identity), any(), any())

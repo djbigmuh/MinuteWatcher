@@ -118,7 +118,7 @@ class TrackerCancellationRegressionTest {
             verify(context).refreshStatus(false)
         }
 
-    private fun createTracker(scope: CoroutineScope): TrafficTracker {
+    private suspend fun createTracker(scope: CoroutineScope): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
                 simIdentityRepository,

@@ -21,6 +21,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -51,11 +52,11 @@ class SimIdentityPersistenceConflictTest {
         appDataStore =
             PreferenceDataStoreFactory.create(
                 scope = scope,
-            ) { tmpFolder.newFile("test_app_settings_${System.currentTimeMillis()}.preferences_pb") }
+            ) { tmpFolder.newFile("test_app_settings_${UUID.randomUUID()}.preferences_pb") }
         val realSimDataStore =
             PreferenceDataStoreFactory.create(
                 scope = scope,
-            ) { tmpFolder.newFile("test_sim_settings_${System.currentTimeMillis()}.preferences_pb") }
+            ) { tmpFolder.newFile("test_sim_settings_${UUID.randomUUID()}.preferences_pb") }
         countingSimDataStore = CountingDataStore(realSimDataStore)
         simDataStore = countingSimDataStore
         migrationService = IdentityMigrationService(appDataStore, simDataStore)

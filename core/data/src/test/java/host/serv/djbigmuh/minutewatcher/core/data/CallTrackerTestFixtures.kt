@@ -3,6 +3,7 @@
 import android.app.Application
 import android.telephony.TelephonyManager
 import host.serv.djbigmuh.minutewatcher.core.android.testing.SingletonResetRule
+import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.TimeProvider
@@ -19,8 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
 import org.junit.Before
 import org.junit.Rule
@@ -32,6 +32,9 @@ import org.mockito.kotlin.whenever
 abstract class CallTrackerTestFixtures {
     @get:Rule
     val singletonResetRule = SingletonResetRule()
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     protected val context: Application = mock()
     protected val simIdentityRepository: SimIdentityRepository = mock()
@@ -52,7 +55,7 @@ abstract class CallTrackerTestFixtures {
             currentUptime = 500000000L,
         )
 
-    protected open val testDispatcher = StandardTestDispatcher()
+    protected open val testDispatcher: TestDispatcher get() = mainDispatcherRule.testDispatcher
     protected val testScope by lazy { TestScope(testDispatcher) }
 
     @Before
@@ -60,21 +63,18 @@ abstract class CallTrackerTestFixtures {
         initTestLogger()
     }
 
-    protected fun setupCommonMocks() {
+    protected suspend fun setupCommonMocks() {
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
         whenever(callSessionRepository.getCallIdentity(any())).thenReturn(flowOf(null))
         whenever(callSessionRepository.getCallStartTime(any())).thenReturn(flowOf(0L))
         whenever(callSessionRepository.getElapsedRealtime(any())).thenReturn(flowOf(0L))
         whenever(callSessionRepository.getUptime(any())).thenReturn(flowOf(0L))
-        runBlocking {
-            whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
-        }
+        whenever(callSessionRepository.getActiveCallSubIds()).thenReturn(emptyList())
 
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
-        runBlocking {
-            whenever(simUsageRepository.incrementMinutesUsedForCall(any(), any(), any())).thenReturn(true)
-        }
+        whenever(simUsageRepository.incrementMinutesUsedForCall(any(), any(), any())).thenReturn(true)
+
         whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
         whenever(telephonyManager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
         // @Suppress("DEPRECATION") is required because TelephonyManager.getCallState() is deprecated in API 31+.

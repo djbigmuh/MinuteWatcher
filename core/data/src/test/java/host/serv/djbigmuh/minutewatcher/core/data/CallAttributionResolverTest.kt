@@ -14,9 +14,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -25,7 +23,6 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallAttributionResolverTest {
@@ -53,7 +50,7 @@ class CallAttributionResolverTest {
 
     @Test
     fun `concurrent attribution failures increment counter atomically without lost updates`() =
-        runBlocking {
+        runTest {
             val subId = 1
             val coroutineCount = 8
             val iterationsPerCoroutine = 250
@@ -71,16 +68,14 @@ class CallAttributionResolverTest {
                     }
                 }
 
-            withTimeout(10.seconds) {
-                jobs.joinAll()
-            }
+            jobs.joinAll()
 
             assertEquals(coroutineCount * iterationsPerCoroutine, resolver.getFailureCount(subId))
         }
 
     @Test
     fun `resolveTargetIdentity returns null and false when no match and multiple active sims`() =
-        runBlocking {
+        runTest {
             val sim0 =
                 ActiveSimInfo(
                     SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, true),
@@ -112,7 +107,7 @@ class CallAttributionResolverTest {
 
     @Test
     fun `resolveTargetIdentity returns fallback sim and true when no match and single active sim is stable`() =
-        runBlocking {
+        runTest {
             val sim0 =
                 ActiveSimInfo(
                     SimIdentity("sim_0", 1, 0, IdentitySource.ICCID, true),
@@ -133,7 +128,7 @@ class CallAttributionResolverTest {
 
     @Test
     fun `resolveTargetIdentity returns null and false when no match and single active sim is unstable`() =
-        runBlocking {
+        runTest {
             val sim0 =
                 ActiveSimInfo(
                     SimIdentity("sub_0", 1, 0, IdentitySource.SUBSCRIPTION_ID, false),
@@ -154,7 +149,7 @@ class CallAttributionResolverTest {
 
     @Test
     fun `resolveIdentity returns stableId for stable SIM and null for unstable SIM`() =
-        runBlocking {
+        runTest {
             val simUnstable =
                 ActiveSimInfo(
                     SimIdentity("sub_1", 1, 0, IdentitySource.SUBSCRIPTION_ID, false),
@@ -198,7 +193,7 @@ class CallAttributionResolverTest {
 
     @Test
     fun `resolveTargetIdentity returns stable identity of sim matched by subId when primary read found none`() =
-        runBlocking {
+        runTest {
             val sim =
                 ActiveSimInfo(
                     SimIdentity("icc_stable", 7, 0, IdentitySource.ICCID, true),
@@ -221,7 +216,7 @@ class CallAttributionResolverTest {
 
     @Test
     fun `resolveTargetIdentity refuses attribution when sim matched by subId has unstable identity`() =
-        runBlocking {
+        runTest {
             val sim =
                 ActiveSimInfo(
                     SimIdentity("sub_7", 7, 0, IdentitySource.SUBSCRIPTION_ID, false),

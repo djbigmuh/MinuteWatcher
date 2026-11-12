@@ -2,6 +2,7 @@
 
 import android.telephony.SubscriptionInfo
 import host.serv.djbigmuh.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
+import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -16,20 +17,17 @@ import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.IdentitySource
 import host.serv.djbigmuh.minutewatcher.core.model.SimIdentity
 import host.serv.djbigmuh.minutewatcher.core.model.SimUsage
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -43,6 +41,9 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficInitialBaselineTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val networkStatsProvider: NetworkStatsProvider = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
@@ -55,21 +56,20 @@ class TrafficInitialBaselineTest {
     private val sim1Identity = "sim_1"
     private val retryCounts = mutableMapOf<String, MutableStateFlow<Int?>>()
 
-    private val testDispatcher = StandardTestDispatcher()
-    private val appScope = CoroutineScope(testDispatcher + Job())
+    private val testDispatcher get() = mainDispatcherRule.testDispatcher
 
     @Before
-    fun setup() {
-        initTestLogger()
-        setupPermissionMocks()
-        setupIdentityMocks()
-        whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow())
+    fun setup() =
+        runTest(testDispatcher) {
+            initTestLogger()
+            setupPermissionMocks()
+            setupIdentityMocks()
+            whenever(permissionStateNotifier.changes).thenReturn(MutableSharedFlow())
 
-        whenever(simUsageResetRepository.getBaselineRetryCount(any())).thenAnswer {
-            val identity = it.arguments[0] as String
-            retryCounts.getOrPut(identity) { MutableStateFlow(null) }
-        }
-        runBlocking {
+            whenever(simUsageResetRepository.getBaselineRetryCount(any())).thenAnswer {
+                val identity = it.arguments[0] as String
+                retryCounts.getOrPut(identity) { MutableStateFlow(null) }
+            }
             whenever(simUsageResetRepository.setBaselineRetryCount(any(), any())).thenAnswer {
                 val identity = it.arguments[0] as String
                 val count = it.arguments[1] as? Int
@@ -80,7 +80,6 @@ class TrafficInitialBaselineTest {
                 retryCounts.entries.removeIf { !active.contains(it.key) }
             }
         }
-    }
 
     private fun setupPermissionMocks() {
         whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
@@ -95,28 +94,27 @@ class TrafficInitialBaselineTest {
         whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo1))
     }
 
-    private fun setupIdentityMocks() =
-        runBlocking {
-            whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn(sim1Identity)
-            val activeSims =
-                listOf(
-                    ActiveSimInfo(
-                        identity = SimIdentity(sim1Identity, 1, 0, IdentitySource.ICCID, isStable = true),
-                        slotIndex = 0,
-                        subscriptionId = 1,
-                        iccId = "icc_1",
-                        displayName = "SIM 1",
-                        carrierName = "C1",
-                        isDefaultData = true,
-                        isDefaultVoice = true,
-                    ),
-                )
-            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
-            whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(sim1Identity)))
-        }
+    private suspend fun setupIdentityMocks() {
+        whenever(callSessionRepository.getLastDataSubId()).thenReturn(flowOf(1))
+        whenever(simIdentityRepository.getIdentity(0)).thenReturn(sim1Identity)
+        val activeSims =
+            listOf(
+                ActiveSimInfo(
+                    identity = SimIdentity(sim1Identity, 1, 0, IdentitySource.ICCID, isStable = true),
+                    slotIndex = 0,
+                    subscriptionId = 1,
+                    iccId = "icc_1",
+                    displayName = "SIM 1",
+                    carrierName = "C1",
+                    isDefaultData = true,
+                    isDefaultVoice = true,
+                ),
+            )
+        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(activeSims))
+        whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(sim1Identity)))
+    }
 
-    private fun TestScope.createTracker(): TrafficTracker {
+    private suspend fun TestScope.createTracker(): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
                 simIdentityRepository,
@@ -136,7 +134,7 @@ class TrafficInitialBaselineTest {
                 baselineManager,
             )
         val deps =
-            createTrafficTrackerDependencies(
+            TrafficTrackerDependencies(
                 simIdentityRepository,
                 simUsageRepository,
                 simUsageResetRepository,
@@ -150,7 +148,7 @@ class TrafficInitialBaselineTest {
                 mock(),
                 timeProvider,
             )
-        return TrafficTracker(deps, appScope).apply { ensureStarted() }
+        return TrafficTracker(deps, backgroundScope).apply { ensureStarted() }
     }
 
     @Test

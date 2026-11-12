@@ -33,6 +33,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import java.util.UUID
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -106,7 +107,7 @@ class SimIdentityRepositoryHangTest {
         PreferenceDataStoreFactory.create(
             scope = backgroundScope,
             produceFile = {
-                val fileName = "test_sim_settings_${name}_${System.currentTimeMillis()}.preferences_pb"
+                val fileName = "test_sim_settings_${name}_${UUID.randomUUID()}.preferences_pb"
                 tmpFolder.newFile(fileName)
             },
         )

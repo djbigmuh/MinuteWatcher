@@ -2,6 +2,7 @@
 
 import android.content.Context
 import android.telephony.TelephonyManager
+import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -17,14 +18,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeoutOrNull
-import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -35,10 +33,12 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerRaceTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val callSessionRepository: CallSessionRepository = mock()
@@ -49,27 +49,26 @@ class CallTrackerRaceTest {
     private val sessionCleaner: CallSessionCleaner = mock()
     private val settingsHandler: CallTrackingSettingsHandler = mock()
     private val permissionStateNotifier: PermissionStateNotifier = mock()
-    private val testDispatcher = StandardTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+    private val testDispatcher get() = mainDispatcherRule.testDispatcher
+    private val testScope by lazy { TestScope(testDispatcher) }
 
     private lateinit var tracker: CallTracker
 
     @Before
-    fun setup() {
-        initTestLogger(context)
+    fun setup() =
+        runTest(testDispatcher) {
+            initTestLogger(context)
 
-        tracker = createTestTracker()
+            tracker = createTestTracker()
 
-        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-        whenever(permissionStateNotifier.changes).thenReturn(emptyFlow())
-        whenever(permissionManager.isTelephonySupported()).thenReturn(true)
-        whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
-        whenever(telephonyManager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
-        whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
-        runBlocking {
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionStateNotifier.changes).thenReturn(emptyFlow())
+            whenever(permissionManager.isTelephonySupported()).thenReturn(true)
+            whenever(telephonyManager.createForSubscriptionId(any())).thenReturn(telephonyManager)
+            whenever(telephonyManager.callStateForSubscription).thenReturn(TelephonyManager.CALL_STATE_OFFHOOK)
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(emptyList()))
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
         }
-    }
 
     private fun createTestTracker(): CallTracker {
         val retryHelper = createMockRetryHelper()
@@ -121,7 +120,7 @@ class CallTrackerRaceTest {
 
     private fun createMockRetryHelper(): DataStoreRetryHelper {
         val retryHelper = mock<DataStoreRetryHelper>()
-        runBlocking {
+        runTest(testDispatcher) {
             whenever(
                 retryHelper.readWithRetry<Any>(
                     label = any(),
@@ -164,8 +163,7 @@ class CallTrackerRaceTest {
                         tracker.onCallStarted(1)
                     }
                 }
-            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
-                ?: fail("Timed out waiting for concurrent call starts to complete")
+            jobs.joinAll()
             advanceUntilIdle()
 
             // Session state is read from storage during each start event.

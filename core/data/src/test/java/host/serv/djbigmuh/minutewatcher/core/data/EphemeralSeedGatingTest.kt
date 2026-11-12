@@ -179,7 +179,7 @@ class EphemeralSeedGatingTest {
             assertNull("Should not resolve identity if it is unstable", resolved)
         }
 
-    private fun createTracker(scope: CoroutineScope): TrafficTracker {
+    private suspend fun createTracker(scope: CoroutineScope): TrafficTracker {
         val deps =
             createTrafficTrackerDependencies(
                 simIdentityRepository,

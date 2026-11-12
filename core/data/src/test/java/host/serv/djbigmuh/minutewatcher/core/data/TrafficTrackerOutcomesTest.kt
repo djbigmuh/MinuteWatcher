@@ -1,6 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import android.telephony.SubscriptionInfo
+import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import host.serv.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
@@ -18,21 +19,25 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrafficTrackerOutcomesTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simUsageResetRepository: SimUsageResetRepository = mock()
@@ -73,25 +78,25 @@ class TrafficTrackerOutcomesTest {
     }
 
     @Before
-    fun setup() {
-        initTestLogger()
-        whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
-        whenever(permissionChecker.checkPermissions(any())).thenAnswer { true }
-        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-        whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
-        whenever(permissionManager.isTelephonySupported()).thenReturn(true)
-        whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
+    fun setup() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            initTestLogger()
+            whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
+            whenever(permissionChecker.checkPermissions(any())).thenAnswer { true }
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
+            whenever(permissionManager.isTelephonySupported()).thenReturn(true)
+            whenever(permissionManager.getDefaultDataSubscriptionId()).thenReturn(1)
 
-        val mockSubInfo =
-            mock<SubscriptionInfo> {
-                on { subscriptionId } doReturn 1
-                on { simSlotIndex } doReturn 0
-            }
-        whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
+            val mockSubInfo =
+                mock<SubscriptionInfo> {
+                    on { subscriptionId } doReturn 1
+                    on { simSlotIndex } doReturn 0
+                }
+            whenever(permissionManager.getActiveSubscriptions()).thenReturn(listOf(mockSubInfo))
 
-        val mockUsage = mock<SimUsage> { on { lastResetDate } doReturn 1000L }
+            val mockUsage = mock<SimUsage> { on { lastResetDate } doReturn 1000L }
 
-        runBlocking {
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(flowOf(listOf(activeSim1)))
             whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0")))
             whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(flowOf(mockUsage))
@@ -99,10 +104,11 @@ class TrafficTrackerOutcomesTest {
             whenever(simUsageResetRepository.getLastTotalBytes("sim_0")).thenReturn(flowOf(1000L))
             whenever(baselineManager.getRetryCount("sim_0")).thenReturn(Result.success(null))
             whenever(baselineManager.getCurrentMobileBytes(1000L)).thenReturn(StatsResult.Success(2000L))
-            whenever(simChangeHandler.withSimChangeLock<String?>(any())).thenAnswer {
-                val block = it.arguments[0] as suspend () -> String?
-                runBlocking { block() }
-            }
+            doSuspendableAnswer { invocation ->
+                val block = invocation.getArgument<suspend () -> String?>(0)
+                block()
+            }.whenever(simChangeHandler).withSimChangeLock<String?>(any())
+
             whenever(simChangeHandler.handleSimChangeIfNeeded(any(), any())).thenReturn("sim_0")
             whenever(targetResolver.resolve(any())).thenReturn(
                 TrafficTargetResolver.TargetResult.Success(TargetInfo(slot = 0, dataSubId = 1)),
@@ -117,7 +123,6 @@ class TrafficTrackerOutcomesTest {
                 ),
             ).thenReturn(true)
         }
-    }
 
     private val activeSim1 =
         ActiveSimInfo(

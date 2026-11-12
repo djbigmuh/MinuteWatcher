@@ -8,10 +8,11 @@ import host.serv.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
+import org.mockito.Mockito
 import org.mockito.kotlin.any
+import org.mockito.kotlin.whenever
 
-internal fun createTrafficTrackerDependencies(
+internal suspend fun createTrafficTrackerDependencies(
     simIdentityRepository: SimIdentityRepository,
     simUsageRepository: SimUsageRepository,
     simUsageResetRepository: SimUsageResetRepository,
@@ -25,23 +26,18 @@ internal fun createTrafficTrackerDependencies(
     dataChangeNotifier: DataChangeNotifier,
     timeProvider: TimeProvider,
 ): TrafficTrackerDependencies {
-    runBlocking {
+    if (Mockito.mockingDetails(simUsageResetRepository).isMock) {
         try {
-            org.mockito.kotlin
-                .whenever(simUsageResetRepository.ensureTrackingWindowInitialized(any()))
-                .thenReturn(true)
-            org.mockito.kotlin
-                .whenever(simUsageResetRepository.setLastTotalBytes(any(), any(), any()))
-                .thenReturn(true)
-            org.mockito.kotlin
-                .whenever(
-                    simUsageResetRepository.incrementTrafficAndSetBaseline(
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                    ),
-                ).thenReturn(true)
+            whenever(simUsageResetRepository.ensureTrackingWindowInitialized(any())).thenReturn(true)
+            whenever(simUsageResetRepository.setLastTotalBytes(any(), any(), any())).thenReturn(true)
+            whenever(
+                simUsageResetRepository.incrementTrafficAndSetBaseline(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                ),
+            ).thenReturn(true)
         } catch (_: Exception) {
             // Not a mock or not stubbable
         }

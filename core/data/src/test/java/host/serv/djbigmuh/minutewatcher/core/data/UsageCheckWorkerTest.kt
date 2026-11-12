@@ -38,6 +38,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -63,27 +64,26 @@ class UsageCheckWorkerTest {
     private lateinit var context: Context
 
     @Before
-    fun setup() {
-        context = ApplicationProvider.getApplicationContext()
-        val workerParams: WorkerParameters = mock()
-        val deps =
-            UsageWorkerDependencies(
-                simNotificationFlagsRepository = simNotificationFlagsRepository,
-                appSettingsRepository = appSettingsRepository,
-                autoResetUseCase = autoResetUseCase,
-                trafficTracker = trafficTracker,
-                notificationHelper = notificationHelper,
-                dataChangeNotifier = dataChangeNotifier,
-                usageStateRepository = usageStateRepository,
-                usageUseCase = usageUseCase,
-                timeProvider = timeProvider,
-            )
-        worker = UsageCheckWorker(context, workerParams, deps, testDispatcher)
-        whenever(trafficTracker.status).thenReturn(MutableStateFlow(TrackingStatus.Active))
-        kotlinx.coroutines.runBlocking {
-            whenever(trafficTracker.updateTrafficUsage()).thenReturn(TrafficUpdateOutcome.Completed)
+    fun setup() =
+        runTest(testDispatcher) {
+            context = ApplicationProvider.getApplicationContext()
+            val workerParams: WorkerParameters = mock()
+            val deps =
+                UsageWorkerDependencies(
+                    simNotificationFlagsRepository = simNotificationFlagsRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    autoResetUseCase = autoResetUseCase,
+                    trafficTracker = trafficTracker,
+                    notificationHelper = notificationHelper,
+                    dataChangeNotifier = dataChangeNotifier,
+                    usageStateRepository = usageStateRepository,
+                    usageUseCase = usageUseCase,
+                    timeProvider = timeProvider,
+                )
+            worker = UsageCheckWorker(context, workerParams, deps, testDispatcher)
+            whenever(trafficTracker.status).thenReturn(MutableStateFlow(TrackingStatus.Active))
+            whenever(trafficTracker.updateTrafficUsage(any())).thenReturn(TrafficUpdateOutcome.Completed)
         }
-    }
 
     private suspend fun setupDefaultMocks() {
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)

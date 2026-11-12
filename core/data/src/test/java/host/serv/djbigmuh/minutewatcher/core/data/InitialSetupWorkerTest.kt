@@ -39,9 +39,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import host.serv.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -58,6 +60,10 @@ import java.io.IOException
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class InitialSetupWorkerTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    private val testDispatcher get() = mainDispatcherRule.testDispatcher
     private val callTracker: CallTracker = mock()
     private val trafficTracker: TrafficTracker = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
@@ -74,26 +80,26 @@ class InitialSetupWorkerTest {
     private lateinit var context: Context
 
     @Before
-    fun setup() {
-        context = ApplicationProvider.getApplicationContext<Application>()
-        val logger: Logger = mock()
-        AppLogger
-            .init(context, logger)
+    fun setup() =
+        runTest(testDispatcher) {
+            context = ApplicationProvider.getApplicationContext<Application>()
+            val logger: Logger = mock()
+            AppLogger
+                .init(context, logger)
 
-        whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
-        whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
-        whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
-        whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
+            whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
+            whenever(migrationFlagsRepository.isMigrationV1Completed()).thenReturn(flowOf(value = true))
+            whenever(migrationFlagsRepository.isMigrationIdentityStabilityCompleted()).thenReturn(flowOf(value = true))
+            whenever(simIdentityRepository.observeActiveSims()).thenReturn(MutableStateFlow(emptyList()))
 
-        val emptySnapshot =
-            GlobalSnapshot(
-                version = SchemaVersion(1, 0, 0),
-                timestamp = 0L,
-                simSnapshots = emptyList(),
-                capabilities = emptyList(),
-            )
+            val emptySnapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = 0L,
+                    simSnapshots = emptyList(),
+                    capabilities = emptyList(),
+                )
 
-        runBlocking {
             whenever(migrationFlagsRepository.setMigrationV1Completed(any())).thenReturn(Unit)
             whenever(migrationFlagsRepository.setMigrationV1Skipped(any())).thenReturn(Unit)
             whenever(migrationFlagsRepository.setMigrationIdentityStabilityCompleted(any())).thenReturn(Unit)
@@ -107,23 +113,22 @@ class InitialSetupWorkerTest {
             whenever(dataChangeNotifier.notifyDataChanged(any(), any())).thenReturn(true)
             whenever(usageUseCase.refreshOperatorInfo()).thenReturn(Unit)
             whenever(autoResetUseCase.performAutoReset(any())).thenReturn(true)
-        }
 
-        deps =
-            InitialSetupWorkerDependencies(
-                callTracker = callTracker,
-                trafficTracker = trafficTracker,
-                simIdentityRepository = simIdentityRepository,
-                migrationFlagsRepository = migrationFlagsRepository,
-                usageStateRepository = usageStateRepository,
-                autoResetUseCase = autoResetUseCase,
-                usageUseCase = usageUseCase,
-                migrationService = migrationService,
-                dataChangeNotifier = dataChangeNotifier,
-                workScheduler = workScheduler,
-                permissionManager = permissionManager,
-            )
-    }
+            deps =
+                InitialSetupWorkerDependencies(
+                    callTracker = callTracker,
+                    trafficTracker = trafficTracker,
+                    simIdentityRepository = simIdentityRepository,
+                    migrationFlagsRepository = migrationFlagsRepository,
+                    usageStateRepository = usageStateRepository,
+                    autoResetUseCase = autoResetUseCase,
+                    usageUseCase = usageUseCase,
+                    migrationService = migrationService,
+                    dataChangeNotifier = dataChangeNotifier,
+                    workScheduler = workScheduler,
+                    permissionManager = permissionManager,
+                )
+        }
 
     private fun createWorker(): InitialSetupWorker =
         TestListenableWorkerBuilder<InitialSetupWorker>(context)

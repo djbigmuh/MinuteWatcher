@@ -38,7 +38,7 @@ class CallTrackerStartTest : CallTrackerTestFixtures() {
     @Before
     override fun setup() {
         super.setup()
-        kotlinx.coroutines.runBlocking {
+        runTest(testDispatcher) {
             whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
         }
     }
