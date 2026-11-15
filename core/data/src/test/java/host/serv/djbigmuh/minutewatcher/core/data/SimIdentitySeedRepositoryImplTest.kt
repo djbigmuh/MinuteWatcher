@@ -185,7 +185,7 @@ class SimIdentitySeedRepositoryImplTest {
         }
 
     @Test
-    fun `regression - no phantom persistent seed on commit failure`() =
+    fun `sim identity seed repository prevents phantom persistent seed on commit failure`() =
         runTest {
             var updateDataCalls = 0
             val failingDataStore =
@@ -194,7 +194,6 @@ class SimIdentitySeedRepositoryImplTest {
 
                     override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
                         updateDataCalls++
-                        // Transform is called, but we throw exception on commit
                         transform(emptyPreferences())
                         throw IOException("Commit failed")
                     }
@@ -202,11 +201,8 @@ class SimIdentitySeedRepositoryImplTest {
 
             val repo = SimIdentitySeedRepositoryImpl(failingDataStore)
 
-            // Act: Try to get seed. It should retry 3 times and then fallback to Ephemeral.
-            // In the buggy code, it would have returned Persistent after the first attempt.
             val result = repo.getOrCreateSeedOrEphemeralFallback { "gen-seed" }
 
-            // Assert
             assertTrue(
                 "Result should be Ephemeral because all persistent attempts failed",
                 result is SeedResolutionResult.Ephemeral,
@@ -215,7 +211,7 @@ class SimIdentitySeedRepositoryImplTest {
         }
 
     @Test
-    fun `regression - existing seed is read without edit transaction`() =
+    fun `sim identity seed repository reads existing seed without edit transaction`() =
         runTest {
             val existingSeed = "existing-persistent-seed"
             val prefs = emptyPreferences().toMutablePreferences()

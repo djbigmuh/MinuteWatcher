@@ -109,7 +109,7 @@ class UsageWorkerSettingsResilienceTest {
     }
 
     @Test
-    fun `regression - Worker should NOT send notifications if settings load fails (fail-closed)`() =
+    fun `usage worker does not send notifications on settings load failure under fail closed policy`() =
         runTest {
             whenever(appSettingsRepository.getAppSettings()).thenReturn(
                 flow {

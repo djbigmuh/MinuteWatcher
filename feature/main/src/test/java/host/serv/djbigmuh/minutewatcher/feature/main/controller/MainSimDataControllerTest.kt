@@ -275,7 +275,7 @@ class MainSimDataControllerTest {
         }
 
     @Test
-    fun `regression - operation with hanging block completes with error after total timeout`() =
+    fun `main sim data controller completes operation with error on hanging block timeout`() =
         runTest {
             val hangingLimitsRepository =
                 object : SimLimitsRepository by mock() {

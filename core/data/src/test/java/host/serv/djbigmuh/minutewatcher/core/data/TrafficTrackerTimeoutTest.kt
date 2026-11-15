@@ -40,7 +40,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class TrafficTrackerRegressionTest {
+class TrafficTrackerTimeoutTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 

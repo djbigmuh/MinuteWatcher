@@ -346,7 +346,7 @@ class UpdateCoordinatorTest {
     }
 
     @Test
-    fun `regression - recover resets all internal states and sticky Error status`() {
+    fun `update coordinator recovery resets all internal states and sticky error status`() {
         runTest {
             val stateFlow = snapshotFlow.stateIn(backgroundScope, SharingStarted.Eagerly, createEmptySnapshot())
             whenever(usageStateRepository.observeSnapshot()).thenReturn(stateFlow)

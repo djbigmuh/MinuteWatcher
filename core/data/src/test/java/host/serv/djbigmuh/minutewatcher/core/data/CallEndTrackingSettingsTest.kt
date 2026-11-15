@@ -32,7 +32,7 @@ class CallEndTrackingSettingsTest {
     }
 
     @Test
-    fun `regression - CallEndHandler should NOT read session data if tracking is disabled`() =
+    fun `call end handler does not read session data when tracking is disabled`() =
         runTest {
             val handler =
                 CallEndHandler(

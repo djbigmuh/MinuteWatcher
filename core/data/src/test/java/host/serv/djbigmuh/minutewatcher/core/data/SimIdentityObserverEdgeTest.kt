@@ -26,7 +26,7 @@ import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SimIdentityObserverRegressionTest {
+class SimIdentityObserverEdgeTest {
     private val discovery: SimIdentityDiscovery = mock()
     private val seedRepository: SimIdentitySeedRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
@@ -55,7 +55,7 @@ class SimIdentityObserverRegressionTest {
         )
 
     @Test
-    fun `regression - Persistent seed from catch block should be Real, not Fallback`() =
+    fun `simIdentityObserver - persistent seed from catch block returns real not fallback`() =
         runTest {
             val persistentSeed = "persistent_seed"
             // 1. seedFlow throws exception
@@ -80,7 +80,7 @@ class SimIdentityObserverRegressionTest {
         }
 
     @Test
-    fun `regression - Ephemeral seed from catch block should be Fallback`() =
+    fun `simIdentityObserver - ephemeral seed from catch block returns fallback`() =
         runTest {
             val ephemeralSeed = "ephemeral_seed"
             whenever(seedRepository.seedFlow).thenReturn(flow { throw IllegalStateException("Source error") })

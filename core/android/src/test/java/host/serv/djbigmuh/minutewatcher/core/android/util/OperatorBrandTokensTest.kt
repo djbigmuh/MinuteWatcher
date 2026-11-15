@@ -80,7 +80,7 @@ class OperatorBrandTokensTest {
     }
 
     @Test
-    fun `operator brand resolution regression tests for restructured tokens`() {
+    fun `operator brand resolution works for restructured tokens`() {
         assertEquals("operator_masmovil", OperatorResolver.getOperatorBrandKey("MASMovil"))
         assertEquals("operator_masmovil", OperatorResolver.getOperatorBrandKey("MásMóvil"))
         assertEquals("operator_e_and", OperatorResolver.getOperatorBrandKey("e&"))

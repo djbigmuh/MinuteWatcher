@@ -192,20 +192,18 @@ class TrafficTrackerResilienceTest {
         }
 
     @Test
-    fun `regression - fresh timeout error is NOT suppressed`() =
+    fun `traffic tracker preserves fresh timeout error`() =
         runTest {
             val tracker = createTracker(this)
 
             val emptySimsFlow = MutableSharedFlow<List<ActiveSimInfo>>(replay = 1).apply { tryEmit(emptyList()) }
             timeProvider.setRealtime(1000L)
             whenever(simIdentityRepository.observeActiveSims()).thenReturn(emptySimsFlow)
-            tracker.updateTrafficUsage() // This will set lastSuccessElapsed to 1000
+            tracker.updateTrafficUsage()
             runCurrent()
             assertEquals(TrackingStatus.Idle, tracker.status.value)
 
-            // 2. New update starts at T=2000, fails with timeout
             timeProvider.setRealtime(2000L)
-            // Mocking timeout by making observeActiveSims never emit (or throw exception)
             whenever(simIdentityRepository.observeActiveSims()).thenAnswer {
                 throw TrafficUpdateTimeoutException(startElapsed = 2000L)
             }
@@ -213,13 +211,12 @@ class TrafficTrackerResilienceTest {
             tracker.updateTrafficUsage()
             runCurrent()
 
-            // Status should be Error(TIMEOUT) because it's a fresh error (2000 > 1000)
             val status = tracker.status.value as TrackingStatus.Error
             assertEquals(TrackingStatus.ErrorCode.TIMEOUT, status.code)
         }
 
     @Test
-    fun `regression - stale timeout error IS suppressed by recent success`() =
+    fun `traffic tracker suppresses stale timeout error on recent success`() =
         runTest {
             val tracker = createTracker(this)
 

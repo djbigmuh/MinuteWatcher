@@ -455,7 +455,7 @@ class OperatorResolverTest {
     }
 
     @Test
-    fun `ambiguous generic brand tokens resolution regression tests`() {
+    fun `operator resolver handles ambiguous generic brand tokens`() {
         val jsonCustom =
             """
             {

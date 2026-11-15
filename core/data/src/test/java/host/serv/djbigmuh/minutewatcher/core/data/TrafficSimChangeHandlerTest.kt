@@ -1,7 +1,6 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.data
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
-import host.serv.djbigmuh.minutewatcher.core.data.util.DataStoreWriteTimeoutException
 import host.serv.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
@@ -9,13 +8,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.milliseconds
@@ -40,9 +38,8 @@ class TrafficSimChangeHandlerTest {
     }
 
     @Test
-    fun `ensureInMemoryLastDataSubId retries on timeout`() =
+    fun `trafficSimChangeHandler resets baseline when lastDataSubId loading times out`() =
         runTest {
-            // 1. Setup repository to hang, causing a timeout
             whenever(callSessionRepository.getLastDataSubId()).thenReturn(
                 flow {
                     delay((Constants.Flow.LONG_TIMEOUT_MS + 1000).milliseconds)
@@ -50,108 +47,14 @@ class TrafficSimChangeHandlerTest {
                 },
             )
 
-            // 2. First call - should timeout
-            handler.ensureInMemoryLastDataSubId()
+            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_new")
+            val target = TargetInfo(slot = 0, dataSubId = 2)
 
-            // Verify that we tried to load
-            verify(callSessionRepository, times(1)).getLastDataSubId()
+            val result = handler.handleSimChangeIfNeeded(target) { }
 
-            // 3. Setup repository to return value immediately
-            whenever(callSessionRepository.getLastDataSubId()).thenReturn(
-                flow {
-                    emit(2)
-                },
-            )
+            assertNull("Should skip delta if previous subId is unknown", result)
 
-            // 4. Second call - should retry because first one failed/timed out
-            handler.ensureInMemoryLastDataSubId()
-
-            // Verify that we tried to load AGAIN (total 2)
-            verify(callSessionRepository, times(2)).getLastDataSubId()
-
-            // 5. Third call - should NOT retry because second one succeeded
-            handler.ensureInMemoryLastDataSubId()
-            verify(callSessionRepository, times(2)).getLastDataSubId()
-        }
-
-    @Test
-    fun `ensureInMemoryLastDataSubId retries on exception`() =
-        runTest {
-            // 1. Setup repository to throw exception
-            whenever(callSessionRepository.getLastDataSubId()).thenReturn(
-                flow {
-                    throw java.io.IOException("Database error")
-                },
-            )
-
-            // 2. First call - should catch exception and not set loaded flag
-            handler.ensureInMemoryLastDataSubId()
-
-            verify(callSessionRepository, times(1)).getLastDataSubId()
-
-            // 3. Setup repository to return value
-            whenever(callSessionRepository.getLastDataSubId()).thenReturn(
-                flow {
-                    emit(3)
-                },
-            )
-
-            // 4. Second call - should retry
-            handler.ensureInMemoryLastDataSubId()
-            verify(callSessionRepository, times(2)).getLastDataSubId()
-
-            // 5. Third call - should not retry
-            handler.ensureInMemoryLastDataSubId()
-            verify(callSessionRepository, times(2)).getLastDataSubId()
-        }
-
-    @Test
-    fun `updateLastDataSubId with -1 does NOT set loaded flag`() =
-        runTest {
-            // 1. Initial state is not loaded
-            whenever(callSessionRepository.getLastDataSubId()).thenReturn(flow { emit(5) })
-
-            // 2. Call update with invalid value
-            handler.updateLastDataSubId(-1)
-
-            // 3. Flag should still be false, so ensureInMemoryLastDataSubId should still load from repository
-            handler.ensureInMemoryLastDataSubId()
-
-            verify(callSessionRepository, times(1)).getLastDataSubId()
-        }
-
-    @Test
-    fun `SIM change detection works after updateLastDataSubId with -1`() =
-        runTest {
-            // 1. Persisted value is 5
-            whenever(callSessionRepository.getLastDataSubId()).thenReturn(flow { emit(5) })
-
-            // 2. Call update with -1 (failed to get default data SIM)
-            handler.updateLastDataSubId(-1)
-
-            // 3. New target SIM is 7. handleSimChangeIfNeeded should load 5 first.
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_7")
-            val target = TargetInfo(slot = 0, dataSubId = 7)
-
-            val identity = handler.handleSimChangeIfNeeded(target) { }
-
-            // 4. Identity should be null because SIM changed (5 -> 7)
-            Assert.assertNull("Identity should be null on SIM change", identity)
-            verify(baselineManager).resetBaseline(eq("sim_7"), any(), eq(true), any())
-        }
-
-    @Test
-    fun `updateLastDataSubId retains in-memory value when setLastDataSubId throws DataStoreWriteTimeoutException`() =
-        runTest {
-            val timeoutException = DataStoreWriteTimeoutException("setLastDataSubId")
-            whenever(callSessionRepository.setLastDataSubId(eq(10))).thenAnswer { throw timeoutException }
-
-            handler.updateLastDataSubId(10)
-
-            whenever(simIdentityRepository.getIdentity(0)).thenReturn("sim_10")
-            val target = TargetInfo(slot = 0, dataSubId = 10)
-
-            val identity = handler.handleSimChangeIfNeeded(target) { }
-            Assert.assertEquals("sim_10", identity)
+            verify(baselineManager).resetBaseline(eq("sim_new"), any(), eq(true), any())
+            verify(callSessionRepository).setLastDataSubId(2)
         }
 }

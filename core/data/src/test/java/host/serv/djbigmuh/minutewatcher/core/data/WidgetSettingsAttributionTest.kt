@@ -67,7 +67,7 @@ class WidgetSettingsAttributionTest {
     }
 
     @Test
-    fun `regression - SIM settings are attributed to identity only and do not leak on swap`() =
+    fun `widget settings attribute sim settings to identity without leak on swap`() =
         runTest {
             // 1. Setup SIM A in slot 0 and hide it
             val identityA = "icc_A"

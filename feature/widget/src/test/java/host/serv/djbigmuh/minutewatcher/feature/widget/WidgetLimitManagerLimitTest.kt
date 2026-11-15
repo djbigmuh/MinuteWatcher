@@ -20,7 +20,7 @@ import org.mockito.kotlin.whenever
 import java.util.concurrent.atomic.AtomicInteger
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WidgetLimitManagerRegressionTest {
+class WidgetLimitManagerLimitTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
@@ -37,7 +37,7 @@ class WidgetLimitManagerRegressionTest {
     }
 
     @Test
-    fun `regression - 10 consecutive updateAll in SIMPLIFIED mode results in exactly one PROBE attempt`() =
+    fun `widgetLimitManager - ten consecutive updateAll in simplified mode results in exactly one probe attempt`() =
         runTest {
             val settings = AppSettings(widgetLimitExceeded = true)
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(settings))
@@ -85,7 +85,7 @@ class WidgetLimitManagerRegressionTest {
         }
 
     @Test
-    fun `regression - counter does NOT increment multiple times during retries of a single update`() =
+    fun `widgetLimitManager - counter does not increment multiple times during retries of a single update`() =
         runTest {
             val settings = AppSettings(widgetLimitExceeded = true)
             whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(settings))

@@ -138,7 +138,7 @@ class UpdateCoordinatorResilienceTest {
         }
 
     @Test
-    fun `regression - recover resets state and starts new observation`() =
+    fun `update coordinator recovery resets state and starts new observation`() =
         runTest {
             val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 1000L, emptyList(), emptyList())
             val snapshotFlow = MutableStateFlow(snapshot)

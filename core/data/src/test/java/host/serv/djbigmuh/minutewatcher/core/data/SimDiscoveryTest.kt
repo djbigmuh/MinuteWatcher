@@ -16,7 +16,7 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class SimDiscoveryRegressionTest {
+class SimDiscoveryTest {
     private val context: Context = mock()
     private val subscriptionManager: SubscriptionManager = mock()
     private val permissionManager: PermissionManager = mock()
