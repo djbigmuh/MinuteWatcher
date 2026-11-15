@@ -29,6 +29,9 @@ object AppLocaleContexts {
      *
      * If no per-app locale is set, returns the original [context].
      *
+     * Note: AppBundleLocaleChanges is suppressed because bundle language split is disabled in consuming :app
+     * module, but library module isolation prevents Android Lint from inspecting app bundle DSL.
+     *
      * @param context The base context.
      * @return Localized [Context] if app locale is set, otherwise [context].
      */
