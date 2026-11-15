@@ -24,6 +24,5 @@ interface MockSimProvider {
      *                          no simulation, whereas a positive value is clamped to the maximum
      *                          supported slot count.
      */
-    @Suppress("SameReturnValue", "unused")
     fun getMockSims(benchmarkSimCount: Int): List<ActiveSimInfo>?
 }

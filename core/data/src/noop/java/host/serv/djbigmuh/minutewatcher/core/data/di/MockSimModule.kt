@@ -8,8 +8,7 @@ import host.serv.djbigmuh.minutewatcher.core.data.MockSimProvider
 import host.serv.djbigmuh.minutewatcher.core.data.NoOpMockSimProvider
 import javax.inject.Singleton
 
-// Hilt entry point of the noop build variant: instantiated via dependency injection,
-// never referenced directly from code.
+// Hilt DI module: instantiated via KSP code generation and reflection at runtime by Hilt framework.
 @Suppress("unused")
 @Module
 @InstallIn(SingletonComponent::class)
