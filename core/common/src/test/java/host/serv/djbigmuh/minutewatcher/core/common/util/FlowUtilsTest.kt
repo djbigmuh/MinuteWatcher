@@ -1,7 +1,6 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -15,7 +14,6 @@ import org.junit.Test
 import org.mockito.kotlin.mock
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class FlowUtilsTest {
     private class RecordingLogger : Logger {
         val warnings = mutableListOf<String>()

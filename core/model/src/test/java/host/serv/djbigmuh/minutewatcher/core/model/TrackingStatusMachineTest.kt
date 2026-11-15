@@ -1,11 +1,9 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.model
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class TrackingStatusMachineTest {
     @Test
     fun `merge should return new status if force is true`() {

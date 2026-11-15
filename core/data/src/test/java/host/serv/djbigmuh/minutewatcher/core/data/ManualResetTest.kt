@@ -7,7 +7,6 @@ import host.serv.djbigmuh.minutewatcher.core.domain.SimLimitsRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageAdjustmentRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -15,7 +14,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ManualResetTest {
     private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()

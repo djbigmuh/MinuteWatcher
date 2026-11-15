@@ -3,7 +3,6 @@
 import host.serv.djbigmuh.minutewatcher.core.domain.TrackingStatusProvider
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingKey
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -13,7 +12,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class TrackingStatusRepositoryImplTest {
     @Test
     fun `recoverTracking calls recover on correct provider`() =

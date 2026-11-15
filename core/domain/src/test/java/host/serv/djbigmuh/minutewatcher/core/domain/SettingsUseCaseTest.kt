@@ -2,7 +2,6 @@
 
 import host.serv.djbigmuh.minutewatcher.core.model.AppSettings
 import host.serv.djbigmuh.minutewatcher.core.model.AppTheme
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -14,7 +13,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SettingsUseCaseTest {
     private val appSettingsRepository: AppSettingsRepository = mock()
     private lateinit var settingsUseCase: SettingsUseCase
