@@ -538,11 +538,7 @@ class IdentityMigrationService
                     )
 
                 is Set<*> -> {
-                    // DataStore Preferences only stores string sets (stringSetPreferencesKey); a Set read
-                    // from the preferences map always contains String elements, so this cast cannot fail
-                    // at runtime. Suppression scope is the single cast expression.
-                    @Suppress("UNCHECKED_CAST")
-                    val stringSet = value as Set<String>
+                    val stringSet = value.filterIsInstance<String>().toSet()
                     migrateOrBackup(
                         stringSetPreferencesKey(newKeyName),
                         stringSetPreferencesKey(conflictKeyName),

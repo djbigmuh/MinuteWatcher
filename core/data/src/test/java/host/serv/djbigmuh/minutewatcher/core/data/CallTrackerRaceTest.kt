@@ -130,7 +130,6 @@ class CallTrackerRaceTest {
                     reader = any(),
                 ),
             ).doSuspendableAnswer { invocation ->
-                @Suppress("UNCHECKED_CAST") // Test helper casting
                 val reader = invocation.getArgument<() -> Flow<Any>>(4)
                 try {
                     Result.success(reader().first())

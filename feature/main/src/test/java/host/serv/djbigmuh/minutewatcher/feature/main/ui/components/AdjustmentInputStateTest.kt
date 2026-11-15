@@ -121,8 +121,7 @@ class AdjustmentInputStateTest {
         original.text = TextFieldValue("250", selection = TextRange(3))
         original.errorText = "Invalid input"
 
-        @Suppress("UNCHECKED_CAST") // Test Saver casting
-        val saver = AdjustmentInputState.saver(defaultLocale) as Saver<AdjustmentInputState, Any>
+        val saver: Saver<AdjustmentInputState, Any> = AdjustmentInputState.saver(defaultLocale)
         val saved = with(saver) { dummySaverScope.save(original) }
         assertNotNull(saved)
 
@@ -139,8 +138,7 @@ class AdjustmentInputStateTest {
         original.text = TextFieldValue("2.5")
         original.errorText = null
 
-        @Suppress("UNCHECKED_CAST") // Test Saver casting
-        val saver = AdjustmentInputState.saver(defaultLocale) as Saver<AdjustmentInputState, Any>
+        val saver: Saver<AdjustmentInputState, Any> = AdjustmentInputState.saver(defaultLocale)
         val saved = with(saver) { dummySaverScope.save(original) }
         assertNotNull(saved)
 

@@ -78,7 +78,7 @@ internal class AdjustmentInputState(
     }
 
     companion object {
-        fun saver(locale: Locale): Saver<AdjustmentInputState, *> =
+        fun saver(locale: Locale): Saver<AdjustmentInputState, Any> =
             listSaver(
                 save = {
                     listOf(
