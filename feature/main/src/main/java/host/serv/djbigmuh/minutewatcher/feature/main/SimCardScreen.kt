@@ -162,8 +162,12 @@ internal fun SimCardErrorHost(
     onDismissOperationError: () -> Unit,
 ) {
     lastOperationError?.let { error ->
-        @Suppress("SpreadOperator") // Localization args
-        val message = stringResource(error.messageRes, *error.args.toTypedArray())
+        val message =
+            when {
+                error.args.isEmpty() -> stringResource(error.messageRes)
+                error.args.size == 1 -> stringResource(error.messageRes, error.args[0])
+                else -> stringResource(error.messageRes, error.args[0], error.args[1])
+            }
         LaunchedEffect(error) {
             snackbarHostState.showSnackbar(
                 message = message,
