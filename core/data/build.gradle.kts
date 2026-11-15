@@ -7,6 +7,11 @@ plugins {
 android {
     namespace = "host.serv.djbigmuh.minutewatcher.core.data"
 
+    @Suppress("UnstableApiUsage")
+    testFixtures {
+        enable = true
+    }
+
     buildFeatures {
         buildConfig = true
     }
@@ -63,4 +68,15 @@ dependencies {
     testImplementation(libs.androidxWorkTesting)
     testImplementation(libs.androidxTestCoreKtx)
     testImplementation(libs.androidxAppcompat)
+
+    testFixturesApi(libs.junit)
+    testFixturesApi(libs.mockingCore)
+    testFixturesApi(libs.mockingKotlin)
+    testFixturesApi(libs.kotlinxCoroutinesTesting)
+    testFixturesApi(libs.androidxDatastorePreferences)
+    testFixturesApi(libs.androidxCoreKtx)
+    testFixturesApi(libs.androidxWorkRuntimeKtx)
+    testFixturesApi(project(":core:common"))
+    testFixturesApi(project(":core:domain"))
+    testFixturesImplementation(testFixtures(project(":core:common")))
 }
