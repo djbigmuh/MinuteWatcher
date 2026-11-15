@@ -70,9 +70,12 @@ class OperatorIconDocumentationConsistencyTest {
     }
 
     private fun getProjectRootDir(): File {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (dir.parentFile != null && !File(dir, "settings.gradle.kts").exists()) {
-            dir = dir.parentFile!!
+        val rootPath =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: error("System property 'minutewatcher.projectRoot' is not set")
+        val dir = File(rootPath)
+        if (!dir.exists()) {
+            error("Project root does not exist at $rootPath")
         }
         return dir
     }

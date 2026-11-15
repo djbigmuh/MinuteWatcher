@@ -51,6 +51,7 @@ dependencies {
 
     implementation(libs.daggerHiltAndroid)
     ksp(libs.daggerHiltCompiler)
+    kspTestFixtures(libs.daggerHiltCompiler)
     implementation(libs.androidxHiltWorker)
     ksp(libs.androidxHiltCompilerWorker)
 
@@ -78,5 +79,7 @@ dependencies {
     testFixturesApi(libs.androidxWorkRuntimeKtx)
     testFixturesApi(project(":core:common"))
     testFixturesApi(project(":core:domain"))
+    testFixturesApi(project(":core:android"))
+    testFixturesApi(project(":core:model"))
     testFixturesImplementation(testFixtures(project(":core:common")))
 }

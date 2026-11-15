@@ -6,9 +6,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.TimeProvider
+import host.serv.djbigmuh.minutewatcher.core.data.CallTracker
 import host.serv.djbigmuh.minutewatcher.core.data.IdentityMigrationService
 import host.serv.djbigmuh.minutewatcher.core.data.InitialSetupWorkerDependencies
 import host.serv.djbigmuh.minutewatcher.core.data.MockSimProvider
+import host.serv.djbigmuh.minutewatcher.core.data.NotificationHelper
 import host.serv.djbigmuh.minutewatcher.core.data.SimDiscoveryDependencies
 import host.serv.djbigmuh.minutewatcher.core.data.SimIdentityRepositoryImpl
 import host.serv.djbigmuh.minutewatcher.core.data.SimIdentityRepositoryTestHelper
@@ -17,14 +19,15 @@ import host.serv.djbigmuh.minutewatcher.core.data.TrafficDeltaCalculator
 import host.serv.djbigmuh.minutewatcher.core.data.TrafficPermissionChecker
 import host.serv.djbigmuh.minutewatcher.core.data.TrafficSimChangeHandler
 import host.serv.djbigmuh.minutewatcher.core.data.TrafficTargetResolver
+import host.serv.djbigmuh.minutewatcher.core.data.TrafficTracker
 import host.serv.djbigmuh.minutewatcher.core.data.TrafficTrackerDependencies
 import host.serv.djbigmuh.minutewatcher.core.data.UsageRepositoryDependencies
 import host.serv.djbigmuh.minutewatcher.core.data.UsageWorkerDependencies
+import host.serv.djbigmuh.minutewatcher.core.data.WorkScheduler
 import host.serv.djbigmuh.minutewatcher.core.data.semantic.SemanticCapabilities
 import host.serv.djbigmuh.minutewatcher.core.data.semantic.SemanticVersion
 import host.serv.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.AutoResetUseCase
-import host.serv.djbigmuh.minutewatcher.core.domain.CallTracker
 import host.serv.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import host.serv.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier
 import host.serv.djbigmuh.minutewatcher.core.domain.MigrationFlagsRepository
@@ -60,8 +63,8 @@ fun createSimDiscoveryDependencies(
 fun createUsageRepositoryDependencies(
     simIdentityRepository: SimIdentityRepository = FakeSimIdentityRepository(),
     simUsageRepository: SimUsageRepository = FakeSimUsageRepository(),
-    semanticCapabilities: SemanticCapabilities = SemanticCapabilities(enabled = true),
-    semanticVersion: SemanticVersion = SemanticVersion(1),
+    semanticCapabilities: SemanticCapabilities = mock(),
+    semanticVersion: SemanticVersion = SemanticVersion(),
     dataRefreshNotifier: DataRefreshNotifier = FakeDataRefreshNotifier(),
     timeProvider: TimeProvider = createFixedTimeProvider(),
 ): UsageRepositoryDependencies =
@@ -107,7 +110,7 @@ fun createTrafficTrackerDependencies(
 @Suppress("LongParameterList")
 fun createInitialSetupWorkerDependencies(
     callTracker: CallTracker = mock(),
-    trafficTracker: host.serv.djbigmuh.minutewatcher.core.data.TrafficTracker = mock(),
+    trafficTracker: TrafficTracker = mock(),
     simIdentityRepository: SimIdentityRepository = FakeSimIdentityRepository(),
     migrationFlagsRepository: MigrationFlagsRepository = FakeMigrationFlagsRepository(),
     usageStateRepository: UsageStateRepository = FakeUsageStateRepository(),
@@ -115,7 +118,7 @@ fun createInitialSetupWorkerDependencies(
     usageUseCase: UsageUseCase = mock(),
     migrationService: IdentityMigrationService = mock(),
     dataChangeNotifier: DataChangeNotifier = FakeDataChangeNotifier(),
-    workScheduler: host.serv.djbigmuh.minutewatcher.core.data.WorkScheduler = mock(),
+    workScheduler: WorkScheduler = mock(),
     permissionManager: PermissionManager = mock(),
 ): InitialSetupWorkerDependencies =
     InitialSetupWorkerDependencies(
@@ -137,8 +140,8 @@ fun createUsageWorkerDependencies(
     simNotificationFlagsRepository: SimNotificationFlagsRepository = FakeSimNotificationFlagsRepository(),
     appSettingsRepository: AppSettingsRepository = FakeAppSettingsRepository(),
     autoResetUseCase: AutoResetUseCase = mock(),
-    trafficTracker: host.serv.djbigmuh.minutewatcher.core.data.TrafficTracker = mock(),
-    notificationHelper: host.serv.djbigmuh.minutewatcher.core.data.NotificationHelper = mock(),
+    trafficTracker: TrafficTracker = mock(),
+    notificationHelper: NotificationHelper = mock(),
     dataChangeNotifier: DataChangeNotifier = FakeDataChangeNotifier(),
     usageStateRepository: UsageStateRepository = FakeUsageStateRepository(),
     usageUseCase: UsageUseCase = mock(),
@@ -162,9 +165,10 @@ fun createTestSimIdentityRepository(
     dataStore: DataStore<Preferences> = createTestDataStore(),
     seedRepository: SimIdentitySeedRepository = FakeSimIdentitySeedRepository(),
     appSettingsRepository: AppSettingsRepository = FakeAppSettingsRepository(),
-    migrationService: IdentityMigrationService = mock {
-        on { migrateLegacyData(any()) } doReturn IdentityMigrationService.MigrationOutcome()
-    },
+    migrationService: IdentityMigrationService =
+        mock {
+            on { migrateLegacyData(any()) } doReturn IdentityMigrationService.MigrationOutcome()
+        },
     mockSimProvider: MockSimProvider = FakeMockSimProvider(),
     timeProvider: TimeProvider = createFixedTimeProvider(),
     scope: CoroutineScope = TestScope(),

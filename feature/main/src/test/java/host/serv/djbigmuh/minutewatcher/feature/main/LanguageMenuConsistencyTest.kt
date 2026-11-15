@@ -136,13 +136,11 @@ class LanguageMenuConsistencyTest {
     }
 
     private fun findLocalesConfigFile(relativePath: String): File {
-        var current: File? = File(System.getProperty("user.dir") ?: ".").canonicalFile
-        while (current != null) {
-            val file = File(current, relativePath)
-            if (file.exists()) return file
-            current = current.parentFile
-        }
-        val dir = System.getProperty("user.dir")
-        error("Could not locate $relativePath from $dir")
+        val rootPath =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: error("System property 'minutewatcher.projectRoot' is not set")
+        val file = File(rootPath, relativePath)
+        if (file.exists()) return file
+        error("Could not locate $relativePath from project root $rootPath")
     }
 }

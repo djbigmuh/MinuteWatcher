@@ -10,9 +10,8 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.util.UUID
 
-fun createTestDataStore(
-    initial: Preferences = emptyPreferences(),
-): DataStore<Preferences> = InMemoryPreferencesDataStore(initial)
+fun createTestDataStore(initial: Preferences = emptyPreferences()): DataStore<Preferences> =
+    InMemoryPreferencesDataStore(initial)
 
 fun createTestFilePreferencesDataStore(
     tmpFolder: TemporaryFolder,

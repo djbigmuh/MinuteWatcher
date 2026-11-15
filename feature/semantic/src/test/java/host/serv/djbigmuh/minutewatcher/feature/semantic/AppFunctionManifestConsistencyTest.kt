@@ -154,25 +154,24 @@ class AppFunctionManifestConsistencyTest {
     }
 
     private fun findFile(vararg paths: String): File {
-        var dir: File? = File(System.getProperty("user.dir") ?: ".")
-        while (dir != null) {
-            for (path in paths) {
-                val f = File(dir, path)
-                if (f.exists()) return f
-            }
-            dir = dir.parentFile
+        val rootPath =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: error("System property 'minutewatcher.projectRoot' is not set")
+        val dir = File(rootPath)
+        for (path in paths) {
+            val f = File(dir, path)
+            if (f.exists()) return f
         }
-        error("Could not find any of ${paths.joinToString()}")
+        error("Could not find any of ${paths.joinToString()} from project root $rootPath")
     }
 
     private fun findResDir(): File {
-        var dir: File? = File(System.getProperty("user.dir") ?: ".")
-        while (dir != null) {
-            val candidate = File(dir, "core/resources/src/main/res")
-            if (candidate.exists() && candidate.isDirectory) return candidate
-            dir = dir.parentFile
-        }
-        error("Could not locate core/resources/src/main/res")
+        val rootPath =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: error("System property 'minutewatcher.projectRoot' is not set")
+        val candidate = File(rootPath, "core/resources/src/main/res")
+        if (candidate.exists() && candidate.isDirectory) return candidate
+        error("Could not locate core/resources/src/main/res at $candidate")
     }
 
     private fun parseLocalesConfig(file: File): Set<String> {

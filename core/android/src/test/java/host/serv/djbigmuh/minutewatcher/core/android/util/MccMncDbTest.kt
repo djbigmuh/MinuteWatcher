@@ -431,19 +431,10 @@ class MccMncDbTest {
     }
 
     private fun findSourcesFile(): File? {
-        val coreResDirProp = System.getProperty("minutewatcher.coreResourcesResDir")
-        val baseFile =
-            if (coreResDirProp != null) {
-                File(coreResDirProp)
-            } else {
-                File(System.getProperty("user.dir") ?: ".")
-            }
-        var dir: File? = baseFile
-        while (dir != null && !File(dir, "settings.gradle.kts").exists()) {
-            dir = dir.parentFile
-        }
-        if (dir == null) return null
-        val candidate = File(dir, "docs/operator_plmn_sources.md")
+        val rootPath =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: error("System property 'minutewatcher.projectRoot' is not set")
+        val candidate = File(rootPath, "docs/operator_plmn_sources.md")
         return if (candidate.exists()) candidate else null
     }
 

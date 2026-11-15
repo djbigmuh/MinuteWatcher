@@ -7,12 +7,14 @@ import java.io.File
 
 class MarkdownTableFormattingTest {
     private fun getProjectRootDir(): File {
-        val prop = System.getProperty("minutewatcher.coreResourcesResDir")
-        var dir: File? = if (prop != null) File(prop) else File(System.getProperty("user.dir") ?: ".")
-        while (dir != null && !File(dir, "settings.gradle.kts").exists()) {
-            dir = dir.parentFile
+        val rootPath =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: error("System property 'minutewatcher.projectRoot' is not set")
+        val dir = File(rootPath)
+        if (!dir.exists()) {
+            error("Project root does not exist at $rootPath")
         }
-        return dir ?: File(".")
+        return dir
     }
 
     @Test

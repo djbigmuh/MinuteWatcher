@@ -96,9 +96,9 @@ class SimIdentityRepositoryRaceTest {
         runTest {
             val storedSeed = MutableSharedFlow<String>(replay = 0)
             val identityRepo = createRepositoryForSeedFlowTest("test_sim_settings_1.preferences_pb", storedSeed)
-            val seedFlow = getInternalSeedFlow(identityRepo)
+            val seedFlow = identityRepo.observer.seedFlow
 
-            val emissions = mutableListOf<Any>()
+            val emissions = mutableListOf<SeedResult>()
             val job = launch { seedFlow.collect { emissions.add(it) } }
 
             // 1. Initial state: wait for extended timeout (2 * 10s = 20s).
@@ -107,7 +107,7 @@ class SimIdentityRepositoryRaceTest {
 
             assertTrue(
                 "Emissions should contain Fallback, found: $emissions",
-                emissions.any { it.toString().contains("Fallback") },
+                emissions.any { it is SeedResult.Fallback },
             )
             // It might have more than 1 emission if Fallback is retried, but distinctUntilChanged should keep it to 1
             // until Real arrives.
@@ -120,8 +120,8 @@ class SimIdentityRepositoryRaceTest {
             testScheduler.runCurrent()
 
             assertTrue(
-                "Emissions should contain Real(real_seed), found: $emissions",
-                emissions.any { it.toString().contains("real_seed") },
+                "Emissions should contain Real, found: $emissions",
+                emissions.any { it is SeedResult.Real },
             )
             assertEquals("Should have added exactly 1 new emission (Real)", sizeBeforeReal + 1, emissions.size)
 
@@ -133,9 +133,9 @@ class SimIdentityRepositoryRaceTest {
         runTest {
             val storedSeed = MutableSharedFlow<String>(replay = 0)
             val identityRepo = createRepositoryForSeedFlowTest("test_sim_settings_2.preferences_pb", storedSeed)
-            val seedFlow = getInternalSeedFlow(identityRepo)
+            val seedFlow = identityRepo.observer.seedFlow
 
-            val emissions = mutableListOf<Any>()
+            val emissions = mutableListOf<SeedResult>()
             val job = launch { seedFlow.collect { emissions.add(it) } }
 
             // 1. Emit real seed at T=5s (well before 10s timeout)
@@ -149,14 +149,14 @@ class SimIdentityRepositoryRaceTest {
             assertTrue("Should have emitted Real seed", emissions.isNotEmpty())
             assertTrue(
                 "All emissions must be Real, found: $emissions",
-                emissions.all { it.toString().contains("real_seed") },
+                emissions.all { it is SeedResult.Real },
             )
 
             // 2. Wait past total timeout to ensure no Fallback is emitted late
             testScheduler.advanceTimeBy(20.seconds)
             testScheduler.runCurrent()
 
-            assertTrue("Should not emit Fallback after Real", emissions.all { !it.toString().contains("Fallback") })
+            assertTrue("Should not emit Fallback after Real", emissions.all { it !is SeedResult.Fallback })
             job.cancel()
         }
 
@@ -199,11 +199,6 @@ class SimIdentityRepositoryRaceTest {
             scope = backgroundScope,
         )
     }
-
-    // Suppressing UNCHECKED_CAST for unchecked flow type casting in test.
-    @Suppress("UNCHECKED_CAST")
-    private fun getInternalSeedFlow(repository: SimIdentityRepositoryImpl): Flow<Any> =
-        repository.observer.seedFlow as Flow<Any>
 
     @Test
     fun `concurrent getSimIdentity calls are serialized by mutex`() =

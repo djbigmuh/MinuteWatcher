@@ -16,14 +16,14 @@ import javax.xml.parsers.DocumentBuilderFactory
 @Config(application = MinuteWatcherTestApp::class)
 class NotificationIconConsistencyTest {
     private fun findProjectRoot(): File {
-        var dir: File? = File(System.getProperty("user.dir") ?: ".")
-        while (dir != null) {
-            if (File(dir, "settings.gradle.kts").exists()) {
-                return dir
-            }
-            dir = dir.parentFile
+        val rootPath =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: error("System property 'minutewatcher.projectRoot' is not set")
+        val dir = File(rootPath)
+        if (!dir.exists()) {
+            error("Project root does not exist at $rootPath")
         }
-        return File(System.getProperty("user.dir") ?: ".")
+        return dir
     }
 
     @Test

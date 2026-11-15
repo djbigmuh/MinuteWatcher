@@ -36,6 +36,12 @@ dependencies {
     testImplementation(libs.androidxTestCoreKtx)
 
     testFixturesApi(libs.androidxDatastorePreferences)
+    testFixturesApi(libs.androidxCoreKtx)
+    testFixturesApi(libs.androidxAppcompat)
+    testFixturesApi(libs.androidxWorkTesting)
+    testFixturesApi(libs.androidxWorkRuntimeKtx)
+    testFixturesApi(libs.androidxLifecycleProcess)
+    testFixturesApi(libs.androidxLifecycleRuntimeKtx)
     testFixturesApi(libs.mockingKotlin)
     testFixturesApi(libs.kotlinxCoroutinesTesting)
     testFixturesApi(libs.junit)

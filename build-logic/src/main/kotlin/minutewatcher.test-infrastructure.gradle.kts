@@ -4,6 +4,7 @@ tasks.withType<Test>().configureEach {
 
     // Centralized Robolectric configuration
     systemProperty("robolectric.graphicsMode", "NATIVE")
+    systemProperty("minutewatcher.projectRoot", rootProject.layout.projectDirectory.asFile.absolutePath)
     systemProperty(
         "minutewatcher.coreResourcesResDir",
         rootProject.layout.projectDirectory.dir("core/resources/src/main/res").asFile.absolutePath,

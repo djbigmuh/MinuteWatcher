@@ -3,6 +3,7 @@
 import android.content.Context
 import android.telephony.SubscriptionManager
 import host.serv.djbigmuh.minutewatcher.core.common.util.PermissionManager
+import host.serv.djbigmuh.minutewatcher.core.data.testing.createSimDiscoveryDependencies
 import host.serv.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -44,7 +45,7 @@ class SimDiscoveryListenerTest {
         whenever(permissionStateNotifier.changes).thenReturn(permissionChangesFlow)
 
         val deps =
-            SimDiscoveryDependencies(
+            createSimDiscoveryDependencies(
                 context = context,
                 subscriptionManager = subscriptionManager,
                 permissionManager = permissionManager,

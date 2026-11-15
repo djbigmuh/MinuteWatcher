@@ -135,14 +135,12 @@ class UrduLocalizationTest {
     }
 
     private fun findResDir(): File {
-        var dir: File? = File(System.getProperty("user.dir") ?: ".")
-        while (dir != null) {
-            val candidate = File(dir, "core/resources/src/main/res")
-            if (candidate.exists() && candidate.isDirectory) return candidate
-            val candidate2 = File(dir, "src/main/res")
-            if (candidate2.exists() && candidate2.isDirectory && dir.name == "resources") return candidate2
-            dir = dir.parentFile
-        }
-        error("Could not find core/resources/src/main/res directory")
+        val rootPath =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: error("System property 'minutewatcher.projectRoot' is not set")
+        val rootDir = File(rootPath)
+        val candidate = File(rootDir, "core/resources/src/main/res")
+        assertTrue("core/resources/src/main/res must exist at $candidate", candidate.exists() && candidate.isDirectory)
+        return candidate
     }
 }

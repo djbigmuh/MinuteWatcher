@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
@@ -208,7 +209,11 @@ class PinWidgetReceiverTest {
                     fun callResolve(c: Context): String = resolveSuccessMessage(c)
                 }
             val message = receiver.callResolve(context)
-            assertEquals("Widget zum Startbildschirm hinzugefügt", message)
+            val config = Configuration(context.resources.configuration)
+            config.setLocale(germanLocale)
+            val localizedContext = context.createConfigurationContext(config)
+            val expected = localizedContext.getString(R.string.widget_added_success)
+            assertEquals(expected, message)
         } finally {
             setAppLocale(LocaleListCompat.getEmptyLocaleList())
         }
