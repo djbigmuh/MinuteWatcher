@@ -97,8 +97,10 @@ style:
     active: true
   MagicNumber:
     active: true
-    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    ignoreNumbers: ['-1', '0', '1', '2']
     ignorePropertyDeclaration: true
+    ignoreLocalVariableDeclaration: true
+    ignoreNamedArgument: true
     ignoreAnnotated:
       - 'androidx.compose.runtime.Composable'
       - 'Composable'

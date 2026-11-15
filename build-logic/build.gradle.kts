@@ -1,5 +1,10 @@
+import dev.detekt.gradle.extensions.DetektExtension
+import org.jlleitschuh.gradle.ktlint.KtlintExtension
+
 plugins {
     `kotlin-dsl`
+    id("dev.detekt") version "2.0.0-alpha.6"
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 }
 
 group = "host.serv.djbigmuh.minutewatcher.buildlogic"
@@ -13,4 +18,14 @@ dependencies {
     compileOnly(libs.findLibrary("kotlin-gradlePlugin").get())
     compileOnly(libs.findLibrary("ktlint-gradlePlugin").get())
     compileOnly(libs.findLibrary("detekt-gradlePlugin").get())
+}
+
+extensions.configure<DetektExtension>("detekt") {
+    config.setFrom(files("${rootDir}/../config/detekt/detekt.yml"))
+    buildUponDefaultConfig.set(true)
+    allRules.set(true)
+}
+
+configure<KtlintExtension> {
+    ignoreFailures.set(false)
 }
