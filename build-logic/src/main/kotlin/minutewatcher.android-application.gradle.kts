@@ -23,6 +23,14 @@ extensions.configure<ApplicationExtension> {
         targetCompatibility = JavaVersion.toVersion(SdkVersions.JAVA_TOOLCHAIN_VERSION)
     }
 
+    // Disabling language splits is required for app language selection support on API 26-32.
+    @Suppress("UnstableApiUsage")
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
     testOptions {
         unitTests {
             isIncludeAndroidResources = true

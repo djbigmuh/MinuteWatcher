@@ -22,6 +22,12 @@ extensions.configure<LibraryExtension> {
         targetCompatibility = JavaVersion.toVersion(SdkVersions.JAVA_TOOLCHAIN_VERSION)
     }
 
+    // Centralized testFixtures configuration for Android library modules.
+    @Suppress("UnstableApiUsage")
+    testFixtures {
+        enable = true
+    }
+
     testOptions {
         unitTests {
             isIncludeAndroidResources = true

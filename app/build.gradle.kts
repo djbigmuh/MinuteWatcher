@@ -81,16 +81,6 @@ configure<ApplicationExtension> {
         buildConfig = true
     }
 
-    // This Android Gradle Plugin DSL block manages app bundle configurations.
-    // Disabling language splits is required for app language selection support on API 26-32.
-    // Suppression is intentional and documented.
-    @Suppress("UnstableApiUsage")
-    bundle {
-        language {
-            enableSplit = false
-        }
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

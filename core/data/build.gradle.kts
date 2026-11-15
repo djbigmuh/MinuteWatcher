@@ -7,11 +7,6 @@ plugins {
 android {
     namespace = "host.serv.djbigmuh.minutewatcher.core.data"
 
-    @Suppress("UnstableApiUsage")
-    testFixtures {
-        enable = true
-    }
-
     buildFeatures {
         buildConfig = true
     }

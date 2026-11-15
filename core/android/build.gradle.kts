@@ -8,13 +8,6 @@ plugins {
 android {
     namespace = "host.serv.djbigmuh.minutewatcher.core.android"
 
-    // AGP's testFixtures DSL is @Incubating but is the only supported way to enable
-    // test fixtures in Android library modules. Suppression is intentional and documented.
-    @Suppress("UnstableApiUsage")
-    testFixtures {
-        enable = true
-    }
-
     buildFeatures {
         compose = true
     }
