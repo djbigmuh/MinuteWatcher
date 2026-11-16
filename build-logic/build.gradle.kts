@@ -3,8 +3,8 @@ import org.jlleitschuh.gradle.ktlint.KtlintExtension
 
 plugins {
     `kotlin-dsl`
-    id("dev.detekt") version "2.0.0-alpha.6"
-    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.ktlint)
 }
 
 group = "host.serv.djbigmuh.minutewatcher.buildlogic"
