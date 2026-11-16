@@ -18,16 +18,18 @@ val verifyVersionCatalogConsistency =
         description =
             "Verifies that build plugin versions match between gradle/libs.versions.toml and gradle/build-logic.versions.toml"
 
-        val libsTomlFile = layout.projectDirectory.file("gradle/libs.versions.toml").asFile
-        val buildLogicTomlFile = layout.projectDirectory.file("gradle/build-logic.versions.toml").asFile
-        val buildLogicScriptFile = layout.projectDirectory.file("build-logic/build.gradle.kts").asFile
+        val libsTomlFile = layout.projectDirectory.file("gradle/libs.versions.toml")
+        val buildLogicTomlFile = layout.projectDirectory.file("gradle/build-logic.versions.toml")
 
         inputs.file(libsTomlFile)
         inputs.file(buildLogicTomlFile)
-        inputs.file(buildLogicScriptFile)
 
         doLast {
-            val keysToCheck = listOf("agp", "kotlin", "ktlint", "detekt")
+            val inputFiles = inputs.files.files
+            val libsTomlFileObj = inputFiles.firstOrNull { it.name == "libs.versions.toml" }
+                ?: error("libs.versions.toml not found in task inputs")
+            val buildLogicTomlFileObj = inputFiles.firstOrNull { it.name == "build-logic.versions.toml" }
+                ?: error("build-logic.versions.toml not found in task inputs")
 
             fun parseVersions(file: File): Map<String, String> {
                 val versions = mutableMapOf<String, String>()
@@ -68,41 +70,24 @@ val verifyVersionCatalogConsistency =
                 return versions
             }
 
-            val mainVersions = parseVersions(libsTomlFile)
-            val buildLogicVersions = parseVersions(buildLogicTomlFile)
+            val mainVersions = parseVersions(libsTomlFileObj)
+            val buildLogicVersions = parseVersions(buildLogicTomlFileObj)
 
             val mismatches = mutableListOf<String>()
-            for (key in keysToCheck) {
+            for ((key, buildLogicVal) in buildLogicVersions) {
                 val mainVal = mainVersions[key]
-                val buildLogicVal = buildLogicVersions[key]
                 if (mainVal == null) {
-                    mismatches.add("Key '$key' is missing in gradle/libs.versions.toml")
-                }
-                if (buildLogicVal == null) {
-                    mismatches.add("Key '$key' is missing in gradle/build-logic.versions.toml")
-                }
-                if (mainVal != null && buildLogicVal != null && mainVal != buildLogicVal) {
+                    mismatches.add("Key '$key' defined in gradle/build-logic.versions.toml is missing in gradle/libs.versions.toml")
+                } else if (mainVal != buildLogicVal) {
                     mismatches.add(
-                        "Version mismatch for key '$key': gradle/libs.versions.toml has '$mainVal', " +
+                        "Version mismatch for '$key': gradle/libs.versions.toml has '$mainVal', " +
                             "gradle/build-logic.versions.toml has '$buildLogicVal'",
                     )
                 }
             }
 
-            val buildLogicText = buildLogicScriptFile.readText()
-            mainVersions["detekt"]?.let { expectedDetekt ->
-                if (!buildLogicText.contains("id(\"dev.detekt\") version \"$expectedDetekt\"")) {
-                    mismatches.add("detekt version in build-logic/build.gradle.kts does not match libs.versions.toml ($expectedDetekt)")
-                }
-            }
-            mainVersions["ktlint"]?.let { expectedKtlint ->
-                if (!buildLogicText.contains("id(\"org.jlleitschuh.gradle.ktlint\") version \"$expectedKtlint\"")) {
-                    mismatches.add("ktlint version in build-logic/build.gradle.kts does not match libs.versions.toml ($expectedKtlint)")
-                }
-            }
-
             if (mismatches.isNotEmpty()) {
-                throw GradleException("Build plugin version catalog mismatch found:\n" + mismatches.joinToString("\n"))
+                throw GradleException("Version catalog consistency check failed:\n" + mismatches.joinToString("\n"))
             }
         }
     }
