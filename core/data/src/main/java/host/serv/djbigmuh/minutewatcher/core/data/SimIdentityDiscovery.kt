@@ -100,9 +100,9 @@ class SimIdentityDiscovery
                 }
 
                 awaitClose {
-                    runCatching {
+                    try {
                         manager.removeOnSubscriptionsChangedListener(listener)
-                    }.onFailure { e ->
+                    } catch (e: Exception) {
                         if (e !is CancellationException) {
                             AppLogger.w("Failed to unregister SubscriptionsChangedListener in awaitClose", e)
                         }

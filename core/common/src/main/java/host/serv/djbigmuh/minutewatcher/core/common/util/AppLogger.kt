@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import host.serv.djbigmuh.minutewatcher.core.common.BuildConfig
+import host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -165,6 +166,7 @@ object AppLogger {
         oldJob?.cancel()
     }
 
+    @RunBlockingBridge("Synchronous logger worker shutdown bridge")
     private fun stopWorkerBlocking() {
         val oldJob: Job?
         synchronized(this) {
@@ -184,11 +186,12 @@ object AppLogger {
                 oldJob.join()
             }
         if (joined == null) {
-            runCatching {
+            try {
                 logger.w(
                     TAG,
                     "AppLogger: worker join timed out after $WORKER_JOIN_TIMEOUT_MS ms",
                 )
+            } catch (_: Exception) {
             }
         }
     }

@@ -440,7 +440,11 @@ class UpdateCoordinator
             ) {
                 // Operation must complete without propagating exception before rethrow for logging.
                 AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
-                val newHash = runCatching { SnapshotUtils.calculateContentHash(snapshot) }.getOrDefault(0)
+                val newHash = try {
+                    SnapshotUtils.calculateContentHash(snapshot)
+                } catch (_: Exception) {
+                    0
+                }
                 handleUpdateResult(
                     WidgetUpdateResult.Failure(
                         isRetryable = false,
