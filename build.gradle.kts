@@ -18,11 +18,13 @@ val verifyVersionCatalogConsistency =
         description =
             "Verifies that build plugin versions match between gradle/libs.versions.toml and gradle/build-logic.versions.toml"
 
-        val libsTomlFile = layout.projectDirectory.file("gradle/libs.versions.toml")
-        val buildLogicTomlFile = layout.projectDirectory.file("gradle/build-logic.versions.toml")
+        val libsTomlFile = layout.projectDirectory.file("gradle/libs.versions.toml").asFile
+        val buildLogicTomlFile = layout.projectDirectory.file("gradle/build-logic.versions.toml").asFile
+        val buildLogicScriptFile = layout.projectDirectory.file("build-logic/build.gradle.kts").asFile
 
         inputs.file(libsTomlFile)
         inputs.file(buildLogicTomlFile)
+        inputs.file(buildLogicScriptFile)
 
         doLast {
             val keysToCheck = listOf("agp", "kotlin", "ktlint", "detekt")
@@ -66,8 +68,8 @@ val verifyVersionCatalogConsistency =
                 return versions
             }
 
-            val mainVersions = parseVersions(libsTomlFile.asFile)
-            val buildLogicVersions = parseVersions(buildLogicTomlFile.asFile)
+            val mainVersions = parseVersions(libsTomlFile)
+            val buildLogicVersions = parseVersions(buildLogicTomlFile)
 
             val mismatches = mutableListOf<String>()
             for (key in keysToCheck) {
@@ -84,6 +86,18 @@ val verifyVersionCatalogConsistency =
                         "Version mismatch for key '$key': gradle/libs.versions.toml has '$mainVal', " +
                             "gradle/build-logic.versions.toml has '$buildLogicVal'",
                     )
+                }
+            }
+
+            val buildLogicText = buildLogicScriptFile.readText()
+            mainVersions["detekt"]?.let { expectedDetekt ->
+                if (!buildLogicText.contains("id(\"dev.detekt\") version \"$expectedDetekt\"")) {
+                    mismatches.add("detekt version in build-logic/build.gradle.kts does not match libs.versions.toml ($expectedDetekt)")
+                }
+            }
+            mainVersions["ktlint"]?.let { expectedKtlint ->
+                if (!buildLogicText.contains("id(\"org.jlleitschuh.gradle.ktlint\") version \"$expectedKtlint\"")) {
+                    mismatches.add("ktlint version in build-logic/build.gradle.kts does not match libs.versions.toml ($expectedKtlint)")
                 }
             }
 
@@ -115,4 +129,7 @@ subprojects {
 
 tasks.named("check") {
     dependsOn(verifyVersionCatalogConsistency)
+    dependsOn("ktlintCheck")
+    dependsOn("detekt")
+    dependsOn(allUnitTests)
 }
