@@ -100,6 +100,7 @@ class SimIdentityDiscovery
                 }
 
                 awaitClose {
+                    @Suppress("TooGenericExceptionCaught")
                     try {
                         manager.removeOnSubscriptionsChangedListener(listener)
                     } catch (e: Exception) {

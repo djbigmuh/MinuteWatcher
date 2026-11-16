@@ -113,23 +113,44 @@ val allUnitTests =
         description = "Runs unit tests of every module: testDebugUnitTest for Android modules, test for pure-JVM modules."
     }
 
+val allDetekt =
+    tasks.register("allDetekt") {
+        group = "verification"
+        description = "Runs detekt analysis across all subprojects."
+    }
+
+val allKtlint =
+    tasks.register("allKtlint") {
+        group = "verification"
+        description = "Runs ktlintCheck across all subprojects."
+    }
+
 subprojects {
     val modulePath = path
-    val aggregate = allUnitTests
+    val testAggregate = allUnitTests
+    val detektAggregate = allDetekt
+    val ktlintAggregate = allKtlint
+
     plugins.withId("com.android.application") {
-        aggregate.configure { dependsOn("$modulePath:testDebugUnitTest") }
+        testAggregate.configure { dependsOn("$modulePath:testDebugUnitTest") }
+        detektAggregate.configure { dependsOn("$modulePath:detekt") }
+        ktlintAggregate.configure { dependsOn("$modulePath:ktlintCheck") }
     }
     plugins.withId("com.android.library") {
-        aggregate.configure { dependsOn("$modulePath:testDebugUnitTest") }
+        testAggregate.configure { dependsOn("$modulePath:testDebugUnitTest") }
+        detektAggregate.configure { dependsOn("$modulePath:detekt") }
+        ktlintAggregate.configure { dependsOn("$modulePath:ktlintCheck") }
     }
     plugins.withId("org.jetbrains.kotlin.jvm") {
-        aggregate.configure { dependsOn("$modulePath:test") }
+        testAggregate.configure { dependsOn("$modulePath:test") }
+        detektAggregate.configure { dependsOn("$modulePath:detekt") }
+        ktlintAggregate.configure { dependsOn("$modulePath:ktlintCheck") }
     }
 }
 
 tasks.named("check") {
     dependsOn(verifyVersionCatalogConsistency)
-    dependsOn("ktlintCheck")
-    dependsOn("detekt")
+    dependsOn(allKtlint)
+    dependsOn(allDetekt)
     dependsOn(allUnitTests)
 }

@@ -237,7 +237,9 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
         }
 
     @Test
-    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Cancellation exception assertion bridge")
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge(
+        "Cancellation exception assertion bridge",
+    )
     fun `performEmergencySave rethrows CancellationException`() =
         runTest {
             initViewModel()

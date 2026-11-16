@@ -432,7 +432,9 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Cancellation exception assertion bridge")
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge(
+        "Cancellation exception assertion bridge",
+    )
     fun `hasLegacyData rethrows CancellationException`() =
         testScope.runTest {
             val canceledDataStore: DataStore<Preferences> = mock()
