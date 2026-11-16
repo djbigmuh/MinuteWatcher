@@ -48,8 +48,6 @@ import javax.inject.Singleton
  * Both instances are created via `by preferencesDataStore` delegate,
  * guaranteeing lazy initialization and thread safety.
  * On AOSP DataStore guarantees atomicity of edit operations.
- * If custom firmware does not guarantee atomicity —
- * this is a custom firmware issue.
  */
 private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "app_settings",

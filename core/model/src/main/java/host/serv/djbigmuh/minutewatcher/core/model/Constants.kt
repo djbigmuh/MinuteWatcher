@@ -178,7 +178,6 @@ object Constants {
      *   Prevents multiple updates during rapid data changes.
      * SEARCH_INDEX_TIMEOUT_MS — search indexing timeout (ms).
      *   Strict API compliance: on AOSP indexing finishes in milliseconds.
-     *   Timeout indicates degradation on custom firmware.
      */
     object Semantic {
         const val THROTTLE_MS = 30_000L

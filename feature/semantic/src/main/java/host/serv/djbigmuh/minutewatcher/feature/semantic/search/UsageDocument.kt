@@ -31,10 +31,6 @@ import host.serv.djbigmuh.minutewatcher.core.model.util.UsageLevelResolver
  * 1. Schema version increment in [SemanticSearchManager].
  * 2. Migration handling via forceOverride in ensureSession().
  * Failure to comply leads to RESULT_INVALID_SCHEMA at launch.
- *
- * **Custom ROM deviation:** if custom firmware
- * does not support AppSearch — this is a custom firmware issue.
- * Strategy: TrackingStatus.ErrorType.NOT_SUPPORTED.
  */
 @Document
 class UsageDocument {
@@ -85,9 +81,6 @@ class UsageDocument {
      * Called via [androidx.appsearch.app.GenericDocument.toDocumentClass].
      * Removal leads to [androidx.appsearch.exceptions.AppSearchException]
      * (RESULT_INTERNAL_ERROR) at runtime.
-     *
-     * **Custom ROM deviation:** if custom firmware does not provide
-     * correct reflection for AppSearch — this is a custom firmware issue.
      */
     constructor()
 

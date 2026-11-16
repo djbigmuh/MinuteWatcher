@@ -36,8 +36,7 @@ Call duration is tracked using real-time system state changes.
 
 Semantic indexing of usage data uses `PlatformStorage` on Android 12+ (API 31+) to participate in system search, and
 bundled `LocalStorage` on Android 8.0–11 (API 26–30) as a private app index. Indexing is automatically disabled on
-devices without the AppSearch system service or where AppSearch is unsupported (e.g., custom ROMs without AppSearch
-service).
+devices without the AppSearch system service or where AppSearch is unsupported.
 - An error banner is **not** displayed for `NOT_SUPPORTED` errors to ensure a clean UX on these devices.
 - For other recoverable issues (like database schema drift), the app attempts automatic recovery with limited retry attempts.
 
@@ -45,7 +44,7 @@ service).
 Android does not provide a public API to render custom application UI on a phone's ambient display (Always-on Display); documented ambient mode APIs exist only for Wear OS.
 
 - MinuteWatcher implements this feature using a documented ongoing silent notification with `IMPORTANCE_LOW`.
-- The visibility and layout of the summary on the Always-on Display depend on the device manufacturer and system settings (some devices show full notification content on AOD, while others show only an icon). This behavior is controlled by the system and OEM firmware.
+- The visibility and layout of the summary on the Always-on Display depend on system settings. This behavior is controlled by the system.
 - MinuteWatcher does not use undocumented APIs or private system settings (`Settings.Secure`).
 - The summary displays lines only for SIM packages with configured limits. The feature is controlled via a toggle in the Notification Settings section.
 - On Android 14+, the system allows users to dismiss ongoing notifications not tied to a foreground service (including

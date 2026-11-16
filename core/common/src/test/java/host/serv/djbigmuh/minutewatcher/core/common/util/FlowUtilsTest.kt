@@ -57,8 +57,6 @@ class FlowUtilsTest {
 
     /**
      * Edge case tests verify behavior under error conditions.
-     * These are critical for production stability on custom ROMs
-     * where system services may degrade or fail unexpectedly.
      */
 
     @Test

@@ -32,7 +32,6 @@ import javax.inject.Inject
  *
  * **Contract:**
  * - Strict TileService/PendingIntent API: only documented constants are valid.
- *   Passing undocumented values causes SystemUI crashes on some OEM ROMs.
  *   See: https://developer.android.com/reference/android/service/quicksettings/Tile#setState(int)
  *   See: https://developer.android.com/reference/android/app/PendingIntent#flags
  *   Do NOT use @SuppressLint("WrongConstant") — fix the constant instead.

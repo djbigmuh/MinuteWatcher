@@ -28,9 +28,7 @@ fun SimCardsSettingsSection(
 
     if (!enabled) {
         // Strict API compliance: observeActiveSims() on AOSP completes in milliseconds.
-        // Timeout here indicates storage degradation on custom firmware.
         // Editing lock prevents silent data loss.
-        // This is a custom firmware issue, not a project issue.
         Text(
             text = stringResource(id = R.string.sim_list_unavailable_error),
             style = MaterialTheme.typography.bodyMedium,

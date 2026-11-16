@@ -49,8 +49,7 @@ import kotlinx.coroutines.coroutineScope
  * currently placed widgets on the home screen for that render pass.
  *
  * Strict API compliance: all components use Glance API
- * according to documentation. On AOSP Glance ensures
- * stable rendering; deviations are possible only on custom firmwares.
+ * according to documentation.
  */
 class MinutesGlanceWidget(
     internal val forceFullRender: Boolean = false,
