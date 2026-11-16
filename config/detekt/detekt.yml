@@ -49,11 +49,23 @@ coroutines:
   active: true
   GlobalCoroutineUsage:
     active: true
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   InjectDispatcher:
     active: true
+    dispatcherNames:
+      - 'IO'
+      - 'Default'
+      - 'Main'
+      - 'Unconfined'
     excludes:
       - '**/DispatchersModule.kt'
       - '**/AppLogger.kt'
+      - '**/src/test/**'
+      - '**/src/androidTest/**'
+      - '**/src/testFixtures/**'
+  SleepInsteadOfDelay:
+    active: true
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
 
 exceptions:
   active: true
@@ -104,6 +116,22 @@ style:
     ignoreAnnotated:
       - 'androidx.compose.runtime.Composable'
       - 'Composable'
+  ForbiddenMethodCall:
+    active: true
+    methods:
+      - reason: 'print does not allow configuring the output stream. Use AppLogger instead.'
+        value: 'kotlin.io.print'
+      - reason: 'println does not allow configuring the output stream. Use AppLogger instead.'
+        value: 'kotlin.io.println'
+      - reason: 'Thread.sleep is forbidden in production code. Use delay or non-blocking synchronization instead.'
+        value: 'java.lang.Thread.sleep'
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+  ForbiddenImport:
+    active: true
+    forbiddenImports:
+      - 'android.*'
+      - 'android.**'
+    includes: [ '**/core/model/src/**', '**/core/domain/src/**' ]
   UnnecessaryParentheses:
     active: false # Disabled to allow explicit grouping parentheses for clarity in arithmetic/boolean logic
   UnderscoresInNumericLiterals:
@@ -133,6 +161,12 @@ style:
 
 potential-bugs:
   active: true
+  UnsafeCallOnNullableType:
+    active: true
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+  UnnecessaryNotNullOperator:
+    active: true
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   EqualsAlwaysReturnsTrueOrFalse:
     active: true
   InvalidRange:
