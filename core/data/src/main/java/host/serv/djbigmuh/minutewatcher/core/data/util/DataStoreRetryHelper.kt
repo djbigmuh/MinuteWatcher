@@ -37,6 +37,16 @@ internal class DataStoreWriteTimeoutException(
 /**
  * Helper class for retrying DataStore read operations with exponential backoff.
  *
+ * **Protected Contract:** Ensures atomic and resilient data reading from
+ * DataStore under transient storage IO errors.
+ * **Upper Bound:** Maximum attempts ([DEFAULT_RETRY_ATTEMPTS]), attempt timeout
+ * ([Constants.Flow.RETRY_READ_ATTEMPT_TIMEOUT_MS]), and maximum backoff delay
+ * ([DEFAULT_MAX_DELAY_MS]).
+ * **Result on Trigger:** Returns [Result.failure] with [DataStoreReadTimeoutException]
+ * or [IOException] upon exhaustion, or [Result.success] on success.
+ * **Idempotency:** Operations passed to `readWithRetry` must be idempotent.
+ * **Cancellation:** [CancellationException] is caught and rethrown immediately
+ * without triggering retries.
  * **Thread safety:** Safe to call from any coroutine context.
  */
 @Singleton
@@ -54,7 +64,7 @@ class DataStoreRetryHelper
          * @param attempts Number of retry attempts.
          * @param retryDelayMs Initial delay between retries.
          * @param attemptTimeoutMillis Timeout for each read attempt.
-         * @param reader Lambda that returns a Flow to read from.
+         * @param reader Lambda that returns a Flow to read from (must be idempotent).
          * @return Result containing the value or the last exception.
          */
         suspend fun <T> readWithRetry(
@@ -81,7 +91,6 @@ class DataStoreRetryHelper
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    // Operation must complete without propagating exception for DataStore read retry attempt.
                     lastException = e
                 }
 
@@ -91,7 +100,7 @@ class DataStoreRetryHelper
                             "Retrying in ${currentDelay}ms",
                     )
                     delay(currentDelay.milliseconds)
-                    currentDelay *= 2
+                    currentDelay = minOf(currentDelay * 2, DEFAULT_MAX_DELAY_MS)
                 }
             }
             return Result.failure(lastException ?: DataStoreReadTimeoutException(label))
@@ -100,5 +109,6 @@ class DataStoreRetryHelper
         companion object {
             const val DEFAULT_RETRY_ATTEMPTS = 3
             const val DEFAULT_RETRY_DELAY_MS = 500L
+            const val DEFAULT_MAX_DELAY_MS = 5000L
         }
     }

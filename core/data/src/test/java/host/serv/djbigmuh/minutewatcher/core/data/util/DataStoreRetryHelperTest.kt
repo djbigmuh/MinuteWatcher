@@ -1,6 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.data.util
 
 import host.serv.djbigmuh.minutewatcher.core.common.util.initTestLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
@@ -228,5 +229,23 @@ class DataStoreRetryHelperTest {
             assertTrue("Should succeed when emission is within attempt timeout", result.isSuccess)
             assertEquals("timely value", result.getOrNull())
             assertEquals("Should succeed on first attempt", 1, attempts)
+        }
+
+    @Test
+    fun `readWithRetry propagates CancellationException without retry`() =
+        runTest {
+            var attempts = 0
+            try {
+                helper.readWithRetry<String>("test_cancel") {
+                    attempts++
+                    flow {
+                        throw CancellationException("Cancelled")
+                    }
+                }
+                org.junit.Assert.fail("Expected CancellationException")
+            } catch (e: CancellationException) {
+                assertEquals("Cancelled", e.message)
+                assertEquals(1, attempts)
+            }
         }
 }

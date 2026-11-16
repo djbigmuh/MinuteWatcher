@@ -2,7 +2,8 @@
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import host.serv.djbigmuh.minutewatcher.core.common.util.firstWithTimeoutOrDefault
+import host.serv.djbigmuh.minutewatcher.core.common.util.firstWithTimeout
+import host.serv.djbigmuh.minutewatcher.core.data.util.DataStoreReadTimeoutException
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -29,7 +30,8 @@ open class BaseDataStoreRepository(
     ): Flow<T> = dataStore.data.map { it[key] ?: defaultValue }
 
     /**
-     * Standard helper for single reads from DataStore with timeout and default value.
+     * Standard helper for single reads from DataStore with timeout.
+     * Throws [DataStoreReadTimeoutException] on timeout instead of masking errors with default values.
      */
     protected suspend fun <T> getValue(
         key: Preferences.Key<T>,
@@ -37,10 +39,6 @@ open class BaseDataStoreRepository(
     ): T =
         dataStore.data
             .map { it[key] ?: defaultValue }
-            .firstWithTimeoutOrDefault(
-                timeoutMillis = Constants.Flow.SHORT_TIMEOUT_MS,
-                tag = this::class.java.simpleName,
-                key = key.name,
-                defaultValue = defaultValue,
-            )
+            .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+            ?: throw DataStoreReadTimeoutException(key.name)
 }
