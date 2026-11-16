@@ -47,6 +47,7 @@ class SemanticInitializerWorkerTest {
     private val snapshotFlow = MutableStateFlow(createEmptySnapshot())
 
     @Before
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test setup mock initialization bridge")
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)

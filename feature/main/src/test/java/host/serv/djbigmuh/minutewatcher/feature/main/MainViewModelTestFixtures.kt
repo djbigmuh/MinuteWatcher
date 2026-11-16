@@ -93,6 +93,7 @@ abstract class MainViewModelTestFixtures {
         MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(replay = 1)
 
     @Before
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test fixture setup bridge")
     open fun setup() {
         initTestLogger()
         phonePermissionFlow.value = false

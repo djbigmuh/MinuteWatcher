@@ -236,6 +236,7 @@ class WidgetLimitManagerTest {
         }
 
     @Test
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Cancellation assertion bridge")
     fun `performProbeUpdate does not set limit exceeded on CancellationException`() =
         runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)
@@ -253,6 +254,7 @@ class WidgetLimitManagerTest {
         }
 
     @Test
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Error assertion bridge")
     fun `performProbeUpdate does NOT set limit exceeded on regular Exception`() =
         runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)

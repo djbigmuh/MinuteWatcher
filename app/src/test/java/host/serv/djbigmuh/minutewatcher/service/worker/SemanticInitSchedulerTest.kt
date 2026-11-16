@@ -11,7 +11,7 @@ import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -63,7 +63,7 @@ class SemanticInitSchedulerTest {
 
     @Test
     fun `schedule enqueues one time semantic_init work without initial delay`() =
-        runBlocking {
+        runTest {
             SemanticInitScheduler.schedule(workManager)
             ShadowLooper.idleMainLooper()
 
@@ -80,7 +80,7 @@ class SemanticInitSchedulerTest {
 
     @Test
     fun `schedule with KEEP policy preserves previous enqueued work`() =
-        runBlocking {
+        runTest {
             SemanticInitScheduler.schedule(workManager)
             ShadowLooper.idleMainLooper()
             val initialWorkInfos =

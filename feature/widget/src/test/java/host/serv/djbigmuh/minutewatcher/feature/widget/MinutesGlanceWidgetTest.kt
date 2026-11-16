@@ -61,6 +61,7 @@ class MinutesGlanceWidgetTest {
         }
 
     @Test
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test mock answer delay bridge")
     fun `getUiStateInternal loads settings and snapshot in parallel`() =
         runTest {
             val settingsLoader = mock<WidgetSettingsLoader>()

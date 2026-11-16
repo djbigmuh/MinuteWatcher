@@ -158,6 +158,7 @@ class WidgetSettingsSaverTest {
         }
 
     @Test
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Cancellation exception assertion bridge")
     fun `notifyDataChanged rethrows CancellationException`() =
         runTest {
             val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)
@@ -208,6 +209,7 @@ class WidgetSettingsSaverTest {
         }
 
     @Test
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Cancellation exception assertion bridge")
     fun `notifyDataChanged propagates CancellationException immediately without retries`() =
         runTest {
             val saver = WidgetSettingsSaver(loader, dataChangeNotifier, backgroundScope)

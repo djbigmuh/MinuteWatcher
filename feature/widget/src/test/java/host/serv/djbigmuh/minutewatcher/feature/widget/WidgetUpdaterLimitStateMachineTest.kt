@@ -378,6 +378,7 @@ class WidgetUpdaterLimitStateMachineTest : BaseWidgetUpdaterFixture() {
         }
 
     @Test
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test mock answer bridge")
     fun `updateAll increments limit counter once per update and probes once per interval when limit exceeded`() =
         runTest {
             appSettingsRepository.settingsFlow.value = AppSettings(widgetLimitExceeded = true)

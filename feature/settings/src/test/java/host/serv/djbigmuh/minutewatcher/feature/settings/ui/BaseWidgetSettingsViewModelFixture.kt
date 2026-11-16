@@ -39,6 +39,7 @@ abstract class BaseWidgetSettingsViewModelFixture {
     }
 
     @Before
+    @host.serv.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test fixture setup bridge")
     open fun setup() {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
         val snapshotFlow = MutableStateFlow(snapshot)
