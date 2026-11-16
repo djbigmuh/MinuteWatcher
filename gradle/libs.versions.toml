@@ -9,8 +9,8 @@ ksp = "2.3.12"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 androidxTestCore = "1.7.0"
-# Robolectric 4.17 is the stable release with Android SDK 37 support.
-robolectric = "4.17"
+# Robolectric 4.18 is the stable release with Android SDK 37 support.
+robolectric = "4.18"
 activityCompose = "1.13.0"
 composeBom = "2026.09.00"
 appcompat = "1.8.0"
@@ -22,18 +22,17 @@ glance = "1.2.0"
 baselineprofile = "1.5.0"
 
 benchmarkMacroJunit4 = "1.5.0"
-uiautomator = "2.4.0"
+uiautomator = "2.4.1"
 leakcanary = "2.14"
 hiltWork = "1.4.0"
 mockito = "5.24.0"
 mockitoKotlin = "6.4.0"
 appsearch = "1.1.0"
-# AppFunctions (beta): required for the AppFunctionServiceEntryPoint architecture used by
-# on-device assistant integration. Update to stable when available.
+# AppFunctions (1.0.0-beta01): required for @AppFunctionServiceEntryPoint API and service/schema generation via KSP; transition to stable 1.0.0 release once available.
 appfunctions = "1.0.0-beta01"
 kotlinxCoroutines = "1.11.0"
-kotlinxCoroutinesTest = "1.11.0"
 ktlint = "14.2.0"
+# Detekt (2.0.0-alpha.6): required for Gradle 9.x compatibility and modern JDK toolchains; transition to stable 2.x release once available.
 detekt = "2.0.0-alpha.6"
 desugarJdkLibs = "2.1.5"
 javaxInject = "1"
@@ -103,7 +102,7 @@ androidxAppfunctionsCompiler = { group = "androidx.appfunctions", name = "appfun
 javaxInject = { group = "javax.inject", name = "javax.inject", version.ref = "javaxInject" }
 kotlinxCoroutinesCore = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesGuava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "kotlinxCoroutines" }
-kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
+kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 androidxMaterialIconsCore = { group = "androidx.compose.material", name = "material-icons-core" }
 
 [plugins]
