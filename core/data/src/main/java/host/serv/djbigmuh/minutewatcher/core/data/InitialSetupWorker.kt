@@ -8,9 +8,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.common.util.firstWithTimeout
-import host.serv.djbigmuh.minutewatcher.core.data.InitialSetupWorker.Companion.WORKER_TIMEOUT_MS
 import host.serv.djbigmuh.minutewatcher.core.model.ActiveSimInfo
-import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.MigrationSkipReason
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -71,7 +69,7 @@ class InitialSetupWorker
             } ?: AppLogger.w("InitialSetupWorker: refreshOperatorInfo timed out after ${REFRESH_OPERATOR_TIMEOUT_MS}ms")
 
             if (inputData.getBoolean(EXTRA_TRIGGERED_BY_BOOT, false)) {
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(BOOT_CLEANUP_TIMEOUT_MS.milliseconds) {
                     deps.callTracker.onBootAwaited()
                 } ?: AppLogger.e("InitialSetupWorker: boot session cleanup timed out")
             }
@@ -249,7 +247,7 @@ class InitialSetupWorker
          * Fetches active SIM cards with a bounded wait for the first non-empty list.
          *
          * On a cold start, the discovery process may take some time. This method waits
-         * up to [Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS] for at least one SIM
+         * up to [INITIAL_SETUP_RETRY_TIMEOUT_MS] for at least one SIM
          * to be discovered. If the timeout expires, it returns the current (potentially empty)
          * list, which is correct for devices without SIM cards.
          *
@@ -257,22 +255,18 @@ class InitialSetupWorker
          */
         private suspend fun getActiveSimsWithRetry(): List<ActiveSimInfo> {
             val flow = deps.simIdentityRepository.observeActiveSims()
-            return withTimeoutOrNull(Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds) {
+            return withTimeoutOrNull(INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds) {
                 flow.first { it.isNotEmpty() }
-            } ?: flow.firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS) ?: emptyList()
+            } ?: flow.firstWithTimeout(SHORT_TIMEOUT_MS) ?: emptyList()
         }
 
         companion object {
             const val EXTRA_TRIGGERED_BY_BOOT = "triggered_by_boot"
             private const val MAX_MIGRATION_ATTEMPTS = 3
             private const val WORKER_TIMEOUT_MS = 120_000L
-
-            /**
-             * Maximum time allocated for refreshing operator info during initial setup.
-             *
-             * Updating operator names is not a critical step and must not consume the overall
-             * worker budget during storage degradation.
-             */
             private const val REFRESH_OPERATOR_TIMEOUT_MS = 30_000L
+            private const val BOOT_CLEANUP_TIMEOUT_MS = 10_000L
+            private const val INITIAL_SETUP_RETRY_TIMEOUT_MS = 15_000L
+            private const val SHORT_TIMEOUT_MS = 5_000L
         }
     }

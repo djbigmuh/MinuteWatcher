@@ -59,6 +59,9 @@ class BenchmarkPopulateWorker
             /**
              * Creates input data for the worker.
              * @param simCount Number of SIMs to populate (1 or 2).
+             * **Protected Contract:** Populates benchmark mock data safely in debug/benchmark builds.
+             * **Upper Bound:** None (synchronous population execution).
+             * **Result on Trigger:** [Result.success] or [Result.failure].
              */
             fun createInputData(simCount: Int): Data =
                 Data

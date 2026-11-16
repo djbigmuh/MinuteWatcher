@@ -98,17 +98,14 @@ class CallEventWorker
             const val EXTRA_EVENT_ELAPSED_REALTIME = "eventElapsedRealtime"
 
             /**
-             * Overall worker timeout. On AOSP a single call event is processed within
-             * a few seconds; exceeding the budget indicates storage or telephony
-             * degradation and is treated as a retryable error within
-             * [MAX_EVENT_RUN_ATTEMPTS].
+             * Overall worker execution timeout (upper bound: 120 seconds).
+             * Result on trigger: [Result.retry] if attempts remain, else [Result.failure].
              */
             private const val WORKER_TIMEOUT_MS = 120_000L
 
             /**
-             * Maximum number of retry attempts for recoverable errors (SecurityException, IOException,
-             * and unexpected errors) before work completes with [Result.failure]. New call events re-create
-             * the chain thanks to APPEND_OR_REPLACE policy in UsageMonitorReceiver.
+             * Maximum number of retry attempts for recoverable errors (upper bound: 3 attempts).
+             * Result on trigger: [Result.failure].
              */
             const val MAX_EVENT_RUN_ATTEMPTS = 3
         }

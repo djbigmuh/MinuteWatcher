@@ -622,12 +622,15 @@ class UsageCheckWorker
             private const val HUNDRED = 100
 
             /**
-             * Overall worker timeout. Exceeding means a hang
-             * on custom firmware. On AOSP all operations complete
-             * within a few seconds.
+             * Overall worker execution timeout (upper bound: 120 seconds).
+             * Result on trigger: [Result.retry].
              */
-            private const val WORKER_TIMEOUT_MS = 120_000L // 2 minutes
+            private const val WORKER_TIMEOUT_MS = 120_000L
 
+            /**
+             * Worker refresh operation timeout (upper bound: 30 seconds).
+             * Result on trigger: [Result.retry] or fallback.
+             */
             private const val WORKER_REFRESH_TIMEOUT_MS = 30_000L
         }
     }
