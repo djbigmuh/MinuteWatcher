@@ -43,6 +43,7 @@ interface SimUsageResetRepository {
     /**
      * Sets the last total bytes seen at reset if the stored lastResetDate equals expectedLastResetDate.
      *
+     * @param subId Subscription ID associated with the baseline counter (-1 if unknown).
      * @return true if write was applied, false if skipped due to window mismatch.
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is canceled.
@@ -51,6 +52,7 @@ interface SimUsageResetRepository {
         identity: String,
         bytes: Long,
         expectedLastResetDate: Long,
+        subId: Int = -1,
     ): Boolean
 
     /**
@@ -58,6 +60,7 @@ interface SimUsageResetRepository {
      * if the stored lastResetDate equals expectedLastResetDate.
      * Prevents data loss or double counting if one operation fails or window changed.
      *
+     * @param subId Subscription ID associated with the baseline counter (-1 if unknown).
      * @return true if write was applied, false if skipped due to window mismatch.
      * @throws IOException if storage access fails.
      * @throws CancellationException if the coroutine is canceled.
@@ -67,6 +70,7 @@ interface SimUsageResetRepository {
         deltaMb: Float,
         totalBytes: Long,
         expectedLastResetDate: Long,
+        subId: Int = -1,
     ): Boolean
 
     /**

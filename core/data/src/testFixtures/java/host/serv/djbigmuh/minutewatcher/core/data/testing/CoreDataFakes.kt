@@ -197,6 +197,7 @@ class FakeSimUsageResetRepository : SimUsageResetRepository {
         identity: String,
         bytes: Long,
         expectedLastResetDate: Long,
+        subId: Int,
     ): Boolean = true
 
     override suspend fun incrementTrafficAndSetBaseline(
@@ -204,6 +205,7 @@ class FakeSimUsageResetRepository : SimUsageResetRepository {
         deltaMb: Float,
         totalBytes: Long,
         expectedLastResetDate: Long,
+        subId: Int,
     ): Boolean = true
 
     override suspend fun ensureTrackingWindowInitialized(identity: String): Boolean = true

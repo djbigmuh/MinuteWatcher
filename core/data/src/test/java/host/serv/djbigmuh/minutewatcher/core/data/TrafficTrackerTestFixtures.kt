@@ -29,9 +29,10 @@ internal suspend fun createTrafficTrackerDependencies(
     if (Mockito.mockingDetails(simUsageResetRepository).isMock) {
         try {
             whenever(simUsageResetRepository.ensureTrackingWindowInitialized(any())).thenReturn(true)
-            whenever(simUsageResetRepository.setLastTotalBytes(any(), any(), any())).thenReturn(true)
+            whenever(simUsageResetRepository.setLastTotalBytes(any(), any(), any(), any())).thenReturn(true)
             whenever(
                 simUsageResetRepository.incrementTrafficAndSetBaseline(
+                    any(),
                     any(),
                     any(),
                     any(),

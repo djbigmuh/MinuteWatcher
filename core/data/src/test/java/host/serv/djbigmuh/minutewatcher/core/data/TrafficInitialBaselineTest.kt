@@ -228,6 +228,7 @@ class TrafficInitialBaselineTest {
                     100L * Constants.BYTES_PER_MB,
                 ),
                 any(),
+                any(),
             )
         }
 

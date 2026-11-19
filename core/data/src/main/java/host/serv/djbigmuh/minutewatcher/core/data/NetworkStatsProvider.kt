@@ -44,7 +44,7 @@ internal fun parseNetworkStatsBytes(
     rxBytes: Long,
     txBytes: Long,
 ): StatsResult {
-    if (rxBytes < 0 || txBytes < 0) {
+    if (rxBytes < 0 || txBytes < 0 || (rxBytes + txBytes) < 0) {
         AppLogger.w("Invalid network stats bucket bytes: rxBytes=$rxBytes, txBytes=$txBytes")
         return StatsResult.Unavailable
     }

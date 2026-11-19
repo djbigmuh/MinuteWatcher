@@ -36,6 +36,7 @@ class TrafficDeltaCalculator
                             targetIdentity,
                             currentBytes,
                             expectedLastResetDate,
+                            subId = target.dataSubId,
                         )
                     if (applied) {
                         AppLogger.d("Traffic baseline reset for $targetIdentity to $currentBytes")
@@ -52,6 +53,7 @@ class TrafficDeltaCalculator
                         currentBytes,
                         lastTotalBytes,
                         target.slot,
+                        target.dataSubId,
                         expectedLastResetDate,
                     )
                 }
@@ -72,6 +74,7 @@ class TrafficDeltaCalculator
             currentBytes: Long,
             lastTotalBytes: Long,
             slot: Int,
+            dataSubId: Int,
             expectedLastResetDate: Long,
         ): Boolean {
             // Operation must complete without propagating exception for delta handling;
@@ -88,6 +91,7 @@ class TrafficDeltaCalculator
                                 deltaMB,
                                 currentBytes,
                                 expectedLastResetDate,
+                                subId = dataSubId,
                             )
                         if (applied) {
                             AppLogger.d("Added $deltaMB MB to identity $identity (SIM $slot)")

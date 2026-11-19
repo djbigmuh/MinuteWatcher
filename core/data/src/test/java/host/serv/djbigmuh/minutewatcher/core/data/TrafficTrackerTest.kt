@@ -78,9 +78,10 @@ class TrafficTrackerTest {
             whenever(networkStatsProvider.queryMobileBytes(any(), any())).thenReturn(StatsResult.Success(0L))
             whenever(simUsageResetRepository.getLastTotalBytes(any())).thenReturn(flowOf(-1L))
             whenever(simUsageResetRepository.ensureTrackingWindowInitialized(any())).thenReturn(true)
-            whenever(simUsageResetRepository.setLastTotalBytes(any(), any(), any())).thenReturn(true)
+            whenever(simUsageResetRepository.setLastTotalBytes(any(), any(), any(), any())).thenReturn(true)
             whenever(
                 simUsageResetRepository.incrementTrafficAndSetBaseline(
+                    any(),
                     any(),
                     any(),
                     any(),

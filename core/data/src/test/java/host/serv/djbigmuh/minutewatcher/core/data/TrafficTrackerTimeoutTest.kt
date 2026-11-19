@@ -53,11 +53,12 @@ class TrafficTrackerTimeoutTest {
             identity: String,
             bytes: Long,
             expectedLastResetDate: Long,
+            subId: Int,
         ): Boolean {
             if (setLastTotalBytesDelayMs > 0) {
                 delay(setLastTotalBytesDelayMs)
             }
-            return delegate.setLastTotalBytes(identity, bytes, expectedLastResetDate)
+            return delegate.setLastTotalBytes(identity, bytes, expectedLastResetDate, subId)
         }
 
         override suspend fun incrementTrafficAndSetBaseline(
@@ -65,7 +66,8 @@ class TrafficTrackerTimeoutTest {
             deltaMb: Float,
             totalBytes: Long,
             expectedLastResetDate: Long,
-        ): Boolean = delegate.incrementTrafficAndSetBaseline(identity, deltaMb, totalBytes, expectedLastResetDate)
+            subId: Int,
+        ): Boolean = delegate.incrementTrafficAndSetBaseline(identity, deltaMb, totalBytes, expectedLastResetDate, subId)
     }
 
     private val networkStatsProvider: NetworkStatsProvider = mock()

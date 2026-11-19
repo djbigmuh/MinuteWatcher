@@ -33,4 +33,10 @@ class NetworkStatsProviderTest {
         val result = parseNetworkStatsBytes(500L, -1L)
         assertEquals(StatsResult.Unavailable, result)
     }
+
+    @Test
+    fun `parseNetworkStatsBytes returns Unavailable for overflowed sum`() {
+        val result = parseNetworkStatsBytes(Long.MAX_VALUE, 100L)
+        assertEquals(StatsResult.Unavailable, result)
+    }
 }

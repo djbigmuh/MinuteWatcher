@@ -216,12 +216,16 @@ class SimUsageRepositoryImpl
             identity: String,
             bytes: Long,
             expectedLastResetDate: Long,
+            subId: Int,
         ): Boolean {
             var applied = false
             dataStore.edit { prefs ->
                 val currentResetDate = prefs[DataStoreKeys.lastResetDateKey(identity)] ?: Constants.Data.EMPTY_TIMESTAMP
                 if (isWindowCompatible(currentResetDate, expectedLastResetDate)) {
                     prefs[DataStoreKeys.lastTotalBytesKey(identity)] = bytes
+                    if (subId != -1) {
+                        prefs[DataStoreKeys.subscriptionIdKey(identity)] = subId
+                    }
                     applied = true
                 }
             }
@@ -233,7 +237,9 @@ class SimUsageRepositoryImpl
             deltaMb: Float,
             totalBytes: Long,
             expectedLastResetDate: Long,
+            subId: Int,
         ): Boolean {
+            if (deltaMb <= 0f) return false
             var applied = false
             dataStore.edit { prefs ->
                 val currentResetDate =
@@ -249,6 +255,9 @@ class SimUsageRepositoryImpl
 
                     // 2. Update baseline
                     prefs[DataStoreKeys.lastTotalBytesKey(identity)] = totalBytes
+                    if (subId != -1) {
+                        prefs[DataStoreKeys.subscriptionIdKey(identity)] = subId
+                    }
                     applied = true
                 }
             }

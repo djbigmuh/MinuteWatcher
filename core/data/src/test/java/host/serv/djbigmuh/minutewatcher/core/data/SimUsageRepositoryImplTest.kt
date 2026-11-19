@@ -421,4 +421,19 @@ class SimUsageRepositoryImplTest {
             val usageMax = repository.getSimUsage(identity).first()
             assertEquals(Constants.MAX_MINUTES_LIMIT, usageMax.minutesUsed)
         }
+
+    @Test
+    fun `setLastTotalBytes stores subscriptionId when subId is provided`() =
+        runTest {
+            val identity = "test_sim"
+            repository.ensureTrackingWindowInitialized(identity)
+            val initialUsage = repository.getSimUsage(identity).first()
+            val correctDate = initialUsage.lastResetDate
+
+            val applied = repository.setLastTotalBytes(identity, 5000L, correctDate, subId = 2)
+            assertTrue(applied)
+
+            val prefs = dataStore.data.first()
+            assertEquals(2, prefs[DataStoreKeys.subscriptionIdKey(identity)])
+        }
 }
