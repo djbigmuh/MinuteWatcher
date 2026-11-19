@@ -388,7 +388,7 @@ class SimIdentityRepositoryRaceTest {
                     dataStore =
                         PreferenceDataStoreFactory.create(
                             scope = backgroundScope,
-                        ) { tmpFolder.newFile("parallel_test.pb") },
+                        ) { tmpFolder.newFile("parallel_test.preferences_pb") },
                     seedRepository = seedRepo,
                     appSettingsRepository = appSettingsRepository,
                     migrationService = migrationService,

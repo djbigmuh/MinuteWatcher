@@ -43,9 +43,7 @@ internal class SimIdentityResolver
             seedFlow: Flow<SeedResult>,
             activeSimsMutex: Mutex,
         ): SimIdentity {
-            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
-                throw InvalidSlotException(slot)
-            }
+            validateSlot(slot)
 
             // 1. Fast atomic check without mutex
             activeSimsCache.value.find { it.slotIndex == slot }?.let {
@@ -71,10 +69,16 @@ internal class SimIdentityResolver
                 // 3. Update cache and persist
                 cache.putManual(slot, identity)
                 if (isStable) {
-                    persistIdentity(slot, identity)
+                    tryPersistIdentity(slot, identity)
                 }
 
                 identity
+            }
+        }
+
+        private fun validateSlot(slot: Int) {
+            if (slot !in SimConstants.SUPPORTED_SLOT_INDICES) {
+                throw InvalidSlotException(slot)
             }
         }
 
@@ -94,32 +98,73 @@ internal class SimIdentityResolver
             slot: Int,
             seedValue: String,
             isStable: Boolean,
-        ): SimIdentity =
-            withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                val sims =
-                    when (val result = discovery.discoverSims(seedValue, isStable)) {
-                        is SimDiscoveryResult.Available -> result.sims
-                        else -> emptyList()
-                    }
-                sims.find { it.slotIndex == slot }?.identity ?: throw SimNotFoundException(slot)
-            } ?: throw IOException("Timeout resolving identity for slot $slot")
+        ): SimIdentity {
+            val result =
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    discovery.discoverSims(seedValue, isStable)
+                } ?: throw IOException("Timeout resolving identity for slot $slot")
+
+            if (result is SimDiscoveryResult.Available) {
+                val sim = result.sims.find { it.slotIndex == slot }
+                if (sim != null) return sim.identity
+            }
+
+            throw mapDiscoveryFailureToException(result, slot)
+        }
+
+        private fun mapDiscoveryFailureToException(
+            result: SimDiscoveryResult,
+            slot: Int,
+        ): Exception =
+            when (result) {
+                is SimDiscoveryResult.PermissionMissing ->
+                    SecurityException("Permission missing for SIM discovery in slot $slot")
+
+                is SimDiscoveryResult.Unsupported ->
+                    UnsupportedOperationException("SIM discovery unsupported for slot $slot")
+
+                is SimDiscoveryResult.Failed ->
+                    IOException("SIM discovery failed for slot $slot: ${result.reason}")
+
+                else ->
+                    SimNotFoundException(slot)
+            }
+
+        private suspend fun tryPersistIdentity(
+            slot: Int,
+            identity: SimIdentity,
+        ) {
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                persistIdentity(slot, identity)
+            } catch (e: Exception) {
+                cache.removeManual(slot)
+                if (e is CancellationException) throw e
+                throw e
+            }
+        }
 
         private suspend fun persistIdentity(
             slot: Int,
             identity: SimIdentity,
         ) {
             @Suppress("TooGenericExceptionCaught")
-            try {
-                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                    persistence.saveSimIdentitiesInfo(listOf(identity))
-                } ?: run {
-                    AppLogger.w("SimIdentityResolver: persistence write timed out for slot $slot")
+            val error: Exception? =
+                try {
+                    val saved =
+                        withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                            persistence.saveSimIdentitiesInfo(listOf(identity))
+                            true
+                        } ?: false
+                    if (!saved) IOException("Timeout saving SIM identity for slot $slot") else null
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
+                    if (e is IOException) e else IOException("Failed to save SIM identity for slot $slot", e)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Operation must complete without propagating exception for SIM identity persistence save.
-                AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
+            if (error != null) {
+                throw error
             }
         }
     }
