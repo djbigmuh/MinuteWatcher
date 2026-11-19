@@ -436,4 +436,29 @@ class SimUsageRepositoryImplTest {
             val prefs = dataStore.data.first()
             assertEquals(2, prefs[DataStoreKeys.subscriptionIdKey(identity)])
         }
+
+    @Test
+    fun `whenRolloverExecutedRemainingAdjustmentsAreClampedToMaxLimits`() =
+        runTest {
+            val identity = "test_sim"
+            repository.ensureTrackingWindowInitialized(identity)
+            val now = 3000000000L
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.lastResetDateKey(identity)] = now - 40L * 24L * 60L * 60L * 1000L
+                prefs[DataStoreKeys.rolloverEnabledKey(identity)] = true
+                prefs[DataStoreKeys.monthlyLimitKey(identity)] = Constants.MAX_MINUTES_LIMIT
+                prefs[DataStoreKeys.manualAdjustmentKey(identity)] = 10000
+                prefs[DataStoreKeys.minutesUsedKey(identity)] = 0
+                prefs[DataStoreKeys.trafficLimitKey(identity)] = Constants.MAX_TRAFFIC_LIMIT_MB
+                prefs[DataStoreKeys.trafficAdjustmentKey(identity)] = 1000f
+                prefs[DataStoreKeys.trafficUsedKey(identity)] = 0f
+            }
+
+            val resetPerformed = repository.resetSimUsageIfDue(identity, 1, now)
+            assertTrue(resetPerformed)
+
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals(Constants.MAX_MINUTES_LIMIT, usage.manualAdjustment)
+            assertEquals(Constants.MAX_TRAFFIC_LIMIT_GB, usage.trafficAdjustmentGb, 0.001f)
+        }
 }
