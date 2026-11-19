@@ -122,4 +122,33 @@ class SimIdentityUtilsTest {
         val candidates = SimIdentityUtils.mccMncCandidates(info)
         assertEquals(emptyList<String>(), candidates)
     }
+
+    @Test
+    fun `identity key is invariant to mutable slot index operator name and subscription id`() {
+        val seed = "test_seed_123"
+        val iccid = "897010000000000001"
+
+        val simInSlot0: SubscriptionInfo =
+            mock {
+                on { simSlotIndex }.thenReturn(0)
+                on { subscriptionId }.thenReturn(10)
+                on { iccId }.thenReturn(iccid)
+                on { displayName }.thenReturn("Operator A")
+                on { carrierName }.thenReturn("Carrier A")
+            }
+
+        val simInSlot1: SubscriptionInfo =
+            mock {
+                on { simSlotIndex }.thenReturn(1)
+                on { subscriptionId }.thenReturn(99)
+                on { iccId }.thenReturn(iccid)
+                on { displayName }.thenReturn("Renamed Operator")
+                on { carrierName }.thenReturn("Renamed Carrier")
+            }
+
+        val identity0 = SimIdentityUtils.createIdentityFromInfo(simInSlot0, seed)
+        val identity1 = SimIdentityUtils.createIdentityFromInfo(simInSlot1, seed)
+
+        assertEquals(identity0.stableId, identity1.stableId)
+    }
 }
