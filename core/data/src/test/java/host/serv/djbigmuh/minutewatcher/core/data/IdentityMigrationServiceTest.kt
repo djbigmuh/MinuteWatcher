@@ -673,4 +673,85 @@ class IdentityMigrationServiceTest {
             assertNull(prefs[conflictKey])
             assertNull(prefs[legacyKey])
         }
+
+    @Test
+    fun `migration steps set schema version and handle step transitions`() =
+        testScope.runTest {
+            val service = IdentityMigrationService(appDataStore, simDataStore)
+
+            val legacyAppKey = intPreferencesKey("app_setting_sim_0")
+            val legacySimKey = intPreferencesKey("minutes_used_sim_0")
+            val identity =
+                SimIdentity(
+                    stableId = "icc_test_1",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = IdentitySource.ICCID,
+                    isStable = true,
+                )
+
+            appDataStore.edit { it[legacyAppKey] = 100 }
+            simDataStore.edit { it[legacySimKey] = 200 }
+
+            val outcome1 = service.migrateLegacyData(identity)
+            assertTrue(outcome1.migrated > 0)
+            assertEquals(0, outcome1.failures)
+
+            service.markSchemaCurrent()
+
+            val appPrefs = appDataStore.data.first()
+            assertEquals(
+                DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION,
+                appPrefs[DataStoreKeys.DATA_SCHEMA_VERSION],
+            )
+            assertEquals(100, appPrefs[intPreferencesKey("app_setting_icc_test_1")])
+            assertNull(appPrefs[legacyAppKey])
+
+            val simPrefs = simDataStore.data.first()
+            assertEquals(200, simPrefs[intPreferencesKey("minutes_used_icc_test_1")])
+            assertNull(simPrefs[legacySimKey])
+        }
+
+    @Test
+    fun `migration process restart after mid-migration termination retains data integrity`() =
+        testScope.runTest {
+            val legacyAppKey = intPreferencesKey("limit_sim_0")
+            val legacySimKey = intPreferencesKey("used_sim_0")
+            val identity =
+                SimIdentity(
+                    stableId = "icc_restart_1",
+                    subscriptionId = 1,
+                    slotIndex = 0,
+                    source = IdentitySource.ICCID,
+                    isStable = true,
+                )
+
+            appDataStore.edit { it[legacyAppKey] = 500 }
+            simDataStore.edit { it[legacySimKey] = 250 }
+
+            appDataStore.edit {
+                it.remove(legacyAppKey)
+                it[intPreferencesKey("limit_icc_restart_1")] = 500
+            }
+
+            assertNull(appDataStore.data.first()[DataStoreKeys.DATA_SCHEMA_VERSION])
+
+            val service2 = IdentityMigrationService(appDataStore, simDataStore)
+            val outcome = service2.migrateLegacyData(identity)
+
+            assertEquals(0, outcome.failures)
+            service2.markSchemaCurrent()
+
+            val appPrefs = appDataStore.data.first()
+            val simPrefs = simDataStore.data.first()
+
+            assertEquals(500, appPrefs[intPreferencesKey("limit_icc_restart_1")])
+            assertEquals(250, simPrefs[intPreferencesKey("used_icc_restart_1")])
+            assertNull(appPrefs[legacyAppKey])
+            assertNull(simPrefs[legacySimKey])
+            assertEquals(
+                DataStoreKeys.CURRENT_DATA_SCHEMA_VERSION,
+                appPrefs[DataStoreKeys.DATA_SCHEMA_VERSION],
+            )
+        }
 }

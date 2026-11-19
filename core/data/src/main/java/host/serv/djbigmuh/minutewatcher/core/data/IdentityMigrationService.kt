@@ -228,6 +228,39 @@ class IdentityMigrationService
                 totalOutcome
             }
 
+        /**
+         * Removes orphaned keys in simDataStore for SIM identities that are no longer active.
+         *
+         * @param activeIdentities The set of currently active SIM identity strings.
+         */
+        suspend fun removeOrphanedIdentityKeys(activeIdentities: Set<String>) {
+            if (activeIdentities.isEmpty()) return
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
+                    simDataStore.edit { prefs ->
+                        val keysToRemove =
+                            prefs.asMap().keys.filter { key ->
+                                val name = key.name
+                                val isIdentityKey =
+                                    SIM_IDENTITY_KEY_PREFIXES.any { prefix -> name.startsWith(prefix) }
+                                if (isIdentityKey) {
+                                    activeIdentities.none { identity -> name.endsWith("_$identity") }
+                                } else {
+                                    false
+                                }
+                            }
+                        keysToRemove.forEach { prefs.remove(it) }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Operation must complete without propagating exception for orphaned key removal.
+                AppLogger.e("IdentityMigrationService: Failed to remove orphaned identity keys", e)
+            }
+        }
+
         private suspend fun performMigration(activeIdentity: SimIdentity): MigrationOutcome {
             val identity = activeIdentity.stableId
             val slotIndex = activeIdentity.slotIndex
@@ -486,6 +519,41 @@ class IdentityMigrationService
         private companion object {
             private val LEGACY_SUB_PATTERN = Regex("_sub_\\d+$")
             private val LEGACY_ICC_PATTERN = Regex("_icc_[a-f0-9]+$")
+
+            private val SIM_IDENTITY_KEY_PREFIXES =
+                listOf(
+                    DataStoreKeys.MONTHLY_LIMIT_PREFIX,
+                    DataStoreKeys.TRAFFIC_LIMIT_PREFIX,
+                    DataStoreKeys.MINUTES_USED_PREFIX,
+                    DataStoreKeys.LAST_COUNTED_CALL_SIGNATURE_PREFIX,
+                    DataStoreKeys.LAST_COUNTED_CALL_MARKER_PREFIX,
+                    DataStoreKeys.MANUAL_ADJUSTMENT_PREFIX,
+                    DataStoreKeys.TRAFFIC_ADJUSTMENT_PREFIX,
+                    DataStoreKeys.TRAFFIC_USED_PREFIX,
+                    DataStoreKeys.AUTO_RESET_PREFIX,
+                    DataStoreKeys.AUTO_RESET_DAY_PREFIX,
+                    DataStoreKeys.LAST_RESET_DATE_PREFIX,
+                    DataStoreKeys.SIM_OPERATOR_PREFIX,
+                    DataStoreKeys.SIM_OPERATOR_BRAND_KEY_PREFIX,
+                    DataStoreKeys.SLOT_INDEX_PREFIX,
+                    DataStoreKeys.SUBSCRIPTION_ID_PREFIX,
+                    DataStoreKeys.ROLLOVER_ENABLED_PREFIX,
+                    DataStoreKeys.WIDGET_SHOW_SIM_PREFIX,
+                    DataStoreKeys.WIDGET_SHOW_SIM_ICON_PREFIX,
+                    DataStoreKeys.WIDGET_SHOW_SIM_NAME_PREFIX,
+                    DataStoreKeys.WIDGET_SHOW_MINUTES_PREFIX,
+                    DataStoreKeys.WIDGET_SHOW_MINUTES_LIMIT_PREFIX,
+                    DataStoreKeys.WIDGET_SHOW_TRAFFIC_PREFIX,
+                    DataStoreKeys.WIDGET_SHOW_TRAFFIC_LIMIT_PREFIX,
+                    DataStoreKeys.NOTIFIED_LOW_MINUTES_PREFIX,
+                    DataStoreKeys.NOTIFIED_LOW_TRAFFIC_PREFIX,
+                    DataStoreKeys.NOTIFIED_CRITICAL_MINUTES_PREFIX,
+                    DataStoreKeys.NOTIFIED_CRITICAL_TRAFFIC_PREFIX,
+                    DataStoreKeys.NOTIFIED_EXHAUSTED_MINUTES_PREFIX,
+                    DataStoreKeys.NOTIFIED_EXHAUSTED_TRAFFIC_PREFIX,
+                    DataStoreKeys.LAST_TOTAL_BYTES_PREFIX,
+                    DataStoreKeys.BASELINE_RETRY_COUNT_PREFIX,
+                )
         }
 
         private fun MutablePreferences.migrateTypedKey(
