@@ -2,7 +2,7 @@
 
 import androidx.datastore.preferences.core.MutablePreferences
 import host.serv.djbigmuh.minutewatcher.core.data.di.DataStoreKeys
-import host.serv.djbigmuh.minutewatcher.core.model.Constants
+import host.serv.djbigmuh.minutewatcher.core.model.util.UnitConversionUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,12 +44,14 @@ class SimUsageResetLogic
                 val trafficLimitMb = prefs[DataStoreKeys.trafficLimitKey(identity)] ?: 0
                 val trafficUsedMb = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                 val trafficAdjGb = (prefs[DataStoreKeys.trafficAdjustmentKey(identity)] ?: 0f).toDouble()
-                val remainingMb =
+                val trafficLimitGb = UnitConversionUtils.mbToGb(trafficLimitMb.toFloat()).toDouble()
+                val trafficUsedGb = UnitConversionUtils.mbToGb(trafficUsedMb.toFloat()).toDouble()
+                val remainingGb =
                     maxOf(
                         0.0,
-                        ((trafficLimitMb.toDouble() + (trafficAdjGb * Constants.MB_PER_GB)) - trafficUsedMb),
+                        (trafficLimitGb + trafficAdjGb) - trafficUsedGb,
                     )
-                val remainingTrafficGb = (remainingMb / Constants.MB_PER_GB).toFloat()
+                val remainingTrafficGb = remainingGb.toFloat()
 
                 prefs[DataStoreKeys.manualAdjustmentKey(identity)] = remainingMinutes
                 prefs[DataStoreKeys.trafficAdjustmentKey(identity)] = remainingTrafficGb

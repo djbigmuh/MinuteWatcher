@@ -1,6 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.model
 
 import host.serv.djbigmuh.minutewatcher.core.model.util.ClampingUtils
+import host.serv.djbigmuh.minutewatcher.core.model.util.UnitConversionUtils
 
 /**
  * Traffic model representing data usage, limits, and adjustments.
@@ -28,9 +29,8 @@ data class TrafficModel(
             limitMb: Int,
             manualAdjustmentGb: Float,
         ): TrafficModel {
-            val mbPerGb = Constants.MB_PER_GB.toDouble()
-            val limitGbD = limitMb.toDouble() / mbPerGb
-            val usedGbD = usedMb.toDouble() / mbPerGb
+            val limitGbD = UnitConversionUtils.mbToGb(limitMb.toFloat()).toDouble()
+            val usedGbD = UnitConversionUtils.mbToGb(usedMb).toDouble()
             val manualAdjGbD = manualAdjustmentGb.toDouble()
 
             val effectiveLimitGbD = (limitGbD + manualAdjGbD)

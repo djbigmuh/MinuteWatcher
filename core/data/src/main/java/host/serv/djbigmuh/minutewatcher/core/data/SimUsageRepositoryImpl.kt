@@ -13,13 +13,13 @@ import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.SimUsage
 import host.serv.djbigmuh.minutewatcher.core.model.util.BillingPeriodCalculator
+import host.serv.djbigmuh.minutewatcher.core.model.util.UnitConversionUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.roundToLong
 
 /**
  * Implementation of [SimUsageRepository], [SimUsageAdjustmentRepository],
@@ -242,11 +242,7 @@ class SimUsageRepositoryImpl
                     // 1. Increment traffic
                     val currentUsage = (prefs[DataStoreKeys.trafficUsedKey(identity)] ?: 0f).toDouble()
                     val newValue = currentUsage + deltaMb.toDouble()
-                    val rounded =
-                        (
-                            (newValue * TRAFFIC_ROUNDING_FACTOR).roundToLong() /
-                                TRAFFIC_ROUNDING_FACTOR
-                        ).toFloat()
+                    val rounded = UnitConversionUtils.roundTrafficMb(newValue.toFloat())
                     prefs[DataStoreKeys.trafficUsedKey(identity)] =
                         rounded.coerceIn(0f, Constants.MAX_TRAFFIC_LIMIT_MB.toFloat())
 
@@ -321,9 +317,5 @@ class SimUsageRepositoryImpl
                     }
                 }
             }
-        }
-
-        companion object {
-            private const val TRAFFIC_ROUNDING_FACTOR = 100.0
         }
     }

@@ -15,6 +15,7 @@ import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.UsageUseCase
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.Constants.SimConstants
+import host.serv.djbigmuh.minutewatcher.core.model.util.UnitConversionUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -143,9 +144,8 @@ class UsageUseCaseImpl
 
                 val safeRemainingGb =
                     remainingGb.toDouble().coerceIn(0.0, Constants.MAX_TRAFFIC_LIMIT_GB.toDouble())
-                val mbPerGb = Constants.MB_PER_GB.toDouble()
-                val limitGb = limitMb.toDouble() / mbPerGb
-                val usedGb = usedMb.toDouble() / mbPerGb
+                val limitGb = UnitConversionUtils.mbToGb(limitMb.toFloat()).toDouble()
+                val usedGb = UnitConversionUtils.mbToGb(usedMb).toDouble()
                 val adj = safeRemainingGb - (limitGb - usedGb)
                 val safeAdj =
                     adj.coerceIn(

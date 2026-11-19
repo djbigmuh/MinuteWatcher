@@ -1,6 +1,5 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.model.util
 
-import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.DataSourceType
 import host.serv.djbigmuh.minutewatcher.core.model.MeasurementUnit
 import host.serv.djbigmuh.minutewatcher.core.model.MinutesModel
@@ -57,11 +56,11 @@ object SemanticMapper {
         resetDay: Int,
         nowMillis: Long,
     ): SemanticEntity {
-        val limitBytes = (model.effectiveLimitGb.toDouble() * Constants.BYTES_PER_GB).toLong()
-        val usedBytes = (model.usedMb.toDouble() * Constants.BYTES_PER_MB).toLong()
+        val limitBytes = UnitConversionUtils.gbToBytes(model.effectiveLimitGb)
+        val usedBytes = UnitConversionUtils.mbToBytes(model.usedMb)
         val remainingBytes =
             if (model.remainingGb != null) {
-                (model.remainingGb.toDouble() * Constants.BYTES_PER_GB).toLong()
+                UnitConversionUtils.gbToBytes(model.remainingGb)
             } else {
                 0L
             }

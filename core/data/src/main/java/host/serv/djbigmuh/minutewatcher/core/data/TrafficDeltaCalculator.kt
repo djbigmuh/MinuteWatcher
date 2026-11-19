@@ -3,6 +3,7 @@
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
+import host.serv.djbigmuh.minutewatcher.core.model.util.UnitConversionUtils
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -79,7 +80,7 @@ class TrafficDeltaCalculator
             try {
                 val deltaBytes = currentBytes - lastTotalBytes
                 if (deltaBytes > 0L) {
-                    val deltaMB = (deltaBytes.toDouble() / Constants.BYTES_PER_MB).toFloat()
+                    val deltaMB = UnitConversionUtils.bytesToMb(deltaBytes)
                     if (deltaMB >= Constants.Traffic.MIN_DELTA_MB) {
                         val applied =
                             simUsageResetRepository.incrementTrafficAndSetBaseline(

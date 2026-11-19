@@ -9,6 +9,7 @@ import host.serv.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
 import host.serv.djbigmuh.minutewatcher.core.model.TrackingStatus
+import host.serv.djbigmuh.minutewatcher.core.model.util.UnitConversionUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.withLock
@@ -415,8 +416,8 @@ internal class CallEndHandler
                             savedIdentity,
                         )
 
-                    if (durationSeconds == 0) {
-                        AppLogger.d("CallTracker: zero-duration call for identity $targetIdentity, clearing session")
+                    if (durationSeconds <= 0) {
+                        AppLogger.d("CallTracker: zero-duration or negative call for identity $targetIdentity, clearing session")
                         CallEndResult.CLEANUP_AND_REFRESH
                     } else if (targetIdentity != null) {
                         val durationMinutes = calculateDurationMinutes(durationSeconds)
@@ -449,7 +450,7 @@ internal class CallEndHandler
         ): String = "$startTimeMillis|$startElapsedRealtime"
 
         private fun calculateDurationMinutes(seconds: Int): Int =
-            ((seconds + Constants.Time.SECONDS_IN_MINUTE) - 1) / Constants.Time.SECONDS_IN_MINUTE
+            UnitConversionUtils.secondsToMinutesCeil(seconds)
 
         private enum class CallEndResult {
             CONTINUE,

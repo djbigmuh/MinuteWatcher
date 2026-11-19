@@ -1,7 +1,7 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.common.util
 
 import android.content.Context
-import host.serv.djbigmuh.minutewatcher.core.model.Constants
+import host.serv.djbigmuh.minutewatcher.core.model.util.UnitConversionUtils
 import host.serv.djbigmuh.minutewatcher.core.resources.R
 import java.util.Locale
 
@@ -33,7 +33,7 @@ object FormatUtils {
         mb: Float,
     ): String {
         val locale = getLocale(context)
-        return "${formatTrafficGb(locale, mb / Constants.MB_PER_GB)} ${context.getString(R.string.gb_abbr)}"
+        return "${formatTrafficGb(locale, UnitConversionUtils.mbToGb(mb))} ${context.getString(R.string.gb_abbr)}"
     }
 
     fun formatTrafficDisplay(
