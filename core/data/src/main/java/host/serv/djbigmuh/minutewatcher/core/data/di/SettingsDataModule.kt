@@ -2,9 +2,12 @@
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.SharedPreferencesMigration
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.preferencesDataStoreFile
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -13,7 +16,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import host.serv.djbigmuh.minutewatcher.core.common.di.AppDataStore
+import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
+import host.serv.djbigmuh.minutewatcher.core.common.di.IoDispatcher
 import host.serv.djbigmuh.minutewatcher.core.common.di.SimDataStore
+import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
 import host.serv.djbigmuh.minutewatcher.core.data.AodSummaryAvailabilityImpl
 import host.serv.djbigmuh.minutewatcher.core.data.AppSettingsRepositoryImpl
 import host.serv.djbigmuh.minutewatcher.core.data.AutoResetScheduleRepositoryImpl
@@ -28,6 +34,9 @@ import host.serv.djbigmuh.minutewatcher.core.domain.PermissionRepository
 import host.serv.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import host.serv.djbigmuh.minutewatcher.core.domain.TrackingStatusProvider
 import host.serv.djbigmuh.minutewatcher.core.model.Constants
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import javax.inject.Singleton
 
 /**
@@ -37,7 +46,6 @@ import javax.inject.Singleton
  * - General application settings (theme, language, notifications)
  * - Widget settings (layout, transparency, font size)
  * - Migration and onboarding flags
- * - Strict API compliance: on AOSP DataStore responds in < 100 ms.
  *
  * **sim_settings** (`simDataStore`):
  * - SIM-specific data (limits, usage, adjustments)
@@ -45,26 +53,10 @@ import javax.inject.Singleton
  * - Separation from app_settings prevents key collisions
  *   and allows independent migration of SIM data.
  *
- * Both instances are created via `by preferencesDataStore` delegate,
- * guaranteeing lazy initialization and thread safety.
- * On AOSP DataStore guarantees atomicity of edit operations.
+ * Both instances are created via singleton Dagger provider methods using
+ * [PreferenceDataStoreFactory.create] with explicit injected [ApplicationScope],
+ * [IoDispatcher], [CoroutineExceptionHandler], and [ReplaceFileCorruptionHandler].
  */
-private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "app_settings",
-    produceMigrations = { context ->
-        listOf(SharedPreferencesMigration(context, Constants.PREFS_NAME))
-    },
-)
-
-private val Context.simDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "sim_settings",
-    produceMigrations = { context ->
-        listOf(
-            SharedPreferencesMigration(context, Constants.LEGACY_SIM_PREFS_NAME),
-        )
-    },
-)
-
 @Module
 @InstallIn(SingletonComponent::class)
 interface SettingsDataModule {
@@ -110,13 +102,49 @@ interface SettingsDataModule {
         @AppDataStore
         fun provideAppDataStore(
             @ApplicationContext context: Context,
-        ): DataStore<Preferences> = context.appDataStore
+            @ApplicationScope applicationScope: CoroutineScope,
+            @IoDispatcher ioDispatcher: CoroutineDispatcher,
+        ): DataStore<Preferences> =
+            PreferenceDataStoreFactory.create(
+                corruptionHandler =
+                    ReplaceFileCorruptionHandler { exception ->
+                        AppLogger.e("AppDataStore file corrupted, resetting to empty preferences", exception)
+                        emptyPreferences()
+                    },
+                migrations = listOf(SharedPreferencesMigration(context, Constants.PREFS_NAME)),
+                scope =
+                    CoroutineScope(
+                        applicationScope.coroutineContext + ioDispatcher +
+                            CoroutineExceptionHandler { _, throwable ->
+                                AppLogger.e("AppDataStore scope uncaught exception", throwable)
+                            },
+                    ),
+                produceFile = { context.preferencesDataStoreFile("app_settings") },
+            )
 
         @Provides
         @Singleton
         @SimDataStore
         fun provideSimDataStore(
             @ApplicationContext context: Context,
-        ): DataStore<Preferences> = context.simDataStore
+            @ApplicationScope applicationScope: CoroutineScope,
+            @IoDispatcher ioDispatcher: CoroutineDispatcher,
+        ): DataStore<Preferences> =
+            PreferenceDataStoreFactory.create(
+                corruptionHandler =
+                    ReplaceFileCorruptionHandler { exception ->
+                        AppLogger.e("SimDataStore file corrupted, resetting to empty preferences", exception)
+                        emptyPreferences()
+                    },
+                migrations = listOf(SharedPreferencesMigration(context, Constants.LEGACY_SIM_PREFS_NAME)),
+                scope =
+                    CoroutineScope(
+                        applicationScope.coroutineContext + ioDispatcher +
+                            CoroutineExceptionHandler { _, throwable ->
+                                AppLogger.e("SimDataStore scope uncaught exception", throwable)
+                            },
+                    ),
+                produceFile = { context.preferencesDataStoreFile("sim_settings") },
+            )
     }
 }

@@ -1,6 +1,7 @@
 package host.serv.djbigmuh.minutewatcher.core.data.testing
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
@@ -16,8 +17,10 @@ fun createTestDataStore(initial: Preferences = emptyPreferences()): DataStore<Pr
 fun createTestFilePreferencesDataStore(
     tmpFolder: TemporaryFolder,
     scope: CoroutineScope,
+    corruptionHandler: ReplaceFileCorruptionHandler<Preferences>? = null,
 ): DataStore<Preferences> =
     PreferenceDataStoreFactory.create(
+        corruptionHandler = corruptionHandler,
         scope = scope,
-        produceFile = { File(tmpFolder.root, "${UUID.randomUUID()}.preferences_pb") },
+        produceFile = { File(tmpFolder.root, "test_${UUID.randomUUID()}.preferences_pb") },
     )
