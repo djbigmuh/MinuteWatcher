@@ -417,7 +417,10 @@ internal class CallEndHandler
                         )
 
                     if (durationSeconds <= 0) {
-                        AppLogger.d("CallTracker: zero-duration or negative call for identity $targetIdentity, clearing session")
+                        AppLogger.d(
+                            "CallTracker: zero-duration or negative call for identity $targetIdentity, " +
+                                "clearing session",
+                        )
                         CallEndResult.CLEANUP_AND_REFRESH
                     } else if (targetIdentity != null) {
                         val durationMinutes = calculateDurationMinutes(durationSeconds)
@@ -449,8 +452,7 @@ internal class CallEndHandler
             startElapsedRealtime: Long,
         ): String = "$startTimeMillis|$startElapsedRealtime"
 
-        private fun calculateDurationMinutes(seconds: Int): Int =
-            UnitConversionUtils.secondsToMinutesCeil(seconds)
+        private fun calculateDurationMinutes(seconds: Int): Int = UnitConversionUtils.secondsToMinutesCeil(seconds)
 
         private enum class CallEndResult {
             CONTINUE,

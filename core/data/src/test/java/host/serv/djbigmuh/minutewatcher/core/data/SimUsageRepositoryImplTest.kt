@@ -408,7 +408,7 @@ class SimUsageRepositoryImplTest {
     }
 
     @Test
-    fun `whenIncrementingMinutesWithNegativeDeltaNoUpdateOccursAndMinutesAreClampedToLimits`() =
+    fun incrementMinutesWithNegativeDeltaNoUpdateOccursAndMinutesAreClampedToLimits() =
         runTest {
             val identity = "test_sim"
             val resultNegative = repository.incrementMinutesUsedForCall(identity, -5, "1000|1")
@@ -438,7 +438,7 @@ class SimUsageRepositoryImplTest {
         }
 
     @Test
-    fun `whenRolloverExecutedRemainingAdjustmentsAreClampedToMaxLimits`() =
+    fun rolloverExecutedRemainingAdjustmentsAreClampedToMaxLimits() =
         runTest {
             val identity = "test_sim"
             repository.ensureTrackingWindowInitialized(identity)

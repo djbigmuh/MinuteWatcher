@@ -67,7 +67,14 @@ class TrafficTrackerTimeoutTest {
             totalBytes: Long,
             expectedLastResetDate: Long,
             subId: Int,
-        ): Boolean = delegate.incrementTrafficAndSetBaseline(identity, deltaMb, totalBytes, expectedLastResetDate, subId)
+        ): Boolean =
+            delegate.incrementTrafficAndSetBaseline(
+                identity,
+                deltaMb,
+                totalBytes,
+                expectedLastResetDate,
+                subId,
+            )
     }
 
     private val networkStatsProvider: NetworkStatsProvider = mock()
