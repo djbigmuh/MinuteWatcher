@@ -120,7 +120,7 @@ class SimIdentityDiscovery
                     .getActiveSubscriptions()
                     .filter { it.simSlotIndex in SimConstants.SUPPORTED_SLOT_INDICES }
             } else {
-                emptyList()
+                throw SecurityException("READ_PHONE_STATE permission missing")
             }
 
         /**
@@ -169,9 +169,10 @@ class SimIdentityDiscovery
                         AppLogger.w("Sim discovery failed: security restriction", e)
                         SimDiscoveryResult.PermissionMissing
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         // Operation must complete without propagating exception for SIM discovery.
                         AppLogger.e("Sim discovery failed", e)
-                        SimDiscoveryResult.Failed(SimDiscoveryFailureReason.UNKNOWN)
+                        SimDiscoveryResult.Failed(SimDiscoveryFailureReason.API_ERROR)
                     }
                 }
             }

@@ -191,7 +191,7 @@ class SimIdentityRepositoryImplResolutionTest {
             whenever(permissionManager.getActiveSubscriptions()).thenReturn(emptyList())
 
             val result = runCatching { identityRepo.getSimIdentity(0) }
-            assertTrue(result.exceptionOrNull() is IllegalStateException)
+            assertTrue(result.exceptionOrNull() is SecurityException)
         }
 
     @Test

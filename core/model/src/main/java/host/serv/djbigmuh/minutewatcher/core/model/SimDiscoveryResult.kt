@@ -26,5 +26,6 @@ sealed interface SimDiscoveryResult {
 
 enum class SimDiscoveryFailureReason {
     STORAGE_ERROR,
+    API_ERROR,
     UNKNOWN,
 }
