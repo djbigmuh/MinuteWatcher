@@ -128,7 +128,7 @@ class SimIdentityObserverEdgeTest {
             whenever(fetcher.fetchActiveSimsWithRetry(any()))
                 .thenReturn(SimDiscoveryResult.Available(emptyList()))
 
-            observer.emitManualTrigger()
+            observer.recover()
             testScheduler.advanceTimeBy(1000.milliseconds)
 
             assertEquals(TrackingStatus.Active, observer.status.value)

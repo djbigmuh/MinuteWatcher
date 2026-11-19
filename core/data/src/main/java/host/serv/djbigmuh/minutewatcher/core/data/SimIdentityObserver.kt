@@ -1,6 +1,5 @@
 ﻿package host.serv.djbigmuh.minutewatcher.core.data
 
-import androidx.annotation.VisibleForTesting
 import host.serv.djbigmuh.minutewatcher.core.android.util.SimCardMapper
 import host.serv.djbigmuh.minutewatcher.core.common.di.ApplicationScope
 import host.serv.djbigmuh.minutewatcher.core.common.util.AppLogger
@@ -105,14 +104,6 @@ internal class SimIdentityObserver
             scope.launch {
                 manualTrigger.emit(Unit)
             }
-        }
-
-        @VisibleForTesting
-        internal fun emitManualTrigger(): Boolean = manualTrigger.tryEmit(Unit)
-
-        @VisibleForTesting
-        internal fun resetGeneralAttempt() {
-            generalAttempt.set(0)
         }
 
         private fun scheduleDiscoveryRecovery(reason: String) {

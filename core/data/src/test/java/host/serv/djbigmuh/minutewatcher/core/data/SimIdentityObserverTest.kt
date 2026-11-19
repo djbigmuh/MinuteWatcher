@@ -292,8 +292,8 @@ class SimIdentityObserverTest {
             whenever(migrationService.migrateFromEphemeralSeed(any(), any()))
                 .thenReturn(IdentityMigrationService.MigrationOutcome(1, 0, 0))
 
-            // 5. Trigger discovery AGAIN
-            observer.emitManualTrigger()
+            // 5. Trigger discovery AGAIN via public recover API
+            observer.recover()
             advanceTimeBy(1.seconds)
             runCurrent()
 
@@ -451,5 +451,27 @@ class SimIdentityObserverTest {
             } finally {
                 resetAppLoggerForTest()
             }
+        }
+
+    @Test
+    fun `previously known identities in persistence are preserved when permission is missing`() =
+        runTest {
+            val observer = createObserver(backgroundScope)
+            whenever(fetcher.fetchActiveSimsWithRetry(any()))
+                .thenReturn(SimDiscoveryResult.PermissionMissing)
+
+            val job = launch { observer.activeSimsCache.collect {} }
+            advanceTimeBy(1.seconds)
+            runCurrent()
+
+            val status = observer.status.value
+            assertTrue(
+                "Status must be Error PERMISSION_MISSING",
+                status is TrackingStatus.Error && status.type == TrackingStatus.ErrorType.PERMISSION_MISSING,
+            )
+
+            verify(migrationService, times(0)).removeOrphanedIdentityKeys(any())
+
+            job.cancel()
         }
 }
