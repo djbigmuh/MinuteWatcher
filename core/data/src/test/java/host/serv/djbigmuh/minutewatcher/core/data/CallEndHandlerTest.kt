@@ -295,4 +295,22 @@ class CallEndHandlerTest {
             verify(settingsHandler, never()).writeCallDuration(any(), any(), any(), any(), any())
             assertTrue(!result)
         }
+
+    @Test
+    fun `endCall when call duration is negative session is cleared without writing duration`() =
+        runTest {
+            whenever(settingsHandler.isCallTrackingEnabled()).thenReturn(true)
+            whenever(callSessionRepository.getCallStartTime(1)).thenReturn(flowOf(1000L))
+            whenever(callSessionRepository.getElapsedRealtime(1)).thenReturn(flowOf(100000L))
+            whenever(callSessionRepository.getCallIdentity(1)).thenReturn(flowOf("id_1"))
+            whenever(callSessionRepository.getUptime(1)).thenReturn(flowOf(3000L))
+
+            whenever(timeProvider.elapsedRealtime()).thenReturn(40000L)
+            whenever(timeProvider.uptimeMillis()).thenReturn(63000L)
+
+            handler.endCall(1, eventElapsedRealtime = -1L, notify = true, context = context)
+
+            verify(settingsHandler, never()).writeCallDuration(any(), any(), any(), any(), any())
+            verify(sessionCleaner).cleanupCounters(eq(1), eq(context))
+        }
 }

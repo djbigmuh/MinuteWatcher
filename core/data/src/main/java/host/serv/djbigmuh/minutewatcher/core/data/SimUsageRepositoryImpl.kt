@@ -73,7 +73,7 @@ class SimUsageRepositoryImpl
             deltaMinutes: Int,
             callSignature: String,
         ): Boolean {
-            if (identity.isBlank()) {
+            if (identity.isBlank() || deltaMinutes <= 0) {
                 return false
             }
             var result = false
@@ -86,7 +86,8 @@ class SimUsageRepositoryImpl
                 }
 
                 val current = prefs[DataStoreKeys.minutesUsedKey(identity)] ?: 0
-                prefs[DataStoreKeys.minutesUsedKey(identity)] = current + deltaMinutes
+                val newMinutes = (current + deltaMinutes).coerceIn(0, Constants.MAX_MINUTES_LIMIT)
+                prefs[DataStoreKeys.minutesUsedKey(identity)] = newMinutes
                 prefs[DataStoreKeys.lastCountedCallSignatureKey(identity)] = callSignature
                 prefs.remove(DataStoreKeys.lastCountedCallMarkerKey(identity))
                 result = true
@@ -133,7 +134,7 @@ class SimUsageRepositoryImpl
             manualAdjustment: Int,
         ) {
             dataStore.edit {
-                it[DataStoreKeys.minutesUsedKey(identity)] = minutesUsed
+                it[DataStoreKeys.minutesUsedKey(identity)] = minutesUsed.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
                 it[DataStoreKeys.trafficUsedKey(identity)] = trafficUsedMb
                 it[DataStoreKeys.manualAdjustmentKey(identity)] = manualAdjustment
             }

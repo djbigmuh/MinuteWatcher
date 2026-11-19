@@ -406,4 +406,19 @@ class SimUsageRepositoryImplTest {
         assertEquals("boot_time_1", DataStoreKeys.bootTimeKey(1).name)
         assertEquals("call_start_time_1", DataStoreKeys.callStartTimeKey(1).name)
     }
+
+    @Test
+    fun `whenIncrementingMinutesWithNegativeDeltaNoUpdateOccursAndMinutesAreClampedToLimits`() =
+        runTest {
+            val identity = "test_sim"
+            val resultNegative = repository.incrementMinutesUsedForCall(identity, -5, "1000|1")
+            assertFalse(resultNegative)
+
+            val usageZero = repository.getSimUsage(identity).first()
+            assertEquals(0, usageZero.minutesUsed)
+
+            repository.incrementMinutesUsedForCall(identity, Constants.MAX_MINUTES_LIMIT + 1000, "1000|2")
+            val usageMax = repository.getSimUsage(identity).first()
+            assertEquals(Constants.MAX_MINUTES_LIMIT, usageMax.minutesUsed)
+        }
 }
