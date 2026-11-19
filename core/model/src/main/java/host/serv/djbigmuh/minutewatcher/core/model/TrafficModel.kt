@@ -30,7 +30,8 @@ data class TrafficModel(
             manualAdjustmentGb: Float,
         ): TrafficModel {
             val limitGbD = UnitConversionUtils.mbToGb(limitMb.toFloat()).toDouble()
-            val usedGbD = UnitConversionUtils.mbToGb(usedMb).toDouble()
+            val safeUsedMb = usedMb.coerceAtLeast(0f)
+            val usedGbD = UnitConversionUtils.mbToGb(safeUsedMb).toDouble()
             val manualAdjGbD = manualAdjustmentGb.toDouble()
 
             val effectiveLimitGbD = (limitGbD + manualAdjGbD)
@@ -55,7 +56,7 @@ data class TrafficModel(
                 }
 
             return TrafficModel(
-                usedMb = usedMb,
+                usedMb = safeUsedMb,
                 limitMb = limitMb,
                 manualAdjustmentGb = manualAdjustmentGb,
                 remainingGb = clampedRemainingGb,

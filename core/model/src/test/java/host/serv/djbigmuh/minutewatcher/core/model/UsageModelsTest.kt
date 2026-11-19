@@ -124,4 +124,25 @@ class UsageModelsTest {
         assertFalse(model.isLimitSet)
         assertNull(model.remainingGb)
     }
+
+    @Test
+    fun `whenUsedMinutesIsNegativeRemainingDoesNotExceedEffectiveLimit`() {
+        val model = MinutesModel.calculate(used = -50, limit = 100, manualAdjustment = 0)
+        assertEquals(100, model.remaining)
+    }
+
+    @Test
+    fun `whenUsedTrafficIsNegativeRemainingDoesNotExceedEffectiveLimit`() {
+        val model = TrafficModel.calculate(usedMb = -1024f, limitMb = 2048, manualAdjustmentGb = 0f)
+        assertEquals(2f, model.remainingGb!!, 0.0001f)
+    }
+
+    @Test
+    fun `whenLimitIsExhaustedRemainingIsZero`() {
+        val minModel = MinutesModel.calculate(used = 150, limit = 100, manualAdjustment = 0)
+        assertEquals(0, minModel.remaining)
+
+        val trafModel = TrafficModel.calculate(usedMb = 3072f, limitMb = 2048, manualAdjustmentGb = 0f)
+        assertEquals(0f, trafModel.remainingGb!!, 0.0001f)
+    }
 }

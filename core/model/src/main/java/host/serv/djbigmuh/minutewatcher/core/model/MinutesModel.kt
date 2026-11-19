@@ -31,11 +31,12 @@ data class MinutesModel(
             val effectiveLimitL = ClampingUtils.clamp(rawEffectiveL, 0L, maxLimitLong)
             val effectiveLimit = effectiveLimitL.toInt()
 
+            val safeUsed = used.coerceAtLeast(0)
             val isLimitSet = limit > 0 || manualAdjustment != 0
             val remainingL =
                 if (isLimitSet) {
                     ClampingUtils.clamp(
-                        effectiveLimitL - used.toLong(),
+                        effectiveLimitL - safeUsed.toLong(),
                         0L,
                         maxLimitLong,
                     )
@@ -44,7 +45,7 @@ data class MinutesModel(
                 }
             val remaining = remainingL.toInt()
 
-            return MinutesModel(used, limit, manualAdjustment, remaining, effectiveLimit, isLimitSet)
+            return MinutesModel(safeUsed, limit, manualAdjustment, remaining, effectiveLimit, isLimitSet)
         }
     }
 }
