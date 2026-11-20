@@ -1,0 +1,172 @@
+﻿package com.github.djbigmuh.minutewatcher.feature.widget
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.color.ColorProvider
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
+import androidx.glance.layout.Column
+import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
+import androidx.glance.layout.padding
+import androidx.glance.layout.size
+import androidx.glance.layout.width
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
+import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
+import androidx.glance.text.TextStyle
+import com.github.djbigmuh.minutewatcher.core.android.ui.SimLayoutRender
+import com.github.djbigmuh.minutewatcher.core.model.Constants
+import com.github.djbigmuh.minutewatcher.core.model.SimLayoutComponent
+import com.github.djbigmuh.minutewatcher.core.model.SimUiState
+import com.github.djbigmuh.minutewatcher.core.model.WidgetUiState
+import com.github.djbigmuh.minutewatcher.core.model.util.buildSimSummary
+import androidx.glance.unit.ColorProvider as IColorProvider
+
+/**
+ * Renders a single SIM card in widget.
+ * Contains icon, operator name, minutes and traffic state.
+ * Uses SimLayoutRender for rendering.
+ *
+ * @param sim SIM card state.
+ * @param uiState Widget state.
+ */
+@Composable
+internal fun SimItem(
+    sim: SimUiState,
+    uiState: WidgetUiState,
+) {
+    val summary = buildSimSummary(uiState.strings, sim)
+
+    Column(
+        modifier =
+            GlanceModifier
+                .fillMaxWidth()
+                .padding(Constants.Widget.PADDING_SIM_ITEM.dp)
+                .semantics { contentDescription = summary },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SimItemLayout(sim, uiState)
+    }
+}
+
+/**
+ * Renders SIM card layout via SimLayoutRender.
+ * Passes renderers for icon, text, and spacer.
+ *
+ * @param sim SIM card state.
+ * @param uiState Widget state.
+ */
+@Composable
+internal fun SimItemLayout(
+    sim: SimUiState,
+    uiState: WidgetUiState,
+) {
+    SimLayoutRender(
+        spec = sim.layoutSpec,
+        iconRenderer = { component ->
+            SimItemIcon(component)
+        },
+        textRenderer = { component ->
+            SimItemText(component, sim, uiState)
+        },
+        spacerRenderer = { component ->
+            SimItemSpacer(component)
+        },
+    ) { content ->
+        Box(
+            modifier = GlanceModifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                content()
+            }
+        }
+    }
+}
+
+/**
+ * Renders SIM card icon in widget.
+ * Used in SimLayoutRender.
+ *
+ * @param component Icon component (iconRes, sizeDp).
+ */
+@Composable
+internal fun SimItemIcon(component: SimLayoutComponent.Icon) {
+    Image(
+        provider = ImageProvider(component.iconRes),
+        contentDescription = null,
+        modifier = GlanceModifier.size(component.sizeDp.dp),
+    )
+}
+
+/**
+ * Renders SIM card text in widget.
+ * Used in SimLayoutRender.
+ * Text color is resolved depending on useSystemColors.
+ *
+ * @param component Text component (text, color, fontSizeSp, isBold).
+ * @param sim SIM card state.
+ * @param uiState Widget state.
+ */
+@Composable
+internal fun SimItemText(
+    component: SimLayoutComponent.Text,
+    sim: SimUiState,
+    uiState: WidgetUiState,
+) {
+    val textColor =
+        resolveTextColor(uiState, sim, component)
+
+    Text(
+        text = component.text,
+        style =
+            TextStyle(
+                fontSize = component.fontSizeSp.sp,
+                fontWeight = if (component.isBold) FontWeight.Bold else FontWeight.Normal,
+                color = textColor,
+            ),
+        maxLines = 1,
+    )
+}
+
+@Composable
+private fun resolveTextColor(
+    uiState: WidgetUiState,
+    sim: SimUiState,
+    component: SimLayoutComponent.Text,
+): IColorProvider =
+    if (uiState.useSystemColors && (component.color == sim.textColor)) {
+        GlanceTheme.colors.onSurface
+    } else if (uiState.useSystemColors && (component.color == sim.secondaryTextColor)) {
+        GlanceTheme.colors.onSurfaceVariant
+    } else {
+        val composeColor = Color(component.color)
+        ColorProvider(day = composeColor, night = composeColor)
+    }
+
+/**
+ * Renders spacer in widget.
+ * Used in SimLayoutRender.
+ *
+ * @param component Spacer component (widthDp, heightDp).
+ */
+@Composable
+internal fun SimItemSpacer(component: SimLayoutComponent.Spacer) {
+    if (component.widthDp > 0) {
+        Spacer(modifier = GlanceModifier.width(component.widthDp.dp))
+    }
+    if (component.heightDp > 0) {
+        Spacer(modifier = GlanceModifier.height(component.heightDp.dp))
+    }
+}

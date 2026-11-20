@@ -1,5 +1,5 @@
 import com.android.build.api.dsl.TestExtension
-import host.serv.djbigmuh.minutewatcher.buildlogic.SdkVersions
+import com.github.djbigmuh.minutewatcher.buildlogic.SdkVersions
 
 plugins {
     id("com.android.test")

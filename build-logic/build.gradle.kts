@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.ktlint)
 }
 
-group = "host.serv.djbigmuh.minutewatcher.buildlogic"
+group = "com.github.djbigmuh.minutewatcher.buildlogic"
 
 // versionCatalogs is the modern accessor (Gradle 7.4+).
 // VersionCatalogsExtension is deprecated and will be removed in Gradle 10.

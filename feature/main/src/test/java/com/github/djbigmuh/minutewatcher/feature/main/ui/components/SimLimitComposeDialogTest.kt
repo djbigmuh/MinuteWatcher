@@ -1,0 +1,359 @@
+﻿package com.github.djbigmuh.minutewatcher.feature.main.ui.components
+
+import android.content.Context
+import androidx.compose.runtime.saveable.SaverScope
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.test.core.app.ApplicationProvider
+import com.github.djbigmuh.minutewatcher.core.common.util.NumberInputNormalizer
+import com.github.djbigmuh.minutewatcher.core.model.Constants
+import com.github.djbigmuh.minutewatcher.core.resources.R
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import java.util.Locale
+import kotlin.math.roundToInt
+
+// UI-infra SDK pin: Espresso InputManager reflection fails on SDK > 35 in Robolectric
+@Config(sdk = [35])
+@RunWith(RobolectricTestRunner::class)
+class SimLimitComposeDialogTest {
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private val defaultLocale = Locale.US
+
+    @Test
+    fun `reset limits shows confirmation dialog`() {
+        var resetCalled = false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 1000,
+                onDismiss = {},
+                onConfirm = { _, _, _ -> },
+                onReset = { resetCalled = true },
+            )
+        }
+
+        // Click "Reset limits" button
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_button)).performClick()
+
+        // Check if confirmation dialog with new limits reset text is displayed
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_confirmation_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_confirmation_body)).assertIsDisplayed()
+        assertFalse("onReset should not be called yet", resetCalled)
+
+        // Click "Cancel" in confirmation dialog (the last one added)
+        composeTestRule.onAllNodesWithText(context.getString(R.string.cancel_button)).onLast().performClick()
+
+        // Confirmation dialog should be gone
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_confirmation_title)).assertDoesNotExist()
+        assertFalse("onReset should not be called after Cancel", resetCalled)
+
+        // Click "Reset limits" button again
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_limits_button)).performClick()
+
+        // Click "Reset" in confirmation dialog
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_label)).performClick()
+
+        assertTrue("onReset should be called after confirmation", resetCalled)
+    }
+
+    @Test
+    fun `ResetConfirmationDialog with default parameters displays counter reset text`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            ResetConfirmationDialog(
+                onDismiss = {},
+                onConfirm = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_confirmation_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.reset_confirmation_body)).assertIsDisplayed()
+    }
+
+    @Test
+    fun `click traffic field then typing 7 replaces value instead of appending`() {
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 10240, // 10 GB ("10.0")
+                onDismiss = {},
+                onConfirm = { _, _, _ -> },
+                onReset = {},
+            )
+        }
+
+        // Click traffic field "10.0"
+        composeTestRule.onNodeWithText("10.0").performClick()
+        // Type "7"
+        composeTestRule.onNodeWithText("10.0").performTextInput("7")
+
+        // Traffic text should be "7", not "10.07"
+        composeTestRule.onNodeWithText("7").assertIsDisplayed()
+    }
+
+    @Test
+    fun `confirm with empty input shows validation error and does not call confirm`() {
+        var confirmCalled = false
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 0,
+                initialTrafficMb = 0,
+                onDismiss = {},
+                onConfirm = { _, _, _ -> confirmCalled = true },
+                onReset = {},
+            )
+        }
+
+        // Clear the minutes text field
+        composeTestRule.onNodeWithText("0").performTextClearance()
+
+        // Click set button
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.set_button), ignoreCase = true)
+            .performClick()
+
+        assertFalse("onConfirm should not be called with empty input", confirmCalled)
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.validation_error_field_required))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `confirm without editing traffic preserves exact initialTrafficMb`() {
+        var confirmedTraffic = -1
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 5120, // 5120 MB (5.0 GB)
+                onDismiss = {},
+                onConfirm = { _, trafficMb, _ -> confirmedTraffic = trafficMb },
+                onReset = {},
+            )
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.set_button), ignoreCase = true)
+            .performClick()
+
+        assertEquals(5120, confirmedTraffic)
+    }
+
+    @Test
+    fun `confirm with edited traffic converts correctly`() {
+        var confirmedTraffic = -1
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 5120,
+                onDismiss = {},
+                onConfirm = { _, trafficMb, _ -> confirmedTraffic = trafficMb },
+                onReset = {},
+            )
+        }
+
+        composeTestRule
+            .onAllNodes(
+                androidx.compose.ui.test
+                    .hasSetTextAction(),
+            )[1]
+            .performTextClearance()
+        composeTestRule
+            .onAllNodes(
+                androidx.compose.ui.test
+                    .hasSetTextAction(),
+            )[1]
+            .performTextInput("6")
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.set_button), ignoreCase = true)
+            .performClick()
+
+        // 6 GB * 1024 = 6144 MB
+        assertEquals(6144, confirmedTraffic)
+    }
+
+    @Test
+    fun `confirm with text numerically equal to initial preserves exact initialTrafficMb`() {
+        var confirmedTraffic = -1
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent {
+            SimLimitComposeDialog(
+                slot = 0,
+                operatorName = "Test Operator",
+                initialMinutes = 100,
+                initialTrafficMb = 5120,
+                onDismiss = {},
+                onConfirm = { _, trafficMb, _ -> confirmedTraffic = trafficMb },
+                onReset = {},
+            )
+        }
+
+        composeTestRule
+            .onAllNodes(
+                androidx.compose.ui.test
+                    .hasSetTextAction(),
+            )[1]
+            .performTextClearance()
+        composeTestRule
+            .onAllNodes(
+                androidx.compose.ui.test
+                    .hasSetTextAction(),
+            )[1]
+            .performTextInput("5.0")
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.set_button), ignoreCase = true)
+            .performClick()
+
+        assertEquals(5120, confirmedTraffic)
+    }
+
+    @Test
+    fun `SimLimitState saver preserves initialTrafficMb`() {
+        val state =
+            SimLimitState("100", "5.0", initialTrafficMb = 5120, initialRolloverEnabled = true, locale = defaultLocale)
+        assertEquals(5120, state.initialTrafficMb)
+    }
+
+    @Test
+    fun `SimLimitState saver preserves locale and properties`() {
+        val testLocale = if (Locale.getDefault() == Locale.GERMANY) Locale.FRANCE else Locale.GERMANY
+        val state =
+            SimLimitState(
+                initialMinutesText = "100",
+                initialTrafficText = "5,0",
+                initialRolloverEnabled = true,
+                initialTrafficMb = 5120,
+                locale = testLocale,
+            ).apply {
+                minutesError = "Min error"
+                trafficError = "Traffic error"
+            }
+
+        val saver = SimLimitState.saver(testLocale)
+        val saved = with(saver) { SaverScope { true }.save(state) }
+        assertNotNull(saved)
+        val restored = with(saver) { restore(saved!!) }
+
+        assertNotNull(restored)
+        val nonNullRestored = restored!!
+        assertEquals("100", nonNullRestored.minutesText.text)
+        assertEquals("5,0", nonNullRestored.trafficText.text)
+        assertEquals("5,0", nonNullRestored.initialTrafficText)
+        assertTrue(nonNullRestored.rolloverEnabled)
+        assertEquals(5120, nonNullRestored.initialTrafficMb)
+        assertEquals("Min error", nonNullRestored.minutesError)
+        assertEquals("Traffic error", nonNullRestored.trafficError)
+        assertTrue(nonNullRestored.isTrafficUnchanged(testLocale))
+        assertEquals(NumberInputNormalizer.normalize("5,0", testLocale), nonNullRestored.initialTrafficNormalized)
+    }
+
+    @Test
+    fun `SimLimitState saver preserves edited traffic text and initial values`() {
+        val state =
+            SimLimitState(
+                "100",
+                "5.0",
+                initialTrafficMb = 5120,
+                initialRolloverEnabled = true,
+                locale = Locale.US,
+            )
+        state.trafficText = TextFieldValue("6.0")
+
+        val saver = SimLimitState.saver(Locale.US)
+        val saved = with(saver) { SaverScope { true }.save(state) }
+        assertNotNull(saved)
+        val restored = with(saver) { restore(saved!!) }
+
+        assertNotNull(restored)
+        val nonNullRestored = restored!!
+        assertEquals("6.0", nonNullRestored.trafficText.text)
+        assertEquals("100", nonNullRestored.minutesText.text)
+        assertEquals("5.0", nonNullRestored.initialTrafficText)
+        assertEquals(5120, nonNullRestored.initialTrafficMb)
+        assertFalse(nonNullRestored.isTrafficUnchanged(Locale.US))
+
+        val result =
+            SimLimitValidator.validate(
+                nonNullRestored.minutesText.text,
+                nonNullRestored.trafficText.text,
+                "req",
+                "inv",
+                "min",
+                "traf",
+                Locale.US,
+            )
+        assertTrue(result is SimLimitValidationResult.Valid)
+        val valid = result as SimLimitValidationResult.Valid
+        assertEquals(100, valid.minutes)
+        assertEquals(6.0f, valid.trafficGb)
+        assertEquals(6144, (valid.trafficGb * Constants.MB_PER_GB).roundToInt())
+    }
+
+    @Test
+    fun `SimLimitState saver resets input to initial values when restored in different locale`() {
+        val state =
+            SimLimitState(
+                "100",
+                "5,0",
+                initialTrafficMb = 5120,
+                initialRolloverEnabled = true,
+                locale = Locale.GERMANY,
+            ).apply {
+                trafficText = TextFieldValue("6,0")
+                minutesError = "err"
+            }
+
+        val saverGerman = SimLimitState.saver(Locale.GERMANY)
+        val saved = with(saverGerman) { SaverScope { true }.save(state) }
+        assertNotNull(saved)
+
+        val saverUs = SimLimitState.saver(Locale.US)
+        val restored = with(saverUs) { restore(saved!!) }
+
+        assertNotNull(restored)
+        val nonNullRestored = restored!!
+        assertEquals("5,0", nonNullRestored.trafficText.text)
+        assertEquals("100", nonNullRestored.minutesText.text)
+        assertEquals(null, nonNullRestored.minutesError)
+        assertEquals(5120, nonNullRestored.initialTrafficMb)
+        assertTrue(nonNullRestored.isTrafficUnchanged(Locale.US))
+    }
+}

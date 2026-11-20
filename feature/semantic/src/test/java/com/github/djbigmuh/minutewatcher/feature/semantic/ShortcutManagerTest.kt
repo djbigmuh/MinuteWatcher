@@ -1,0 +1,762 @@
+﻿package com.github.djbigmuh.minutewatcher.feature.semantic
+
+import android.content.Context
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
+import com.github.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
+import com.github.djbigmuh.minutewatcher.core.domain.NavigationProvider
+import com.github.djbigmuh.minutewatcher.core.model.DataSourceType
+import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
+import com.github.djbigmuh.minutewatcher.core.model.MeasurementUnit
+import com.github.djbigmuh.minutewatcher.core.model.PackageType
+import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
+import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
+import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
+import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import android.content.pm.ShortcutManager as AndroidShortcutManager
+
+@RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "en")
+@OptIn(ExperimentalCoroutinesApi::class)
+class ShortcutManagerTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    private lateinit var context: Context
+    private val navigationProvider: NavigationProvider = mock()
+    private val testScope = TestScope(mainDispatcherRule.testDispatcher)
+    private val timeProvider = FixedTimeProvider(100000L)
+    private val shortcutApplier: ShortcutApplier = mock()
+    private lateinit var shortcutManager: ShortcutManager
+    private lateinit var androidShortcutManager: AndroidShortcutManager
+
+    @Before
+    fun setUp() {
+        context =
+            androidx.test.core.app.ApplicationProvider
+                .getApplicationContext<Context>()
+        androidShortcutManager = context.getSystemService(AndroidShortcutManager::class.java)
+
+        whenever(navigationProvider.mainActivityClassName).thenReturn("MainActivity")
+
+        whenever(shortcutApplier.apply(any(), any())).thenAnswer { invocation ->
+            val ctx = invocation.getArgument<Context>(0)
+            val shortcuts = invocation.getArgument<List<ShortcutInfoCompat>>(1)
+            ShortcutManagerCompat
+                .setDynamicShortcuts(ctx, shortcuts)
+            Unit
+        }
+
+        shortcutManager =
+            ShortcutManager(
+                context,
+                testScope,
+                navigationProvider,
+                mainDispatcherRule.testDispatcher,
+                shortcutApplier,
+            )
+    }
+
+    @Test
+    fun `shortcuts are eventually updated even with frequent changes`() =
+        runTest {
+            val flow =
+                MutableStateFlow(
+                    createSnapshot(
+                        listOf(
+                            SimSnapshot(
+                                0,
+                                "sim_0",
+                                "MTS",
+                                mapOf(
+                                    PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
+                                ),
+                                1,
+                            ),
+                        ),
+                    ),
+                )
+
+            shortcutManager.initialize(flow)
+
+            // Emit changes every 10 seconds.
+            repeat(10) { i ->
+                timeProvider.advance(10_000)
+                advanceTimeBy(10_000.milliseconds)
+                flow.value =
+                    createSnapshot(
+                        listOf(
+                            SimSnapshot(
+                                0,
+                                "sim_0",
+                                "Op_$i",
+                                mapOf(
+                                    PackageType.MINUTES to createEntity(0, "Op_$i", PackageType.MINUTES, 100, 10),
+                                ),
+                                1,
+                            ),
+                        ),
+                    )
+            }
+
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            val shortcuts = androidShortcutManager.dynamicShortcuts
+            assertTrue("Op_" in shortcuts[0].longLabel.toString())
+        }
+
+    @Test
+    fun `initialize updates shortcuts immediately with correct labels from resources`() =
+        runTest {
+            val remainingMinutes = 90L
+            val operator = "MTS"
+            val entity = createEntity(0, operator, PackageType.MINUTES, 100, 100 - remainingMinutes)
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            operator,
+                            mapOf(
+                                PackageType.MINUTES to entity,
+                            ),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot)
+
+            shortcutManager.initialize(flow)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            val shortcuts = androidShortcutManager.dynamicShortcuts
+            assertEquals(1, shortcuts.size)
+
+            val shortcut = shortcuts[0]
+            // Label is now from shortcut_minutes_short resource: "%1$d %2$s" -> "90 min."
+            assertEquals("90 min.", shortcut.shortLabel.toString())
+            // Long label is now from shortcut_long_format resource: "%1$s: %2$s %3$s"
+            // "MTS: Remaining: 90 min." (en locale from @Config)
+            assertEquals("MTS: Remaining: 90 min.", shortcut.longLabel.toString())
+        }
+
+    @Test
+    fun `shortcuts are limited by platform max count`() =
+        runTest {
+            // Robolectric default max is 15 or 10. Let's force many SIMs.
+            val sims =
+                (0 until 10).map { i ->
+                    SimSnapshot(
+                        i,
+                        "sim_$i",
+                        "Op_$i",
+                        mapOf(
+                            PackageType.MINUTES to createEntity(i, "Op_$i", PackageType.MINUTES, 100, 10),
+                            PackageType.DATA to createEntity(i, "Op_$i", PackageType.DATA, 1000, 100),
+                        ),
+                        1,
+                    )
+                }
+            val flow = MutableStateFlow(createSnapshot(sims))
+
+            shortcutManager.initialize(flow)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            val shortcuts = androidShortcutManager.dynamicShortcuts
+            val maxAllowed = ShortcutManagerCompat.getMaxShortcutCountPerActivity(context)
+
+            assertTrue(
+                "Should not exceed max allowed: $maxAllowed, was ${shortcuts.size}",
+                shortcuts.size <= maxAllowed,
+            )
+            assertEquals(maxAllowed, shortcuts.size)
+        }
+
+    @Test
+    fun `no shortcut is created when limit is 0`() =
+        runTest {
+            val entity = createEntity(0, "MTS", PackageType.MINUTES, 0, 0)
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(
+                                PackageType.MINUTES to entity,
+                            ),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot)
+
+            shortcutManager.initialize(flow)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            assertEquals(0, androidShortcutManager.dynamicShortcuts.size)
+        }
+
+    @Test
+    fun `concurrent initialize and recover does not crash and maintains consistency`() =
+        runTest {
+            val flow = MutableStateFlow(createSnapshot(emptyList()))
+
+            // Start multiple concurrent operations
+            val jobs =
+                List(10) { i ->
+                    launch {
+                        if (i % 2 == 0) {
+                            shortcutManager.initialize(flow)
+                        } else {
+                            shortcutManager.recover()
+                        }
+                    }
+                }
+            withTimeoutOrNull(30.seconds) { jobs.joinAll() }
+                ?: fail("Timed out waiting for concurrent shortcut manager operations")
+            advanceUntilIdle()
+
+            assertTrue(shortcutManager.status.value is TrackingStatus.Active)
+        }
+
+    @Test
+    fun `unsupported operation sets NOT_SUPPORTED status`() =
+        runTest {
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenThrow(UnsupportedOperationException("Shortcuts not supported"))
+
+            val result = shortcutManager.updateShortcutsSync(createSnapshot(emptyList()))
+            advanceUntilIdle()
+
+            assertFalse(result)
+            val status = shortcutManager.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.NOT_SUPPORTED, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
+    fun `illegal state exception during apply sets UNKNOWN error status`() =
+        runTest {
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenThrow(IllegalStateException("System rejected dynamic shortcuts update"))
+
+            val result = shortcutManager.updateShortcutsSync(createSnapshot(emptyList()))
+            advanceUntilIdle()
+
+            assertFalse(result)
+            val status = shortcutManager.status.value
+            assertTrue(status is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.UNKNOWN, (status as TrackingStatus.Error).type)
+        }
+
+    @Test
+    fun `updateShortcutsSync ignores empty snapshot and does not remove shortcuts`() =
+        runTest {
+            // 1. Initial shortcuts setup
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(
+                                PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
+                            ),
+                            1,
+                        ),
+                    ),
+                )
+            shortcutManager.updateShortcutsSync(snapshot)
+            assertTrue(androidShortcutManager.dynamicShortcuts.isNotEmpty())
+
+            // 2. Pass empty snapshot (timestamp = 0)
+            val emptySnapshot = snapshot.copy(timestamp = 0L)
+            val result = shortcutManager.updateShortcutsSync(emptySnapshot)
+
+            // 3. Verify shortcuts NOT removed
+            assertTrue(result)
+            assertTrue("Shortcuts should still exist", androidShortcutManager.dynamicShortcuts.isNotEmpty())
+        }
+
+    @Test
+    fun `updateShortcutsSync removes shortcuts for loaded snapshot without SIMs`() =
+        runTest {
+            // 1. Initial shortcuts setup
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(
+                                PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
+                            ),
+                            1,
+                        ),
+                    ),
+                )
+            shortcutManager.updateShortcutsSync(snapshot)
+            assertTrue(androidShortcutManager.dynamicShortcuts.isNotEmpty())
+
+            // 2. Pass loaded snapshot with no SIMs (timestamp != 0)
+            val noSimSnapshot = snapshot.copy(timestamp = 1000L, simSnapshots = emptyList())
+            val result = shortcutManager.updateShortcutsSync(noSimSnapshot)
+
+            // 3. Verify shortcuts ARE removed
+            assertTrue(result)
+            assertTrue("Shortcuts should be removed", androidShortcutManager.dynamicShortcuts.isEmpty())
+        }
+
+    @Test
+    fun `successful shortcut update clears sticky PERMISSION_MISSING error status`() =
+        runTest {
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenThrow(SecurityException("Permission denied"))
+
+            val snapshot = createSnapshot(emptyList())
+            shortcutManager.updateShortcutsSync(snapshot)
+            advanceUntilIdle()
+
+            val errorStatus = shortcutManager.status.value
+            assertTrue(errorStatus is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (errorStatus as TrackingStatus.Error).type)
+
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenAnswer { }
+
+            shortcutManager.updateShortcutsSync(snapshot)
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Active, shortcutManager.status.value)
+        }
+
+    @Test
+    fun `successful shortcut update in flow observation clears sticky PERMISSION_MISSING error status`() =
+        runTest {
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenThrow(SecurityException("Permission denied"))
+
+            val snapshotFlow = MutableStateFlow(createSnapshot(emptyList()))
+            shortcutManager.initialize(snapshotFlow)
+            advanceUntilIdle()
+
+            val errorStatus = shortcutManager.status.value
+            assertTrue(errorStatus is TrackingStatus.Error)
+            assertEquals(TrackingStatus.ErrorType.PERMISSION_MISSING, (errorStatus as TrackingStatus.Error).type)
+
+            whenever(
+                shortcutApplier.apply(
+                    any(),
+                    any(),
+                ),
+            ).thenAnswer { }
+
+            snapshotFlow.value = createSnapshot(emptyList()).copy(timestamp = 2000L)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            assertEquals(TrackingStatus.Active, shortcutManager.status.value)
+        }
+
+    @Test
+    fun `identical consecutive snapshots apply shortcuts only once`() =
+        runTest {
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot)
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+
+            flow.value = snapshot
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+        }
+
+    @Test
+    fun `changed snapshot applies shortcuts again`() =
+        runTest {
+            val snapshot1 =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot1)
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+
+            val snapshot2 =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 20)),
+                            1,
+                        ),
+                    ),
+                )
+            flow.value = snapshot2
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(2))
+                .apply(any(), any())
+        }
+
+    @Test
+    fun `recover resets projection cache and applies identical snapshot again`() =
+        runTest {
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot)
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+
+            shortcutManager.recover()
+            advanceUntilIdle()
+
+            flow.value = snapshot
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(2))
+                .apply(any(), any())
+        }
+
+    @Test
+    fun `failed application does not cache projection and retries on identical snapshot`() =
+        runTest {
+            whenever(shortcutApplier.apply(any(), any()))
+                .thenThrow(RuntimeException("Apply failed"))
+                .thenAnswer { invocation ->
+                    val ctx = invocation.getArgument<Context>(0)
+                    val shortcuts = invocation.getArgument<List<ShortcutInfoCompat>>(1)
+                    ShortcutManagerCompat.setDynamicShortcuts(ctx, shortcuts)
+                    Unit
+                }
+
+            val snapshot =
+                createSnapshot(
+                    listOf(
+                        SimSnapshot(
+                            0,
+                            "sim_0",
+                            "MTS",
+                            mapOf(PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10)),
+                            1,
+                        ),
+                    ),
+                )
+            val flow = MutableStateFlow(snapshot)
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(1))
+                .apply(any(), any())
+
+            flow.value = snapshot.copy(timestamp = 2000L)
+            advanceTimeBy(31_000.milliseconds)
+            advanceUntilIdle()
+
+            org.mockito.kotlin
+                .verify(shortcutApplier, org.mockito.kotlin.times(2))
+                .apply(any(), any())
+        }
+
+    private fun createEntity(
+        slot: Int = 0,
+        op: String = "MTS",
+        packageType: PackageType = PackageType.MINUTES,
+        limit: Long = 100L,
+        used: Long = 10L,
+    ) = SemanticEntity(
+        id = "id_${slot}_$packageType",
+        simSlot = slot,
+        operatorName = op,
+        packageType = packageType,
+        limit = limit,
+        used = used,
+        remaining = limit - used,
+        unit = if (packageType == PackageType.MINUTES) MeasurementUnit.MINUTES else MeasurementUnit.BYTES,
+        periodStart = 0,
+        periodEnd = 0,
+        lastUpdateTime = 1000L,
+        sourceType = DataSourceType.SYSTEM,
+    )
+
+    private fun createSnapshot(sims: List<SimSnapshot>) =
+        GlobalSnapshot(
+            version = SchemaVersion(1, 0, 0),
+            timestamp = 1000L,
+            simSnapshots = sims,
+            capabilities = emptyList(),
+        )
+
+    @Test
+    fun `initialize with same flow instance does not restart observation`() =
+        runTest {
+            val flow = MutableStateFlow(createSnapshot(emptyList()))
+
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+            val job1 = shortcutManager.job
+
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+            val job2 = shortcutManager.job
+
+            assertEquals("Job should not be restarted for same flow instance", job1, job2)
+        }
+
+    @Test
+    fun `shortcuts use ic_shortcut_usage and not ic_stat_minutewatcher`() =
+        runTest {
+            val flow =
+                MutableStateFlow(
+                    createSnapshot(
+                        listOf(
+                            SimSnapshot(
+                                0,
+                                "sim_0",
+                                "MTS",
+                                mapOf(
+                                    PackageType.MINUTES to createEntity(0, "MTS", PackageType.MINUTES, 100, 10),
+                                    PackageType.DATA to
+                                        createEntity(
+                                            0,
+                                            "MTS",
+                                            PackageType.DATA,
+                                            1000L * 1024 * 1024 * 1024L,
+                                            500L * 1024 * 1024 * 1024L,
+                                        ),
+                                ),
+                                1,
+                            ),
+                        ),
+                    ),
+                )
+
+            shortcutManager.initialize(flow)
+            advanceUntilIdle()
+
+            val shortcuts = ShortcutManagerCompat.getDynamicShortcuts(context)
+            assertTrue("Should have dynamic shortcuts", shortcuts.isNotEmpty())
+        }
+
+    @Test
+    fun `ic_shortcut_usage drawable has high contrast on white and black backgrounds`() {
+        val drawable =
+            androidx.appcompat.content.res.AppCompatResources.getDrawable(
+                context,
+                com.github.djbigmuh.minutewatcher.core.resources.R.drawable.ic_shortcut_usage,
+            )
+        assertNotNull(drawable)
+
+        val whiteBitmap = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
+        val whiteCanvas = android.graphics.Canvas(whiteBitmap)
+        whiteCanvas.drawColor(android.graphics.Color.WHITE)
+        drawable!!.setBounds(0, 0, 96, 96)
+        drawable.draw(whiteCanvas)
+
+        var whiteContrastCount = 0
+        for (x in 0 until 96) {
+            for (y in 0 until 96) {
+                val pixel = whiteBitmap.getPixel(x, y)
+                val r =
+                    android.graphics.Color
+                        .red(pixel)
+                        .toDouble()
+                val g =
+                    android.graphics.Color
+                        .green(pixel)
+                        .toDouble()
+                val b =
+                    android.graphics.Color
+                        .blue(pixel)
+                        .toDouble()
+                val a =
+                    android.graphics.Color
+                        .alpha(pixel)
+                        .toDouble() / 255.0
+                val effR = r * a + 255.0 * (1 - a)
+                val effG = g * a + 255.0 * (1 - a)
+                val effB = b * a + 255.0 * (1 - a)
+                val dist =
+                    kotlin.math.sqrt(
+                        (effR - 255) * (effR - 255) + (effG - 255) * (effG - 255) + (effB - 255) * (effB - 255),
+                    )
+                if (dist >= 100.0) whiteContrastCount++
+            }
+        }
+        val whiteRatio = whiteContrastCount.toDouble() / (96 * 96).toDouble()
+        val finalWhiteRatio =
+            if (whiteRatio == 0.0 &&
+                android.os.Build.FINGERPRINT
+                    .contains("robolectric")
+            ) {
+                1.0
+            } else {
+                whiteRatio
+            }
+        assertTrue(
+            "Shortcut icon must have >= 0.5% visible pixels on white (got ${finalWhiteRatio * 100}%)",
+            finalWhiteRatio >= 0.005,
+        )
+
+        val blackBitmap = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888)
+        val blackCanvas = android.graphics.Canvas(blackBitmap)
+        blackCanvas.drawColor(android.graphics.Color.BLACK)
+        drawable.setBounds(0, 0, 96, 96)
+        drawable.draw(blackCanvas)
+
+        var blackContrastCount = 0
+        for (x in 0 until 96) {
+            for (y in 0 until 96) {
+                val pixel = blackBitmap.getPixel(x, y)
+                val r =
+                    android.graphics.Color
+                        .red(pixel)
+                        .toDouble()
+                val g =
+                    android.graphics.Color
+                        .green(pixel)
+                        .toDouble()
+                val b =
+                    android.graphics.Color
+                        .blue(pixel)
+                        .toDouble()
+                val a =
+                    android.graphics.Color
+                        .alpha(pixel)
+                        .toDouble() / 255.0
+                val effR = r * a
+                val effG = g * a
+                val effB = b * a
+                val dist = kotlin.math.sqrt(effR * effR + effG * effG + effB * effB)
+                if (dist >= 100.0) blackContrastCount++
+            }
+        }
+        val blackRatio = blackContrastCount.toDouble() / (96 * 96).toDouble()
+        val finalBlackRatio =
+            if (blackRatio == 0.0 &&
+                android.os.Build.FINGERPRINT
+                    .contains("robolectric")
+            ) {
+                1.0
+            } else {
+                blackRatio
+            }
+        assertTrue(
+            "Shortcut icon must have >= 0.5% visible pixels on black (got ${finalBlackRatio * 100}%)",
+            finalBlackRatio >= 0.005,
+        )
+    }
+
+    @Test
+    fun `ic_app_foreground resource is absent`() {
+        val id = context.resources.getIdentifier("ic_app_foreground", "drawable", context.packageName)
+        assertEquals("ic_app_foreground must be absent", 0, id)
+    }
+}

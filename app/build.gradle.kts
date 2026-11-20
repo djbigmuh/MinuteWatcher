@@ -9,10 +9,10 @@ plugins {
 }
 
 configure<ApplicationExtension> {
-    namespace = "host.serv.djbigmuh.minutewatcher"
+    namespace = "com.github.djbigmuh.minutewatcher"
 
     defaultConfig {
-        applicationId = "host.serv.djbigmuh.minutewatcher"
+        applicationId = "com.github.djbigmuh.minutewatcher"
         versionCode = 413
         versionName = "4.3.0"
     }

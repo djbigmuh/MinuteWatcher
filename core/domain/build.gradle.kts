@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "host.serv.djbigmuh.minutewatcher.core.domain"
+    namespace = "com.github.djbigmuh.minutewatcher.core.domain"
 }
 
 dependencies {

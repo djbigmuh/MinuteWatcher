@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "host.serv.djbigmuh.minutewatcher.baselineprofile"
+    namespace = "com.github.djbigmuh.minutewatcher.baselineprofile"
 
     targetProjectPath = ":app"
 }

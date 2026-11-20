@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "host.serv.djbigmuh.minutewatcher.feature.settings"
+    namespace = "com.github.djbigmuh.minutewatcher.feature.settings"
 
     buildFeatures {
         compose = true

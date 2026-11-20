@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "host.serv.djbigmuh.minutewatcher.macrobenchmark"
+    namespace = "com.github.djbigmuh.minutewatcher.macrobenchmark"
 
     targetProjectPath = ":app"
 }

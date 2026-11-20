@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "host.serv.djbigmuh.minutewatcher.feature.semantic"
+    namespace = "com.github.djbigmuh.minutewatcher.feature.semantic"
 
     defaultConfig {
         consumerProguardFiles("consumer-rules.pro")
