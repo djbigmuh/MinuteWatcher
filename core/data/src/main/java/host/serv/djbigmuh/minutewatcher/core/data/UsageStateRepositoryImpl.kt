@@ -231,6 +231,7 @@ class UsageStateRepositoryImpl
                     manualAdjustmentGb = usage.trafficAdjustmentGb,
                 )
 
+            val zoneId = deps.timeProvider.zoneId()
             val entities =
                 mutableMapOf<PackageType, SemanticEntity>(
                     PackageType.MINUTES to
@@ -240,6 +241,7 @@ class UsageStateRepositoryImpl
                             minutes,
                             usage.autoResetDay,
                             timestamp,
+                            zoneId,
                         ),
                     PackageType.DATA to
                         SemanticMapper.mapTraffic(
@@ -248,6 +250,7 @@ class UsageStateRepositoryImpl
                             traffic,
                             usage.autoResetDay,
                             timestamp,
+                            zoneId,
                         ),
                 )
 

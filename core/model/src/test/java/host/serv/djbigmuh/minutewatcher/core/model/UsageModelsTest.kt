@@ -60,7 +60,7 @@ class UsageModelsTest {
     }
 
     @Test
-    fun `MinutesModel caps remaining usage at maximum limit when used minutes is minimum Int`() {
+    fun `MinutesModel handles minimum Int used by clamping negative usage to zero and returning effective limit`() {
         val model =
             MinutesModel.calculate(
                 used = Int.MIN_VALUE,
@@ -69,7 +69,7 @@ class UsageModelsTest {
             )
 
         assertTrue(model.remaining >= 0)
-        assertEquals(Constants.MAX_MINUTES_LIMIT, model.remaining)
+        assertEquals(100, model.remaining)
     }
 
     @Test

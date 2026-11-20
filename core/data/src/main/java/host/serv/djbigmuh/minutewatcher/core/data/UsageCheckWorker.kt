@@ -219,9 +219,15 @@ class UsageCheckWorker
         ) {
             val identity = simSnapshot.identity
             val now = deps.timeProvider.now()
+            val zoneId = deps.timeProvider.zoneId()
             val daysRemaining =
                 if (simSnapshot.autoReset) {
-                    DateUtils.getDaysRemainingInMonth(simSnapshot.autoResetDay, now)
+                    if (now >= Constants.Data.MIN_VALID_TIMESTAMP) {
+                        DateUtils.getDaysRemainingInMonth(simSnapshot.autoResetDay, now, zoneId)
+                    } else {
+                        AppLogger.w("UsageCheckWorker: Skipping days remaining calculation due to un-synchronized device time ($now)")
+                        0
+                    }
                 } else {
                     0
                 }

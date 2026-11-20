@@ -6,6 +6,7 @@ import host.serv.djbigmuh.minutewatcher.core.model.MinutesModel
 import host.serv.djbigmuh.minutewatcher.core.model.PackageType
 import host.serv.djbigmuh.minutewatcher.core.model.SemanticEntity
 import host.serv.djbigmuh.minutewatcher.core.model.TrafficModel
+import java.time.ZoneId
 import java.util.Locale
 
 object SemanticMapper {
@@ -30,8 +31,9 @@ object SemanticMapper {
         model: MinutesModel,
         resetDay: Int,
         nowMillis: Long,
+        zoneId: ZoneId,
     ): SemanticEntity {
-        val (periodStart, periodEnd) = calculatePeriod(resetDay, nowMillis)
+        val (periodStart, periodEnd) = calculatePeriod(resetDay, nowMillis, zoneId)
 
         return SemanticEntity(
             id = getDocumentId(slot, PackageType.MINUTES),
@@ -55,6 +57,7 @@ object SemanticMapper {
         model: TrafficModel,
         resetDay: Int,
         nowMillis: Long,
+        zoneId: ZoneId,
     ): SemanticEntity {
         val limitBytes = UnitConversionUtils.gbToBytes(model.effectiveLimitGb)
         val usedBytes = UnitConversionUtils.mbToBytes(model.usedMb)
@@ -64,7 +67,7 @@ object SemanticMapper {
             } else {
                 0L
             }
-        val (periodStart, periodEnd) = calculatePeriod(resetDay, nowMillis)
+        val (periodStart, periodEnd) = calculatePeriod(resetDay, nowMillis, zoneId)
 
         return SemanticEntity(
             id = getDocumentId(slot, PackageType.DATA),
@@ -85,8 +88,9 @@ object SemanticMapper {
     private fun calculatePeriod(
         resetDay: Int,
         nowMillis: Long,
+        zoneId: ZoneId,
     ): Pair<Long, Long> {
-        val info = BillingPeriodCalculator.calculate(resetDay, nowMillis)
+        val info = BillingPeriodCalculator.calculate(resetDay, nowMillis, zoneId)
         return info.startDate to info.endDate
     }
 }

@@ -23,8 +23,8 @@ object BillingPeriodCalculator {
 
     fun calculate(
         resetDay: Int,
-        nowMillis: Long = System.currentTimeMillis(),
-        zoneId: ZoneId = ZoneId.systemDefault(),
+        nowMillis: Long,
+        zoneId: ZoneId,
     ): PeriodInfo {
         val safeDay = resetDay.coerceIn(Constants.AutoReset.MIN_DAY, Constants.AutoReset.MAX_DAY)
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), zoneId)

@@ -169,6 +169,7 @@ object Constants {
         const val SNAPSHOT_TIMEOUT_MS = 2000L
         const val STALE_SNAPSHOT_THRESHOLD_MS = 60_000L
         const val EMPTY_TIMESTAMP = 0L
+        const val MIN_VALID_TIMESTAMP = 1577836800000L // January 1, 2020 00:00:00 UTC
     }
 
     /**

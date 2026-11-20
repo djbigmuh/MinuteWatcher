@@ -8,9 +8,11 @@ import host.serv.djbigmuh.minutewatcher.core.model.PackageType
 import host.serv.djbigmuh.minutewatcher.core.model.TrafficModel
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.ZoneId
 
 class SemanticMapperTest {
     private val testTimestamp = 1_627_812_000_000L
+    private val testZoneId = ZoneId.of("UTC")
 
     @Test
     fun `getDocumentId returns correct format`() {
@@ -22,7 +24,7 @@ class SemanticMapperTest {
     fun `mapMinutes converts MinutesModel to SemanticEntity correctly`() {
         val model = MinutesModel.calculate(used = 50, limit = 100, manualAdjustment = 0)
 
-        val entity = SemanticMapper.mapMinutes(0, "Test Op", model, 1, testTimestamp)
+        val entity = SemanticMapper.mapMinutes(0, "Test Op", model, 1, testTimestamp, testZoneId)
 
         assertEquals("sim_0_minutes", entity.id)
         assertEquals(0, entity.simSlot)
@@ -39,7 +41,7 @@ class SemanticMapperTest {
     @Test
     fun `mapMinutes marks as MANUAL when adjustment is present`() {
         val model = MinutesModel.calculate(used = 50, limit = 100, manualAdjustment = 10)
-        val entity = SemanticMapper.mapMinutes(0, "Op", model, 1, testTimestamp)
+        val entity = SemanticMapper.mapMinutes(0, "Op", model, 1, testTimestamp, testZoneId)
         assertEquals(DataSourceType.MANUAL, entity.sourceType)
     }
 
@@ -47,7 +49,7 @@ class SemanticMapperTest {
     fun `mapTraffic converts TrafficModel to SemanticEntity correctly`() {
         val model = TrafficModel.calculate(usedMb = 1024f, limitMb = 2048, manualAdjustmentGb = 0f)
 
-        val entity = SemanticMapper.mapTraffic(1, "Test Op", model, 1, testTimestamp)
+        val entity = SemanticMapper.mapTraffic(1, "Test Op", model, 1, testTimestamp, testZoneId)
 
         assertEquals("sim_1_data", entity.id)
         assertEquals(1, entity.simSlot)
@@ -62,7 +64,7 @@ class SemanticMapperTest {
     @Test
     fun `mapTraffic marks as MANUAL when adjustment is present`() {
         val model = TrafficModel.calculate(usedMb = 100f, limitMb = 1000, manualAdjustmentGb = 1.0f)
-        val entity = SemanticMapper.mapTraffic(0, "Op", model, 1, testTimestamp)
+        val entity = SemanticMapper.mapTraffic(0, "Op", model, 1, testTimestamp, testZoneId)
         assertEquals(DataSourceType.MANUAL, entity.sourceType)
     }
 }

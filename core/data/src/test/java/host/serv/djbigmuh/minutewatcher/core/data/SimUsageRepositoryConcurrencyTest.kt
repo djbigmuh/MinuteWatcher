@@ -24,7 +24,7 @@ class SimUsageRepositoryConcurrencyTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
-    private val timeProvider = FixedTimeProvider(currentTime = 1000000000000L)
+    private val timeProvider = FixedTimeProvider(currentTime = 1704067200000L)
 
     @Before
     fun setup() {
@@ -53,7 +53,7 @@ class SimUsageRepositoryConcurrencyTest {
 
             val identity = "test_sim"
             val autoResetDay = 1
-            val now = 1000000000000L
+            val now = 1704067200000L
             val futureNow = now + 40L * 24 * 3600 * 1000
 
             // Data preparation

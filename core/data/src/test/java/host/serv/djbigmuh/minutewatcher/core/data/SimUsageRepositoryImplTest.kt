@@ -32,7 +32,7 @@ class SimUsageRepositoryImplTest {
     private val testScope = TestScope(mainDispatcherRule.testDispatcher)
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SimUsageRepositoryImpl
-    private val timeProvider = FixedTimeProvider(currentTime = 1000000L)
+    private val timeProvider = FixedTimeProvider(currentTime = 1704067200000L)
 
     @Before
     fun setup() {
@@ -124,10 +124,24 @@ class SimUsageRepositoryImplTest {
         }
 
     @Test
+    fun `resetSimUsageIfDue returns false when nowMillis is less than MIN_VALID_TIMESTAMP`() =
+        runTest {
+            val identity = "test_sim"
+            val invalidNow = 1000000L // Below MIN_VALID_TIMESTAMP (1577836800000L)
+            repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
+
+            val result = repository.resetSimUsageIfDue(identity, autoResetDay = 1, nowMillis = invalidNow)
+
+            assertFalse("Should return false for un-synchronized device timestamp", result)
+            val usage = repository.getSimUsage(identity).first()
+            assertEquals("Last reset date should remain unset", Constants.Data.EMPTY_TIMESTAMP, usage.lastResetDate)
+        }
+
+    @Test
     fun `resetSimUsageIfDue initializes window when date is missing`() =
         runTest {
             val identity = "test_sim"
-            val now = 1000000L
+            val now = 1704067200000L
             repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // First call - should NOT reset but initialize date
@@ -145,7 +159,7 @@ class SimUsageRepositoryImplTest {
     fun `resetSimUsageIfDue skips reset in same period after initialization`() =
         runTest {
             val identity = "test_sim"
-            val now = 1000000L // Assume this is day 10
+            val now = 1704067200000L // Assume this is day 10
             repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // 1. Initialize
@@ -165,7 +179,7 @@ class SimUsageRepositoryImplTest {
     fun `resetSimUsageIfDue performs reset in next period`() =
         runTest {
             val identity = "test_sim"
-            val now = 1000000L // Day 1
+            val now = 1704067200000L // Day 1
             repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // 1. Initialize
@@ -187,7 +201,7 @@ class SimUsageRepositoryImplTest {
     fun `resetSimUsageIfDue respects rollover in next period`() =
         runTest {
             val identity = "test_sim"
-            val now = 1000000L
+            val now = 1704067200000L
             repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             // Set limit and enable rollover
@@ -213,7 +227,7 @@ class SimUsageRepositoryImplTest {
     fun `resetSimUsageIfDue discards manual adjustment in next period when rollover is disabled`() =
         runTest {
             val identity = "test_sim"
-            val now = 1000000L
+            val now = 1704067200000L
             repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             dataStore.edit { prefs ->
@@ -239,7 +253,7 @@ class SimUsageRepositoryImplTest {
     fun `resetSimUsageIfDue includes manual adjustment in carried over balance when rollover is enabled`() =
         runTest {
             val identity = "test_sim"
-            val now = 1000000L
+            val now = 1704067200000L
             repository.updateSimStats(identity, minutesUsed = 50, trafficUsedMb = 0f, manualAdjustment = 0)
 
             dataStore.edit { prefs ->
@@ -442,7 +456,7 @@ class SimUsageRepositoryImplTest {
         runTest {
             val identity = "test_sim"
             repository.ensureTrackingWindowInitialized(identity)
-            val now = 3000000000L
+            val now = 1704067200000L
             dataStore.edit { prefs ->
                 prefs[DataStoreKeys.lastResetDateKey(identity)] = now - 40L * 24L * 60L * 60L * 1000L
                 prefs[DataStoreKeys.rolloverEnabledKey(identity)] = true

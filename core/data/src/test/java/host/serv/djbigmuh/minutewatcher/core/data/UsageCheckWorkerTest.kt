@@ -43,6 +43,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -85,6 +86,8 @@ class UsageCheckWorkerTest {
         }
 
     private suspend fun setupDefaultMocks() {
+        whenever(timeProvider.now()).thenReturn(1_700_000_000_000L)
+        whenever(timeProvider.zoneId()).thenReturn(ZoneId.of("UTC"))
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
         whenever(notificationHelper.sendUsageNotification(any(), any(), any(), any())).thenReturn(true)
         whenever(appSettingsRepository.getAppSettings())
@@ -221,6 +224,41 @@ class UsageCheckWorkerTest {
         }
 
     @Test
+    fun `notification when system clock is un-synchronized does not contain days text`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val unSynchronizedNowMs = 1_000L // Below MIN_VALID_TIMESTAMP
+            whenever(timeProvider.now()).thenReturn(unSynchronizedNowMs)
+
+            val snapshot =
+                createUsageSnapshot(
+                    minutesUsed = 85,
+                    minutesLimit = 100,
+                    identity = "sim_unsynced_time",
+                    autoReset = true,
+                )
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val validNowMs = 1_700_000_000_000L
+            val expectedDaysRemaining =
+                DateUtils.getDaysRemainingInMonth(
+                    1,
+                    validNowMs,
+                    timeProvider.zoneId(),
+                )
+            val expectedDaysText = FormatUtils.formatDaysPlural(context, expectedDaysRemaining)
+
+            worker.doWork()
+
+            verify(notificationHelper).sendUsageNotification(
+                title = any(),
+                message = argThat { !contains(expectedDaysText) },
+                simSlot = eq(0),
+                type = eq(UsageNotificationType.MINUTES),
+            )
+        }
+
+    @Test
     fun `daysRemaining in notification corresponds to autoResetDay from simSnapshot`() =
         runTest(testDispatcher) {
             setupDefaultMocks()
@@ -237,7 +275,12 @@ class UsageCheckWorkerTest {
                 )
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
 
-            val expectedDaysRemaining = DateUtils.getDaysRemainingInMonth(customAutoResetDay, nowMs)
+            val expectedDaysRemaining =
+                DateUtils.getDaysRemainingInMonth(
+                    customAutoResetDay,
+                    nowMs,
+                    timeProvider.zoneId(),
+                )
             val expectedDaysText = FormatUtils.formatDaysPlural(context, expectedDaysRemaining)
 
             worker.doWork()
@@ -266,7 +309,12 @@ class UsageCheckWorkerTest {
                 )
             whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
 
-            val expectedDaysRemaining = DateUtils.getDaysRemainingInMonth(1, nowMs)
+            val expectedDaysRemaining =
+                DateUtils.getDaysRemainingInMonth(
+                    1,
+                    nowMs,
+                    timeProvider.zoneId(),
+                )
             val expectedDaysText = FormatUtils.formatDaysPlural(context, expectedDaysRemaining)
 
             worker.doWork()
@@ -399,6 +447,7 @@ class UsageCheckWorkerTest {
     @Test
     fun `reset stale minutes flags when notifyLowMinutes is false`() =
         runTest(testDispatcher) {
+            setupDefaultMocks()
             whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
             whenever(appSettingsRepository.getAppSettings())
                 .thenReturn(flowOf(AppSettings(notifyLowMinutes = false, notifyLowTraffic = true, isLoaded = true)))
@@ -427,6 +476,7 @@ class UsageCheckWorkerTest {
     @Test
     fun `reset stale minutes flags when limit is zero`() =
         runTest(testDispatcher) {
+            setupDefaultMocks()
             whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
             whenever(appSettingsRepository.getAppSettings())
                 .thenReturn(flowOf(AppSettings(notifyLowMinutes = true, notifyLowTraffic = true, isLoaded = true)))
@@ -452,6 +502,7 @@ class UsageCheckWorkerTest {
     @Test
     fun `reset stale traffic flags when notifyLowTraffic is false`() =
         runTest(testDispatcher) {
+            setupDefaultMocks()
             whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
             whenever(appSettingsRepository.getAppSettings())
                 .thenReturn(flowOf(AppSettings(notifyLowMinutes = true, notifyLowTraffic = false, isLoaded = true)))

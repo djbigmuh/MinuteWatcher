@@ -157,6 +157,109 @@ class PermissionManagerTest {
     }
 
     @Test
+    fun `getActiveSubscriptions returns list when permission is granted`() {
+        val subInfo: android.telephony.SubscriptionInfo = mock()
+        whenever(subscriptionManager.activeSubscriptionInfoList).thenReturn(listOf(subInfo))
+
+        mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+
+            val result = permissionManager.getActiveSubscriptions()
+            assertEquals(1, result.size)
+            assertEquals(subInfo, result.first())
+        }
+    }
+
+    @Test(expected = SecurityException::class)
+    fun `getActiveSubscriptions rethrows SecurityException when underlying call throws`() {
+        whenever(subscriptionManager.activeSubscriptionInfoList).thenThrow(SecurityException("Denied"))
+
+        mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+
+            permissionManager.getActiveSubscriptions()
+        }
+    }
+
+    @Test
+    fun `getDefaultVoiceSubscriptionId returns id when permission is granted`() {
+        mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+
+            mockStatic(SubscriptionManager::class.java).use { mockedSubManager ->
+                mockedSubManager
+                    .`when`<Int> { SubscriptionManager.getDefaultVoiceSubscriptionId() }
+                    .thenReturn(1)
+
+                assertEquals(1, permissionManager.getDefaultVoiceSubscriptionId())
+            }
+        }
+    }
+
+    @Test
+    fun `getDefaultVoiceSubscriptionId returns negative one when SecurityException is thrown`() {
+        mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+
+            mockStatic(SubscriptionManager::class.java).use { mockedSubManager ->
+                mockedSubManager
+                    .`when`<Int> { SubscriptionManager.getDefaultVoiceSubscriptionId() }
+                    .thenThrow(SecurityException("Denied"))
+
+                assertEquals(-1, permissionManager.getDefaultVoiceSubscriptionId())
+            }
+        }
+    }
+
+    @Test
+    fun `getDefaultDataSubscriptionId returns id when permission is granted`() {
+        mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+
+            mockStatic(SubscriptionManager::class.java).use { mockedSubManager ->
+                mockedSubManager
+                    .`when`<Int> { SubscriptionManager.getDefaultDataSubscriptionId() }
+                    .thenReturn(2)
+
+                assertEquals(2, permissionManager.getDefaultDataSubscriptionId())
+            }
+        }
+    }
+
+    @Test
+    fun `getDefaultDataSubscriptionId returns negative one when SecurityException is thrown`() {
+        mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
+            mockedContextCompat
+                .`when`<Int> {
+                    ContextCompat.checkSelfPermission(any(), eq(Manifest.permission.READ_PHONE_STATE))
+                }.thenReturn(PackageManager.PERMISSION_GRANTED)
+
+            mockStatic(SubscriptionManager::class.java).use { mockedSubManager ->
+                mockedSubManager
+                    .`when`<Int> { SubscriptionManager.getDefaultDataSubscriptionId() }
+                    .thenThrow(SecurityException("Denied"))
+
+                assertEquals(-1, permissionManager.getDefaultDataSubscriptionId())
+            }
+        }
+    }
+
+    @Test
     fun `repeated calls to hasPhoneStatePermission with unchanged result yield single log entry`() {
         val capturedLogs = mutableListOf<String>()
         val capturingLogger =

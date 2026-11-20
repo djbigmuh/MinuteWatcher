@@ -190,13 +190,38 @@ class SimUsageRepositoryImpl
             nowMillis: Long,
         ): Boolean =
             resetMutex.withLock {
-                val periodStart = BillingPeriodCalculator.calculate(autoResetDay, nowMillis).startDate
+                if (nowMillis < Constants.Data.MIN_VALID_TIMESTAMP) {
+                    AppLogger.w(
+                        "SimUsageRepositoryImpl: Skipped reset check for $identity " +
+                            "due to un-synchronized device time ($nowMillis)",
+                    )
+                    return false
+                }
+
+                val zoneId = timeProvider.zoneId()
+                val periodStart =
+                    BillingPeriodCalculator
+                        .calculate(
+                            autoResetDay,
+                            nowMillis,
+                            zoneId,
+                        ).startDate
 
                 var actuallyReset = false
                 dataStore.edit { prefs ->
                     val innerLastResetDate =
                         prefs[DataStoreKeys.lastResetDateKey(identity)]
                             ?: Constants.Data.EMPTY_TIMESTAMP
+
+                    if (innerLastResetDate != Constants.Data.EMPTY_TIMESTAMP &&
+                        nowMillis < innerLastResetDate
+                    ) {
+                        AppLogger.w(
+                            "SimUsageRepositoryImpl: Clock rollback detected for $identity " +
+                                "(now=$nowMillis < lastReset=$innerLastResetDate), skipping reset",
+                        )
+                        return@edit
+                    }
 
                     if (innerLastResetDate == Constants.Data.EMPTY_TIMESTAMP) {
                         prefs[DataStoreKeys.lastResetDateKey(identity)] = nowMillis
