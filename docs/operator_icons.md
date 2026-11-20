@@ -62,7 +62,7 @@ The following 5 icons that already contained recognizable brand-colored artwork 
 ## Normative asset compliance rules
 
 All operator vector icons in the repository (`ic_operator_*.xml`) are validated by unit tests
-in [OperatorIconAssetComplianceTest.kt](../core/resources/src/test/java/host/serv/djbigmuh/minutewatcher/core/resources/OperatorIconAssetComplianceTest.kt)
+in [OperatorIconAssetComplianceTest.kt](../core/resources/src/test/java/com/github/djbigmuh/minutewatcher/core/resources/OperatorIconAssetComplianceTest.kt)
 against the following 13 normative rules:
 
 1. `viewportWidth` and `viewportHeight` must equal `48`.

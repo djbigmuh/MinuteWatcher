@@ -61,7 +61,7 @@ The following Android Lint checks are globally disabled in `minutewatcher.androi
 ## Module Dependency Notes
 
 - `implementation(project(":core:resources"))` edges are required in every module that imports
-  `host.serv.djbigmuh.minutewatcher.core.resources.R` for shared drawables and strings. With
+  `com.github.djbigmuh.minutewatcher.core.resources.R` for shared drawables and strings. With
   `android.nonTransitiveRClass=true`, R classes are not re-exported transitively, so each
   consumer must declare the dependency directly.
 - Test-only edges (`testImplementation(project(...))`, `testFixtures(project(...))`) are required

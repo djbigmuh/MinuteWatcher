@@ -66,6 +66,7 @@ MinuteWatcher is built with a "Local First" philosophy:
 - **No Analytics**: We do not use Firebase, Google Analytics, or any other tracking SDKs.
 - **No Identity Storage**: SIM cards are identified by stable internal IDs; personal phone numbers or contact names are never accessed.
 - **Backup**: Cloud backup is disabled for application data (DataStore and SharedPreferences) to protect your privacy. On Android 12 (API 31) and higher, only explicit device-to-device transfer is permitted. On older versions (API 26–30), application data is excluded from Auto Backup.
+- **Privacy Policy**: See [PRIVACY_POLICY.md](https://raw.githubusercontent.com/djbigmuh/MinuteWatcher/main/PRIVACY_POLICY.md) for details.
 
 ## Technical Architecture
 

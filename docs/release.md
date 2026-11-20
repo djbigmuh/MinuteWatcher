@@ -96,7 +96,7 @@ To ensure readiness for automated build systems (such as F-Droid build servers a
     - **Data Safety**: Declare zero data collection and zero data sharing, aligned with `PRIVACY_POLICY.md`.
     - **Content Rating**: Complete IARC questionnaire for utility application without user-generated content.
     - **Target Audience**: Select 13+ or general audience; declare no child-directed content.
-    - **Privacy Policy URL**: Link to hosted policy on GitHub Pages (`https://<username>.github.io/MinuteWatcher/PRIVACY_POLICY.md` or repository `/docs`).
+    - **Privacy Policy URL**: Link to hosted policy on GitHub Pages (`https://djbigmuh.github.io/MinuteWatcher/PRIVACY_POLICY.md` or repository `/docs`).
 4. **Listing Metadata Assets**: Use localized fastlane metadata from `fastlane/metadata/android/`:
     - App Icon: `en-US/images/icon.png` (512×512 px).
     - Feature Graphic: `en-US/images/featureGraphic.png` (1024×500 px).
@@ -118,11 +118,11 @@ To ensure readiness for automated build systems (such as F-Droid build servers a
       Categories:
         - System
       License: MIT
-      SourceCode: https://github.com/<username>/MinuteWatcher
-      IssueTracker: https://github.com/<username>/MinuteWatcher/issues
+      SourceCode: https://github.com/djbigmuh/MinuteWatcher
+      IssueTracker: https://github.com/djbigmuh/MinuteWatcher/issues
       AutoName: MinuteWatcher
       RepoType: git
-      Repo: https://github.com/<username>/MinuteWatcher.git
+      Repo: https://github.com/djbigmuh/MinuteWatcher.git
       Builds:
         - versionName: '4.3.0'
           versionCode: 413
