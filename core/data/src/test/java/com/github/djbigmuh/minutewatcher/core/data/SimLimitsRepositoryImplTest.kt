@@ -3,7 +3,6 @@
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.github.djbigmuh.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
-import com.github.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -52,21 +51,25 @@ class SimLimitsRepositoryImplTest {
         }
 
     @Test
-    fun `update SIM limits and get usage`() =
+    fun `update SIM limits resets notification flags`() =
         runTest {
-            val usageRepo =
-                SimUsageRepositoryImpl(
-                    dataStore = dataStore,
-                    timeProvider = FixedTimeProvider(currentTime = 1000000L),
-                    mapper = SimUsageMapper(),
-                    resetLogic = SimUsageResetLogic(),
-                )
+            val flagsRepo = SimNotificationFlagsRepositoryImpl(dataStore)
             val identity = "test_sim"
+
+            flagsRepo.setNotifiedLowMinutes(identity, true)
+            flagsRepo.setNotifiedLowTraffic(identity, true)
+            flagsRepo.setNotifiedCriticalMinutes(identity, true)
+            flagsRepo.setNotifiedCriticalTraffic(identity, true)
+            flagsRepo.setNotifiedExhaustedMinutes(identity, true)
+            flagsRepo.setNotifiedExhaustedTraffic(identity, true)
 
             repository.updateSimLimits(identity, 100, 1024)
 
-            val usage = usageRepo.getSimUsage(identity).first()
-            assertEquals(100, usage.minutesLimit)
-            assertEquals(1024, usage.trafficLimitMb)
+            assertEquals(false, flagsRepo.getNotifiedLowMinutes(identity).first())
+            assertEquals(false, flagsRepo.getNotifiedLowTraffic(identity).first())
+            assertEquals(false, flagsRepo.getNotifiedCriticalMinutes(identity).first())
+            assertEquals(false, flagsRepo.getNotifiedCriticalTraffic(identity).first())
+            assertEquals(false, flagsRepo.getNotifiedExhaustedMinutes(identity).first())
+            assertEquals(false, flagsRepo.getNotifiedExhaustedTraffic(identity).first())
         }
 }

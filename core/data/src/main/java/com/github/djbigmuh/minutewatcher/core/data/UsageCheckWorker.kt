@@ -33,6 +33,22 @@ import kotlin.time.Duration.Companion.milliseconds
  * UsageCheckWorker encapsulates a single background check cycle
  * for limit usage across all active SIM cards.
  * Notification limits and remaining days are calculated directly from the SIM snapshot.
+ *
+ * ## Re-notification Policy
+ * 1. Notifications are state-triggered and posted at most ONCE when a SIM identity enters
+ *    a usage threshold level (LOW, CRITICAL, or EXHAUSTED).
+ * 2. Repeated background checks while remaining in the same threshold state do not re-send notifications.
+ * 3. Threshold transitions:
+ *    - Downward (increasing usage / decreasing remaining):
+ *      - NORMAL -> LOW: sends LOW notification, sets notifiedLow = true.
+ *      - LOW -> CRITICAL: sends CRITICAL notification, sets notifiedCritical = true, clears notifiedLow = false.
+ *      - CRITICAL -> EXHAUSTED (remaining <= 0): sends EXHAUSTED notification, sets notifiedExhausted = true.
+ *    - Upward (recovering balance / limit update / reset):
+ *      - EXHAUSTED -> CRITICAL/LOW/NORMAL: clears notifiedExhausted = false.
+ *      - CRITICAL -> LOW: clears notifiedCritical = false, sets notifiedLow = true
+ *        (prevents duplicate alert on recovery).
+ *      - LOW -> NORMAL: clears notifiedLow = false
+ *        (enables new LOW notification on future downward crossing).
  */
 @HiltWorker
 class UsageCheckWorker
@@ -446,6 +462,7 @@ class UsageCheckWorker
                 val sent = sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.CRITICAL)
                 if (sent) {
                     setCriticalFlag(identity, isMinutes, true)
+                    setLowFlag(identity, isMinutes, false)
                 }
             } else if (level == UsageStatus.LOW && !notifiedLow && !notifiedCritical) {
                 val sent = sendUsageNotificationForLevel(entity, daysRem, autoReset, packageType, UsageStatus.LOW)
@@ -465,10 +482,12 @@ class UsageCheckWorker
             val targetCritical = level == UsageStatus.CRITICAL
             if (notifiedCritical && !targetCritical) {
                 setCriticalFlag(identity, isMinutes, false)
+                if (level == UsageStatus.LOW) {
+                    setLowFlag(identity, isMinutes, true)
+                }
             }
 
-            val targetLow = level == UsageStatus.LOW
-            if (notifiedLow && !targetLow) {
+            if (notifiedLow && level == UsageStatus.NORMAL) {
                 setLowFlag(identity, isMinutes, false)
             }
         }

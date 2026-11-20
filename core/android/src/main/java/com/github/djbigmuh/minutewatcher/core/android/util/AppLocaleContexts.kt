@@ -50,7 +50,11 @@ object AppLocaleContexts {
 
         return cache.computeIfAbsent(key) {
             val configuration = Configuration(appContext.resources.configuration)
-            configuration.setLocale(firstLocale)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                configuration.setLocales(appLocales.unwrap() as android.os.LocaleList)
+            } else {
+                configuration.setLocale(firstLocale)
+            }
             configuration.setLayoutDirection(firstLocale)
             appContext.createConfigurationContext(configuration)
         }

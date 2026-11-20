@@ -3,7 +3,10 @@
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
+import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
+import androidx.work.testing.TestListenableWorkerBuilder
+import androidx.work.testing.WorkManagerTestInitHelper
 import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
 import com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
@@ -25,6 +28,7 @@ import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
 import com.github.djbigmuh.minutewatcher.core.model.util.DateUtils
 import com.github.djbigmuh.minutewatcher.core.resources.R
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,17 +36,20 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import java.io.IOException
 import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
@@ -67,22 +74,40 @@ class UsageCheckWorkerTest {
     fun setup() =
         runTest(testDispatcher) {
             context = ApplicationProvider.getApplicationContext()
-            val workerParams: WorkerParameters = mock()
-            val deps =
-                UsageWorkerDependencies(
-                    simNotificationFlagsRepository = simNotificationFlagsRepository,
-                    appSettingsRepository = appSettingsRepository,
-                    autoResetUseCase = autoResetUseCase,
-                    trafficTracker = trafficTracker,
-                    notificationHelper = notificationHelper,
-                    dataChangeNotifier = dataChangeNotifier,
-                    usageStateRepository = usageStateRepository,
-                    usageUseCase = usageUseCase,
-                    timeProvider = timeProvider,
-                )
-            worker = UsageCheckWorker(context, workerParams, deps, testDispatcher)
+            WorkManagerTestInitHelper.initializeTestWorkManager(context)
+            worker =
+                TestListenableWorkerBuilder<UsageCheckWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker =
+                                UsageCheckWorker(
+                                    appContext,
+                                    workerParameters,
+                                    UsageWorkerDependencies(
+                                        simNotificationFlagsRepository = simNotificationFlagsRepository,
+                                        appSettingsRepository = appSettingsRepository,
+                                        autoResetUseCase = autoResetUseCase,
+                                        trafficTracker = trafficTracker,
+                                        notificationHelper = notificationHelper,
+                                        dataChangeNotifier = dataChangeNotifier,
+                                        usageStateRepository = usageStateRepository,
+                                        usageUseCase = usageUseCase,
+                                        timeProvider = timeProvider,
+                                    ),
+                                    testDispatcher,
+                                )
+                        },
+                    ).build()
             whenever(trafficTracker.status).thenReturn(MutableStateFlow(TrackingStatus.Active))
-            whenever(trafficTracker.updateTrafficUsage(any())).thenReturn(TrafficUpdateOutcome.Completed)
+            org.mockito.Mockito
+                .lenient()
+                .whenever(
+                    trafficTracker.updateTrafficUsage(any()),
+                ).thenReturn(TrafficUpdateOutcome.Completed)
         }
 
     private suspend fun setupDefaultMocks() {
@@ -566,5 +591,118 @@ class UsageCheckWorkerTest {
 
             assertEquals(ListenableWorker.Result.success(), result)
             verify(simNotificationFlagsRepository, never()).setNotifiedLowMinutes(eq(identity), any())
+        }
+
+    @Test
+    fun `doWork returns retry on IOException`() =
+        runTest(testDispatcher) {
+            doThrow(IOException("Network error")).whenever(trafficTracker).updateTrafficUsage(any())
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `doWork returns failure on SecurityException`() =
+        runTest(testDispatcher) {
+            doThrow(SecurityException("Permission denied")).whenever(trafficTracker).updateTrafficUsage(any())
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+        }
+
+    @Test
+    fun `doWork propagates cancellation when stopped`() =
+        runTest(testDispatcher) {
+            doThrow(CancellationException("Cancelled")).whenever(trafficTracker).updateTrafficUsage(any())
+
+            val result =
+                runCatching {
+                    worker.doWork()
+                }
+            assertTrue(result.exceptionOrNull() is CancellationException)
+        }
+
+    @Test
+    fun `repeat check when remaining usage is in LOW state does not resend notification`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val identity = "sim_0"
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(false))
+
+            val snapshot = createUsageSnapshot(minutesUsed = 85, minutesLimit = 100, identity = identity)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+        }
+
+    @Test
+    fun `downward transition from LOW to CRITICAL sends CRITICAL notification and updates flags`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val identity = "sim_0"
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(false))
+
+            // 96 minutes used out of 100 -> 4% remaining (CRITICAL)
+            val snapshot = createUsageSnapshot(minutesUsed = 96, minutesLimit = 100, identity = identity)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(notificationHelper).sendUsageNotification(
+                title = any(),
+                message = argThat { contains(context.getString(R.string.usage_level_critical)) },
+                simSlot = eq(0),
+                type = eq(UsageNotificationType.MINUTES),
+            )
+            verify(simNotificationFlagsRepository).setNotifiedCriticalMinutes(identity, true)
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(identity, false)
+        }
+
+    @Test
+    fun `upward transition from CRITICAL to LOW clears critical flag and sets low flag`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val identity = "sim_0"
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(false))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(true))
+
+            // 85 minutes used out of 100 -> 15% remaining (LOW)
+            val snapshot = createUsageSnapshot(minutesUsed = 85, minutesLimit = 100, identity = identity)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+            verify(simNotificationFlagsRepository).setNotifiedCriticalMinutes(identity, false)
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(identity, true)
+        }
+
+    @Test
+    fun `upward transition from LOW to NORMAL clears low flag`() =
+        runTest(testDispatcher) {
+            setupDefaultMocks()
+            val identity = "sim_0"
+            whenever(simNotificationFlagsRepository.getNotifiedLowMinutes(identity)).thenReturn(flowOf(true))
+            whenever(simNotificationFlagsRepository.getNotifiedCriticalMinutes(identity)).thenReturn(flowOf(false))
+
+            // 50 minutes used out of 100 -> 50% remaining (NORMAL)
+            val snapshot = createUsageSnapshot(minutesUsed = 50, minutesLimit = 100, identity = identity)
+            whenever(usageStateRepository.refresh()).thenReturn(RefreshResult.Success(snapshot))
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            verify(notificationHelper, never()).sendUsageNotification(any(), any(), any(), any())
+            verify(simNotificationFlagsRepository).setNotifiedLowMinutes(identity, false)
         }
 }

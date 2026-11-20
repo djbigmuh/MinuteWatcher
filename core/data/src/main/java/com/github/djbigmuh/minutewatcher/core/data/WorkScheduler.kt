@@ -92,7 +92,7 @@ class WorkScheduler
 
             return WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 USAGE_CHECK_WORK_NAME,
-                ExistingPeriodicWorkPolicy.UPDATE,
+                ExistingPeriodicWorkPolicy.KEEP,
                 workRequest,
             )
         }

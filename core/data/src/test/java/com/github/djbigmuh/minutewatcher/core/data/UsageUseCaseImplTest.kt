@@ -67,7 +67,7 @@ class UsageUseCaseImplTest {
         }
 
     @Test
-    fun `adjustMinutes calls repository with correct adjustment`() =
+    fun `adjustMinutes keeps limit unchanged and recalculates used balance`() =
         runTest {
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
@@ -76,15 +76,19 @@ class UsageUseCaseImplTest {
                 simUsageRepository.getSimUsage(identity),
             ).thenReturn(flowOf(createSimUsage(minutesUsed = 100)))
 
-            // target remaining = 450
-            // formula: (target - limit) + used = (450 - 500) + 100 = 50
+            // limit = 500, target remaining = 450 -> newUsed = 500 - 450 = 50
             usageUseCase.adjustMinutes(0, 450)
 
-            verify(simUsageAdjustmentRepository).setManualAdjustment(identity, 50)
+            verify(simUsageAdjustmentRepository).updateSimStats(
+                identity = identity,
+                minutesUsed = 50,
+                trafficUsedMb = 0f,
+                manualAdjustment = 0,
+            )
         }
 
     @Test
-    fun `adjustTraffic calls repository with correct adjustment`() =
+    fun `adjustTraffic keeps limit unchanged and recalculates used traffic`() =
         runTest {
             val identity = "sim_0"
             whenever(simIdentityRepository.getIdentity(0)).thenReturn(identity)
@@ -93,13 +97,16 @@ class UsageUseCaseImplTest {
                 simUsageRepository.getSimUsage(identity),
             ).thenReturn(flowOf(createSimUsage(trafficUsedMb = 2048f))) // 2 GB
 
-            // target remaining = 5 GB
-            // limitGb = 10, usedGb = 2
-            // current remaining = 8 GB
-            // adj = target - (limit - used) = 5 - (10 - 2) = -3
+            // limit = 10 GB, target remaining = 5 GB -> newUsedMb = (10 - 5) * 1024 = 5120 MB
             usageUseCase.adjustTraffic(0, 5f)
 
-            verify(simUsageAdjustmentRepository).setTrafficAdjustment(identity, -3f)
+            verify(simUsageAdjustmentRepository).updateSimStats(
+                identity = identity,
+                minutesUsed = 0,
+                trafficUsedMb = 5120f,
+                manualAdjustment = 0,
+            )
+            verify(simUsageAdjustmentRepository).setTrafficAdjustment(identity, 0f)
         }
 
     @Test

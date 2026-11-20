@@ -55,11 +55,15 @@ class UsageUseCaseImplValidationTest {
                 simUsageRepository.getSimUsage(identity),
             ).thenReturn(flowOf(createSimUsage(minutesUsed = 0)))
 
-            // target = -50 (clamped to 0)
-            // formula: (0 - 100) + 0 = -100
+            // target = -50 (clamped to 0) -> newUsed = limit (100) - 0 = 100
             usageUseCase.adjustMinutes(0, -50)
 
-            verify(simUsageAdjustmentRepository).setManualAdjustment(identity, -100)
+            verify(simUsageAdjustmentRepository).updateSimStats(
+                identity = identity,
+                minutesUsed = 100,
+                trafficUsedMb = 0f,
+                manualAdjustment = 0,
+            )
         }
 
     @Test
@@ -74,7 +78,12 @@ class UsageUseCaseImplValidationTest {
 
             usageUseCase.adjustMinutes(0, Constants.MAX_MINUTES_LIMIT + 1000)
 
-            verify(simUsageAdjustmentRepository).setManualAdjustment(identity, Constants.MAX_MINUTES_LIMIT)
+            verify(simUsageAdjustmentRepository).updateSimStats(
+                identity = identity,
+                minutesUsed = 0,
+                trafficUsedMb = 0f,
+                manualAdjustment = 0,
+            )
         }
 
     @Test
@@ -87,12 +96,16 @@ class UsageUseCaseImplValidationTest {
                 simUsageRepository.getSimUsage(identity),
             ).thenReturn(flowOf(createSimUsage(trafficUsedMb = 0f)))
 
-            // target = -1f (clamped to 0)
-            // limitGb = 10, usedGb = 0
-            // adj = 0 - (10 - 0) = -10
+            // target = -1f (clamped to 0f) -> newUsedMb = (10 - 0) * 1024 = 10240f
             usageUseCase.adjustTraffic(0, -1f)
 
-            verify(simUsageAdjustmentRepository).setTrafficAdjustment(identity, -10f)
+            verify(simUsageAdjustmentRepository).updateSimStats(
+                identity = identity,
+                minutesUsed = 0,
+                trafficUsedMb = 10240f,
+                manualAdjustment = 0,
+            )
+            verify(simUsageAdjustmentRepository).setTrafficAdjustment(identity, 0f)
         }
 
     private fun createSimUsage(

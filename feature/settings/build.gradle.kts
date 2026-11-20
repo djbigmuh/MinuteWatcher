@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.androidxLifecycleViewmodelKtx)
     implementation(libs.androidxLifecycleRuntimeCompose)
 
+    implementation(libs.colorpickerCompose)
+
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidxUiTestJunit4)

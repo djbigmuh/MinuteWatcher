@@ -98,7 +98,7 @@ class WorkSchedulerTest {
     }
 
     @Test
-    fun `schedulePeriodicUsageCheck updates work with update policy and preserves single work`() {
+    fun `schedulePeriodicUsageCheck keeps existing work with keep policy`() {
         workScheduler.schedulePeriodicUsageCheck().result.get()
 
         val workInfos = workManager.getWorkInfosForUniqueWork(WorkScheduler.USAGE_CHECK_WORK_NAME).get()

@@ -191,6 +191,10 @@ class AodSummaryController
                 isPosted = false
                 lastPublishedText = null
                 AppLogger.d("AOD summary notification canceled: $reason")
+            } else {
+                notificationHelper.cancelAodSummaryNotification()
+                isPosted = false
+                lastPublishedText = null
             }
         }
 

@@ -65,6 +65,12 @@ class SimLimitsRepositoryImpl
                 it[DataStoreKeys.monthlyLimitKey(identity)] = safeMinutes
                 it[DataStoreKeys.trafficLimitKey(identity)] = safeTraffic
                 it[DataStoreKeys.rolloverEnabledKey(identity)] = rolloverEnabled
+                it[DataStoreKeys.notifiedLowMinutesKey(identity)] = false
+                it[DataStoreKeys.notifiedLowTrafficKey(identity)] = false
+                it[DataStoreKeys.notifiedExhaustedMinutesKey(identity)] = false
+                it[DataStoreKeys.notifiedExhaustedTrafficKey(identity)] = false
+                it[DataStoreKeys.notifiedCriticalMinutesKey(identity)] = false
+                it[DataStoreKeys.notifiedCriticalTrafficKey(identity)] = false
             }
         }
 

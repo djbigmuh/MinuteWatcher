@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.os.LocaleListCompat
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.github.djbigmuh.minutewatcher.controller.MainPermissionController
@@ -34,7 +35,9 @@ import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreen
 import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreenActions
 import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
+import com.github.djbigmuh.minutewatcher.feature.widget.MinutesGlanceWidget
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -149,6 +152,14 @@ class MainActivity : AppCompatActivity() {
         notificationHelper.ensureChannels()
         viewModel.setLanguage(lang)
         widgetDataChangeDispatcher.notifyDataChanged("language change")
+        lifecycleScope.launch {
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                MinutesGlanceWidget().updateAll(this@MainActivity)
+            } catch (e: Exception) {
+                AppLogger.e("Failed to update widgets on language change", e)
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

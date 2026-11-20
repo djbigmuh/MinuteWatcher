@@ -100,17 +100,16 @@ class UsageUseCaseImpl
                 val usage =
                     simUsageRepository.getSimUsage(identity).firstWithTimeout()
                         ?: throw IOException("Timeout reading current usage for $identity")
-                val used = usage.minutesUsed
 
-                val safeRemaining = remainingMinutes.coerceIn(0, Constants.MAX_MINUTES_LIMIT)
-                val adj = (safeRemaining - limit).toLong() + used.toLong()
-                val safeAdj =
-                    adj
-                        .coerceIn(
-                            -Constants.MAX_MINUTES_LIMIT.toLong(),
-                            Constants.MAX_MINUTES_LIMIT.toLong(),
-                        ).toInt()
-                simUsageAdjustmentRepository.setManualAdjustment(identity, safeAdj)
+                val safeRemaining = remainingMinutes.coerceIn(0, if (limit > 0) limit else Constants.MAX_MINUTES_LIMIT)
+                val newUsed = if (limit > 0) (limit - safeRemaining).coerceIn(0, limit) else usage.minutesUsed
+
+                simUsageAdjustmentRepository.updateSimStats(
+                    identity = identity,
+                    minutesUsed = newUsed,
+                    trafficUsedMb = usage.trafficUsedMb,
+                    manualAdjustment = 0,
+                )
             }
         }
 
@@ -140,19 +139,24 @@ class UsageUseCaseImpl
                 val usage =
                     simUsageRepository.getSimUsage(identity).firstWithTimeout()
                         ?: throw IOException("Timeout reading current traffic usage for $identity")
-                val usedMb = usage.trafficUsedMb
 
-                val safeRemainingGb =
-                    remainingGb.toDouble().coerceIn(0.0, Constants.MAX_TRAFFIC_LIMIT_GB.toDouble())
-                val limitGb = UnitConversionUtils.mbToGb(limitMb.toFloat()).toDouble()
-                val usedGb = UnitConversionUtils.mbToGb(usedMb).toDouble()
-                val adj = safeRemainingGb - (limitGb - usedGb)
-                val safeAdj =
-                    adj.coerceIn(
-                        -Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
-                        Constants.MAX_TRAFFIC_LIMIT_GB.toDouble(),
-                    )
-                simUsageAdjustmentRepository.setTrafficAdjustment(identity, safeAdj.toFloat())
+                val limitGb = UnitConversionUtils.mbToGb(limitMb.toFloat())
+                val maxGb = if (limitGb > 0f) limitGb else Constants.MAX_TRAFFIC_LIMIT_GB
+                val safeRemainingGb = remainingGb.coerceIn(0f, maxGb)
+                val newUsedMb =
+                    if (limitGb > 0f) {
+                        ((limitGb - safeRemainingGb) * Constants.MB_PER_GB).coerceIn(0f, limitMb.toFloat())
+                    } else {
+                        usage.trafficUsedMb
+                    }
+
+                simUsageAdjustmentRepository.updateSimStats(
+                    identity = identity,
+                    minutesUsed = usage.minutesUsed,
+                    trafficUsedMb = newUsedMb,
+                    manualAdjustment = 0,
+                )
+                simUsageAdjustmentRepository.setTrafficAdjustment(identity, 0f)
             }
         }
 

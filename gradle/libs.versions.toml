@@ -32,6 +32,7 @@ appsearch = "1.1.0"
 appfunctions = "1.0.0-beta01"
 kotlinxCoroutines = "1.11.0"
 ktlint = "14.2.0"
+colorpickerCompose = "1.1.2"
 # Detekt (2.0.0-alpha.6): required for Gradle 9.x compatibility and modern JDK toolchains; transition to stable 2.x release once available.
 detekt = "2.0.0-alpha.6"
 desugarJdkLibs = "2.1.5"
@@ -104,6 +105,7 @@ kotlinxCoroutinesCore = { group = "org.jetbrains.kotlinx", name = "kotlinx-corou
 kotlinxCoroutinesGuava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesTesting = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 androidxMaterialIconsCore = { group = "androidx.compose.material", name = "material-icons-core" }
+colorpickerCompose = { group = "com.github.skydoves", name = "colorpicker-compose", version.ref = "colorpickerCompose" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -648,9 +648,8 @@ class UpdateCoordinator
                     if (outcome.success) {
                         dataRefreshNotifier.notifyRefresh(
                             isManual = true,
-                            // Suppress reactive update ONLY if data DID NOT change during render.
-                            // If it did — let the reactive cycle immediately finish updating the widget.
-                            suppressWidgetUpdate = !outcome.contentChangedDuringUpdate,
+                            // Do not suppress widget update on forced/manual notifications (e.g. settings changes)
+                            suppressWidgetUpdate = false,
                         )
                     }
                     outcome.success

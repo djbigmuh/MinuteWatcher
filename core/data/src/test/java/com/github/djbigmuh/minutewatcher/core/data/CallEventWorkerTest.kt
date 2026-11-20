@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.data.util.DataStoreWriteTimeoutException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -16,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -489,5 +491,36 @@ class CallEventWorkerTest {
 
             val result = worker.doWork()
             assertEquals(ListenableWorker.Result.failure(), result)
+        }
+
+    @Test
+    fun `doWork propagates cancellation when stopped`() =
+        runTest {
+            val inputData =
+                Data
+                    .Builder()
+                    .putString(CallEventWorker.EXTRA_STATE, TelephonyManager.EXTRA_STATE_OFFHOOK)
+                    .build()
+            val worker =
+                TestListenableWorkerBuilder<CallEventWorker>(context)
+                    .setWorkerFactory(
+                        object : WorkerFactory() {
+                            override fun createWorker(
+                                appContext: Context,
+                                workerClassName: String,
+                                workerParameters: WorkerParameters,
+                            ): ListenableWorker = CallEventWorker(appContext, workerParameters, callTracker)
+                        },
+                    ).setInputData(inputData)
+                    .build()
+
+            whenever(callTracker.onCallStarted(any(), any()))
+                .thenThrow(CancellationException("Cancelled"))
+
+            val result =
+                runCatching {
+                    worker.doWork()
+                }
+            assertTrue(result.exceptionOrNull() is CancellationException)
         }
 }
