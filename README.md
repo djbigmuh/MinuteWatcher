@@ -2,6 +2,19 @@
 
 MinuteWatcher is an Android application designed to track your mobile carrier's minutes and data usage. It provides a clean UI, highly customizable home screen widgets, and deep integration with Android system features like AppSearch, Quick Settings Tiles, and Dynamic Shortcuts.
 
+## Screenshots
+
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="30%" alt="Screenshot 1" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="30%" alt="Screenshot 2" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="30%" alt="Screenshot 3" />
+</p>
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="30%" alt="Screenshot 4" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" width="30%" alt="Screenshot 5" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" width="30%" alt="Screenshot 6" />
+</p>
+
 ## Key Features
 
 - **Multi-SIM Support**: Architecture supports up to 10 slots (used in benchmark mode). Real-world devices with up to 3 SIMs are supported with independent limits and optimized widget layouts.
