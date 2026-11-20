@@ -98,7 +98,7 @@ The project uses a few non-stable (Beta/Alpha) versions of critical libraries to
 MinuteWatcher is not published yet; distribution channels are in preparation:
 
 - **Google Play**: store listing is being prepared; store metadata is maintained via `fastlane/`.
-- **F-Droid**, **GitHub Releases**: planned; both require a public source repository, which does not exist yet.
+- **F-Droid**, **GitHub Releases**: planned.
 
 For detailed release procedures, store metadata management, and build specifications, see [docs/release.md](docs/release.md).
 
