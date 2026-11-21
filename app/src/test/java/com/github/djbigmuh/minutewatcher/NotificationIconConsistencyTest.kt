@@ -26,12 +26,18 @@ class NotificationIconConsistencyTest {
         return dir
     }
 
+    private fun findAppManifestFile(): File {
+        val path =
+            System.getProperty("minutewatcher.appManifestPath")
+                ?: error("System property 'minutewatcher.appManifestPath' is not set")
+        val file = File(path)
+        assertTrue("Manifest file must exist at $path", file.exists())
+        return file
+    }
+
     @Test
     fun `usage tile service in manifest uses ic_stat_minutewatcher`() {
-        val root = findProjectRoot()
-        val manifestFile = File(root, "app/src/main/AndroidManifest.xml")
-        assertTrue("AndroidManifest.xml must exist", manifestFile.exists())
-
+        val manifestFile = findAppManifestFile()
         val dbFactory = DocumentBuilderFactory.newInstance()
         val dBuilder = dbFactory.newDocumentBuilder()
         val doc = dBuilder.parse(manifestFile)

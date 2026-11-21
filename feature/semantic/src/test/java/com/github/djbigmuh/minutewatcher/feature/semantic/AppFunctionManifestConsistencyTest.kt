@@ -13,8 +13,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 class AppFunctionManifestConsistencyTest {
     @Test
     fun `manifest declares app function service with required security and properties`() {
-        val manifestFile =
-            findFile("feature/semantic/src/main/AndroidManifest.xml", "src/main/AndroidManifest.xml")
+        val manifestFile = findManifestFile()
         assertTrue("AndroidManifest.xml must exist", manifestFile.exists())
 
         val doc = parseXml(manifestFile)
@@ -62,64 +61,88 @@ class AppFunctionManifestConsistencyTest {
 
             val doc = builder.parse(stringsFile)
             val stringNodes = doc.getElementsByTagName("string")
-            var foundValue: String? = null
-
-            for (i in 0 until stringNodes.length) {
-                val node = stringNodes.item(i)
-                val nameAttr = node.attributes?.getNamedItem("name")?.nodeValue
-                if (nameAttr == "app_functions_display_description") {
-                    foundValue = node.textContent
-                    break
-                }
-            }
+            val foundValue =
+                (0 until stringNodes.length)
+                    .mapNotNull { stringNodes.item(it) }
+                    .firstOrNull { node ->
+                        node.attributes?.getNamedItem("name")?.nodeValue == "app_functions_display_description"
+                    }?.textContent
 
             assertNotNull(foundValue)
             assertTrue(!foundValue.isNullOrBlank())
         }
     }
 
+    @Test
+    fun `declared service matches generated class name and assets`() {
+        val manifestFile = findManifestFile()
+        val doc = parseXml(manifestFile)
+        val serviceNodes = doc.getElementsByTagName("service")
+        val serviceClassName =
+            (0 until serviceNodes.length)
+                .mapNotNull { serviceNodes.item(it) as? Element }
+                .firstOrNull { it.getAttribute("android:name").endsWith("MinuteWatcherAppFunctionService") }
+                ?.getAttribute("android:name")
+
+        assertNotNull("MinuteWatcherAppFunctionService must be declared", serviceClassName)
+        assertEquals(
+            "com.github.djbigmuh.minutewatcher.feature.semantic.appfunctions.MinuteWatcherAppFunctionService",
+            serviceClassName,
+        )
+
+        val generatedClass =
+            Class.forName(
+                "com.github.djbigmuh.minutewatcher.feature.semantic.appfunctions.MinuteWatcherAppFunctionService",
+            )
+        assertNotNull(generatedClass)
+    }
+
     private fun parseXml(file: File): Document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
 
     private fun verifyServiceDeclaration(doc: Document) {
         val serviceNodes = doc.getElementsByTagName("service")
-        var foundService = false
-        for (i in 0 until serviceNodes.length) {
-            val service = serviceNodes.item(i) as? Element ?: continue
-            val name = service.getAttribute("android:name")
-            if (name.endsWith("MinuteWatcherAppFunctionService")) {
-                foundService = true
-                assertEquals("true", service.getAttribute("android:exported"))
-                assertEquals(
-                    "android.permission.BIND_APP_FUNCTION_SERVICE",
-                    service.getAttribute("android:permission"),
-                )
-                verifyServiceChildren(service)
-            }
+        val service =
+            (0 until serviceNodes.length)
+                .mapNotNull { serviceNodes.item(it) as? Element }
+                .firstOrNull { it.getAttribute("android:name").endsWith("MinuteWatcherAppFunctionService") }
+        assertNotNull(service)
+        if (service != null) {
+            assertEquals("true", service.getAttribute("android:exported"))
+            assertEquals(
+                "android.permission.BIND_APP_FUNCTION_SERVICE",
+                service.getAttribute("android:permission"),
+            )
+            verifyServiceChildren(service)
         }
-        assertTrue(foundService)
     }
 
     private fun verifyServiceChildren(service: Element) {
         val children = service.childNodes
-        var hasAction = false
-        var schemaProperty = false
-        var v2Property = false
+        val childElements =
+            (0 until children.length)
+                .mapNotNull { children.item(it) as? Element }
 
-        for (j in 0 until children.length) {
-            val child = children.item(j) as? Element ?: continue
-            if (child.tagName == "intent-filter") {
-                hasAction = hasAppFunctionAction(child)
-            } else if (child.tagName == "property") {
-                val propName = child.getAttribute("android:name")
-                val propVal = child.getAttribute("android:value")
-                if (propName == "android.app.appfunctions.schema" && propVal.endsWith(".xsd")) {
-                    schemaProperty = true
+        val hasAction =
+            childElements
+                .filter { it.tagName == "intent-filter" }
+                .any { hasAppFunctionAction(it) }
+
+        val schemaProperty =
+            childElements
+                .filter { it.tagName == "property" }
+                .any {
+                    it.getAttribute("android:name") == "android.app.appfunctions.schema" &&
+                        it.getAttribute("android:value").endsWith(".xsd")
                 }
-                if (propName == "android.app.appfunctions.v2" && propVal.endsWith(".xml")) {
-                    v2Property = true
+
+        val v2Property =
+            childElements
+                .filter { it.tagName == "property" }
+                .any {
+                    it.getAttribute("android:name") == "android.app.appfunctions.v2" &&
+                        it.getAttribute("android:value").endsWith(".xml")
                 }
-            }
-        }
+
         assertTrue(hasAction)
         assertTrue(schemaProperty)
         assertTrue(v2Property)
@@ -127,13 +150,9 @@ class AppFunctionManifestConsistencyTest {
 
     private fun hasAppFunctionAction(intentFilter: Element): Boolean {
         val actions = intentFilter.getElementsByTagName("action")
-        for (k in 0 until actions.length) {
-            val action = actions.item(k) as? Element ?: continue
-            if (action.getAttribute("android:name") == "android.app.appfunctions.AppFunctionService") {
-                return true
-            }
-        }
-        return false
+        return (0 until actions.length)
+            .mapNotNull { actions.item(it) as? Element }
+            .any { it.getAttribute("android:name") == "android.app.appfunctions.AppFunctionService" }
     }
 
     private fun verifyApplicationProperty(doc: Document) {
@@ -141,16 +160,23 @@ class AppFunctionManifestConsistencyTest {
         assertTrue(appNodes.length > 0)
         val appNode = appNodes.item(0) as Element
         val props = appNode.getElementsByTagName("property")
-        var metadataProperty = false
-        for (i in 0 until props.length) {
-            val prop = props.item(i) as Element
-            if (prop.getAttribute("android:name") == "android.app.appfunctions.app_metadata" &&
-                prop.getAttribute("android:resource") == "@xml/app_metadata"
-            ) {
-                metadataProperty = true
-            }
-        }
+        val metadataProperty =
+            (0 until props.length)
+                .mapNotNull { props.item(it) as? Element }
+                .any {
+                    it.getAttribute("android:name") == "android.app.appfunctions.app_metadata" &&
+                        it.getAttribute("android:resource") == "@xml/app_metadata"
+                }
         assertTrue(metadataProperty)
+    }
+
+    private fun findManifestFile(): File {
+        val path =
+            System.getProperty("minutewatcher.semanticManifestPath")
+                ?: error("System property 'minutewatcher.semanticManifestPath' is not set")
+        val file = File(path)
+        assertTrue("Manifest file must exist at $path", file.exists())
+        return file
     }
 
     private fun findFile(vararg paths: String): File {
@@ -177,14 +203,10 @@ class AppFunctionManifestConsistencyTest {
     private fun parseLocalesConfig(file: File): Set<String> {
         val doc = parseXml(file)
         val localeNodes = doc.getElementsByTagName("locale")
-        val result = mutableSetOf<String>()
-        for (i in 0 until localeNodes.length) {
-            val node = localeNodes.item(i)
-            val nameAttr = node.attributes?.getNamedItem("android:name")?.nodeValue
-            if (!nameAttr.isNullOrEmpty()) {
-                result.add(nameAttr)
-            }
-        }
-        return result
+        return (0 until localeNodes.length)
+            .mapNotNull { localeNodes.item(it) }
+            .mapNotNull { it.attributes?.getNamedItem("android:name")?.nodeValue }
+            .filter { !it.isNullOrEmpty() }
+            .toSet()
     }
 }

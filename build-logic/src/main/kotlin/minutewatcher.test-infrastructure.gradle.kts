@@ -9,6 +9,14 @@ tasks.withType<Test>().configureEach {
         "minutewatcher.coreResourcesResDir",
         rootProject.layout.projectDirectory.dir("core/resources/src/main/res").asFile.absolutePath,
     )
+    systemProperty(
+        "minutewatcher.appManifestPath",
+        rootProject.layout.projectDirectory.dir("app/src/main/AndroidManifest.xml").asFile.absolutePath,
+    )
+    systemProperty(
+        "minutewatcher.semanticManifestPath",
+        rootProject.layout.projectDirectory.dir("feature/semantic/src/main/AndroidManifest.xml").asFile.absolutePath,
+    )
 
     val moduleCacheName = project.path.removePrefix(":").replace(':', '.').ifEmpty { "root" }
     val roboUserHomeFile = rootProject.layout.projectDirectory.dir(".robolectric/$moduleCacheName/home").asFile

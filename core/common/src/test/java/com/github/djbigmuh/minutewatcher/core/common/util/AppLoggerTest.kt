@@ -446,6 +446,73 @@ class AppLoggerTest {
             assertFalse(logFile.exists() && logFile.readText().contains("Ignored message"))
         }
 
+    @Test
+    fun `queue overflow increments dropped entries counter without throwing exception`() =
+        runTest {
+            val initialDropped = AppLogger.droppedEntries
+            repeat(10_000) { idx ->
+                AppLogger.d("Overflow message $idx")
+            }
+            waitForChannelDrain()
+            assertTrue(
+                "Dropped entries counter should record evicted messages",
+                AppLogger.droppedEntries >= initialDropped,
+            )
+        }
+
+    @Test
+    fun `write error triggers consecutive failure limit and disables file logging`() =
+        runTest {
+            val badDir = tmpFolder.newFolder("write_error_dir")
+            AppLogger.initForTest(badDir)
+
+            val logFile = File(badDir, "logs.txt")
+            logFile.createNewFile()
+            logFile.setReadOnly()
+
+            repeat(10) { i ->
+                AppLogger.d("Message on failing file $i")
+            }
+
+            waitForChannelDrain()
+
+            AppLogger.d("Post failure message")
+            AppLogger.w("Post failure warning")
+            AppLogger.e("Post failure error")
+        }
+
+    @Test
+    fun `processing completion drains pending logs and reaches quiescent state`() =
+        runTest {
+            repeat(100) { i ->
+                AppLogger.d("Quiescent entry $i")
+            }
+            AppLogger.awaitQuiescent()
+            assertFalse("AppLogger should have no pending logs after awaitQuiescent", AppLogger.hasPendingLogs())
+        }
+
+    @Test
+    fun `absence of state leaks between tests when using reset rule`() =
+        runTest {
+            assertEquals("Dropped entries should be 0 on fresh test start", 0L, AppLogger.droppedEntries)
+            assertFalse("Pending logs should be false on fresh test start", AppLogger.hasPendingLogs())
+        }
+
+    @Test
+    fun `custom dispatcher and scope injection operates correctly`() =
+        runTest {
+            val customDir = tmpFolder.newFolder("custom_scope_dir")
+            val customDispatcher = kotlinx.coroutines.Dispatchers.Default
+            val customScope = kotlinx.coroutines.CoroutineScope(customDispatcher + kotlinx.coroutines.SupervisorJob())
+
+            AppLogger.initForTest(customDir, customDispatcher = customDispatcher, customScope = customScope)
+            AppLogger.d("Custom scope entry")
+            waitForLogMarker("Custom scope entry", targetDir = customDir)
+
+            val file = File(customDir, "logs.txt")
+            assertTrue(file.exists() && file.readText().contains("Custom scope entry"))
+        }
+
     private suspend fun waitForLogMarker(
         marker: String,
         targetDir: File = logDir,

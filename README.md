@@ -89,7 +89,7 @@ The app follows modern Android development best practices:
 - **DI**: Hilt
 - **Background Work**: WorkManager
 - **Data Storage**: DataStore (for usage data and UI settings).
-- **Static Analysis**: Detekt and Ktlint enforced locally via `VERIFY.bat` (Windows) or `verify.ps1` (PowerShell); GitHub CI is not currently used.
+- **Static Analysis**: Detekt and Ktlint enforced locally via `./gradlew ktlintCheck detekt lintDebug testDebugUnitTest :app:assembleDebug`; GitHub CI is not currently used.
 
 ### Non-Stable Dependencies
 The project uses non-stable (Alpha) tools where required for modern build system and JDK compatibility:

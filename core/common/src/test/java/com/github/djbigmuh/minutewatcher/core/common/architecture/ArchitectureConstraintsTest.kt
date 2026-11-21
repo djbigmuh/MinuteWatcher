@@ -245,4 +245,33 @@ class ArchitectureConstraintsTest {
             }
         }
     }
+
+    @Test
+    fun `components running on main dispatcher do not execute blocking operations`() {
+        val mainComponents =
+            findProductionKtFiles().filter { file ->
+                val path = file.absolutePath.replace('\\', '/')
+                path.contains("/feature/") ||
+                    path.contains("/app/") ||
+                    file.name.contains("ViewModel") ||
+                    file.name.contains("Controller") ||
+                    file.name.contains("Screen") ||
+                    file.name.contains("Activity")
+            }
+
+        val violations = mutableListOf<String>()
+        val blockingRegex = Regex("""\b(Thread\.sleep|runBlocking|FileInputStream|FileOutputStream)\b""")
+
+        for (file in mainComponents) {
+            file.readLines().forEachIndexed { index, line ->
+                if (isCodeLine(line) && blockingRegex.containsMatchIn(line)) {
+                    violations.add("Blocking operation on main component: ${relativePath(file)}:${index + 1}: '$line'")
+                }
+            }
+        }
+
+        if (violations.isNotEmpty()) {
+            fail("Blocking operations on main dispatcher components are forbidden:\n" + violations.joinToString("\n"))
+        }
+    }
 }
