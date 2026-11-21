@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
+import java.util.Properties
 
 plugins {
     id("minutewatcher.android-application")
@@ -17,34 +18,45 @@ configure<ApplicationExtension> {
         versionName = "4.3.0"
     }
 
-    val keystoreFile = layout.projectDirectory.file("release.keystore").asFile
-    val envStorePassword = providers.environmentVariable("MINUTEWATCHER_STORE_PASSWORD").orNull
-    val envKeyAlias = providers.environmentVariable("MINUTEWATCHER_KEY_ALIAS").orNull
-    val envKeyPassword = providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull
+    val signingPropertiesFile = rootProject.file("signing.properties")
+    val signingProps = Properties()
+    if (signingPropertiesFile.exists()) {
+        signingPropertiesFile.inputStream().use { signingProps.load(it) }
+    }
+    val storePath = signingProps.getProperty("storeFile") ?: providers.environmentVariable("MINUTEWATCHER_STORE_FILE").orNull
+    val storePass = signingProps.getProperty("storePassword") ?: providers.environmentVariable("MINUTEWATCHER_STORE_PASSWORD").orNull
+    val keyAl = signingProps.getProperty("keyAlias") ?: providers.environmentVariable("MINUTEWATCHER_KEY_ALIAS").orNull
+    val keyPass = signingProps.getProperty("keyPassword") ?: providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull
+
+    val keystoreFile = if (storePath != null) file(storePath) else layout.projectDirectory.file("release.keystore").asFile
 
     val hasReleaseSigning =
         keystoreFile.exists() &&
-            !envStorePassword.isNullOrEmpty() &&
-            !envKeyAlias.isNullOrEmpty() &&
-            !envKeyPassword.isNullOrEmpty()
+            !storePass.isNullOrEmpty() &&
+            !keyAl.isNullOrEmpty() &&
+            !keyPass.isNullOrEmpty()
 
     if (!hasReleaseSigning) {
         val missingParams = mutableListOf<String>()
-        if (!keystoreFile.exists()) missingParams.add("release.keystore file (expected at app/release.keystore)")
-        if (envStorePassword.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_STORE_PASSWORD env var")
-        if (envKeyAlias.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_KEY_ALIAS env var")
-        if (envKeyPassword.isNullOrEmpty()) missingParams.add("MINUTEWATCHER_KEY_PASSWORD env var")
-        logger.warn("Release signing is disabled due to missing parameters: ${missingParams.joinToString(", ")}")
+        if (!keystoreFile.exists()) missingParams.add("release.keystore file (expected at app/release.keystore or signing.properties)")
+        if (storePass.isNullOrEmpty()) missingParams.add("storePassword (in signing.properties or MINUTEWATCHER_STORE_PASSWORD env var)")
+        if (keyAl.isNullOrEmpty()) missingParams.add("keyAlias (in signing.properties or MINUTEWATCHER_KEY_ALIAS env var)")
+        if (keyPass.isNullOrEmpty()) missingParams.add("keyPassword (in signing.properties or MINUTEWATCHER_KEY_PASSWORD env var)")
+
+        val isReleaseBuildRequested = rootProject.gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+        if (isReleaseBuildRequested) {
+            throw GradleException("Release signing configuration is missing mandatory parameters: ${missingParams.joinToString(", ")}")
+        } else {
+            logger.warn("Release signing is disabled due to missing parameters: ${missingParams.joinToString(", ")}")
+        }
     }
 
     signingConfigs {
-        if (hasReleaseSigning) {
-            create("release") {
-                storeFile = keystoreFile
-                storePassword = envStorePassword
-                keyAlias = envKeyAlias
-                keyPassword = envKeyPassword
-            }
+        create("release") {
+            storeFile = keystoreFile
+            storePassword = storePass ?: ""
+            keyAlias = keyAl ?: ""
+            keyPassword = keyPass ?: ""
         }
     }
 
@@ -52,23 +64,18 @@ configure<ApplicationExtension> {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            if (hasReleaseSigning) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            manifestPlaceholders["benchmarkReceiverEnabled"] = false
         }
         debug {
-            manifestPlaceholders["benchmarkReceiverEnabled"] = true
         }
         create("benchmark") {
             initWith(getByName("release"))
             matchingFallbacks += listOf("release")
             signingConfig = signingConfigs.getByName("debug")
-            manifestPlaceholders["benchmarkReceiverEnabled"] = true
         }
     }
 
