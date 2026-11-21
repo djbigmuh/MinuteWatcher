@@ -319,6 +319,186 @@ class LocaleConfigConsistencyTest {
         }
     }
 
+    @Test
+    fun `all text resources and changelogs are decoded as utf-8 without bom and contain no forbidden characters`() {
+        val projectRoot = findProjectRoot()
+        val filesToCheck = mutableListOf<File>()
+
+        val resDir = findResDir()
+        collectFiles(resDir, ".xml", filesToCheck)
+
+        val fastlaneDir = File(projectRoot, "fastlane/metadata/android")
+        if (fastlaneDir.exists()) {
+            collectFiles(fastlaneDir, ".txt", filesToCheck)
+        }
+
+        collectFiles(projectRoot, ".md", filesToCheck)
+
+        filesToCheck.forEach { file ->
+            val bytes = file.readBytes()
+            if (bytes.size >= 3) {
+                val hasBom =
+                    bytes[0] == 0xEF.toByte() &&
+                        bytes[1] == 0xBB.toByte() &&
+                        bytes[2] == 0xBF.toByte()
+                if (hasBom) {
+                    org.junit.Assert.fail("File ${file.absolutePath} contains UTF-8 BOM")
+                }
+            }
+
+            val text = file.readText(Charsets.UTF_8)
+            text.forEachIndexed { index, c ->
+                if (c in '\u0080'..'\u009F') {
+                    org.junit.Assert.fail(
+                        "File ${file.absolutePath} contains forbidden control character U+${c.code.toString(
+                            16,
+                        )} at index $index",
+                    )
+                }
+                if (c == '\uFFFD') {
+                    org.junit.Assert.fail(
+                        "File ${file.absolutePath} contains forbidden replacement character U+FFFD at index $index",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `locale translation completeness across all supported locales`() {
+        val resDir = findResDir()
+        val defaultStringsFile = File(resDir, "values/strings.xml")
+        val defaultStrings = parseStringsXmlKeys(defaultStringsFile, requireTranslatable = true)
+        val defaultPlurals = parsePluralsXmlKeys(defaultStringsFile)
+
+        val valueDirs = resDir.listFiles { file -> file.isDirectory && file.name.startsWith("values-") } ?: emptyArray()
+
+        valueDirs.forEach { dir ->
+            val stringsFile = File(dir, "strings.xml")
+            if (stringsFile.exists()) {
+                val localeStrings = parseStringsXmlKeys(stringsFile, requireTranslatable = false)
+                val localePlurals = parsePluralsXmlKeys(stringsFile)
+
+                defaultStrings.forEach { key ->
+                    assertTrue("Locale ${dir.name} is missing string key '$key'", localeStrings.contains(key))
+                }
+                defaultPlurals.forEach { key ->
+                    assertTrue("Locale ${dir.name} is missing plural key '$key'", localePlurals.contains(key))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `string arrays have equal length and element order across all locales`() {
+        val resDir = findResDir()
+        val defaultArraysFile = File(resDir, "values/arrays.xml")
+        val defaultArrays = parseArraysXml(defaultArraysFile)
+
+        val valueDirs = resDir.listFiles { file -> file.isDirectory && file.name.startsWith("values") } ?: emptyArray()
+
+        valueDirs.forEach { dir ->
+            val arraysFile = File(dir, "arrays.xml")
+            if (arraysFile.exists()) {
+                val localeArrays = parseArraysXml(arraysFile)
+                defaultArrays.forEach { (arrayName, defaultItems) ->
+                    val localeItems = localeArrays[arrayName]
+                    assertNotNull("Array '$arrayName' must exist in ${dir.name}/arrays.xml", localeItems)
+                    assertEquals(
+                        "Array '$arrayName' length in ${dir.name} must match default",
+                        defaultItems.size,
+                        localeItems!!.size,
+                    )
+                    localeItems.forEach { item ->
+                        assertTrue(
+                            "Array '$arrayName' item in ${dir.name} must not be empty",
+                            item.isNotEmpty(),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun collectFiles(
+        dir: File,
+        extension: String,
+        list: MutableList<File>,
+    ) {
+        dir.listFiles()?.forEach { file ->
+            if (file.isDirectory) {
+                if (file.name != ".gradle" && file.name != "build" && file.name != ".git") {
+                    collectFiles(file, extension, list)
+                }
+            } else if (file.name.endsWith(extension)) {
+                list.add(file)
+            }
+        }
+    }
+
+    private fun parseStringsXmlKeys(
+        file: File,
+        requireTranslatable: Boolean,
+    ): Set<String> {
+        val factory = DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+        val doc = builder.parse(file)
+        val stringNodes = doc.getElementsByTagName("string")
+        val result = mutableSetOf<String>()
+        for (i in 0 until stringNodes.length) {
+            val node = stringNodes.item(i)
+            val translatable = node.attributes?.getNamedItem("translatable")?.nodeValue
+            val name = node.attributes?.getNamedItem("name")?.nodeValue
+            if (name != null) {
+                if (!requireTranslatable || translatable != "false") {
+                    result.add(name)
+                }
+            }
+        }
+        return result
+    }
+
+    private fun parsePluralsXmlKeys(file: File): Set<String> {
+        val factory = DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+        val doc = builder.parse(file)
+        val pluralNodes = doc.getElementsByTagName("plurals")
+        val result = mutableSetOf<String>()
+        for (i in 0 until pluralNodes.length) {
+            val name =
+                pluralNodes
+                    .item(i)
+                    .attributes
+                    ?.getNamedItem("name")
+                    ?.nodeValue
+            if (name != null) {
+                result.add(name)
+            }
+        }
+        return result
+    }
+
+    private fun parseArraysXml(file: File): Map<String, List<String>> {
+        val factory = DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+        val doc = builder.parse(file)
+        val arrayNodes = doc.getElementsByTagName("string-array")
+        val result = mutableMapOf<String, List<String>>()
+        for (i in 0 until arrayNodes.length) {
+            val arrayNode = arrayNodes.item(i) as org.w3c.dom.Element
+            val name = arrayNode.getAttribute("name")
+            val itemNodes = arrayNode.getElementsByTagName("item")
+            val items = mutableListOf<String>()
+            for (j in 0 until itemNodes.length) {
+                items.add(itemNodes.item(j).textContent.trim())
+            }
+            if (name != null) {
+                result[name] = items
+            }
+        }
+        return result
+    }
+
     private fun parseLocalesConfig(file: File): Set<String> {
         val factory = DocumentBuilderFactory.newInstance()
         val builder = factory.newDocumentBuilder()
@@ -336,12 +516,18 @@ class LocaleConfigConsistencyTest {
         return result
     }
 
+    private fun findProjectRoot(): File {
+        val resDir = findResDir()
+        return resDir.parentFile?.parentFile?.parentFile ?: error("Cannot find project root")
+    }
+
     private fun findResDir(): File {
-        val userDir = File(System.getProperty("user.dir") ?: ".")
-        val candidate1 = File(userDir, "src/main/res")
-        if (candidate1.exists() && candidate1.isDirectory) return candidate1
-        val candidate2 = File(userDir, "core/resources/src/main/res")
-        if (candidate2.exists() && candidate2.isDirectory) return candidate2
-        error("Could not locate core/resources/src/main/res from ${userDir.absolutePath}")
+        var dir: File? = File(System.getProperty("user.dir") ?: ".")
+        while (dir != null) {
+            val candidate = File(dir, "core/resources/src/main/res")
+            if (candidate.exists() && candidate.isDirectory) return candidate
+            dir = dir.parentFile
+        }
+        error("Could not locate core/resources/src/main/res")
     }
 }
