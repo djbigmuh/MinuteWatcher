@@ -79,23 +79,6 @@
             </intent-filter>
         </receiver>
 
-        <!--
-          BenchmarkReceiver is exported but protected by DUMP permission.
-          Only system/ADB tools (used by Macrobenchmark) can trigger it.
-          This is required by Android Lint for exported receivers and
-          follows the principle of least privilege.
-        -->
-        <receiver
-            android:name=".benchmark.BenchmarkReceiver"
-            android:enabled="${benchmarkReceiverEnabled}"
-            android:exported="true"
-            android:permission="android.permission.DUMP"
-            tools:ignore="ExportedReceiver">
-            <intent-filter>
-                <action android:name="com.github.djbigmuh.minutewatcher.benchmark.POPULATE_DATA" />
-            </intent-filter>
-        </receiver>
-
         <receiver
             android:name=".PinWidgetReceiver"
             android:enabled="true"
