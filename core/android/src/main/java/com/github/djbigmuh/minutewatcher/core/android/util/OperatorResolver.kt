@@ -44,6 +44,9 @@ object OperatorResolver {
     @VisibleForTesting
     val tokenToResKey = OperatorBrandDatabase.tokenToResKey
 
+    private val brandKeyCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private const val MAX_BRAND_KEY_CACHE_SIZE = 128
+
     /**
      * Resets the cache state completely, clearing the database map and load attempt counter.
      */
@@ -52,6 +55,19 @@ object OperatorResolver {
         synchronized(this) {
             db = null
             loadAttempts = 0
+            brandKeyCache.clear()
+        }
+    }
+
+    /**
+     * Preloads the MCC/MNC database off the main thread.
+     */
+    suspend fun preload(context: Context) {
+        if (db != null) return
+        kotlinx.coroutines.withContext(
+            com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback.io,
+        ) {
+            loadDb(context)
         }
     }
 
@@ -256,13 +272,25 @@ object OperatorResolver {
      * Resolves the operator brand key from the given operator name.
      * Lowercases query once, checks exact/normalized map lookup first,
      * and checks diacritics fallback variant when stripped differs from normalized.
+     * Optimized with thread-safe cache to avoid repeated allocations and regex parsing.
      */
     fun getOperatorBrandKey(operatorName: String): String? {
+        if (operatorName.isEmpty()) return null
+        val cached = brandKeyCache[operatorName]
+        if (cached != null) {
+            return if (cached.isEmpty()) null else cached
+        }
         val normalized = operatorName.lowercase(Locale.ROOT)
         val stripped = operatorName.stripDiacritics().lowercase(Locale.ROOT)
         val candidates = if (stripped == normalized) listOf(normalized) else listOf(normalized, stripped)
-        return candidates.firstNotNullOfOrNull { tokenToResKey[it] }
-            ?: candidates.firstNotNullOfOrNull { findBestTokenMatch(it) }
+        val resolved =
+            candidates.firstNotNullOfOrNull { tokenToResKey[it] }
+                ?: candidates.firstNotNullOfOrNull { findBestTokenMatch(it) }
+
+        if (brandKeyCache.size < MAX_BRAND_KEY_CACHE_SIZE) {
+            brandKeyCache[operatorName] = resolved ?: ""
+        }
+        return resolved
     }
 
     /**

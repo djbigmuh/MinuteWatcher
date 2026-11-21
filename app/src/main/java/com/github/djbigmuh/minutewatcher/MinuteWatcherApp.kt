@@ -77,20 +77,30 @@ class MinuteWatcherApp :
         updateCoordinator.start()
 
         if (BuildConfig.DEBUG) {
-            StrictMode.setThreadPolicy(
+            val threadPolicyBuilder =
                 StrictMode.ThreadPolicy
                     .Builder()
                     .detectAll()
                     .penaltyLog()
-                    .build(),
-            )
-            StrictMode.setVmPolicy(
+
+            val vmPolicyBuilder =
                 StrictMode.VmPolicy
                     .Builder()
                     .detectAll()
                     .penaltyLog()
-                    .build(),
-            )
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                val executor = mainExecutor
+                threadPolicyBuilder.penaltyListener(executor) { violation ->
+                    AppLogger.e("StrictMode thread policy violation detected", violation)
+                }
+                vmPolicyBuilder.penaltyListener(executor) { violation ->
+                    AppLogger.e("StrictMode VM policy violation detected", violation)
+                }
+            }
+
+            StrictMode.setThreadPolicy(threadPolicyBuilder.build())
+            StrictMode.setVmPolicy(vmPolicyBuilder.build())
         }
     }
 

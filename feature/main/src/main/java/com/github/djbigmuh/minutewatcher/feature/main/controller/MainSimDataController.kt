@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
@@ -94,16 +95,17 @@ internal class MainSimDataController
                         isDataLoaded = usageStateRepository.isDataLoaded(),
                         statusMap = statusMap,
                     )
-                }.retryWhen { cause, attempt ->
-                    (cause as? CancellationException)?.let { throw it }
-                    if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
-                        val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
-                        delay(delayMs.milliseconds)
-                        true
-                    } else {
-                        false
-                    }
-                }.onStart { emit(SimCardListState.Loading) }
+                }.distinctUntilChanged()
+                    .retryWhen { cause, attempt ->
+                        (cause as? CancellationException)?.let { throw it }
+                        if ((attempt < MAX_RETRY_ATTEMPTS) && (cause is IOException)) {
+                            val delayMs = RETRY_BASE_DELAY_MS * (1L shl minOf(attempt.toInt(), MAX_RETRY_EXPONENT))
+                            delay(delayMs.milliseconds)
+                            true
+                        } else {
+                            false
+                        }
+                    }.onStart { emit(SimCardListState.Loading) }
                     .catch { e ->
                         AppLogger.e("MainSimDataController: observeSimCardUiModels failed", e)
                         emit(SimCardListState.Error(R.string.refresh_error, SimCardListState.ErrorKind.REFRESH))

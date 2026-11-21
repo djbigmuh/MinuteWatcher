@@ -95,7 +95,8 @@ object AppLogger {
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
 
-    private val logScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    private var logScope: CoroutineScope = CoroutineScope(dispatcher + SupervisorJob())
     private var workerJob: Job? = null
 
     private class LogEntry(
@@ -109,6 +110,20 @@ object AppLogger {
         DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
             .withZone(cachedZoneId)
+
+    private fun sanitizeMessage(message: String): String {
+        if (BuildConfig.DEBUG) return message
+        var sanitized = message
+        sanitized = sanitized.replace(Regex("""subId\s*=\s*\d+"""), "subId=***")
+        sanitized = sanitized.replace(Regex("""\+?\d{7,15}"""), "***")
+        val pattern =
+            Regex(
+                """\b(usage|subscriber|identity|phone|number)\b[^\s]*""",
+                RegexOption.IGNORE_CASE,
+            )
+        sanitized = sanitized.replace(pattern, "***")
+        return sanitized
+    }
 
     internal fun getFormatter(): DateTimeFormatter {
         val currentZone = ZoneId.systemDefault()
@@ -129,6 +144,8 @@ object AppLogger {
     fun init(
         context: Context,
         customLogger: Logger = AndroidLogger(),
+        customDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+        customScope: CoroutineScope = CoroutineScope(customDispatcher + SupervisorJob()),
     ) {
         val filesDir = context.filesDir
         synchronized(this) {
@@ -144,6 +161,8 @@ object AppLogger {
             consecutiveWriteFailures = 0
             logDir = filesDir
             logger = customLogger
+            dispatcher = customDispatcher
+            logScope = customScope
             isFileLoggingEnabled = BuildConfig.DEBUG
         }
         restartWorker()
@@ -237,21 +256,23 @@ object AppLogger {
         }
 
     fun d(message: String) {
-        runCatching { logger.d(TAG, message) }
-        runCatching { logToFile("D", message) }
+        val safeMessage = sanitizeMessage(message)
+        runCatching { logger.d(TAG, safeMessage) }
+        runCatching { logToFile("D", safeMessage) }
     }
 
     fun w(
         message: String,
         throwable: Throwable? = null,
     ) {
-        runCatching { logger.w(TAG, message, throwable) }
+        val safeMessage = sanitizeMessage(message)
+        runCatching { logger.w(TAG, safeMessage, throwable) }
         runCatching {
             val fullMessage =
                 if (throwable != null) {
-                    "$message\n${throwable.stackTraceToString()}"
+                    "$safeMessage\n${throwable.stackTraceToString()}"
                 } else {
-                    message
+                    safeMessage
                 }
             logToFile("W", fullMessage)
         }
@@ -261,13 +282,14 @@ object AppLogger {
         message: String,
         throwable: Throwable? = null,
     ) {
-        runCatching { logger.e(TAG, message, throwable) }
+        val safeMessage = sanitizeMessage(message)
+        runCatching { logger.e(TAG, safeMessage, throwable) }
         runCatching {
             val fullMessage =
                 if (throwable != null) {
-                    "$message\n${throwable.stackTraceToString()}"
+                    "$safeMessage\n${throwable.stackTraceToString()}"
                 } else {
-                    message
+                    safeMessage
                 }
             logToFile("E", fullMessage)
         }
@@ -464,7 +486,11 @@ object AppLogger {
      * and restarts the file logging worker.
      */
     @VisibleForTesting
-    internal fun initForTest(dir: File) {
+    internal fun initForTest(
+        dir: File,
+        customDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+        customScope: CoroutineScope = CoroutineScope(customDispatcher + SupervisorJob()),
+    ) {
         synchronized(this) {
             isShutdown = false
             closeWriter()
@@ -473,6 +499,8 @@ object AppLogger {
             queuedCount.set(0)
             logDir = dir
             logger = AndroidLogger()
+            dispatcher = customDispatcher
+            logScope = customScope
             isFileLoggingEnabled = true
             while (logChannel.tryReceive().isSuccess) {
                 // Drain channel

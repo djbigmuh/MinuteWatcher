@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -112,7 +113,8 @@ class WidgetSettingsViewModel
                             (sim.entities[PackageType.MINUTES]?.limit ?: 0L) > 0L ||
                                 (sim.entities[PackageType.DATA]?.limit ?: 0L) > 0L
                         }
-                }.stateIn(
+                }.distinctUntilChanged()
+                .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
                     initialValue = false,
@@ -126,6 +128,7 @@ class WidgetSettingsViewModel
             appSettingsRepository
                 .observeAppSettings()
                 .map { it.theme }
+                .distinctUntilChanged()
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
