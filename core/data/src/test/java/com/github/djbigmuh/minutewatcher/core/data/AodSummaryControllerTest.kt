@@ -408,9 +408,14 @@ class AodSummaryControllerTest {
                     any(),
                 )
 
+                val appLocaleCtx =
+                    com.github.djbigmuh.minutewatcher.core.android.util.AppLocaleContexts.forAppLocale(
+                        context,
+                    )
+                val expectedMinutesPlural = appLocaleCtx.resources.getQuantityString(R.plurals.minutes_plurals, 5, 5)
                 assertTrue(
-                    "Summary line should contain Russian plural 'минут'",
-                    lineCaptor.firstValue.contains("минут"),
+                    "Summary line should contain localized plural for 5 minutes",
+                    lineCaptor.firstValue.contains(expectedMinutesPlural),
                 )
             } finally {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

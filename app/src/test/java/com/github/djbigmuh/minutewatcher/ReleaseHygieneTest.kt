@@ -16,26 +16,30 @@ class ReleaseHygieneTest {
 
     @Test
     fun `verify no benchmark population code exists in main source sets`() {
-        val forbiddenNames = listOf(
-            "BenchmarkPopulateWorker",
-            "BenchmarkUseCaseImpl"
-        )
+        val forbiddenNames =
+            listOf(
+                "BenchmarkPopulateWorker",
+                "BenchmarkUseCaseImpl",
+            )
 
-        val prodFiles = projectRoot.walkTopDown().filter { file ->
-            if (!file.isFile) return@filter false
-            val path = file.absolutePath.replace('\\', '/')
-            path.contains("/src/main/") &&
-                !path.contains("/build/") &&
-                !path.contains("/macrobenchmark/") &&
-                !path.contains("/baselineprofile/")
-        }.toList()
+        val prodFiles =
+            projectRoot
+                .walkTopDown()
+                .filter { file ->
+                    if (!file.isFile) return@filter false
+                    val path = file.absolutePath.replace('\\', '/')
+                    path.contains("/src/main/") &&
+                        !path.contains("/build/") &&
+                        !path.contains("/macrobenchmark/") &&
+                        !path.contains("/baselineprofile/")
+                }.toList()
 
         for (file in prodFiles) {
             val content = file.readText()
             for (forbidden in forbiddenNames) {
                 assertFalse(
                     "Forbidden benchmark/mock class '$forbidden' found in production code: ${file.absolutePath}",
-                    content.contains(forbidden)
+                    content.contains(forbidden),
                 )
             }
         }
@@ -57,7 +61,7 @@ class ReleaseHygieneTest {
             val name = receiver.attributes?.getNamedItem("android:name")?.nodeValue ?: continue
             assertFalse(
                 "BenchmarkReceiver must not be in main manifest: $name",
-                name.contains("BenchmarkReceiver")
+                name.contains("BenchmarkReceiver"),
             )
         }
     }

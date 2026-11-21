@@ -42,7 +42,7 @@ class BenchmarkUseCaseImplTest {
     private lateinit var useCase: BenchmarkUseCaseImpl
 
     @Before
-    fn setup() {
+    fun setUp() {
         useCase =
             BenchmarkUseCaseImpl(
                 simIdentityRepository = simIdentityRepository,

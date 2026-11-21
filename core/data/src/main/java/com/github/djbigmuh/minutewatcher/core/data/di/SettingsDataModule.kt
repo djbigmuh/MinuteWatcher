@@ -21,7 +21,6 @@ import com.github.djbigmuh.minutewatcher.core.data.PermissionStateNotifierImpl
 import com.github.djbigmuh.minutewatcher.core.domain.AodSummaryAvailability
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.AutoResetScheduleRepository
-import com.github.djbigmuh.minutewatcher.core.domain.BenchmarkUseCase
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionRepository
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.TrackingStatusProvider
