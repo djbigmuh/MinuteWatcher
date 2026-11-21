@@ -15,5 +15,10 @@ import javax.inject.Inject
 class NoOpMockSimProvider
     @Inject
     constructor() : MockSimProvider {
+        /**
+         * Returns `null` as this is the no-op implementation for production build variants where
+         * simulation is disabled by design (benchmark variant supplies dynamic simulation data).
+         */
+        @Suppress("SameReturnValue")
         override fun getMockSims(benchmarkSimCount: Int): List<ActiveSimInfo>? = null
     }

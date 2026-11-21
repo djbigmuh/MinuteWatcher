@@ -6,7 +6,7 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 
 ### 1. Android Gradle Plugin
 
-- **Version**: `9.5.1`
+- **Version**: `9.5.2`
 - **Reason**: The project requires the latest build system features to support SDK 37 and experimental Gradle 9.x integrations.
 - **Plan**: Continue using the latest preview versions until a stable branch for the 9.x series is established.
 
@@ -21,13 +21,11 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 - **Artifact**: `androidx.appsearch:appsearch-platform-storage` (1.1.0)
 - **Purpose**: Enables system search integration on Android 12+ (API 31+) via `PlatformStorage`.
 
-### 4. AndroidX AppFunctions (Beta)
+### 4. AndroidX AppFunctions
 
-- **Version**: `1.0.0-beta01`
-- **Reason**: On-device assistant integration requires compile-time API `@AppFunctionServiceEntryPoint` and
-  service/schema generation via KSP; stable release is not available yet.
-- **Plan**: Transition to the stable release once available; verify manifest contract, generated service name, and
-  generated asset contents upon migration.
+- **Version**: `1.0.0` (Stable)
+- **Purpose**: Enables on-device assistant integration using compile-time `@AppFunctionServiceEntryPoint` API and
+  service/schema generation via KSP.
 
 ---
 

@@ -19,10 +19,13 @@ interface MockSimProvider {
 
     /**
      * Returns a list of simulated SIM cards, or `null` if simulation is disabled.
+     * Note: This interface method has multiple variant-specific implementations. While the noop
+     * variant and test fakes return null, the mockBenchmark variant returns dynamic lists.
      *
      * @param benchmarkSimCount Number of simulated slots requested. A non-positive value indicates
      *                          no simulation, whereas a positive value is clamped to the maximum
      *                          supported slot count.
      */
+    @Suppress("SameReturnValue")
     fun getMockSims(benchmarkSimCount: Int): List<ActiveSimInfo>?
 }

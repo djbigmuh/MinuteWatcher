@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong
  * **Invariants:**
  * - Single worker coroutine consumes log channel sequentially in FIFO order.
  * - New worker is registered synchronously under state lock (`init`, `initForTest`);
- *   previous worker is cancelled and completes on generation check, returning
+ *   previous worker is canceled and completes on generation check, returning
  *   unprocessed entries to the channel; teardown paths (`resetForTest`, `shutdown`)
  *   additionally perform a time-limited join (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
  * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
@@ -80,7 +80,7 @@ object AppLogger {
 
     /**
      * Approximate total of entries evicted by the DROP_OLDEST policy when the queue was full.
-     * Approximate because the fullness check and the send are not a single atomic operation.
+     * Approximate because the fullness check and send are not a single atomic operation.
      */
     @VisibleForTesting
     internal val droppedEntries: Long get() = droppedEntryCount.get()

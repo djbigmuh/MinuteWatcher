@@ -33,7 +33,7 @@ class MainResumeController
          *
          * **Debounce logic:** Prevents rapid re-runs within RESUME_DEBOUNCE_MS.
          * If monotonic clocks were reset (detected via negative time difference after reboot),
-         * the debounce is considered expired and execution continues immediately.
+         * debounce is considered expired and execution continues immediately.
          *
          * **Thread Safety:** Must be invoked on the Main thread (from Activity's `onResume`).
          * State persistence is backed by [SavedStateHandle].

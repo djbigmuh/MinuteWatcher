@@ -92,12 +92,10 @@ The app follows modern Android development best practices:
 - **Static Analysis**: Detekt and Ktlint enforced locally via `VERIFY.bat` (Windows) or `verify.ps1` (PowerShell); GitHub CI is not currently used.
 
 ### Non-Stable Dependencies
-The project uses a few non-stable (Beta/Alpha) versions of critical libraries to access essential fixes and modern features:
+The project uses non-stable (Alpha) tools where required for modern build system and JDK compatibility:
 
 - **Detekt (Alpha)**: Static analysis; the 2.x line is used ahead of its stable release for rule and Gradle
   compatibility.
-- **AppFunctions (Beta)**: `androidx.appfunctions` is required for the AppFunctionServiceEntryPoint
-  architecture used by on-device assistant integration; no stable release is available yet.
 
 
 ## Development Requirements

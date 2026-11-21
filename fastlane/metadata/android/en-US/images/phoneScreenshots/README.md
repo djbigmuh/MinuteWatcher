@@ -1,6 +1,6 @@
 # Store Screenshots Guidelines
 
-This directory contains phone screenshots for F-Droid and Google Play store listings.
+This directory contains phone screenshots for F-Droid and Google Play Store listings.
 
 ## Requirements
 

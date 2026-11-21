@@ -200,7 +200,7 @@ class OperatorIconUniquenessTest {
     }
 
     /**
-     * Determines whether a SVG pathData subpath represents an axis-aligned rectangle.
+     * Determines whether an SVG pathData subpath represents an axis-aligned rectangle.
      *
      * @param subpath SVG pathData string snippet representing a single subpath.
      * @return `true` if the subpath parses into an axis-aligned rectangle with 4 vertices.
