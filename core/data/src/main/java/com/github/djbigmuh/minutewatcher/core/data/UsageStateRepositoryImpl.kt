@@ -191,7 +191,7 @@ class UsageStateRepositoryImpl
                     .map { usage ->
                         SimCardMapper.map(context, usage.slotIndex, usage)
                     }.toList()
-            }
+            }.distinctUntilChanged()
 
         private val snapshotFlow: StateFlow<GlobalSnapshot> =
             combine(

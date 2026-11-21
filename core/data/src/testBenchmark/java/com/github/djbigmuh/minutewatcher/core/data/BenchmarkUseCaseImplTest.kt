@@ -1,4 +1,4 @@
-﻿package com.github.djbigmuh.minutewatcher.core.data
+package com.github.djbigmuh.minutewatcher.core.data
 
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.MigrationFlagsRepository
@@ -42,7 +42,7 @@ class BenchmarkUseCaseImplTest {
     private lateinit var useCase: BenchmarkUseCaseImpl
 
     @Before
-    fun setup() {
+    fn setup() {
         useCase =
             BenchmarkUseCaseImpl(
                 simIdentityRepository = simIdentityRepository,

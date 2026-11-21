@@ -1,4 +1,4 @@
-﻿package com.github.djbigmuh.minutewatcher.core.data
+package com.github.djbigmuh.minutewatcher.core.data
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker

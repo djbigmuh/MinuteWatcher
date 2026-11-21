@@ -1,4 +1,4 @@
-﻿package com.github.djbigmuh.minutewatcher.core.data
+package com.github.djbigmuh.minutewatcher.core.data
 
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.BenchmarkUseCase

@@ -2,6 +2,7 @@
 
 import android.content.Context
 import com.github.djbigmuh.minutewatcher.core.android.util.OperatorResolver
+import com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcher
 import com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import com.github.djbigmuh.minutewatcher.core.common.util.firstWithTimeout
 import com.github.djbigmuh.minutewatcher.core.data.util.SimIdentityUtils
@@ -17,8 +18,10 @@ import com.github.djbigmuh.minutewatcher.core.model.Constants.SimConstants
 import com.github.djbigmuh.minutewatcher.core.model.util.UnitConversionUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,6 +43,8 @@ class UsageUseCaseImpl
         private val simUsageResetRepository: SimUsageResetRepository,
         private val trafficTracker: TrafficTracker,
         private val permissionManager: PermissionManager,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher =
+            com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback.io,
     ) : UsageUseCase {
         private val adjustmentMutex = Mutex()
 
@@ -50,29 +55,31 @@ class UsageUseCaseImpl
          * @throws java.io.IOException if DataStore write fails.
          * @throws CancellationException if the process is canceled.
          */
-        override suspend fun refreshOperatorInfo() {
-            val activeList = permissionManager.getActiveSubscriptions()
+        override suspend fun refreshOperatorInfo() =
+            withContext(ioDispatcher) {
+                OperatorResolver.preload(context)
+                val activeList = permissionManager.getActiveSubscriptions()
 
-            for (info in activeList) {
-                val slot = info.simSlotIndex
-                if (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
-                    val identity = simIdentityRepository.getIdentity(slot)
-                    val displayName = info.displayName?.toString().orEmpty()
-                    val carrierName = info.carrierName?.toString().orEmpty()
+                for (info in activeList) {
+                    val slot = info.simSlotIndex
+                    if (slot in SimConstants.SUPPORTED_SLOT_INDICES) {
+                        val identity = simIdentityRepository.getIdentity(slot)
+                        val displayName = info.displayName?.toString().orEmpty()
+                        val carrierName = info.carrierName?.toString().orEmpty()
 
-                    val candidates = SimIdentityUtils.mccMncCandidates(info)
+                        val candidates = SimIdentityUtils.mccMncCandidates(info)
 
-                    val resolution =
-                        OperatorResolver.resolve(
-                            context,
-                            displayName.ifEmpty { carrierName },
-                            candidates,
-                            slot,
-                        )
-                    simIdentityRepository.setSimOperator(identity, resolution.displayName, resolution.brandKey)
+                        val resolution =
+                            OperatorResolver.resolve(
+                                context,
+                                displayName.ifEmpty { carrierName },
+                                candidates,
+                                slot,
+                            )
+                        simIdentityRepository.setSimOperator(identity, resolution.displayName, resolution.brandKey)
+                    }
                 }
             }
-        }
 
         /**
          * Adjusts manual minutes correction to match remaining minutes for current billing period.

@@ -16,7 +16,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.data.AodSummaryAvailabilityImpl
 import com.github.djbigmuh.minutewatcher.core.data.AppSettingsRepositoryImpl
 import com.github.djbigmuh.minutewatcher.core.data.AutoResetScheduleRepositoryImpl
-import com.github.djbigmuh.minutewatcher.core.data.BenchmarkUseCaseImpl
 import com.github.djbigmuh.minutewatcher.core.data.PermissionRepositoryImpl
 import com.github.djbigmuh.minutewatcher.core.data.PermissionStateNotifierImpl
 import com.github.djbigmuh.minutewatcher.core.domain.AodSummaryAvailability
@@ -81,12 +80,6 @@ interface SettingsDataModule {
     @Binds
     @Singleton
     fun bindPermissionRepository(impl: PermissionRepositoryImpl): PermissionRepository
-
-    /** Binds the concrete [BenchmarkUseCaseImpl] to the [BenchmarkUseCase] interface.
-     *  Used by Hilt to provide benchmarking functionality. */
-    @Binds
-    @Singleton
-    fun bindBenchmarkUseCase(impl: BenchmarkUseCaseImpl): BenchmarkUseCase
 
     @Binds
     @Singleton
