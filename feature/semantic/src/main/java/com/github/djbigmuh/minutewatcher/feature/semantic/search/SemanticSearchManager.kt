@@ -9,6 +9,8 @@ import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.common.util.FlowObservationScope
 import com.github.djbigmuh.minutewatcher.core.common.util.ObservationMode
 import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
+import com.github.djbigmuh.minutewatcher.core.common.util.firstWithTimeout
+import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.TrackingStatusProvider
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
@@ -51,6 +53,7 @@ class SemanticSearchManager
         private val indexer: SnapshotIndexer,
         @get:VisibleForTesting
         internal val errorHandler: AppSearchErrorHandler,
+        private val appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val scope: CoroutineScope,
         @IoDispatcher
         private val ioDispatcher: CoroutineDispatcher,
@@ -134,6 +137,7 @@ class SemanticSearchManager
                             ),
                         )
                     } else {
+                        sessionManager.closeSession()
                         val flow = lastSnapshotFlow
                         if (flow == null) {
                             AppLogger.w("SemanticSearchManager: recovery skipped, lastSnapshotFlow is null")
@@ -311,6 +315,14 @@ class SemanticSearchManager
         }
 
         private suspend fun performIndexSnapshotLocked(snapshot: GlobalSnapshot): IndexResult {
+            val settings = appSettingsRepository.getAppSettings().firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
+            if (settings != null && settings.isLoaded && !settings.assistantAccessEnabled) {
+                AppLogger.d("SemanticSearchManager: assistant access disabled, skipping indexing and deleting index")
+                sessionManager.ensureSession({ transitionStatus(it) }, forceOverride = true)
+                resetLastSnapshotState()
+                return IndexResult.Success
+            }
+
             val hasSims = snapshot.simSnapshots.isNotEmpty()
             val currentHash = if (hasSims) SnapshotUtils.calculateContentHash(snapshot) else null
 
