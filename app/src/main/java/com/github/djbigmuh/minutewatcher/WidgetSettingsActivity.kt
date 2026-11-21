@@ -1,5 +1,7 @@
 ﻿package com.github.djbigmuh.minutewatcher
 
+import android.appwidget.AppWidgetManager
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,6 +26,26 @@ class WidgetSettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val appWidgetId =
+            intent.getIntExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID,
+                AppWidgetManager.INVALID_APPWIDGET_ID,
+            )
+        if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            val appWidgetManager = AppWidgetManager.getInstance(this)
+            val info = appWidgetManager.getAppWidgetInfo(appWidgetId)
+            if (info == null) {
+                setResult(RESULT_CANCELED)
+                finish()
+                return
+            }
+            setResult(
+                RESULT_CANCELED,
+                Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
+            )
+        }
+
         setContent {
             val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
             val isDarkTheme = rememberIsDarkTheme(appTheme)
@@ -35,7 +57,18 @@ class WidgetSettingsActivity : AppCompatActivity() {
                 ) {
                     WidgetSettingsScreen(
                         viewModel = viewModel,
-                        onBack = { finish() },
+                        onBack = {
+                            if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                                setResult(
+                                    RESULT_OK,
+                                    Intent().putExtra(
+                                        AppWidgetManager.EXTRA_APPWIDGET_ID,
+                                        appWidgetId,
+                                    ),
+                                )
+                            }
+                            finish()
+                        },
                     )
                 }
             }

@@ -316,4 +316,36 @@ class WidgetUiSnapshotMapperTest {
         assertTrue("showMinutes should be true", simUiState.showMinutes)
         assertEquals("380", simUiState.minutesText)
     }
+
+    @Test
+    fun `mapFromSnapshot covers all layout modes, SIM placements, font sizes, and transparencies without overflow`() {
+        val snapshot = buildBasicSnapshot()
+        for (layoutMode in listOf(1, 2, 3, 6, 99)) {
+            for (simArrangement in listOf(0, 1)) {
+                for (fontSize in listOf(1, 2, 3)) {
+                    for (transparency in listOf(0, 50, 90)) {
+                        val settings =
+                            WidgetSettingsState(
+                                layoutMode = layoutMode,
+                                simArrangement = simArrangement,
+                                fontSize = fontSize,
+                                transparency = transparency,
+                                backgroundColor = colorBlack,
+                                notifyLowMinutes = true,
+                                notifyLowTraffic = true,
+                                simStates = emptyMap(),
+                            )
+                        val uiState =
+                            WidgetUiMapper.mapFromSnapshot(
+                                strings = widgetStrings,
+                                snapshot = snapshot,
+                                state = settings,
+                                operatorNames = mapOf(0 to "MTS"),
+                            )
+                        assertTrue(uiState.simUiStates.isNotEmpty())
+                    }
+                }
+            }
+        }
+    }
 }

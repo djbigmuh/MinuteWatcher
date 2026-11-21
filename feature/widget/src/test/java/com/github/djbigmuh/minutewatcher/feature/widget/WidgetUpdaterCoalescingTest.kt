@@ -24,10 +24,7 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
             var renderCount = 0
             val fakeRenderer =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
+                    override suspend fun renderAll(context: Context) {
                         renderCount++
                     }
                 }
@@ -52,10 +49,7 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
 
             val fakeRenderer =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
+                    override suspend fun renderAll(context: Context) {
                         renderCount++
                         passStartTimes.add(System.currentTimeMillis())
                         if (renderCount == 1) {
@@ -75,7 +69,6 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
             withTimeoutOrNull(30.seconds) { startBarrier1.await() }
                 ?: throw AssertionError("Timed out waiting for startBarrier1")
 
-            // Arrive during running pass 1 -> schedules tail pass
             val result2Deferred = async { updater.updateAll() }
 
             finishBarrier1.complete(Unit)
@@ -105,10 +98,7 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
 
             val fakeRenderer =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
+                    override suspend fun renderAll(context: Context) {
                         renderCount++
                         if (renderCount == 1) {
                             startBarrier1.complete(Unit)
@@ -125,7 +115,6 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
             val result1Deferred = async { updater.updateAll() }
             withTimeoutOrNull(30.seconds) { startBarrier1.await() }
 
-            // Multiple concurrent requests during pass 1
             val result2Deferred = async { updater.updateAll() }
             val result3Deferred = async { updater.updateAll() }
             val result4Deferred = async { updater.updateAll() }
@@ -158,10 +147,7 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
 
             val fakeRenderer =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
+                    override suspend fun renderAll(context: Context) {
                         renderCount++
                         if (renderCount == 1) {
                             startBarrier1.complete(Unit)
@@ -180,7 +166,6 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
 
             val waitingDeferred = async { updater.updateAll() }
 
-            // Cancel primary job while running
             primaryJob.cancel()
             finishBarrier1.complete(Unit)
 
@@ -201,10 +186,7 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
 
             val fakeRenderer =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
+                    override suspend fun renderAll(context: Context) {
                         renderCount++
                         startBarrier1.complete(Unit)
                         withTimeoutOrNull(30.seconds) { finishBarrier1.await() }
@@ -226,15 +208,11 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
             assertTrue(result.exceptionOrNull() is CancellationException)
             assertEquals(1, renderCount)
 
-            // Verify slot is freed and subsequent call succeeds
             val finishBarrier2 = CompletableDeferred<Unit>()
             val startBarrier2 = CompletableDeferred<Unit>()
             val renderer2 =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
+                    override suspend fun renderAll(context: Context) {
                         startBarrier2.complete(Unit)
                         withTimeoutOrNull(30.seconds) { finishBarrier2.await() }
                     }
@@ -285,5 +263,43 @@ class WidgetUpdaterCoalescingTest : BaseWidgetUpdaterFixture() {
             updater.handleTailScheduleTimeout(owner)
 
             assertEquals(otherOwner, updater.activeUpdate.get())
+        }
+
+    @Test
+    fun `batch state change executes updates in deterministic order with correct count`() =
+        runTest {
+            val executionOrder = mutableListOf<Int>()
+            var renderCount = 0
+            val startBarrier = CompletableDeferred<Unit>()
+            val finishBarrier = CompletableDeferred<Unit>()
+
+            val fakeRenderer =
+                object : WidgetRenderer {
+                    override suspend fun renderAll(context: Context) {
+                        renderCount++
+                        executionOrder.add(renderCount)
+                        if (renderCount == 1) {
+                            startBarrier.complete(Unit)
+                            finishBarrier.await()
+                        }
+                    }
+                }
+
+            val updater = createUpdater(backgroundScope, fakeRenderer)
+
+            val d1 = async { updater.updateAll() }
+            withTimeoutOrNull(30.seconds) { startBarrier.await() }
+
+            val d2 = async { updater.updateAll() }
+            val d3 = async { updater.updateAll() }
+
+            finishBarrier.complete(Unit)
+
+            d1.await()
+            d2.await()
+            d3.await()
+
+            assertEquals(2, renderCount)
+            assertEquals(listOf(1, 2), executionOrder)
         }
 }
