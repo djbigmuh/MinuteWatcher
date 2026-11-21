@@ -10,6 +10,8 @@ import com.github.djbigmuh.minutewatcher.core.android.testing.SingletonResetRule
 import com.github.djbigmuh.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
+import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
+import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.DataSourceType
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.MeasurementUnit
@@ -21,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import org.junit.After
@@ -52,11 +55,14 @@ abstract class SemanticSearchManagerTestFixtures {
 
     protected lateinit var fakeWrapper: FakeAppSearchWrapper
     protected lateinit var dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+    protected val appSettingsRepository: AppSettingsRepository = mock()
 
     @Before
     open fun setup() {
         initTestLogger()
         context = mock()
+        whenever(appSettingsRepository.getAppSettings())
+            .thenReturn(flowOf(AppSettings(assistantAccessEnabled = true, isLoaded = true)))
         whenever(timeProvider.now()).thenAnswer { currentTime + testScheduler.currentTime }
         whenever(timeProvider.elapsedRealtime()).thenAnswer { currentTime + testScheduler.currentTime }
         whenever(timeProvider.uptimeMillis()).thenAnswer { currentTime + testScheduler.currentTime }
@@ -78,6 +84,7 @@ abstract class SemanticSearchManagerTestFixtures {
             sessionManager = sessionManager,
             indexer = indexer,
             errorHandler = errorHandler,
+            appSettingsRepository = appSettingsRepository,
             scope = scope,
             ioDispatcher = testDispatcher,
             timeProvider = timeProvider,

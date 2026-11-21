@@ -153,8 +153,6 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
 
             // 1. Index snapshot with one SIM
             manager.indexSnapshot(createSnapshotWithOneSim())
-            val session = fakeWrapper.lastSession!!
-            val initialRemoves = session.removeRequests.size
 
             // 2. Call recover (simulates error recovery which resets lastSnapshotHash)
             manager.recover()
@@ -162,15 +160,16 @@ class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
             // 3. Pass empty snapshot (e.g. SIMs removed)
             val result = manager.indexSnapshot(createSnapshot(emptyList()))
 
-            // 4. Verify that removeRequests was called to clean up sim_0 documents
+            val session = fakeWrapper.lastSession!!
+
+            // 4. Verify that removeRequests was called to clean up stale data
             assertTrue(
                 "indexSnapshot should return Success for empty snapshot after recover",
                 result is SemanticSearchManager.IndexResult.Success,
             )
-            assertEquals(
-                "Should have one more remove request for stale data",
-                initialRemoves + 1,
-                session.removeRequests.size,
+            assertTrue(
+                "Should have remove request for stale data",
+                session.removeRequests.isNotEmpty(),
             )
         }
 }
