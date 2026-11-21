@@ -59,10 +59,7 @@ class WidgetUpdaterCancellationTest {
 
             val fakeRenderer =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ) {
+                    override suspend fun renderAll(context: Context) {
                         reachedUpdate.complete(Unit)
                         withTimeoutOrNull(30.seconds) { finishUpdate.await() }
                             ?: throw AssertionError("Timed out waiting for finishUpdate in fakeRenderer")
@@ -81,7 +78,6 @@ class WidgetUpdaterCancellationTest {
                     scope = backgroundScope,
                 )
 
-            // 1. Start first update
             val job =
                 launch {
                     testUpdater.updateAll()
@@ -90,11 +86,8 @@ class WidgetUpdaterCancellationTest {
             withTimeoutOrNull(30.seconds) { reachedUpdate.await() }
                 ?: throw AssertionError("Timed out waiting for reachedUpdate")
 
-            // 2. Cancel it while it's "rendering" (suspended in finishUpdate.await())
             job.cancelAndJoin()
 
-            // 3. Immediately call updateAll again.
-            // If activeUpdate was cleared, this should be a NEW update (not coalesced).
             val wasCoalesced =
                 when (val result = testUpdater.updateAll()) {
                     is WidgetUpdateResult.Success -> result.wasCoalesced

@@ -39,21 +39,8 @@ import kotlinx.coroutines.coroutineScope
 /**
  * Main class of MinuteWatcher widget.
  * Renders SIM card state on the home screen.
- *
- * @param forceFullRender If true, forces the full layout rendering by ignoring
- * the global `widgetLimitExceeded` flag during this specific render pass.
- * This is used for probe updates to see if the full layout can now fit.
- *
- * **Note:** Since Glance `updateAll` updates all instances of the widget,
- * calling it with a specific `forceFullRender` value will affect all
- * currently placed widgets on the home screen for that render pass.
- *
- * Strict API compliance: all components use Glance API
- * according to documentation.
  */
-class MinutesGlanceWidget(
-    internal val forceFullRender: Boolean = false,
-) : GlanceAppWidget() {
+class MinutesGlanceWidget : GlanceAppWidget() {
     /**
      * Hilt EntryPoint for widget.
      * Allows obtaining dependencies in widget via EntryPointAccessors.
@@ -89,7 +76,6 @@ class MinutesGlanceWidget(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    // Operation must complete without propagating exception for widget navigation.
                     AppLogger.e("Widget: failed to get NavigationProvider", e)
                     null
                 }
@@ -102,7 +88,6 @@ class MinutesGlanceWidget(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Operation must complete without propagating exception for widget fallback rendering.
             AppLogger.e("Widget provideGlance failed, showing fallback", e)
             provideContent {
                 GlanceTheme {
@@ -127,8 +112,6 @@ class MinutesGlanceWidget(
                     .appWidgetBackground(),
             contentAlignment = Alignment.Center,
         ) {
-            // Using refresh_error as a general fallback message.
-            // This is intentional as most provideGlance failures are related to data access.
             Text(
                 text = appLocaleContext.getString(R.string.refresh_error),
                 style =
@@ -176,12 +159,10 @@ class MinutesGlanceWidget(
                 async {
                     @Suppress("TooGenericExceptionCaught")
                     try {
-                        val loaded = widgetSettingsLoader.load()
-                        if (forceFullRender) loaded.copy(widgetLimitExceeded = false) else loaded
+                        widgetSettingsLoader.load()
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        // Operation must complete without propagating exception for widget settings load.
                         AppLogger.e("Failed to load widget settings, using defaults", e)
                         WidgetSettingsState(settingsLoadFailed = true)
                     }
@@ -232,7 +213,9 @@ class MinutesGlanceWidget(
     ): RefreshResult {
         val initialSnapshot = usageRepository.observeSnapshot().value
         val now = timeProvider.now()
-        val isStale = (now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS
+        val isStale =
+            (initialSnapshot.timestamp != Constants.Data.EMPTY_TIMESTAMP) &&
+                ((now - initialSnapshot.timestamp) > Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS)
 
         if ((initialSnapshot.timestamp != Constants.Data.EMPTY_TIMESTAMP) && !isStale) {
             return RefreshResult
@@ -246,7 +229,6 @@ class MinutesGlanceWidget(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for widget refresh.
                 AppLogger.e("Widget refresh failed", e)
                 RefreshResult.Failure(initialSnapshot, e)
             }

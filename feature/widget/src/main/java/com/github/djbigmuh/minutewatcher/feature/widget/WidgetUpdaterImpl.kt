@@ -32,15 +32,6 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * Invariant: `activeUpdate` is non-null iff a pass is running or a tail pass is registered
  * and waiting to start; parallel execution of passes is excluded.
- *
- * This class implements a state machine for handling RemoteViews size limits:
- * 1. FULL: Default mode. Tries to render the complete widget layout.
- * 2. LimitExceeded: If FULL render fails with TransactionTooLargeException,
- *    it switches to SIMPLIFIED mode and sets the persistent widgetLimitExceeded flag.
- * 3. SIMPLIFIED: Renders a reduced layout to fit within Binder limits.
- * 4. PROBE: Every 10 updates (see PROBE_INTERVAL_UPDATES), it attempts
- *    a FULL render again to see if the situation has improved (e.g., fewer SIMs).
- *    If PROBE succeeds, it switches back to FULL and clears the flag.
  */
 @Singleton
 class WidgetUpdaterImpl
@@ -65,22 +56,8 @@ class WidgetUpdaterImpl
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal val rerunRequested = AtomicBoolean(false)
 
-        /**
-         * Tracks whether a LimitExceeded error has been handled within the CURRENT update call.
-         * This prevents redundant flag updates and infinite retry loops if SIMPLIFIED mode also fails.
-         * Reset at the beginning of each update process, on [recover], or when a FULL update succeeds.
-         */
         private val limitExceededHandled = AtomicBoolean(false)
 
-        /**
-         * Triggers an update for all application widgets.
-         *
-         * This operation is typically bounded by a timeout (e.g., WIDGET_UPDATE_TIMEOUT_MS).
-         * Supports coalescing: if an update is already in progress, the caller will join it.
-         *
-         * @return [WidgetUpdateResult] indicating the outcome of the update.
-         * @throws CancellationException if the coroutine scope is canceled.
-         */
         override suspend fun updateAll(): WidgetUpdateResult {
             val (deferred, isCoalesced) =
                 coalescingMutex.withLock {
@@ -123,7 +100,6 @@ class WidgetUpdaterImpl
                 deferred.complete(transientFailure(wasCoalesced = false))
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for widget updater stability.
                 AppLogger.e("WidgetUpdater: update failed", e)
                 val failure = terminalFailure()
                 deferred.complete(failure)
@@ -148,7 +124,6 @@ class WidgetUpdaterImpl
                 completed = true
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for widget updater tail pass.
                 AppLogger.e("WidgetUpdater: tail pass failed", e)
                 tailDeferred.complete(transientFailure(wasCoalesced = true))
                 completed = true
@@ -180,12 +155,6 @@ class WidgetUpdaterImpl
             }
         }
 
-        /**
-         * Consumes the pending tail pass registered under [coalescingMutex] and schedules
-         * its execution, or clears [activeUpdate] held by [owner] when no tail pass is pending.
-         *
-         * Must be invoked from a NonCancellable context.
-         */
         private suspend fun scheduleNextTailPass(owner: CompletableDeferred<WidgetUpdateResult>) {
             val startTime = System.currentTimeMillis()
             val nextTail =
@@ -216,16 +185,6 @@ class WidgetUpdaterImpl
             }
         }
 
-        /**
-         * Fallback for the coalescing mutex acquisition timeout: releases the owner slot and
-         * completes the registered tail pass (if any) with a transient failure so that its
-         * awaiter is never left waiting forever.
-         *
-         * The identity CAS guarantees that a tail pass concurrently consumed or replaced under
-         * the mutex is never completed or discarded by this path. [rerunRequested] is
-         * intentionally left untouched: a stale true flag is consumed safely by the next
-         * scheduleNextTailPass under the mutex.
-         */
         @VisibleForTesting
         internal fun handleTailScheduleTimeout(owner: CompletableDeferred<WidgetUpdateResult>) {
             val pending = pendingPass.getAndSet(null)
@@ -263,7 +222,6 @@ class WidgetUpdaterImpl
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                // Operation must complete without propagating exception for single update attempt.
                                 AppLogger.e("WidgetUpdater: attempt $attempt threw exception", e)
                                 UpdateOutcome.Retry
                             }
@@ -272,7 +230,6 @@ class WidgetUpdaterImpl
                             is UpdateOutcome.LimitExceeded -> {
                                 if (outcome.wasFull && limitExceededHandled.compareAndSet(false, true)) {
                                     limitManager.setWidgetLimitExceeded(value = true)
-                                    // Retry to switch to SIMPLIFIED mode in the next iteration
                                     UpdateOutcome.Retry
                                 } else {
                                     lastOutcome = outcome
@@ -295,7 +252,6 @@ class WidgetUpdaterImpl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for widget update process.
                 AppLogger.e("WidgetUpdater: update process failed", e)
                 terminalFailure()
             }
@@ -320,39 +276,19 @@ class WidgetUpdaterImpl
         }
 
         private suspend fun performSingleUpdate(attempt: Int): UpdateOutcome {
-            val isFirstAttempt = attempt == 1
-            val mode = resolveRenderMode(isFirstAttempt)
+            val isExceeded = resolveIsExceeded()
+            val isFullAttempt = !isExceeded
 
-            AppLogger.d("WidgetUpdater: performing update in mode $mode (attempt $attempt)")
-            return when (mode) {
-                RenderMode.PROBE ->
-                    handleUpdateResult(
-                        limitManager.performProbeUpdate(context) { ctx, _ ->
-                            safeUpdateInternal(ctx, isFullAttempt = true, isProbe = true)
-                        },
-                    )
-
-                RenderMode.SIMPLIFIED ->
-                    handleUpdateResult(
-                        safeUpdateInternal(
-                            context,
-                            isFullAttempt = false,
-                            isProbe = false,
-                        ),
-                    )
-
-                RenderMode.FULL ->
-                    handleUpdateResult(
-                        safeUpdateInternal(
-                            context,
-                            isFullAttempt = true,
-                            isProbe = false,
-                        ),
-                    )
-            }
+            AppLogger.d(
+                "WidgetUpdater: performing update in mode " +
+                    "${if (isFullAttempt) "FULL" else "SIMPLIFIED"} (attempt $attempt)",
+            )
+            return handleUpdateResult(
+                safeUpdateInternal(context, isFullAttempt = isFullAttempt),
+            )
         }
 
-        private suspend fun resolveRenderMode(isFirstAttempt: Boolean): RenderMode {
+        private suspend fun resolveIsExceeded(): Boolean {
             val isExceeded =
                 limitManager.isLimitExceeded() ?: run {
                     val settings =
@@ -360,30 +296,20 @@ class WidgetUpdaterImpl
                             .getAppSettings()
                             .firstWithTimeout(Constants.Flow.SHORT_TIMEOUT_MS)
                     if (settings == null) {
-                        AppLogger.w("WidgetUpdater: settings timeout in resolveRenderMode, defaulting to FULL")
-                        return RenderMode.FULL
+                        AppLogger.w("WidgetUpdater: settings timeout in resolveIsExceeded, defaulting to false")
+                        return false
                     }
                     val value = settings.widgetLimitExceeded
                     limitManager.updateCache(value)
                     value
                 }
-
-            return if (isExceeded) {
-                if (isFirstAttempt) {
-                    limitManager.incrementUpdateCounter()
-                }
-                if (isFirstAttempt && limitManager.shouldProbe()) RenderMode.PROBE else RenderMode.SIMPLIFIED
-            } else {
-                limitManager.resetCounter()
-                RenderMode.FULL
-            }
+            return isExceeded
         }
 
-        private suspend fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
+        private fun handleUpdateResult(result: UpdateResult): UpdateOutcome =
             when (result) {
                 is UpdateResult.Success -> {
                     if (result.wasFull) {
-                        limitManager.setWidgetLimitExceeded(value = false)
                         limitExceededHandled.set(false)
                     }
                     UpdateOutcome.Success
@@ -406,26 +332,18 @@ class WidgetUpdaterImpl
         private suspend fun safeUpdateInternal(
             context: Context,
             isFullAttempt: Boolean,
-            isProbe: Boolean,
         ): UpdateResult =
             @Suppress("TooGenericExceptionCaught")
             try {
-                renderer.renderAll(context, forceFull = isFullAttempt || isProbe)
+                renderer.renderAll(context)
                 UpdateResult.Success(wasFull = isFullAttempt)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception.
                 errorClassifier.classifyUpdateError(e, isFullAttempt)
             }
 
         override suspend fun recover() {
             limitExceededHandled.set(false)
-        }
-
-        private enum class RenderMode {
-            FULL,
-            SIMPLIFIED,
-            PROBE,
         }
     }

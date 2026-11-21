@@ -125,34 +125,4 @@ class MinutesGlanceWidgetTest {
             val uiState = widget.getUiStateInternal(context, usageRepo, settingsLoader, timeProvider)
             assertEquals(Constants.Widget.DEFAULT_LAYOUT_MODE, uiState.layoutMode)
         }
-
-    @Test
-    fun `forceFullRender true clears widgetLimitExceeded in loaded settings`() =
-        runTest {
-            val settingsLoader = mock<WidgetSettingsLoader>()
-            whenever(settingsLoader.load()).thenReturn(WidgetSettingsState(widgetLimitExceeded = true))
-
-            val usageRepo = mock<UsageStateRepository>()
-            whenever(
-                usageRepo.observeSnapshot(),
-            ).thenReturn(
-                MutableStateFlow(
-                    GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()),
-                ),
-            )
-            whenever(
-                usageRepo.refresh(),
-            ).thenReturn(
-                RefreshResult.Success(
-                    GlobalSnapshot(SchemaVersion(1, 0, 0), System.currentTimeMillis(), emptyList(), emptyList()),
-                ),
-            )
-
-            val timeProvider = mock<TimeProvider>()
-            whenever(timeProvider.now()).thenReturn(System.currentTimeMillis())
-
-            val widget = MinutesGlanceWidget(forceFullRender = true)
-            val uiState = widget.getUiStateInternal(context, usageRepo, settingsLoader, timeProvider)
-            assertEquals(2, uiState.layoutMode)
-        }
 }

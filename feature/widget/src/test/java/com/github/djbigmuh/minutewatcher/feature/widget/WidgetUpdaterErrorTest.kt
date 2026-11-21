@@ -24,10 +24,7 @@ class WidgetUpdaterErrorTest : BaseWidgetUpdaterFixture() {
         runTest {
             val oomRenderer =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ): Unit = throw OutOfMemoryError("Simulated OOM")
+                    override suspend fun renderAll(context: Context): Unit = throw OutOfMemoryError("Simulated OOM")
                 }
             val updater = createUpdater(backgroundScope, oomRenderer)
 
@@ -49,10 +46,7 @@ class WidgetUpdaterErrorTest : BaseWidgetUpdaterFixture() {
             val renderCount = AtomicInteger(0)
             val oomRenderer =
                 object : WidgetRenderer {
-                    override suspend fun renderAll(
-                        context: Context,
-                        forceFull: Boolean,
-                    ): Unit =
+                    override suspend fun renderAll(context: Context): Unit =
                         run {
                             renderCount.incrementAndGet()
                             throw OutOfMemoryError("Simulated OOM")
@@ -68,7 +62,6 @@ class WidgetUpdaterErrorTest : BaseWidgetUpdaterFixture() {
 
             assertEquals(1, renderCount.get())
 
-            // Subsequent update should run independently and throw OOM again
             runCatching {
                 withTimeout(5.seconds) {
                     updater.updateAll()
@@ -81,7 +74,7 @@ class WidgetUpdaterErrorTest : BaseWidgetUpdaterFixture() {
     @Test
     fun `renderer throwing IllegalStateException with TransactionTooLargeException triggers limit exceeded`() =
         runTest {
-            whenever(renderer.renderAll(any(), any()))
+            whenever(renderer.renderAll(any()))
                 .thenThrow(IllegalStateException("Binder", TransactionTooLargeException()))
                 .thenReturn(Unit)
             val updater = createUpdater(backgroundScope, renderer)
@@ -97,6 +90,6 @@ class WidgetUpdaterErrorTest : BaseWidgetUpdaterFixture() {
                 "Widget limit exceeded flag should be set",
                 appSettingsRepository.settingsFlow.value.widgetLimitExceeded,
             )
-            verify(renderer, times(2)).renderAll(any(), any())
+            verify(renderer, times(2)).renderAll(any())
         }
 }

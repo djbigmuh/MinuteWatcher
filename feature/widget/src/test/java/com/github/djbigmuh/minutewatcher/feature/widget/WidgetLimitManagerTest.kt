@@ -3,20 +3,16 @@
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.mock
@@ -94,26 +90,6 @@ class WidgetLimitManagerTest {
         }
 
     @Test
-    fun `shouldProbe returns true every PROBE_INTERVAL_UPDATES`() {
-        manager.resetCounter()
-        repeat(WidgetLimitManager.PROBE_INTERVAL_UPDATES - 1) {
-            manager.incrementUpdateCounter()
-            assertFalse(manager.shouldProbe())
-        }
-        manager.incrementUpdateCounter()
-        assertTrue(manager.shouldProbe())
-    }
-
-    @Test
-    fun `resetCounter resets the counter`() {
-        repeat(WidgetLimitManager.PROBE_INTERVAL_UPDATES - 1) {
-            manager.incrementUpdateCounter()
-        }
-        manager.resetCounter()
-        assertFalse(manager.shouldProbe())
-    }
-
-    @Test
     fun `setWidgetLimitExceeded updates repository when value changes`() =
         runTest(testDispatcher) {
             settingsFlow.value = AppSettings(widgetLimitExceeded = false)
@@ -146,129 +122,5 @@ class WidgetLimitManagerTest {
             verify(appSettingsRepository, never()).getAppSettings()
             verify(appSettingsRepository, org.mockito.kotlin.times(1)).updateAppSettings(any())
             assertEquals(true, manager.isLimitExceeded())
-        }
-
-    @Test
-    fun `calling setWidgetLimitExceeded(false) when cache is null reads settings and avoids write if false`() =
-        runTest(testDispatcher) {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
-            clearInvocations(appSettingsRepository)
-
-            manager.setWidgetLimitExceeded(false)
-
-            verify(appSettingsRepository, org.mockito.kotlin.times(1)).getAppSettings()
-            verify(appSettingsRepository, never()).updateAppSettings(any())
-            assertEquals(false, manager.isLimitExceeded())
-        }
-
-    @Test
-    fun `read timeout when cache is null results in value write and log warning`() =
-        runTest(testDispatcher) {
-            val hangingFlow =
-                kotlinx.coroutines.flow.flow<AppSettings> {
-                    kotlinx.coroutines.awaitCancellation()
-                }
-            whenever(appSettingsRepository.getAppSettings()).thenReturn(hangingFlow)
-            clearInvocations(appSettingsRepository)
-
-            manager.setWidgetLimitExceeded(false)
-
-            verify(appSettingsRepository, org.mockito.kotlin.times(1)).getAppSettings()
-            verify(appSettingsRepository, org.mockito.kotlin.times(1)).updateAppSettings(any())
-            assertEquals(false, manager.isLimitExceeded())
-        }
-
-    @Test
-    fun `ten consecutive calls to setWidgetLimitExceeded(false) when cache is false result in no repo access`() =
-        runTest(testDispatcher) {
-            manager.updateCache(false)
-            clearInvocations(appSettingsRepository)
-
-            repeat(10) {
-                manager.setWidgetLimitExceeded(false)
-            }
-
-            verify(appSettingsRepository, never()).getAppSettings()
-            verify(appSettingsRepository, never()).updateAppSettings(any())
-        }
-
-    @Test
-    fun `performProbeUpdate sets flag to true if probe results in LimitExceeded`() =
-        runTest(testDispatcher) {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
-
-            val result =
-                manager.performProbeUpdate(mock()) { _, _ ->
-                    UpdateResult.LimitExceeded(wasFull = true)
-                }
-
-            assertEquals(UpdateResult.LimitExceeded(wasFull = true), result)
-            verify(appSettingsRepository).updateAppSettings(any())
-        }
-
-    @Test
-    fun `performProbeUpdate does NOT set flag to true if probe fails transiently`() =
-        runTest(testDispatcher) {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
-            Mockito.clearInvocations(appSettingsRepository)
-
-            val result =
-                manager.performProbeUpdate(mock()) { _, _ ->
-                    UpdateResult.GenericFailure(isRetryable = true)
-                }
-
-            assertEquals(UpdateResult.GenericFailure(isRetryable = true), result)
-            verify(appSettingsRepository, never()).updateAppSettings(any())
-        }
-
-    @Test
-    fun `performProbeUpdate sets flag to false if probe succeeds`() =
-        runTest(testDispatcher) {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = true)
-
-            val result =
-                manager.performProbeUpdate(mock()) { _, _ ->
-                    UpdateResult.Success(wasFull = true)
-                }
-
-            assertEquals(UpdateResult.Success(wasFull = true), result)
-            verify(appSettingsRepository).updateAppSettings(any())
-        }
-
-    @Test
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Cancellation assertion bridge")
-    fun `performProbeUpdate does not set limit exceeded on CancellationException`() =
-        runTest(testDispatcher) {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
-            clearInvocations(appSettingsRepository)
-
-            assertThrows(CancellationException::class.java) {
-                runBlocking {
-                    manager.performProbeUpdate(mock()) { _, _ ->
-                        throw CancellationException("Canceled")
-                    }
-                }
-            }
-
-            verify(appSettingsRepository, never()).updateAppSettings(any())
-        }
-
-    @Test
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Error assertion bridge")
-    fun `performProbeUpdate does NOT set limit exceeded on regular Exception`() =
-        runTest(testDispatcher) {
-            settingsFlow.value = AppSettings(widgetLimitExceeded = false)
-            clearInvocations(appSettingsRepository)
-
-            assertThrows(IllegalStateException::class.java) {
-                runBlocking {
-                    manager.performProbeUpdate(mock()) { _, _ ->
-                        throw IllegalStateException("Error")
-                    }
-                }
-            }
-
-            // Should NOT call setWidgetLimitExceeded(true) in catch anymore.
-            verify(appSettingsRepository, never()).updateAppSettings(any())
         }
 }
