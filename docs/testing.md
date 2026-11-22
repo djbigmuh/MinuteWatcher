@@ -24,6 +24,20 @@ Unit tests and local Compose UI tests run on JVM using Robolectric. They are loc
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew test
 ```
 
+### Verbose Logging & Test Reports
+
+By default, standard streams (stdout, stderr, app logs, and Robolectric debug logs) are hidden from the console during test execution to eliminate noise. Full captured output is saved in test reports.
+
+To enable verbose mode (echoing standard streams, Robolectric debug logs, and application logs in the console), pass the `-PverboseTests` parameter:
+
+```powershell
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew allUnitTests --rerun-tasks -PverboseTests
+```
+
+Test results, standard streams, and logs can be inspected in the generated test reports:
+- **HTML Reports**: `build/reports/tests/<taskName>/index.html`
+- **XML Reports**: `build/test-results/<taskName>/TEST-*.xml`
+
 ### Instrumented Tests (Device)
 
 Instrumented Compose UI tests requiring a real device or emulator are located in `src/androidTest`.
