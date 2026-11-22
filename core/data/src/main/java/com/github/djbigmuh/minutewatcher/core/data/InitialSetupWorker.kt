@@ -114,7 +114,7 @@ class InitialSetupWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for cleanup step.
+                // Operation must complete without propagating exception for cleanup phase.
                 AppLogger.w("InitialSetupWorker: cleanup step failed", e)
             }
         }

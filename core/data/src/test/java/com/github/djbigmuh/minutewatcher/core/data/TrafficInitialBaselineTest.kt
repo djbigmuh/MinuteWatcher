@@ -184,14 +184,14 @@ class TrafficInitialBaselineTest {
             val tracker = createTracker()
             val now = timeProvider.now()
 
-            // Phase 1: Initialization
-            var phase1Attempts = 0
+            // Initial state setup
+            var initAttempts = 0
             whenever(
                 simUsageRepository.getSimUsage(sim1Identity),
             ).thenAnswer {
-                phase1Attempts++
+                initAttempts++
                 flowOf(
-                    if (phase1Attempts == 1) {
+                    if (initAttempts == 1) {
                         createSimUsage(lastResetDate = 0L)
                     } else {
                         createSimUsage(lastResetDate = now)
@@ -203,7 +203,7 @@ class TrafficInitialBaselineTest {
             tracker.updateTrafficUsage()
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // Phase 2: Consumption. Update mocks to reflect initialized state.
+            // Data consumption state. Update mocks to reflect initialized state.
             whenever(
                 simUsageRepository.getSimUsage(sim1Identity),
             ).thenReturn(flowOf(createSimUsage(lastResetDate = now)))

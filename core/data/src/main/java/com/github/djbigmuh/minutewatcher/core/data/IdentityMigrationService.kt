@@ -458,7 +458,7 @@ class IdentityMigrationService
 
             for ((legacySuffix, newSuffix) in mappings) {
                 // EXCLUDE metadata keys (subscription_id_*) from suffix migration.
-                // They are handled by the cleanup block (step 2) or re-written by persistence.
+                // They are handled by the cleanup block or re-written by persistence.
                 val keysToMigrate =
                     prefs
                         .asMap()

@@ -125,7 +125,7 @@ class IdentityMigrationServiceTest {
             assertEquals(1, outcome.migrated) // Only minutes_used_icc_OLD migrated
             val prefs = simDataStore.data.first()
             assertEquals(100, prefs[newDataKey])
-            assertNull(prefs[legacyMarkerKey]) // Cleaned up in step 2
+            assertNull(prefs[legacyMarkerKey]) // Cleaned up during migration
             assertNull(prefs[markerKeyInNew]) // Not migrated from suffix
         }
 

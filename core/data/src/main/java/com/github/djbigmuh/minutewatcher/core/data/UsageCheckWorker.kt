@@ -155,7 +155,7 @@ class UsageCheckWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for auto reset step.
+                // Operation must complete without propagating exception for auto reset operation.
                 AppLogger.e("UsageCheckWorker: Auto-reset failed with error, continuing", e)
             }
         }

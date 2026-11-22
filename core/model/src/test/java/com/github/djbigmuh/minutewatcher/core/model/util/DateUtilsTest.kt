@@ -13,9 +13,7 @@ class DateUtilsTest {
 
     @Test
     fun `get days remaining in month basic`() {
-        // Current date: 2026-10-16, reset day: 1
-        // Next period start date: 2026-11-01
-        // Days from 2026-10-16 to 2026-11-01: 16 days
+        // Scenario: mid-month date, reset day 1
         val now = LocalDateTime.of(2026, 10, 16, 12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
         val remaining = DateUtils.getDaysRemainingInMonth(1, now, zoneId)
         val expected = ChronoUnit.DAYS.between(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 11, 1))
@@ -25,9 +23,7 @@ class DateUtilsTest {
 
     @Test
     fun `get days remaining in month last day`() {
-        // Current date: 2026-10-31, reset day: 1
-        // Next period start date: 2026-11-01
-        // Days from 2026-10-31 to 2026-11-01: 1 day
+        // Scenario: last day of month, reset day 1
         val now = LocalDateTime.of(2026, 10, 31, 12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
         val remaining = DateUtils.getDaysRemainingInMonth(1, now, zoneId)
         val expected = ChronoUnit.DAYS.between(LocalDate.of(2026, 10, 31), LocalDate.of(2026, 11, 1))
@@ -37,9 +33,7 @@ class DateUtilsTest {
 
     @Test
     fun `get days remaining in month reset day 15 mid Feb`() {
-        // Current date: 2026-02-20, reset day: 15
-        // Next period start date: 2026-03-15
-        // Days from 2026-02-20 to 2026-03-15: 23 days
+        // Scenario: mid February date, reset day 15
         val now = LocalDateTime.of(2026, 2, 20, 12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
         val remaining = DateUtils.getDaysRemainingInMonth(15, now, zoneId)
         val expected = ChronoUnit.DAYS.between(LocalDate.of(2026, 2, 20), LocalDate.of(2026, 3, 15))
@@ -49,9 +43,7 @@ class DateUtilsTest {
 
     @Test
     fun `get days remaining in month reset day 31 April end`() {
-        // Current date: 2026-04-30, reset day: 31
-        // Period started on 2026-04-30, next period start date: 2026-05-31
-        // Days from 2026-04-30 to 2026-05-31: 31 days
+        // Scenario: short month end, reset day 31
         val now = LocalDateTime.of(2026, 4, 30, 12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
         val remaining = DateUtils.getDaysRemainingInMonth(31, now, zoneId)
         val expected = ChronoUnit.DAYS.between(LocalDate.of(2026, 4, 30), LocalDate.of(2026, 5, 31))
@@ -61,9 +53,7 @@ class DateUtilsTest {
 
     @Test
     fun `get days remaining in month reset day 30 early Feb`() {
-        // Current date: 2026-02-10, reset day: 30
-        // Period started on 2026-01-30, next period start date: 2026-02-28
-        // Days from 2026-02-10 to 2026-02-28: 18 days
+        // Scenario: early February date, reset day 30
         val now = LocalDateTime.of(2026, 2, 10, 12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
         val remaining = DateUtils.getDaysRemainingInMonth(30, now, zoneId)
         val expected = ChronoUnit.DAYS.between(LocalDate.of(2026, 2, 10), LocalDate.of(2026, 2, 28))
@@ -73,9 +63,7 @@ class DateUtilsTest {
 
     @Test
     fun `get days remaining in month first day of period`() {
-        // Current date: 2026-10-01, reset day: 1
-        // Period started on 2026-10-01, next period start date: 2026-11-01
-        // Days from 2026-10-01 to 2026-11-01: 31 days
+        // Scenario: first day of reset period
         val now = LocalDateTime.of(2026, 10, 1, 12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
         val remaining = DateUtils.getDaysRemainingInMonth(1, now, zoneId)
         val expected = ChronoUnit.DAYS.between(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 11, 1))

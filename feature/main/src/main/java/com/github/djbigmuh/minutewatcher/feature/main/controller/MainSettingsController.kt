@@ -198,7 +198,7 @@ class MainSettingsController
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    // Operation must complete without propagating exception for settings task.
+                    // Operation must complete without propagating exception for settings operation.
                     AppLogger.e("MainSettingsController: $operationName failed", e)
                 }
             }

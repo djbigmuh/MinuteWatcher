@@ -76,10 +76,10 @@ class TrafficTrackerCancellationTest {
     @Test
     fun `recover cancellation completes promptly and preserves recoverability`() =
         runTest(testDispatcher) {
-            val attempts = runPhase1InitializationFailure()
+            val attempts = runInitializationFailureStage()
             assertTrue("Should have collected flow", attempts > 0)
-            runPhase2CancelRecoverDuringInit()
-            val finalAttempts = runPhase3VerifyRecoverability()
+            runCancelRecoverDuringInitStage()
+            val finalAttempts = runVerifyRecoverabilityStage()
             assertTrue("Should perform recovery", finalAttempts >= 1)
         }
 
@@ -155,7 +155,7 @@ class TrafficTrackerCancellationTest {
             timeProvider,
         )
 
-    private suspend fun TestScope.runPhase1InitializationFailure(): Int {
+    private suspend fun TestScope.runInitializationFailureStage(): Int {
         var attempts = 0
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(
             flow {
@@ -170,7 +170,7 @@ class TrafficTrackerCancellationTest {
         return attempts
     }
 
-    private suspend fun TestScope.runPhase2CancelRecoverDuringInit() {
+    private suspend fun TestScope.runCancelRecoverDuringInitStage() {
         val reachedInit = CompletableDeferred<Unit>()
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(
             flow {
@@ -185,7 +185,7 @@ class TrafficTrackerCancellationTest {
         withTimeout(10.seconds) { recoverJob.cancelAndJoin() }
     }
 
-    private suspend fun TestScope.runPhase3VerifyRecoverability(): Int {
+    private suspend fun TestScope.runVerifyRecoverabilityStage(): Int {
         var finalAttempts = 0
         whenever(simIdentityRepository.observeActiveSims()).thenReturn(
             flow {
