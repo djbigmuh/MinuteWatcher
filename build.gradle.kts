@@ -245,3 +245,92 @@ tasks.named("check") {
     dependsOn(allDetekt)
     dependsOn(allUnitTests)
 }
+
+abstract class VerifyQuietTask : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val testResultXmls: ConfigurableFileCollection
+
+    @get:Input
+    abstract val reportDirs: ListProperty<String>
+
+    @TaskAction
+    fun verify() {
+        var totalTests = 0
+        var failedTests = 0
+        val failedTestNames = mutableListOf<String>()
+
+        testResultXmls.files.forEach { file ->
+            if (file.exists() && file.extension == "xml") {
+                try {
+                    val dbf = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+                    dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+                    val db = dbf.newDocumentBuilder()
+                    val doc = db.parse(file)
+                    val testsuite = doc.documentElement
+                    if (testsuite != null) {
+                        totalTests += testsuite.getAttribute("tests").toIntOrNull() ?: 0
+                        val failures = testsuite.getAttribute("failures").toIntOrNull() ?: 0
+                        val errors = testsuite.getAttribute("errors").toIntOrNull() ?: 0
+                        failedTests += failures + errors
+
+                        if (failures > 0 || errors > 0) {
+                            val testcases = testsuite.getElementsByTagName("testcase")
+                            for (i in 0 until testcases.length) {
+                                val tc = testcases.item(i) as? org.w3c.dom.Element
+                                if (tc != null) {
+                                    val hasFailure = tc.getElementsByTagName("failure").length > 0 ||
+                                                     tc.getElementsByTagName("error").length > 0
+                                    if (hasFailure) {
+                                        val className = tc.getAttribute("classname")
+                                        val name = tc.getAttribute("name")
+                                        failedTestNames.add("$className#$name")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Ignore unparseable or incomplete files
+                }
+            }
+        }
+
+        val success = (failedTests == 0)
+        val reportsInfo = reportDirs.get().distinct().joinToString(", ")
+
+        if (success) {
+            logger.quiet("VERIFICATION SUCCESS: tests=$totalTests, failed=0, reports=[$reportsInfo]")
+        } else {
+            val limitedFailures = failedTestNames.take(40).joinToString("; ")
+            logger.quiet("VERIFICATION FAILED: tests=$totalTests, failed=$failedTests, failedTests=[$limitedFailures], reports=[$reportsInfo]")
+            throw GradleException("Verification failed: $failedTests failing tests found.")
+        }
+    }
+}
+
+tasks.register<VerifyQuietTask>("verifyQuiet") {
+    group = "verification"
+    description = "Aggregates static analysis, tests, and debug app assembly into a single compact verification task."
+
+    dependsOn(
+        allKtlint,
+        allDetekt,
+        allUnitTests,
+        tasks.matching { it.name == "lintDebug" || it.name == "assembleDebug" }
+    )
+
+    testResultXmls.from(
+        subprojects.map { sub ->
+            sub.layout.buildDirectory.dir("test-results").map { dir ->
+                dir.asFileTree.matching { include("**/*.xml") }
+            }
+        }
+    )
+
+    reportDirs.set(
+        subprojects.map { sub ->
+            sub.layout.buildDirectory.dir("reports").get().asFile.absolutePath
+        }
+    )
+}
