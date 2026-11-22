@@ -1,0 +1,8 @@
+Run verification exclusively via `./gradlew verifyQuiet`.
+Never run clean or forced task re-runs without explicit instruction.
+Never use verbose logging levels.
+Never read full log or report files.
+Never re-run verification without code changes.
+Never output log contents in responses.
+Never add baseline files or unmotivated suppressions.
+Never mention tasks, instruction steps, or numbers in code and commits.

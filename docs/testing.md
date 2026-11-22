@@ -14,7 +14,31 @@ This document describes the testing strategy for the MinuteWatcher project.
 - **Static Analysis**: Detekt + Ktlint
 - **Code Coverage**: JaCoCo
 
-## Running Tests
+## Running Verification & Testing
+
+### Single Verification Command
+To run all static analysis checks, unit tests across all modules, and debug app assembly in a single aggregated task, use:
+```powershell
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew -q verifyQuiet
+```
+
+### Summary Output & Diagnosis
+- **Successful Run**: Prints a single compact line containing total tests count and report paths, e.g.:
+  `VERIFICATION SUCCESS: tests=..., failed=0, reports=[...]`
+- **Failed Run**: Prints failure count, failing test names (up to 40), and report paths.
+- **Full Output & Reports**: If deeper diagnostics are needed, use persistent HTML/XML reports under `build/reports/tests/...` and `build/test-results/...`. For verbose console logging during investigation, pass `-PverboseTests`:
+  ```powershell
+  $env:ANDROID_PREFS_ROOT=$null; ./gradlew allUnitTests -PverboseTests
+  ```
+
+### Usage Guidelines
+- **Clean and Forced Runs**: Actions like `./gradlew clean` or `--rerun-tasks` are expensive and must **only** be used when explicitly necessary to resolve stale caching issues.
+- **Logging Levels**: Verbose and debug logging levels (`--info`, `--debug`, `-PverboseTests`) are reserved for active diagnostics and must not be used during routine checks.
+
+### Execution Channels
+1. **IDE Build Output Window**: Displays Gradle build progress and task execution summaries. Standard test streams and verbose logs are hidden by default to keep this window clean.
+2. **Gradle Launch Console**: Terminal output when executing Gradle commands directly via PowerShell/CLI.
+3. **Test Reports**: Persistent HTML and XML test reports containing full captured output, standard streams, test results, and stack traces for every test.
 
 ### Local Unit & Compose Tests (Robolectric)
 
@@ -23,20 +47,6 @@ Unit tests and local Compose UI tests run on JVM using Robolectric. They are loc
 ```powershell
 $env:ANDROID_PREFS_ROOT=$null; ./gradlew test
 ```
-
-### Verbose Logging & Test Reports
-
-By default, standard streams (stdout, stderr, app logs, and Robolectric debug logs) are hidden from the console during test execution to eliminate noise. Full captured output is saved in test reports.
-
-To enable verbose mode (echoing standard streams, Robolectric debug logs, and application logs in the console), pass the `-PverboseTests` parameter:
-
-```powershell
-$env:ANDROID_PREFS_ROOT=$null; ./gradlew allUnitTests --rerun-tasks -PverboseTests
-```
-
-Test results, standard streams, and logs can be inspected in the generated test reports:
-- **HTML Reports**: `build/reports/tests/<taskName>/index.html`
-- **XML Reports**: `build/test-results/<taskName>/TEST-*.xml`
 
 ### Instrumented Tests (Device)
 
@@ -68,8 +78,8 @@ To maintain test execution speed and minimize overhead, we follow a strict SDK c
 
 ## Pre-Commit Verification
 
-The following command must pass locally before completing a task and committing:
+The primary verification command is:
 
 ```powershell
-$env:ANDROID_PREFS_ROOT=$null; ./gradlew ktlintCheck detekt lintDebug testDebugUnitTest :app:assembleDebug
+$env:ANDROID_PREFS_ROOT=$null; ./gradlew -q verifyQuiet
 ```
