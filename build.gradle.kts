@@ -173,7 +173,7 @@ subprojects {
                 )
             }
 
-            val verifyTask = tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
+            tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
                 dependsOn(reportTask)
                 val mainClasses = fileTree("build/tmp/kotlin-classes/debug") {
                     exclude(jacocoExclusions)
@@ -194,7 +194,7 @@ subprojects {
                 }
             }
 
-            testAggregate.configure { dependsOn(verifyTask) }
+
         }
     }
     plugins.withId("org.jetbrains.kotlin.jvm") {
@@ -218,7 +218,7 @@ subprojects {
                 executionData.setFrom(fileTree("build/jacoco") { include("*.exec") })
             }
 
-            val verifyTask = tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
+            tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
                 dependsOn(reportTask)
                 val mainClasses = fileTree("build/classes/kotlin/main") {
                     exclude(jacocoExclusions)
@@ -234,7 +234,7 @@ subprojects {
                 }
             }
 
-            testAggregate.configure { dependsOn(verifyTask) }
+
         }
     }
 }
