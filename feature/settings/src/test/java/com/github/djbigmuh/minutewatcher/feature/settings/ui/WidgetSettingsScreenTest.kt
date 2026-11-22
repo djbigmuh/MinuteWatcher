@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -57,6 +59,7 @@ class WidgetSettingsScreenTest {
             simStates =
                 mapOf(
                     0 to SimSettingsState(true, true, true, true, true, true, true),
+                    1 to SimSettingsState(true, true, true, true, true, true, true),
                 ),
         )
 
@@ -66,21 +69,24 @@ class WidgetSettingsScreenTest {
         // Provide default stubs to avoid NPE on collectAsStateWithLifecycle
         whenever(viewModel.state)
             .doReturn(MutableStateFlow(WidgetSettingsUiState()))
+        val defaultSnapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(0, "id0", "Op0", emptyMap(), 1),
+                        SimSnapshot(1, "id1", "Op1", emptyMap(), 1),
+                    ),
+                capabilities = emptyList(),
+            )
         whenever(viewModel.snapshot)
-            .doReturn(MutableStateFlow(createEmptySnapshot()))
+            .doReturn(MutableStateFlow(defaultSnapshot))
         whenever(viewModel.aodSummaryAvailable)
             .doReturn(MutableStateFlow(true))
         whenever(viewModel.aodSummaryHasContent)
             .doReturn(MutableStateFlow(true))
     }
-
-    private fun createEmptySnapshot() =
-        GlobalSnapshot(
-            version = SchemaVersion(1, 0, 0),
-            timestamp = 0L,
-            simSnapshots = emptyList(),
-            capabilities = emptyList(),
-        )
 
     @Test
     fun `loading state is displayed`() {
@@ -668,5 +674,285 @@ class WidgetSettingsScreenTest {
                 substring = true,
             ).performScrollTo()
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun `layout mode section does not exist for one sim and exists for two sims`() {
+        val layoutModeTitle = context.getString(R.string.layout_mode_title)
+
+        // Case 1: One visible SIM
+        val settingsOne =
+            WidgetSettingsState(
+                simStates = mapOf(0 to SimSettingsState(showSim = true)),
+            )
+        val snapshotOne =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots = listOf(SimSnapshot(0, "id0", "Op0", emptyMap(), 1)),
+                capabilities = emptyList(),
+            )
+        val stateFlowOne = MutableStateFlow(WidgetSettingsUiState(settings = settingsOne))
+        whenever(viewModel.state).doReturn(stateFlowOne)
+        whenever(viewModel.snapshot).doReturn(MutableStateFlow(snapshotOne))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(viewModel = viewModel, onBack = {})
+        }
+
+        composeTestRule.onNodeWithText(layoutModeTitle).assertDoesNotExist()
+
+        // Case 2: Two visible SIMs
+        val settingsTwo =
+            WidgetSettingsState(
+                simStates =
+                    mapOf(
+                        0 to SimSettingsState(showSim = true),
+                        1 to SimSettingsState(showSim = true),
+                    ),
+            )
+        val snapshotTwo =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(0, "id0", "Op0", emptyMap(), 1),
+                        SimSnapshot(1, "id1", "Op1", emptyMap(), 1),
+                    ),
+                capabilities = emptyList(),
+            )
+        stateFlowOne.value = WidgetSettingsUiState(settings = settingsTwo)
+        whenever(viewModel.snapshot).doReturn(MutableStateFlow(snapshotTwo))
+
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(layoutModeTitle).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `toggling sim visibility immediately hides and shows layout mode block`() {
+        val layoutModeTitle = context.getString(R.string.layout_mode_title)
+
+        val settingsTwo =
+            WidgetSettingsState(
+                simStates =
+                    mapOf(
+                        0 to SimSettingsState(showSim = true),
+                        1 to SimSettingsState(showSim = true),
+                    ),
+            )
+        val snapshotTwo =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(0, "id0", "Op0", emptyMap(), 1),
+                        SimSnapshot(1, "id1", "Op1", emptyMap(), 1),
+                    ),
+                capabilities = emptyList(),
+            )
+        val stateFlow = MutableStateFlow(WidgetSettingsUiState(settings = settingsTwo))
+        whenever(viewModel.state).doReturn(stateFlow)
+        whenever(viewModel.snapshot).doReturn(MutableStateFlow(snapshotTwo))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(viewModel = viewModel, onBack = {})
+        }
+
+        // Initially 2 visible SIMs -> layout mode title is displayed
+        composeTestRule.onNodeWithText(layoutModeTitle).performScrollTo().assertIsDisplayed()
+
+        // Toggle slot 1 showSim to false -> 1 visible SIM -> block disappears immediately
+        val settingsOne =
+            WidgetSettingsState(
+                simStates =
+                    mapOf(
+                        0 to SimSettingsState(showSim = true),
+                        1 to SimSettingsState(showSim = false),
+                    ),
+            )
+        stateFlow.value = WidgetSettingsUiState(settings = settingsOne)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(layoutModeTitle).assertDoesNotExist()
+
+        // Toggle slot 1 showSim back to true -> 2 visible SIMs -> block appears immediately
+        stateFlow.value = WidgetSettingsUiState(settings = settingsTwo)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(layoutModeTitle).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `disabled sim display shows toggle and excludes detailed settings from composition tree`() {
+        val settings =
+            WidgetSettingsState(
+                simStates = mapOf(0 to SimSettingsState(showSim = false)),
+            )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots = listOf(SimSnapshot(0, "id0", "Op0", emptyMap(), 1)),
+                capabilities = emptyList(),
+            )
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
+        whenever(viewModel.snapshot).doReturn(MutableStateFlow(snapshot))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(viewModel = viewModel, onBack = {})
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.sim_card_generic, 1), substring = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.display_name)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.display_icon)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.display_minutes)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.display_traffic)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `toggling sim switch expands full settings and collapsing hides them back`() {
+        val settingsCollapsed =
+            WidgetSettingsState(
+                simStates = mapOf(0 to SimSettingsState(showSim = false)),
+            )
+        val settingsExpanded =
+            WidgetSettingsState(
+                simStates = mapOf(0 to SimSettingsState(showSim = true)),
+            )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots = listOf(SimSnapshot(0, "id0", "Op0", emptyMap(), 1)),
+                capabilities = emptyList(),
+            )
+        val stateFlow = MutableStateFlow(WidgetSettingsUiState(settings = settingsCollapsed))
+        whenever(viewModel.state).doReturn(stateFlow)
+        whenever(viewModel.snapshot).doReturn(MutableStateFlow(snapshot))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(viewModel = viewModel, onBack = {})
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.display_name)).assertDoesNotExist()
+
+        stateFlow.value = WidgetSettingsUiState(settings = settingsExpanded)
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.display_name))
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        stateFlow.value = WidgetSettingsUiState(settings = settingsCollapsed)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.display_name)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `with two sims one hidden and one visible visible sim settings remain present and functional`() {
+        val settings =
+            WidgetSettingsState(
+                simStates =
+                    mapOf(
+                        0 to SimSettingsState(showSim = true, showName = true),
+                        1 to SimSettingsState(showSim = false),
+                    ),
+            )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(0, "id0", "Op0", emptyMap(), 1),
+                        SimSnapshot(1, "id1", "Op1", emptyMap(), 1),
+                    ),
+                capabilities = emptyList(),
+            )
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
+        whenever(viewModel.snapshot).doReturn(MutableStateFlow(snapshot))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(viewModel = viewModel, onBack = {})
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.display_name))
+            .performScrollTo()
+            .performClick()
+
+        verify(viewModel).updateSimSettings(org.mockito.kotlin.eq(0), any())
+
+        // Only SIM 0 has display_name, SIM 1 is collapsed and has no sub-setting nodes
+        composeTestRule.onAllNodesWithText(context.getString(R.string.display_name)).assertCountEquals(1)
+    }
+
+    @Test
+    fun `collapsed sim section leaves no residual nodes from hidden content`() {
+        val settings =
+            WidgetSettingsState(
+                simStates = mapOf(0 to SimSettingsState(showSim = false)),
+            )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots = listOf(SimSnapshot(0, "id0", "Op0", emptyMap(), 1)),
+                capabilities = emptyList(),
+            )
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
+        whenever(viewModel.snapshot).doReturn(MutableStateFlow(snapshot))
+
+        composeTestRule.setContent {
+            WidgetSettingsScreen(viewModel = viewModel, onBack = {})
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.display_name)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.display_icon)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.display_minutes)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.display_minutes_limit)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.display_traffic)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.display_traffic_limit)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `collapsed sim section renders correctly in rtl layout`() {
+        val settings =
+            WidgetSettingsState(
+                simStates = mapOf(0 to SimSettingsState(showSim = false)),
+            )
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots = listOf(SimSnapshot(0, "id0", "Op0", emptyMap(), 1)),
+                capabilities = emptyList(),
+            )
+        whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
+        whenever(viewModel.snapshot).doReturn(MutableStateFlow(snapshot))
+
+        composeTestRule.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl,
+            ) {
+                WidgetSettingsScreen(viewModel = viewModel, onBack = {})
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.sim_card_generic, 1), substring = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.display_name)).assertDoesNotExist()
     }
 }

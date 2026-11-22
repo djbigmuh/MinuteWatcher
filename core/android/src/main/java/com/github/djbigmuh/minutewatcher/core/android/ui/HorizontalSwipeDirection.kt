@@ -12,10 +12,16 @@ import androidx.compose.ui.node.PointerInputModifierNode
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 
 enum class HorizontalSwipeDirection {
     LEFT_TO_RIGHT,
     RIGHT_TO_LEFT,
+}
+
+enum class SwipeHintSide {
+    START,
+    END,
 }
 
 /**
@@ -41,6 +47,34 @@ fun resolveNavigationSwipeDirection(
     } else {
         if (isRtl) HorizontalSwipeDirection.RIGHT_TO_LEFT else HorizontalSwipeDirection.LEFT_TO_RIGHT
     }
+
+/**
+ * Resolves the side of the screen ([SwipeHintSide.START] or [SwipeHintSide.END]) where the swipe hint
+ * indicator should be placed based on the layout direction and the supported swipe gesture direction.
+ *
+ * Truth Table:
+ * - [direction] = RIGHT_TO_LEFT, [isRtl] = false -> [SwipeHintSide.END]
+ * - [direction] = RIGHT_TO_LEFT, [isRtl] = true  -> [SwipeHintSide.START]
+ * - [direction] = LEFT_TO_RIGHT, [isRtl] = false -> [SwipeHintSide.START]
+ * - [direction] = LEFT_TO_RIGHT, [isRtl] = true  -> [SwipeHintSide.END]
+ *
+ * @param direction The supported horizontal swipe direction for navigation.
+ * @param isRtl `true` if the layout direction is Right-to-Left, `false` otherwise.
+ * @return The resolved [SwipeHintSide] for positioning the hint indicator.
+ */
+fun resolveSwipeHintSide(
+    direction: HorizontalSwipeDirection,
+    isRtl: Boolean,
+): SwipeHintSide =
+    when (direction) {
+        HorizontalSwipeDirection.RIGHT_TO_LEFT -> if (isRtl) SwipeHintSide.START else SwipeHintSide.END
+        HorizontalSwipeDirection.LEFT_TO_RIGHT -> if (isRtl) SwipeHintSide.END else SwipeHintSide.START
+    }
+
+fun resolveSwipeHintSide(
+    direction: HorizontalSwipeDirection,
+    layoutDirection: LayoutDirection,
+): SwipeHintSide = resolveSwipeHintSide(direction, layoutDirection == LayoutDirection.Rtl)
 
 fun Modifier.onHorizontalSwipe(
     direction: HorizontalSwipeDirection,

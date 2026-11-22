@@ -71,4 +71,41 @@ class SimWidgetVisibilityRepositoryImplTest {
             assertEquals(settings2.showSim, readSettings[id2]?.showSim)
             assertEquals(settings2.showIcon, readSettings[id2]?.showIcon)
         }
+
+    @Test
+    fun `collapsing and expanding sim section performs no extra storage writes and preserves previous settings`() =
+        runTest {
+            val identity = "icc_test_collapsible"
+            val initialSettings =
+                SimSettingsState(
+                    showSim = true,
+                    showName = false,
+                    showIcon = true,
+                    showMinutes = true,
+                    showMinutesLimit = true,
+                    showTraffic = false,
+                    showTrafficLimit = false,
+                )
+
+            repository.setSimSettingsBatch(mapOf(identity to initialSettings))
+
+            val savedInitial = repository.getSimSettingsBatch(listOf(identity)).first()[identity]
+            assertEquals(true, savedInitial?.showSim)
+            assertEquals(false, savedInitial?.showName)
+            assertEquals(true, savedInitial?.showMinutesLimit)
+
+            val collapsedSettings = savedInitial!!.copy(showSim = false)
+            repository.setSimSettingsBatch(mapOf(identity to collapsedSettings))
+
+            val savedCollapsed = repository.getSimSettingsBatch(listOf(identity)).first()[identity]
+            assertEquals(false, savedCollapsed?.showSim)
+            assertEquals(false, savedCollapsed?.showName)
+            assertEquals(true, savedCollapsed?.showMinutesLimit)
+
+            val reExpandedSettings = savedCollapsed!!.copy(showSim = true)
+            repository.setSimSettingsBatch(mapOf(identity to reExpandedSettings))
+
+            val savedExpanded = repository.getSimSettingsBatch(listOf(identity)).first()[identity]
+            assertEquals(initialSettings, savedExpanded)
+        }
 }

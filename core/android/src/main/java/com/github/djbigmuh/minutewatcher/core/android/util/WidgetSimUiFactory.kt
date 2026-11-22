@@ -9,6 +9,7 @@ import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.SimUiState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetLayoutMode
 import com.github.djbigmuh.minutewatcher.core.model.WidgetStrings
+import com.github.djbigmuh.minutewatcher.core.model.resolveShowSim
 import com.github.djbigmuh.minutewatcher.core.model.util.UsageLevelResolver
 
 /**
@@ -33,7 +34,7 @@ object WidgetSimUiFactory {
     fun resolveShowSim(
         simConfig: SimSettingsState?,
         simListLoadFailed: Boolean,
-    ): Boolean = simConfig?.showSim ?: simListLoadFailed
+    ): Boolean = simConfig.resolveShowSim(simListLoadFailed)
 
     fun createSimUiState(
         strings: WidgetStrings,

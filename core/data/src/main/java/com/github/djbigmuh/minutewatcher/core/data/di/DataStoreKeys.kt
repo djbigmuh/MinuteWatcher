@@ -75,6 +75,8 @@ internal object DataStoreKeys {
 
     val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
+    val SWIPE_HINT_DISMISSED = booleanPreferencesKey("swipe_hint_dismissed")
+
     val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
 
     val WAS_PHONE_PERMISSION_REQUESTED_BEFORE =

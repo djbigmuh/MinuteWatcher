@@ -24,6 +24,7 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
@@ -51,6 +52,7 @@ class MainSettingsControllerTest {
             migrationFlagsRepository,
             settingsUseCase,
             scope,
+            mainDispatcherRule.testDispatcher,
         )
 
     @Test
@@ -186,6 +188,7 @@ class MainSettingsControllerTest {
                         migrationFlagsRepository,
                         localSettingsUseCase,
                         appScope,
+                        mainDispatcherRule.testDispatcher,
                     )
 
                 controller.setTheme(AppTheme.DARK)
@@ -198,4 +201,48 @@ class MainSettingsControllerTest {
             }
         }
     }
+
+    @Test
+    fun `dismissSwipeHint records hide flag exactly once upon first swipe and ignores subsequent swipes`() =
+        runTest {
+            withTimeout(5.seconds) {
+                val settingsState = MutableStateFlow(AppSettings())
+                whenever(appSettingsRepository.observeAppSettings()).thenReturn(settingsState)
+
+                doAnswer { invocation ->
+                    @Suppress("UNCHECKED_CAST")
+                    val transform = invocation.arguments[0] as (AppSettings) -> AppSettings
+                    settingsState.value = transform(settingsState.value)
+                }.whenever(appSettingsRepository).updateAppSettings(any())
+
+                val controller = createController(backgroundScope)
+
+                controller.dismissSwipeHint()
+                advanceUntilIdle()
+                assertTrue(settingsState.value.swipeHintDismissed)
+
+                controller.dismissSwipeHint()
+                advanceUntilIdle()
+
+                verify(appSettingsRepository, times(1)).updateAppSettings(any())
+            }
+        }
+
+    @Test
+    fun `dismissSwipeHint failure does not crash and does not cancel calling coroutine`() =
+        runTest {
+            withTimeout(5.seconds) {
+                doAnswer {
+                    throw IOException(
+                        "DataStore write failed",
+                    )
+                }.whenever(appSettingsRepository).updateAppSettings(any())
+
+                val controller = createController(backgroundScope)
+                controller.dismissSwipeHint()
+                advanceUntilIdle()
+
+                verify(appSettingsRepository).updateAppSettings(any())
+            }
+        }
 }

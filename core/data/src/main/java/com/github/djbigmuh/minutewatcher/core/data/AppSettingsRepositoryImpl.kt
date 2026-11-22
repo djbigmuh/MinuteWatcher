@@ -179,6 +179,7 @@ class AppSettingsRepositoryImpl
         ) {
             prefs[DataStoreKeys.MIGRATION_V1_COMPLETED] = updated.migrationV1Completed
             prefs[DataStoreKeys.ONBOARDING_COMPLETED] = updated.onboardingCompleted
+            prefs[DataStoreKeys.SWIPE_HINT_DISMISSED] = updated.swipeHintDismissed
             prefs[DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED] = updated.notificationPermissionRequested
             prefs[DataStoreKeys.WAS_PHONE_PERMISSION_REQUESTED_BEFORE] = updated.wasPhonePermissionRequestedBefore
             prefs[DataStoreKeys.PHONE_PERMISSION_PERMANENTLY_DENIED] =
@@ -219,6 +220,7 @@ class AppSettingsRepositoryImpl
             current.copy(
                 migrationV1Completed = read(DataStoreKeys.MIGRATION_V1_COMPLETED, current.migrationV1Completed),
                 onboardingCompleted = read(DataStoreKeys.ONBOARDING_COMPLETED, current.onboardingCompleted),
+                swipeHintDismissed = read(DataStoreKeys.SWIPE_HINT_DISMISSED, current.swipeHintDismissed),
                 notificationPermissionRequested =
                     read(DataStoreKeys.NOTIFICATION_PERMISSION_REQUESTED, current.notificationPermissionRequested),
                 wasPhonePermissionRequestedBefore =

@@ -41,7 +41,13 @@ data class WidgetUiState(
             limitText = "",
             gbAbbr = "",
         ),
-)
+) {
+    val visibleSimCount: Int
+        get() = simUiStates.count { it.showSim }
+
+    val showLayoutMode: Boolean
+        get() = visibleSimCount >= Constants.Widget.MIN_SIMS_FOR_SEPARATOR
+}
 
 /**
  * Widget strings.

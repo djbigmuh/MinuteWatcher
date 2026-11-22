@@ -107,3 +107,14 @@ data class SimSettingsState(
     val showTrafficLimit: Boolean = false,
     val lastKnownIdentity: String? = null,
 )
+
+/**
+ * Resolves whether a SIM is visible based on settings config and load failure fallback.
+ */
+fun SimSettingsState?.resolveShowSim(simListLoadFailed: Boolean): Boolean = this?.showSim ?: simListLoadFailed
+
+val WidgetSettingsState.visibleSimCount: Int
+    get() = simStates.values.count { it.resolveShowSim(simListLoadFailed) }
+
+val WidgetSettingsState.showLayoutMode: Boolean
+    get() = visibleSimCount >= Constants.Widget.MIN_SIMS_FOR_SEPARATOR

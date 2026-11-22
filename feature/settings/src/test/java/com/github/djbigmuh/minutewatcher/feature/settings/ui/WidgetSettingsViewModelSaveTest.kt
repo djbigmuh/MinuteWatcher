@@ -6,6 +6,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -49,7 +50,7 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
 
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
-            val realSaver = WidgetSettingsSaver(blockingLoader, mock(), backgroundScope)
+            val realSaver = WidgetSettingsSaver(blockingLoader, mock(), StandardTestDispatcher(), backgroundScope)
             whenever(loader.load()).thenReturn(WidgetSettingsState())
             val vm =
                 WidgetSettingsViewModel(

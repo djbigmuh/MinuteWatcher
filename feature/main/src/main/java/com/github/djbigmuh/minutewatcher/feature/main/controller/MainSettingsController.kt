@@ -1,6 +1,7 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.main.controller
 
 import com.github.djbigmuh.minutewatcher.core.common.di.ApplicationScope
+import com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcher
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.MigrationFlagsRepository
@@ -8,6 +9,7 @@ import com.github.djbigmuh.minutewatcher.core.domain.SettingsUseCase
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.AppTheme
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +26,7 @@ import javax.inject.Inject
  * @property appSettingsRepository Repository for application settings.
  * @property settingsUseCase Use case for application settings.
  * @property scope Application-wide coroutine scope for async operations.
+ * @property ioDispatcher Dispatcher for background I/O operations.
  */
 class MainSettingsController
     @Inject
@@ -32,6 +35,7 @@ class MainSettingsController
         migrationFlagsRepository: MigrationFlagsRepository,
         private val settingsUseCase: SettingsUseCase,
         @ApplicationScope private val scope: CoroutineScope,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         val isInitialSetupCompleted: Flow<Boolean> = migrationFlagsRepository.isInitialSetupCompleted()
 
@@ -186,6 +190,30 @@ class MainSettingsController
                 appSettingsRepository.updateAppSettings { it.copy(usageAccessDialogShown = true) }
             }
         }
+
+    /**
+     * Dismisses the swipe navigation affordance hint once upon successful swipe.
+     *
+     * Executes in application scope with [ioDispatcher].
+     * Recorded exactly once; subsequent calls are ignored if already dismissed.
+     * Non-blocking, catches generic exceptions, rethrows [CancellationException].
+     */
+    fun dismissSwipeHint() {
+        if (appSettingsRepository.observeAppSettings().value.swipeHintDismissed) return
+        scope.launch(ioDispatcher) {
+            if (appSettingsRepository.observeAppSettings().value.swipeHintDismissed) return@launch
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                appSettingsRepository.updateAppSettings { current ->
+                    if (current.swipeHintDismissed) current else current.copy(swipeHintDismissed = true)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("MainSettingsController: dismissSwipeHint failed", e)
+            }
+        }
+    }
 
         private fun launchSafely(
             operationName: String,

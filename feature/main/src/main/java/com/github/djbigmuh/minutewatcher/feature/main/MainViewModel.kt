@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -63,6 +64,29 @@ class MainViewModel
         val isInitialSetupCompleted: Flow<Boolean> get() = controllers.settings.isInitialSetupCompleted
         val appSettings: StateFlow<AppSettings> get() = controllers.settings.appSettings
         val trackingBannerState: StateFlow<TrackingBannerState> get() = controllers.banner.trackingBannerState
+
+    val isSwipeAvailable: StateFlow<Boolean> =
+        combine(
+            showOnboardingDialog,
+            showUsageAccessDialog,
+        ) { onboarding, usageAccess ->
+            !onboarding && !usageAccess
+        }.distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                initialValue = true,
+            )
+
+    val isSwipeHintDismissed: StateFlow<Boolean> =
+        controllers.settings.appSettings
+            .map { settings: AppSettings -> settings.swipeHintDismissed }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
+                initialValue = controllers.settings.appSettings.value.swipeHintDismissed,
+            )
 
         private val _isRefreshing = MutableStateFlow(false)
         val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -206,6 +230,8 @@ class MainViewModel
         fun setTheme(theme: AppTheme) = controllers.settings.setTheme(theme)
 
         fun setLanguage(language: String?) = controllers.settings.setLanguage(language)
+
+    fun dismissSwipeHint() = controllers.settings.dismissSwipeHint()
 
         // Delegate SIM Data Actions
         fun retrySimList() = controllers.simData.retrySimList()

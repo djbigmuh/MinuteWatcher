@@ -6,6 +6,7 @@ import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
@@ -44,7 +45,8 @@ class WidgetSettingsSaverResilienceTest {
                     override suspend fun saveSimSettings(state: WidgetSettingsState): List<Int> = emptyList()
                 }
 
-            val saver = WidgetSettingsSaver(controlledLoader, mock(), backgroundScope)
+            val saver =
+                WidgetSettingsSaver(controlledLoader, mock(), StandardTestDispatcher(testScheduler), backgroundScope)
 
             // 1. Start first save
             val firstSave =

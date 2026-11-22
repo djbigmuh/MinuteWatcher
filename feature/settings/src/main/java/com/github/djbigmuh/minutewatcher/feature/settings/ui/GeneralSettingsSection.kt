@@ -36,6 +36,7 @@ import kotlin.math.roundToInt
 @Composable
 fun GeneralSettingsSection(
     state: WidgetSettingsState,
+    showLayoutMode: Boolean,
     enabled: Boolean = true,
     onUpdateLayoutMode: (Int) -> Unit,
     onUpdateSimArrangement: (Int) -> Unit,
@@ -43,11 +44,11 @@ fun GeneralSettingsSection(
     onUpdateFontSize: (Int) -> Unit,
     onShowColorPicker: () -> Unit,
 ) {
-    LayoutModeSetting(state, enabled, onUpdateLayoutMode)
-
-    SimArrangementSetting(state, enabled, onUpdateSimArrangement)
-
-    Spacer(modifier = Modifier.height(16.dp))
+    if (showLayoutMode) {
+        LayoutModeSetting(state, enabled, onUpdateLayoutMode)
+        SimArrangementSetting(state, enabled, onUpdateSimArrangement)
+        Spacer(modifier = Modifier.height(16.dp))
+    }
 
     TransparencySetting(state, enabled, onUpdateTransparency)
 
@@ -162,7 +163,8 @@ private fun BackgroundColorSetting(
                 .fillMaxWidth()
                 .clickable(enabled = enabled) {
                     onShowColorPicker()
-                }.padding(vertical = 8.dp),
+                }
+                .padding(vertical = 8.dp),
     ) {
         Box(
             modifier =

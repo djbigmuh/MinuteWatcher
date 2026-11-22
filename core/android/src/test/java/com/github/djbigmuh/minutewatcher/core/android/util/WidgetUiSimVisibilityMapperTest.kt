@@ -5,6 +5,7 @@ import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
+import com.github.djbigmuh.minutewatcher.core.model.resolveShowSim
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -54,5 +55,47 @@ class WidgetUiSimVisibilityMapperTest {
                 operatorNames = emptyMap(),
             )
         assertTrue("showSim should be true when config missing and load failed", uiStateFailed.simUiStates[0].showSim)
+    }
+
+    @Test
+    fun `consistency test between visibility predicate and render filter count`() {
+        val simStates =
+            mapOf(
+                0 to
+                    com.github.djbigmuh.minutewatcher.core.model
+                        .SimSettingsState(showSim = true),
+                1 to
+                    com.github.djbigmuh.minutewatcher.core.model
+                        .SimSettingsState(showSim = false),
+                2 to
+                    com.github.djbigmuh.minutewatcher.core.model
+                        .SimSettingsState(showSim = true),
+            )
+        val state = WidgetSettingsState(simStates = simStates, simListLoadFailed = false)
+        val snapshot =
+            GlobalSnapshot(
+                version = SchemaVersion(1, 0, 0),
+                timestamp = 1000L,
+                simSnapshots =
+                    listOf(
+                        SimSnapshot(0, "id0", "Op0", emptyMap(), 1),
+                        SimSnapshot(1, "id1", "Op1", emptyMap(), 1),
+                        SimSnapshot(2, "id2", "Op2", emptyMap(), 1),
+                    ),
+                capabilities = emptyList(),
+            )
+
+        val predicateCount = state.simStates.values.count { it.resolveShowSim(state.simListLoadFailed) }
+        val uiState =
+            WidgetUiMapper.mapFromSnapshot(
+                strings = widgetStrings,
+                snapshot = snapshot,
+                state = state,
+                operatorNames = emptyMap(),
+            )
+        val renderFilterCount = uiState.simUiStates.count { it.showSim }
+
+        org.junit.Assert.assertEquals(predicateCount, renderFilterCount)
+        org.junit.Assert.assertEquals(2, predicateCount)
     }
 }

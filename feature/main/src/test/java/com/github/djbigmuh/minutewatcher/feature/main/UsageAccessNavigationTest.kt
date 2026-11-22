@@ -156,6 +156,7 @@ class UsageAccessNavigationTest {
                 migrationFlagsRepository = migrationFlagsRepository,
                 settingsUseCase = settingsUseCase,
                 scope = scope,
+                ioDispatcher = testDispatcher,
             )
         val simDataController =
             MainSimDataController(

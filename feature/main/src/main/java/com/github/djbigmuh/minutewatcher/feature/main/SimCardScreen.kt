@@ -1,6 +1,7 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.main
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -18,6 +19,7 @@ import com.github.djbigmuh.minutewatcher.core.android.ui.onHorizontalSwipe
 import com.github.djbigmuh.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.feature.main.controller.OperationError
+import com.github.djbigmuh.minutewatcher.feature.main.ui.components.SimCardSwipeHint
 
 @Composable
 fun SimCardScreen(
@@ -38,6 +40,8 @@ fun SimCardScreen(
     val showUsageAccessDialog by viewModel.showUsageAccessDialog.collectAsStateWithLifecycle()
     val showAboutDialog by viewModel.showAboutDialog.collectAsStateWithLifecycle()
     val lastOperationError by viewModel.lastOperationError.collectAsStateWithLifecycle()
+    val isSwipeAvailable by viewModel.isSwipeAvailable.collectAsStateWithLifecycle()
+    val isSwipeHintDismissed by viewModel.isSwipeHintDismissed.collectAsStateWithLifecycle()
 
     val trackingBannerCallbacks =
         remember(viewModel, actions) {
@@ -66,17 +70,23 @@ fun SimCardScreen(
         onDismissOperationError = viewModel::dismissOperationError,
     )
 
+    val swipeDirection =
+        resolveNavigationSwipeDirection(
+            navigateForward = true,
+            isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl,
+        )
+
     Scaffold(
         modifier =
             Modifier
                 .fillMaxSize()
                 .onHorizontalSwipe(
-                    resolveNavigationSwipeDirection(
-                        navigateForward = true,
-                        isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl,
-                    ),
+                    swipeDirection,
                     Constants.UI.SWIPE_NAVIGATION_THRESHOLD_DP.dp,
-                ) { actions.onOpenSettings() },
+                ) {
+                    viewModel.dismissSwipeHint()
+                    actions.onOpenSettings()
+                },
         topBar = {
             SimCardTopBar(
                 currentTheme = appTheme,
@@ -110,6 +120,13 @@ fun SimCardScreen(
             onSetDayDialog = viewModel::setDayDialog,
             onSetAdjustDialog = viewModel::setAdjustDialog,
             onShowTrafficInfo = { viewModel.setTrafficLimitationDialog(true) },
+        )
+
+        SimCardSwipeHint(
+            isSwipeAvailable = isSwipeAvailable,
+            isSwipeHintDismissed = isSwipeHintDismissed,
+            swipeDirection = swipeDirection,
+            modifier = Modifier.padding(paddingValues),
         )
 
         DialogRenderer(

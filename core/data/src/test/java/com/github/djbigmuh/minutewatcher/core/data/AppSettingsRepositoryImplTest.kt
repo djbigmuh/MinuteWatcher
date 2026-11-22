@@ -56,6 +56,7 @@ class AppSettingsRepositoryImplTest {
             assertEquals(2, settings.widgetLayoutMode)
             assertEquals(50, settings.widgetTransparency)
             assertFalse(settings.onboardingCompleted)
+            assertFalse(settings.swipeHintDismissed)
         }
 
     @Test
@@ -87,6 +88,18 @@ class AppSettingsRepositoryImplTest {
 
             val settings = repository.getAppSettings().first()
             assertTrue(settings.onboardingCompleted)
+        }
+
+    @Test
+    fun `update app settings saves swipe hint dismissed`() =
+        runTest {
+            val repository = AppSettingsRepositoryImpl(dataStore, testScope)
+
+            repository.updateAppSettings { it.copy(swipeHintDismissed = true) }
+            advanceUntilIdle()
+
+            val settings = repository.getAppSettings().first()
+            assertTrue(settings.swipeHintDismissed)
         }
 
     @Test

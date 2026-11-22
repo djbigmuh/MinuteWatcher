@@ -52,6 +52,7 @@ import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetUiState
+import com.github.djbigmuh.minutewatcher.core.model.showLayoutMode
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 private typealias SimSettingsTransform = (SimSettingsState) -> SimSettingsState
@@ -321,6 +322,7 @@ private fun WidgetSettingsList(
     onShowColorPicker: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
+    val showLayoutMode = uiState?.showLayoutMode ?: state.showLayoutMode
     Column(
         modifier =
             modifier
@@ -329,6 +331,7 @@ private fun WidgetSettingsList(
     ) {
         GeneralSettingsSection(
             state = state,
+            showLayoutMode = showLayoutMode,
             enabled = true,
             onUpdateLayoutMode = { mode -> onUpdateSettings { it.copy(layoutMode = mode) } },
             onUpdateSimArrangement = { arr -> onUpdateSettings { it.copy(simArrangement = arr) } },

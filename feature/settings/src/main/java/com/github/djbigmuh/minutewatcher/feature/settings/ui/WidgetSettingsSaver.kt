@@ -1,15 +1,15 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
-import androidx.annotation.VisibleForTesting
 import com.github.djbigmuh.minutewatcher.core.common.di.ApplicationScope
+import com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcher
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
-import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetSettingsLoader
+import com.github.djbigmuh.minutewatcher.core.domain.WidgetUpdater
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -23,7 +23,8 @@ class WidgetSettingsSaver
     @Inject
     constructor(
         private val loader: WidgetSettingsLoader,
-        private val dataChangeNotifier: DataChangeNotifier,
+        private val widgetUpdater: WidgetUpdater,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val saveMutex = Mutex()
@@ -53,6 +54,7 @@ class WidgetSettingsSaver
             }
         }
 
+    @Suppress("TooGenericExceptionCaught", "ThrowsCount")
         private suspend fun performSave(
             state: WidgetSettingsState,
             skipSimSettings: Boolean,
@@ -65,31 +67,28 @@ class WidgetSettingsSaver
             val validatedState = WidgetSettingsState.validate(state)
 
             @Suppress("TooGenericExceptionCaught")
-            val res =
-                try {
-                    saveGeneralSettings(validatedState)
-                    val simResult = trySaveSimSettings(validatedState, skipSimSettings)
+            return try {
+                saveGeneralSettings(validatedState)
+                val simResult = trySaveSimSettings(validatedState, skipSimSettings)
 
-                    scope.launch {
-                        @Suppress("TooGenericExceptionCaught")
-                        try {
-                            notifyDataChanged()
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            // Operation must complete without propagating exception for saver background notification.
-                            AppLogger.w("WidgetSettingsSaver: background notification failed", e)
-                        }
+                scope.launch(ioDispatcher) {
+                    @Suppress("TooGenericExceptionCaught")
+                    try {
+                        widgetUpdater.updateAll()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        AppLogger.e("WidgetSettingsSaver: widget update failed", e)
                     }
-                    simResult
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // Operation must complete without propagating exception for widget settings saver.
-                    AppLogger.e("Failed to save general widget settings", e)
-                    SaveResult.Failed(SaveFailureReason.GENERAL)
                 }
-            return res
+
+                simResult
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("Failed to save general widget settings", e)
+                SaveResult.Failed(SaveFailureReason.GENERAL)
+            }
         }
 
         private suspend fun trySaveSimSettings(
@@ -109,39 +108,9 @@ class WidgetSettingsSaver
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for SIM widget settings saver.
                 AppLogger.e("Failed to save SIM-specific widget settings", e)
                 SaveResult.PartialFailure(emptyList())
             }
-
-        @VisibleForTesting
-        internal suspend fun notifyDataChanged() {
-            var attempt = 0
-            val maxAttempts = 3
-            while (attempt < maxAttempts) {
-                attempt++
-                @Suppress("TooGenericExceptionCaught")
-                val success =
-                    try {
-                        dataChangeNotifier.notifyDataChanged(updateWidget = true, force = true)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // Operation must complete without propagating exception for notification retry.
-                        AppLogger.w("WidgetSettingsSaver: notification attempt $attempt failed with exception", e)
-                        false
-                    }
-
-                if (success) {
-                    return
-                }
-
-                if (attempt < maxAttempts) {
-                    delay(Constants.Flow.RETRY_DELAY_MS.milliseconds)
-                }
-            }
-            AppLogger.e("WidgetSettingsSaver: widget notification failed after $maxAttempts attempts")
-        }
 
         private suspend fun saveGeneralSettings(state: WidgetSettingsState) {
             loader.saveGeneralSettings(state)

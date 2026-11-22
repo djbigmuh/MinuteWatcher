@@ -63,6 +63,11 @@ data class AppSettings(
      */
     val aodSummaryEnabled: Boolean = false,
     /**
+     * Whether the swipe navigation affordance hint on the SIM card screen has been dismissed by the user.
+     * Defaults to false (hint is shown until dismissed).
+     */
+    val swipeHintDismissed: Boolean = false,
+    /**
      * Whether the settings have been successfully loaded from persistent storage.
      * Default state is not loaded.
      */

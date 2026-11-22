@@ -15,6 +15,7 @@ import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
+import com.github.djbigmuh.minutewatcher.core.model.resolveShowSim
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -138,10 +139,13 @@ class WidgetSettingsRepository
          * @throws kotlinx.coroutines.CancellationException if the operation is canceled.
          */
         override suspend fun saveGeneralSettings(state: WidgetSettingsState) {
+            val visibleSimCount = state.simStates.values.count { it.resolveShowSim(state.simListLoadFailed) }
+            val hideBlock = visibleSimCount < 2
+
             appSettingsRepository.updateAppSettings { current ->
                 current.copy(
-                    widgetLayoutMode = state.layoutMode,
-                    widgetSimArrangement = state.simArrangement,
+                    widgetLayoutMode = if (hideBlock) current.widgetLayoutMode else state.layoutMode,
+                    widgetSimArrangement = if (hideBlock) current.widgetSimArrangement else state.simArrangement,
                     widgetTransparency = state.transparency,
                     widgetFontSize = state.fontSize,
                     widgetBackgroundColor = state.backgroundColor,

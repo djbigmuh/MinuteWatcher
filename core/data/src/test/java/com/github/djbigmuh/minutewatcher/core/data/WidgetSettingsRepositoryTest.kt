@@ -250,6 +250,33 @@ class WidgetSettingsRepositoryTest {
             assertEquals(true, result.settingsLoadFailed)
         }
 
+    @Test
+    fun `saveGeneralSettings does not write layoutMode and simArrangement when visible sim count is less than 2`() =
+        runTest {
+            val appSettings = AppSettings(widgetLayoutMode = 1, widgetSimArrangement = 0, isLoaded = true)
+            var capturedSettings: AppSettings? = null
+            whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(appSettings))
+            whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(appSettings))
+            whenever(appSettingsRepository.updateAppSettings(any())).thenAnswer { invocation ->
+                val block = invocation.getArgument<AppSettings.() -> AppSettings>(0)
+                capturedSettings = appSettings.block()
+                Unit
+            }
+
+            val state =
+                WidgetSettingsState(
+                    layoutMode = 3,
+                    simArrangement = 1,
+                    simStates = mapOf(0 to SimSettingsState(showSim = true)),
+                )
+
+            repository.saveGeneralSettings(state)
+
+            assertNotNull(capturedSettings)
+            assertEquals(1, capturedSettings?.widgetLayoutMode)
+            assertEquals(0, capturedSettings?.widgetSimArrangement)
+        }
+
     private fun createMockActiveSims(): List<ActiveSimInfo> =
         listOf(
             createMockSim(0, "id0", isStable = true),
