@@ -110,6 +110,25 @@ val allKtlint =
         description = "Runs ktlintCheck across all subprojects."
     }
 
+val jacocoExclusions = listOf(
+    "**/R.class",
+    "**/R$*.class",
+    "**/BuildConfig.*",
+    "**/Manifest*.*",
+    "**/*_Factory.*",
+    "**/*_Factory$*.*",
+    "**/*_MembersInjector.*",
+    "**/*_Provide*Factory.*",
+    "**/Hilt_*",
+    "**/hilt_aggregated_deps/**",
+    "**/*Hilt*.*",
+    "**/*AppFunction*.*",
+    "**/testFixtures/**",
+    "**/testing/**",
+    "**/CoreDataFakes*.*",
+    "**/*Test*.*",
+)
+
 subprojects {
     val modulePath = path
     val testAggregate = allUnitTests
@@ -125,11 +144,98 @@ subprojects {
         testAggregate.configure { dependsOn("$modulePath:testDebugUnitTest") }
         detektAggregate.configure { dependsOn("$modulePath:detekt") }
         ktlintAggregate.configure { dependsOn("$modulePath:ktlintCheck") }
+
+        val threshold = when (modulePath) {
+            ":core:common" -> 0.95
+            ":core:android" -> 0.90
+            ":core:data" -> 0.85
+            else -> null
+        }
+
+        if (threshold != null) {
+            val reportTask = tasks.register<JacocoReport>("jacocoCoverageReport") {
+                dependsOn("testDebugUnitTest")
+                reports {
+                    xml.required.set(true)
+                    html.required.set(true)
+                }
+                val mainSrc = files("src/main/java")
+                val mainClasses = fileTree("build/tmp/kotlin-classes/debug") {
+                    exclude(jacocoExclusions)
+                }
+                sourceDirectories.setFrom(mainSrc)
+                classDirectories.setFrom(mainClasses)
+                executionData.setFrom(
+                    files(
+                        "build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec",
+                        "build/jacoco/testDebugUnitTest.exec",
+                    ),
+                )
+            }
+
+            val verifyTask = tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
+                dependsOn(reportTask)
+                val mainClasses = fileTree("build/tmp/kotlin-classes/debug") {
+                    exclude(jacocoExclusions)
+                }
+                classDirectories.setFrom(mainClasses)
+                executionData.setFrom(
+                    files(
+                        "build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec",
+                        "build/jacoco/testDebugUnitTest.exec",
+                    ),
+                )
+                violationRules {
+                    rule {
+                        limit {
+                            minimum = threshold.toBigDecimal()
+                        }
+                    }
+                }
+            }
+
+            testAggregate.configure { dependsOn(verifyTask) }
+        }
     }
     plugins.withId("org.jetbrains.kotlin.jvm") {
         testAggregate.configure { dependsOn("$modulePath:test") }
         detektAggregate.configure { dependsOn("$modulePath:detekt") }
         ktlintAggregate.configure { dependsOn("$modulePath:ktlintCheck") }
+
+        if (modulePath == ":core:model") {
+            val reportTask = tasks.register<JacocoReport>("jacocoCoverageReport") {
+                dependsOn("test")
+                reports {
+                    xml.required.set(true)
+                    html.required.set(true)
+                }
+                val mainSrc = files("src/main/java")
+                val mainClasses = fileTree("build/classes/kotlin/main") {
+                    exclude(jacocoExclusions)
+                }
+                sourceDirectories.setFrom(mainSrc)
+                classDirectories.setFrom(mainClasses)
+                executionData.setFrom(fileTree("build/jacoco") { include("*.exec") })
+            }
+
+            val verifyTask = tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
+                dependsOn(reportTask)
+                val mainClasses = fileTree("build/classes/kotlin/main") {
+                    exclude(jacocoExclusions)
+                }
+                classDirectories.setFrom(mainClasses)
+                executionData.setFrom(fileTree("build/jacoco") { include("*.exec") })
+                violationRules {
+                    rule {
+                        limit {
+                            minimum = 0.85.toBigDecimal()
+                        }
+                    }
+                }
+            }
+
+            testAggregate.configure { dependsOn(verifyTask) }
+        }
     }
 }
 

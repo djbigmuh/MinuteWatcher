@@ -1,3 +1,9 @@
+apply(plugin = "jacoco")
+
+configure<JacocoPluginExtension> {
+    toolVersion = "0.8.12"
+}
+
 tasks.withType<Test>().configureEach {
     // Allow Mockito to self-attach on JDK 17+
     jvmArgs("-Dnet.bytebuddy.experimental=true")
@@ -38,10 +44,11 @@ tasks.withType<Test>().configureEach {
     maxParallelForks = 1
     forkEvery = 1
 
-    // Disable JaCoCo agent by default to speed up test execution.
-    // Enable only when -Pcoverage is passed (e.g., during a dedicated coverage run).
-    extensions.findByType(JacocoTaskExtension::class.java)?.isEnabled =
-        providers.gradleProperty("coverage").isPresent
+    extensions.findByType(JacocoTaskExtension::class.java)?.apply {
+        isEnabled = providers.gradleProperty("coverage").isPresent
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
 
     jvmArgs(
         "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
