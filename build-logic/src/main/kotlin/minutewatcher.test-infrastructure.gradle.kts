@@ -5,9 +5,6 @@ configure<JacocoPluginExtension> {
 }
 
 tasks.withType<Test>().configureEach {
-    // Allow Mockito to self-attach on JDK 17+
-    jvmArgs("-Dnet.bytebuddy.experimental=true")
-
     // Centralized Robolectric configuration
     systemProperty("robolectric.graphicsMode", "NATIVE")
     systemProperty("minutewatcher.projectRoot", rootProject.layout.projectDirectory.asFile.absolutePath)
@@ -51,6 +48,8 @@ tasks.withType<Test>().configureEach {
     }
 
     jvmArgs(
+        "-Xshare:off",
+        "-Dnet.bytebuddy.experimental=true",
         "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
         "--add-opens=java.base/java.io=ALL-UNNAMED",
         "--add-opens=java.base/java.net=ALL-UNNAMED",
