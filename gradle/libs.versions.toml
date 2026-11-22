@@ -37,8 +37,10 @@ colorpickerCompose = "1.1.2"
 detekt = "2.0.0-alpha.6"
 desugarJdkLibs = "2.1.5"
 javaxInject = "1"
+byteBuddyAgent = "1.17.7"
 
 [libraries]
+byteBuddyAgent = { group = "net.bytebuddy", name = "byte-buddy-agent", version.ref = "byteBuddyAgent" }
 # DI - Hilt
 daggerHiltAndroid = { group = "com.google.dagger", name = "hilt-android", version.ref = "hiltVersion" }
 daggerHiltAndroidTesting = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hiltVersion" }

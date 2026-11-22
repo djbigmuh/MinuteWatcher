@@ -4,6 +4,13 @@ configure<JacocoPluginExtension> {
     toolVersion = "0.8.12"
 }
 
+val libs = the<VersionCatalogsExtension>().named("libs")
+val mockitoAgentConfig = project.configurations.create("mockitoAgentConfig") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+project.dependencies.add("mockitoAgentConfig", libs.findLibrary("byteBuddyAgent").get())
+
 tasks.withType<Test>().configureEach {
     val isVerbose = providers.gradleProperty("verboseTests").isPresent
 
@@ -42,8 +49,8 @@ tasks.withType<Test>().configureEach {
 
     // Policy: Reliability over speed.
     maxHeapSize = "1536m"
-    maxParallelForks = 1
-    forkEvery = 1
+    maxParallelForks = maxOf(1, minOf(Runtime.getRuntime().availableProcessors() / 2, 4))
+    forkEvery = 100
 
     testLogging {
         showStandardStreams = isVerbose
@@ -65,6 +72,7 @@ tasks.withType<Test>().configureEach {
 
     jvmArgs(
         "-Xshare:off",
+        "-javaagent:${mockitoAgentConfig.singleFile.absolutePath}",
         "-Dnet.bytebuddy.experimental=true",
         "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
         "--add-opens=java.base/java.io=ALL-UNNAMED",
