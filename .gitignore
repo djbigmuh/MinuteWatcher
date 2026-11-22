@@ -1,34 +1,22 @@
-*.iml
+# Build outputs, cache, and generated files
+/build/
+**/build/
+**/generated/
 .gradle/
 .gradle_home/
-.idea/*
-!.idea/inspectionProfiles/
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-app/release/
-app/build/
-build/
-build/diagnostics/
-*.log
+.externalNativeBuild/
+.cxx/
 .kotlin/
 .artifacts/
 .agents/
+app/release/
+app/src/testBenchmark/
 
-# Sensitive files
-**/local.properties
-**/google-services.json
-google-services.json
-local.properties
-keystore.properties
-release.keystore
-**/*.jks
-**/*.keystore
-keystore/
-
-# OS/IDE
+# IDE and OS
+*.iml
+.idea/*
+!.idea/inspectionProfiles/
+.DS_Store
 Thumbs.db
 .settings/
 .project
@@ -37,32 +25,40 @@ Thumbs.db
 *.bak
 *.tmp
 *.swp
+.android/
+.robolectric/
 
-# Audit scripts (local data and verification/audit scripts; not tracked)
-audit_dump/
-verify_status.txt
-verify_output.txt
-*.bat
-!gradlew.bat
-*.ps1
+# Sensitive files and keys
+**/local.properties
+**/google-services.json
+keystore.properties
+release.keystore
+**/*.jks
+**/*.keystore
+keystore/
 
-# Debug/diagnostic artifacts (local only)
+# Scripts, logs, and diagnostic artifacts
+*.log
+replay_pid*.log
 build_log.txt
 deps_ksp.txt
 ksp_log.txt
 detekt_output.txt
 ktlint_output.txt
-
-# Diagnostic scripts (local only)
+verify_status.txt
+verify_output.txt
 diag_result.txt
-
-# Tools local output
-tools/iconforge/out/
-tools/plmn_audit/reports/
-
-# Junk and local output files
-*.exe
 *_output.txt
 files_with_*.txt
-.android/
-.robolectric/
+*.exe
+*.bat
+!gradlew.bat
+*.ps1
+
+# Tools local cache and outputs
+__pycache__/
+*.pyc
+audit_dump/
+tools/iconforge/out/
+tools/plmn_audit/cache/
+tools/plmn_audit/reports/
