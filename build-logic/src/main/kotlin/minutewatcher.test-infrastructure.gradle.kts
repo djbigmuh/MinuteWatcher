@@ -5,6 +5,8 @@ configure<JacocoPluginExtension> {
 }
 
 tasks.withType<Test>().configureEach {
+    val isVerbose = providers.gradleProperty("verboseTests").isPresent
+
     // Centralized Robolectric configuration
     systemProperty("robolectric.graphicsMode", "NATIVE")
     systemProperty("minutewatcher.projectRoot", rootProject.layout.projectDirectory.asFile.absolutePath)
@@ -34,12 +36,26 @@ tasks.withType<Test>().configureEach {
     systemProperty("robolectric.dependency.repo.url", "https://repo1.maven.org/maven2/")
     systemProperty("user.home", roboUserHomeFile.absolutePath)
     systemProperty("java.io.tmpdir", testTmpDirFile.absolutePath)
-    systemProperty("robolectric.logging.enabled", "true")
+    if (isVerbose) {
+        systemProperty("robolectric.logging.enabled", "true")
+    }
 
     // Policy: Reliability over speed.
     maxHeapSize = "1536m"
     maxParallelForks = 1
     forkEvery = 1
+
+    testLogging {
+        showStandardStreams = isVerbose
+        events(
+            org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED,
+        )
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+    }
 
     extensions.findByType(JacocoTaskExtension::class.java)?.apply {
         isEnabled = providers.gradleProperty("coverage").isPresent
