@@ -21,6 +21,13 @@ data class ResolutionResult(
 /**
  * Logic for resolving operator name from MCC/MNC database.
  * Optimized with thread-safe cache and explicit resource mapping.
+ *
+ * Deterministic Brand Resolution Priority:
+ * 1. Exact / Token Match: Specific operator name resolved
+ *    against known operator brand tokens and keys.
+ * 2. Database Lookup / Virtual Operators: Database lookup via
+ *    candidate MCC/MNC codes (including virtual operator rules).
+ * 3. Fallback: Formatted MCC/MNC string or generic SIM name fallback.
  */
 object OperatorResolver {
     @Volatile
@@ -106,10 +113,17 @@ object OperatorResolver {
      * Loads the MCC/MNC database from assets.
      */
     private fun loadDbInternal(context: Context): Map<String, String> =
-        @Suppress("TooGenericExceptionCaught")
         try {
+            val assetManager = context.assets ?: return emptyMap()
+            val inputStream =
+                try {
+                    assetManager.open("mcc_mnc_db.json")
+                } catch (_: IOException) {
+                    null
+                } ?: return emptyMap()
+
             val jsonString =
-                context.assets.open("mcc_mnc_db.json").use { input ->
+                inputStream.use { input ->
                     BufferedReader(InputStreamReader(input, Charsets.UTF_8)).use { it.readText() }
                 }
 
@@ -122,10 +136,8 @@ object OperatorResolver {
         } catch (e: IOException) {
             AppLogger.e("Failed to load MCC/MNC database from assets", e)
             emptyMap()
-        } catch (e: Exception) {
-            // Operation must complete without propagating exception to ensure system stability and fault tolerance.
-            // Catches all other exceptions to ensure db is set to emptyMap
-            AppLogger.e("Unexpected error loading MCC/MNC database", e)
+        } catch (e: org.json.JSONException) {
+            AppLogger.e("Failed to parse MCC/MNC database JSON", e)
             emptyMap()
         }
 

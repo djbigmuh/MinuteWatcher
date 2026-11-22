@@ -495,4 +495,41 @@ class OperatorResolverTest {
         assertNull(unmappedSmart.brandKey)
         assertEquals("Smart", unmappedSmart.displayName)
     }
+
+    @Test
+    fun `boundary test empty database catalog`() {
+        whenever(assets.open(any())).thenAnswer {
+            ByteArrayInputStream("{}".toByteArray(Charsets.UTF_8))
+        }
+        OperatorResolver.reset()
+
+        val result = OperatorResolver.resolve(context, "", listOf("25001"), 0)
+        assertEquals("Operator with mcc MCC:250 MNC:01", result.displayName)
+        assertNull(result.brandKey)
+    }
+
+    @Test
+    fun `boundary test missing code`() {
+        val result = OperatorResolver.resolve(context, "", listOf("99999"), 0)
+        assertEquals("Operator with mcc MCC:999 MNC:99", result.displayName)
+        assertNull(result.brandKey)
+    }
+
+    @Test
+    fun `boundary test unknown operator`() {
+        val result = OperatorResolver.resolve(context, "NonExistentOperatorBrandXYZ", emptyList(), 0)
+        assertEquals("NonExistentOperatorBrandXYZ", result.displayName)
+        assertNull(result.brandKey)
+    }
+
+    @Test
+    fun `boundary test operator change with same identity`() {
+        val resultFirst = OperatorResolver.resolve(context, "", listOf("25001"), 0)
+        assertEquals("MTS", resultFirst.displayName)
+        assertEquals("operator_mts", resultFirst.brandKey)
+
+        val resultSecond = OperatorResolver.resolve(context, "", listOf("25099"), 0)
+        assertEquals("Beeline", resultSecond.displayName)
+        assertEquals("operator_beeline", resultSecond.brandKey)
+    }
 }

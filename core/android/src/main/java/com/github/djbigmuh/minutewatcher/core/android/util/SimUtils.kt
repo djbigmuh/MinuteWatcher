@@ -43,10 +43,7 @@ object SimUtils {
                 operatorName.isNotEmpty() -> trimmed
                 else -> genericOperatorName(localizedContext, slot)
             }
-        } catch (
-            @Suppress("TooGenericExceptionCaught") e: Exception,
-        ) {
-            // Operation must complete without propagating exception to ensure system stability and fault tolerance.
+        } catch (e: android.content.res.Resources.NotFoundException) {
             AppLogger.e("Error resolving short operator name for: $operatorName", e)
             if (operatorName.isNotEmpty()) trimmed else genericOperatorName(localizedContext, slot)
         }
@@ -64,10 +61,7 @@ object SimUtils {
     ): String =
         try {
             context.getString(resId)
-        } catch (
-            @Suppress("TooGenericExceptionCaught") e: Exception,
-        ) {
-            // Operation must complete without propagating exception to ensure system stability and fault tolerance.
+        } catch (e: android.content.res.Resources.NotFoundException) {
             AppLogger.w("Resource not found or failed to load: $resId. Using default: $default", e)
             default
         }
