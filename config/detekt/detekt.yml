@@ -117,7 +117,7 @@ style:
     ignoreAnnotated:
       - 'androidx.compose.runtime.Composable'
       - 'Composable'
-    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    excludes: [ '**/test/**', '**/testFixtures/**', '**/testBenchmark/**', '**/androidTest/**' ]
   ForbiddenMethodCall:
     active: true
     methods:
@@ -127,7 +127,7 @@ style:
         value: 'kotlin.io.println'
       - reason: 'Thread.sleep is forbidden in production code. Use delay or non-blocking synchronization instead.'
         value: 'java.lang.Thread.sleep'
-    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    excludes: [ '**/test/**', '**/testFixtures/**', '**/testBenchmark/**', '**/androidTest/**' ]
   ForbiddenImport:
     active: true
     forbiddenImports:
@@ -152,12 +152,12 @@ style:
     active: false # Disabled to allow utility extension/helper methods on value data classes
   MultilineRawStringIndentation:
     active: true
-    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    excludes: [ '**/test/**', '**/testFixtures/**', '**/testBenchmark/**', '**/androidTest/**' ]
   ReturnCount:
     active: true
     max: 4
     excludeGuardClauses: true
-    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    excludes: [ '**/test/**', '**/testFixtures/**', '**/testBenchmark/**', '**/androidTest/**' ]
   UseLet:
     active: false # Disabled to allow explicit null checking
 
@@ -165,10 +165,10 @@ potential-bugs:
   active: true
   UnsafeCallOnNullableType:
     active: true
-    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    excludes: [ '**/test/**', '**/testFixtures/**', '**/testBenchmark/**', '**/androidTest/**' ]
   UnnecessaryNotNullOperator:
     active: true
-    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    excludes: [ '**/test/**', '**/testFixtures/**', '**/testBenchmark/**', '**/androidTest/**' ]
   EqualsAlwaysReturnsTrueOrFalse:
     active: true
   InvalidRange:
