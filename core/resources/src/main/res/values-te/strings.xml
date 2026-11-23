@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">డేటా పరిమితిని చూపించు</string>
     <string name="display_name">పేరును చూపించు</string>
     <string name="display_icon">ఐకాన్‌ను చూపించు</string>
-    <string name="show_sim_checkbox">ఈ సిమ్ కార్డ్‌ని చూపించు</string>
     <string name="preview">ముందస్తు వీక్షణ</string>
     <string name="layout_mode_title">లేఅవుట్ మోడ్</string>
     <string name="sim_arrangement_prompt">సిమ్ అమరికను ఎంచుకోండి</string>

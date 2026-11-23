@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">ਡਾਟਾ ਸੀਮਾ ਦਿਖਾਓ</string>
     <string name="display_name">ਨਾਮ ਦਿਖਾਓ</string>
     <string name="display_icon">ਆਈਕਨ ਦਿਖਾਓ</string>
-    <string name="show_sim_checkbox">ਇਹ ਸਿਮ ਕਾਰਡ ਦਿਖਾਓ</string>
     <string name="preview">ਪੂਰਵ-ਝਲਕ</string>
     <string name="layout_mode_title">ਲੇਆਊਟ ਮੋਡ</string>
     <string name="sim_arrangement_prompt">ਸਿਮ ਤਰਤੀਬ ਚੁਣੋ</string>

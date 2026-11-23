@@ -20,7 +20,9 @@ import kotlin.math.pow
 class ShortcutIconConsistencyTest {
     @Test
     fun `test shortcut icon asset and rendering compliance`() {
-        val coreResDirProp = System.getProperty("minutewatcher.coreResourcesResDir") ?: "src/main/res"
+        val coreResDirProp =
+            System.getProperty("minutewatcher.coreResourcesResDir")
+                ?: error("System property minutewatcher.coreResourcesResDir is not set")
         val coreResDir = File(coreResDirProp)
         val shortcutFile = File(coreResDir, "drawable/ic_shortcut_usage.xml")
 

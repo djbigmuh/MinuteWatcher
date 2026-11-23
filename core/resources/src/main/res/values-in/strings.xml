@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">Tampilkan batas lalu lintas</string>
     <string name="display_name">Tampilkan nama</string>
     <string name="display_icon">Tampilkan ikon</string>
-    <string name="show_sim_checkbox">Tampilkan kartu SIM ini</string>
     <string name="preview">Pratinjau</string>
     <string name="layout_mode_title">Mode tata letak</string>
     <string name="sim_arrangement_prompt">Pilih susunan SIM</string>

@@ -5,31 +5,6 @@ import org.junit.Test
 import java.io.File
 
 class ArchitectureConstraintsTest {
-    private val projectRoot: File by lazy {
-        val rootPath =
-            System.getProperty("minutewatcher.projectRoot")
-                ?: error("System property minutewatcher.projectRoot is not set")
-        File(rootPath)
-    }
-
-    private fun findProductionKtFiles(): List<File> {
-        val allFiles = projectRoot.walkTopDown().toList()
-        return allFiles.filter { file ->
-            if (!file.isFile || file.extension != "kt") return@filter false
-            val path = file.absolutePath.replace('\\', '/')
-            path.contains("/src/main/") && !path.contains("/build/")
-        }
-    }
-
-    private fun findAllKtFiles(): List<File> {
-        val allFiles = projectRoot.walkTopDown().toList()
-        return allFiles.filter { file ->
-            if (!file.isFile || (file.extension != "kt" && file.extension != "kts")) return@filter false
-            val path = file.absolutePath.replace('\\', '/')
-            !path.contains("/build/") && !path.contains("/.gradle/")
-        }
-    }
-
     private fun relativePath(file: File): String = file.relativeTo(projectRoot).path.replace('\\', '/')
 
     private fun isCodeLine(line: String): Boolean {
@@ -274,4 +249,37 @@ class ArchitectureConstraintsTest {
             fail("Blocking operations on main dispatcher components are forbidden:\n" + violations.joinToString("\n"))
         }
     }
+
+    companion object {
+        private val projectRoot: File by lazy {
+            val rootPath =
+                System.getProperty("minutewatcher.projectRoot")
+                    ?: error("System property minutewatcher.projectRoot is not set")
+            File(rootPath)
+        }
+
+        private val productionKtFiles: List<File> by lazy {
+            projectRoot
+                .walkTopDown()
+                .filter { file ->
+                    if (!file.isFile || file.extension != "kt") return@filter false
+                    val path = file.absolutePath.replace('\\', '/')
+                    path.contains("/src/main/") && !path.contains("/build/")
+                }.toList()
+        }
+
+        private val allKtFiles: List<File> by lazy {
+            projectRoot
+                .walkTopDown()
+                .filter { file ->
+                    if (!file.isFile || (file.extension != "kt" && file.extension != "kts")) return@filter false
+                    val path = file.absolutePath.replace('\\', '/')
+                    !path.contains("/build/") && !path.contains("/.gradle/")
+                }.toList()
+        }
+    }
+
+    private fun findProductionKtFiles(): List<File> = productionKtFiles
+
+    private fun findAllKtFiles(): List<File> = allKtFiles
 }

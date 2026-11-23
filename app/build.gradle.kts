@@ -9,78 +9,76 @@ plugins {
     alias(libs.plugins.androidxBaselineprofile)
 }
 
+val signingPropertiesFile = rootProject.file("signing.properties")
+val signingProps = Properties()
+if (signingPropertiesFile.exists()) {
+    signingPropertiesFile.inputStream().use { signingProps.load(it) }
+}
+val storePath =
+    signingProps.getProperty("storeFile") ?: providers.environmentVariable("MINUTEWATCHER_STORE_FILE").orNull
+val storePass =
+    signingProps.getProperty("storePassword")
+        ?: providers.environmentVariable("MINUTEWATCHER_STORE_PASSWORD").orNull
+val keyAl = signingProps.getProperty("keyAlias") ?: providers.environmentVariable("MINUTEWATCHER_KEY_ALIAS").orNull
+val keyPass =
+    signingProps.getProperty("keyPassword") ?: providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull
+
+val keystoreFile =
+    if (storePath != null) {
+        file(storePath)
+    } else {
+        layout.projectDirectory.file("release.keystore").asFile
+    }
+
+val hasReleaseSigning =
+    keystoreFile.exists() &&
+        !storePass.isNullOrEmpty() &&
+        !keyAl.isNullOrEmpty() &&
+        !keyPass.isNullOrEmpty()
+
+if (!hasReleaseSigning) {
+    val missingParams = mutableListOf<String>()
+    if (!keystoreFile.exists()) {
+        missingParams.add(
+            "release.keystore file (expected at app/release.keystore or signing.properties)",
+        )
+    }
+    if (storePass.isNullOrEmpty()) {
+        missingParams.add(
+            "storePassword (in signing.properties or MINUTEWATCHER_STORE_PASSWORD env var)",
+        )
+    }
+    if (keyAl.isNullOrEmpty()) {
+        missingParams.add(
+            "keyAlias (in signing.properties or MINUTEWATCHER_KEY_ALIAS env var)",
+        )
+    }
+    if (keyPass.isNullOrEmpty()) {
+        missingParams.add(
+            "keyPassword (in signing.properties or MINUTEWATCHER_KEY_PASSWORD env var)",
+        )
+    }
+
+    val isReleaseBuildRequested =
+        rootProject.gradle.startParameter.taskNames.any {
+            it.contains("Release", ignoreCase = true)
+        }
+    if (isReleaseBuildRequested) {
+        throw GradleException(
+            "Release signing configuration is missing mandatory parameters: ${missingParams.joinToString(", ")}",
+        )
+    } else {
+        logger.warn("Release signing is disabled due to missing parameters: ${missingParams.joinToString(", ")}")
+    }
+}
+
 configure<ApplicationExtension> {
     namespace = "com.github.djbigmuh.minutewatcher"
 
     defaultConfig {
         applicationId = "com.github.djbigmuh.minutewatcher"
-        versionCode = 413
-        versionName = "4.3.0"
-    }
-
-    val signingPropertiesFile = rootProject.file("signing.properties")
-    val signingProps = Properties()
-    if (signingPropertiesFile.exists()) {
-        signingPropertiesFile.inputStream().use { signingProps.load(it) }
-    }
-    val storePath =
-        signingProps.getProperty("storeFile") ?: providers.environmentVariable("MINUTEWATCHER_STORE_FILE").orNull
-    val storePass =
-        signingProps.getProperty("storePassword")
-            ?: providers.environmentVariable("MINUTEWATCHER_STORE_PASSWORD").orNull
-    val keyAl = signingProps.getProperty("keyAlias") ?: providers.environmentVariable("MINUTEWATCHER_KEY_ALIAS").orNull
-    val keyPass =
-        signingProps.getProperty("keyPassword") ?: providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull
-
-    val keystoreFile =
-        if (storePath !=
-            null
-        ) {
-            file(storePath)
-        } else {
-            layout.projectDirectory.file("release.keystore").asFile
-        }
-
-    val hasReleaseSigning =
-        keystoreFile.exists() &&
-            !storePass.isNullOrEmpty() &&
-            !keyAl.isNullOrEmpty() &&
-            !keyPass.isNullOrEmpty()
-
-    if (!hasReleaseSigning) {
-        val missingParams = mutableListOf<String>()
-        if (!keystoreFile.exists()) {
-            missingParams.add(
-                "release.keystore file (expected at app/release.keystore or signing.properties)",
-            )
-        }
-        if (storePass.isNullOrEmpty()) {
-            missingParams.add(
-                "storePassword (in signing.properties or MINUTEWATCHER_STORE_PASSWORD env var)",
-            )
-        }
-        if (keyAl.isNullOrEmpty()) {
-            missingParams.add(
-                "keyAlias (in signing.properties or MINUTEWATCHER_KEY_ALIAS env var)",
-            )
-        }
-        if (keyPass.isNullOrEmpty()) {
-            missingParams.add(
-                "keyPassword (in signing.properties or MINUTEWATCHER_KEY_PASSWORD env var)",
-            )
-        }
-
-        val isReleaseBuildRequested =
-            rootProject.gradle.startParameter.taskNames.any {
-                it.contains("Release", ignoreCase = true)
-            }
-        if (isReleaseBuildRequested) {
-            throw GradleException(
-                "Release signing configuration is missing mandatory parameters: ${missingParams.joinToString(", ")}",
-            )
-        } else {
-            logger.warn("Release signing is disabled due to missing parameters: ${missingParams.joinToString(", ")}")
-        }
+        versionCode = 101
+        versionName = "1.0.1"
     }
 
     signingConfigs {
@@ -101,8 +99,6 @@ configure<ApplicationExtension> {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-        }
-        debug {
         }
         create("benchmark") {
             initWith(getByName("release"))

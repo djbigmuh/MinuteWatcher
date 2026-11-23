@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">显示流量限制</string>
     <string name="display_name">显示名称</string>
     <string name="display_icon">显示图标</string>
-    <string name="show_sim_checkbox">显示此 SIM 卡</string>
     <string name="preview">预览</string>
     <string name="layout_mode_title">布局模式</string>
     <string name="sim_arrangement_prompt">选择 SIM 卡排列方式</string>

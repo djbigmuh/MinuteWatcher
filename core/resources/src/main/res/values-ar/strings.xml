@@ -36,7 +36,6 @@
     <string name="display_traffic_limit">إظهار حد حركة البيانات</string>
     <string name="display_name">إظهار الاسم</string>
     <string name="display_icon">إظهار الأيقونة</string>
-    <string name="show_sim_checkbox">إظهار هذه البطاقة</string>
     <string name="preview">معاينة</string>
     <string name="layout_mode_title">وضع التخطيط</string>
     <string name="sim_arrangement_prompt">اختر ترتيب SIM</string>

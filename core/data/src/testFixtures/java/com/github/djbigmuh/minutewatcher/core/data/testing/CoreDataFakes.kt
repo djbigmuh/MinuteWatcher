@@ -37,7 +37,6 @@ class FakeMockSimProvider : MockSimProvider {
      * Returns `null` as test double default stub behavior; other test configurations
      * or benchmark variants supply actual mock SIM data.
      */
-    @Suppress("SameReturnValue")
     override fun getMockSims(count: Int): List<ActiveSimInfo>? = null
 }
 

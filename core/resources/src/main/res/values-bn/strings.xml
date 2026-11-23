@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">ট্রাফিকের সীমা দেখান</string>
     <string name="display_name">নাম দেখান</string>
     <string name="display_icon">আইকন দেখান</string>
-    <string name="show_sim_checkbox">এই সিম কার্ডটি দেখান</string>
     <string name="preview">পূর্বরূপ</string>
     <string name="layout_mode_title">লেআউট মোড</string>
     <string name="sim_arrangement_prompt">সিম বিন্যাস চয়ন করুন</string>

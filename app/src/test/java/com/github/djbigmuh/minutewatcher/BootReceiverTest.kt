@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -14,11 +16,16 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.github.djbigmuh.minutewatcher.core.common.di.AppDataStore
+import com.github.djbigmuh.minutewatcher.core.common.di.SimDataStore
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.data.WorkScheduler
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -162,4 +169,30 @@ class BootReceiverTest {
 
             verify(mockPendingResult, org.mockito.Mockito.times(1)).finish()
         }
+
+    @Test
+    fun `DataStore instances provided by DI are singletons`() {
+        val entryPoint =
+            dagger.hilt.android.EntryPointAccessors.fromApplication(
+                context,
+                DataStoreEntryPoint::class.java,
+            )
+        val appDs1 = entryPoint.appDataStore()
+        val appDs2 = entryPoint.appDataStore()
+        org.junit.Assert.assertSame(appDs1, appDs2)
+
+        val simDs1 = entryPoint.simDataStore()
+        val simDs2 = entryPoint.simDataStore()
+        org.junit.Assert.assertSame(simDs1, simDs2)
+    }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface DataStoreEntryPoint {
+    @AppDataStore
+    fun appDataStore(): DataStore<Preferences>
+
+    @SimDataStore
+    fun simDataStore(): DataStore<Preferences>
 }

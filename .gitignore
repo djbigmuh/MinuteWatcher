@@ -50,6 +50,7 @@ verify_output.txt
 diag_result.txt
 *_output.txt
 files_with_*.txt
+ProjectDump*.txt
 *.exe
 *.bat
 !gradlew.bat

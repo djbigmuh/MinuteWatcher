@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">데이터 한도 표시</string>
     <string name="display_name">이름 표시</string>
     <string name="display_icon">아이콘 표시</string>
-    <string name="show_sim_checkbox">이 SIM 카드 표시</string>
     <string name="preview">미리보기</string>
     <string name="layout_mode_title">레이아웃 모드</string>
     <string name="sim_arrangement_prompt">SIM 배치 선택</string>

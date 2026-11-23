@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">Veri limitini göster</string>
     <string name="display_name">İsmi göster</string>
     <string name="display_icon">Simgeyi göster</string>
-    <string name="show_sim_checkbox">Bu SIM kartı göster</string>
     <string name="preview">Önizleme</string>
     <string name="layout_mode_title">Düzen modu</string>
     <string name="sim_arrangement_prompt">SIM düzenini seçin</string>

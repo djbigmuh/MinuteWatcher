@@ -28,6 +28,7 @@ class TrafficDeltaCalculator
         ): Boolean {
             // Operation must complete without propagating exception for baseline and usage update;
             // failure degrades to a skipped update.
+            // Caught Exception required for safe delta update fallback on storage errors
             @Suppress("TooGenericExceptionCaught")
             try {
                 if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
@@ -79,6 +80,7 @@ class TrafficDeltaCalculator
         ): Boolean {
             // Operation must complete without propagating exception for delta handling;
             // failure degrades to a skipped update.
+            // Caught Exception required for safe traffic delta calculation error fallback
             @Suppress("TooGenericExceptionCaught")
             try {
                 val deltaBytes = currentBytes - lastTotalBytes

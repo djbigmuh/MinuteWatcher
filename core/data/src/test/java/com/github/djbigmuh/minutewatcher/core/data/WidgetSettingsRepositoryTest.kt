@@ -20,7 +20,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -188,11 +187,8 @@ class WidgetSettingsRepositoryTest {
                 appSettingsRepository.updateAppSettings(any()),
             ).thenThrow(IllegalStateException("Simulated failure"))
 
-            assertThrows(IllegalStateException::class.java) {
-                runTest {
-                    repository.saveGeneralSettings(state)
-                }
-            }
+            val failure = runCatching { repository.saveGeneralSettings(state) }.exceptionOrNull()
+            assertTrue("Expected IllegalStateException", failure is IllegalStateException)
 
             verify(appFunctionAvailability, never()).setAssistantAccessEnabled(any())
         }

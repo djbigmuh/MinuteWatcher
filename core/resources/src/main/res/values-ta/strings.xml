@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">டேட்டா வரம்பைக் காட்டு</string>
     <string name="display_name">பெயரைக் காட்டு</string>
     <string name="display_icon">ஐகானைக் காட்டு</string>
-    <string name="show_sim_checkbox">இந்த சிம் கார்டைக் காட்டு</string>
     <string name="preview">முன்னோட்டம்</string>
     <string name="layout_mode_title">அமைப்பியல் பயன்முறை</string>
     <string name="sim_arrangement_prompt">சிம் அமைப்பைத் தேர்ந்தெடுக்கவும்</string>

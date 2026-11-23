@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">نمایش حد داده</string>
     <string name="display_name">نمایش نام</string>
     <string name="display_icon">نمایش نماد</string>
-    <string name="show_sim_checkbox">نمایش این سیم‌کارت</string>
     <string name="preview">پیش‌نمایش</string>
     <string name="layout_mode_title">حالت چیدمان</string>
     <string name="sim_arrangement_prompt">چیدمان سیم‌کارت را انتخاب کنید</string>

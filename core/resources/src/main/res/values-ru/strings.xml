@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">Показывать лимит трафика</string>
     <string name="display_name">Показывать название</string>
     <string name="display_icon">Показывать иконку</string>
-    <string name="show_sim_checkbox">Отображать эту SIM-карту</string>
     <string name="preview">Предпросмотр</string>
     <string name="layout_mode_title">Режим компоновки</string>
     <string name="sim_arrangement_prompt">Выберите расположение SIM</string>

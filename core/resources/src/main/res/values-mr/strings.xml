@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">डेटा मर्यादा दाखवा</string>
     <string name="display_name">नाव दाखवा</string>
     <string name="display_icon">आयकॉन दाखवा</string>
-    <string name="show_sim_checkbox">हे सिम कार्ड दाखवा</string>
     <string name="preview">पूर्वावलोकन</string>
     <string name="layout_mode_title">लेआउट मोड</string>
     <string name="sim_arrangement_prompt">सिम व्यवस्था निवडा</string>

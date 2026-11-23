@@ -23,7 +23,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -126,13 +125,8 @@ class UsageSummaryProviderTest {
                 }
             val provider = UsageSummaryProvider(fakeRepo)
 
-            withTimeout(5.seconds) {
-                assertThrows(AppFunctionElementNotFoundException::class.java) {
-                    runTest(testDispatcher) {
-                        provider.getUsageSummary()
-                    }
-                }
-            }
+            val failure = runCatching { provider.getUsageSummary() }.exceptionOrNull()
+            assertTrue(failure is AppFunctionElementNotFoundException)
         }
 
     @Test
@@ -142,13 +136,8 @@ class UsageSummaryProviderTest {
             val fakeRepo = FakeUsageStateRepository(emptySimsSnapshot)
             val provider = UsageSummaryProvider(fakeRepo)
 
-            withTimeout(5.seconds) {
-                assertThrows(AppFunctionElementNotFoundException::class.java) {
-                    runTest(testDispatcher) {
-                        provider.getUsageSummary()
-                    }
-                }
-            }
+            val failure = runCatching { provider.getUsageSummary() }.exceptionOrNull()
+            assertTrue(failure is AppFunctionElementNotFoundException)
         }
 
     @Test
@@ -162,13 +151,8 @@ class UsageSummaryProviderTest {
                 }
             val provider = UsageSummaryProvider(fakeRepo)
 
-            withTimeout(5.seconds) {
-                assertThrows(AppFunctionElementNotFoundException::class.java) {
-                    runTest(testDispatcher) {
-                        provider.getUsageSummary()
-                    }
-                }
-            }
+            val failure = runCatching { provider.getUsageSummary() }.exceptionOrNull()
+            assertTrue(failure is AppFunctionElementNotFoundException)
         }
 
     @Test
@@ -182,13 +166,8 @@ class UsageSummaryProviderTest {
                 }
             val provider = UsageSummaryProvider(fakeRepo)
 
-            withTimeout(5.seconds) {
-                assertThrows(CancellationException::class.java) {
-                    runTest(testDispatcher) {
-                        provider.getUsageSummary()
-                    }
-                }
-            }
+            val failure = runCatching { provider.getUsageSummary() }.exceptionOrNull()
+            assertTrue(failure is CancellationException)
         }
 
     @Test

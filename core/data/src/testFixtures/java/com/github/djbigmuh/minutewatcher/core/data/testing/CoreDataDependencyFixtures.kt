@@ -45,7 +45,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
-@Suppress("LongParameterList")
 fun createSimDiscoveryDependencies(
     context: Context = mock(),
     subscriptionManager: SubscriptionManager? = mock(),
@@ -59,7 +58,6 @@ fun createSimDiscoveryDependencies(
         permissionStateNotifier = permissionStateNotifier,
     )
 
-@Suppress("LongParameterList")
 fun createUsageRepositoryDependencies(
     simIdentityRepository: SimIdentityRepository = FakeSimIdentityRepository(),
     simUsageRepository: SimUsageRepository = FakeSimUsageRepository(),
@@ -77,7 +75,6 @@ fun createUsageRepositoryDependencies(
         timeProvider = timeProvider,
     )
 
-@Suppress("LongParameterList")
 fun createTrafficTrackerDependencies(
     simIdentityRepository: SimIdentityRepository = FakeSimIdentityRepository(),
     simUsageRepository: SimUsageRepository = FakeSimUsageRepository(),
@@ -107,7 +104,6 @@ fun createTrafficTrackerDependencies(
         timeProvider = timeProvider,
     )
 
-@Suppress("LongParameterList")
 fun createInitialSetupWorkerDependencies(
     callTracker: CallTracker = mock(),
     trafficTracker: TrafficTracker = mock(),
@@ -135,7 +131,6 @@ fun createInitialSetupWorkerDependencies(
         permissionManager = permissionManager,
     )
 
-@Suppress("LongParameterList")
 fun createUsageWorkerDependencies(
     simNotificationFlagsRepository: SimNotificationFlagsRepository = FakeSimNotificationFlagsRepository(),
     appSettingsRepository: AppSettingsRepository = FakeAppSettingsRepository(),
@@ -159,7 +154,6 @@ fun createUsageWorkerDependencies(
         timeProvider = timeProvider,
     )
 
-@Suppress("LongParameterList")
 fun createTestSimIdentityRepository(
     discoveryDeps: SimDiscoveryDependencies = createSimDiscoveryDependencies(),
     dataStore: DataStore<Preferences> = createTestDataStore(),

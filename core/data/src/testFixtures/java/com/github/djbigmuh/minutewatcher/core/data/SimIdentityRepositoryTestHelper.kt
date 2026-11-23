@@ -8,8 +8,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.SimIdentitySeedRepository
 import kotlinx.coroutines.CoroutineScope
 
 object SimIdentityRepositoryTestHelper {
-    // @Suppress("LongParameterList") is required for test factory parameter aggregation.
-    @Suppress("LongParameterList")
     fun createRepository(
         discoveryDeps: SimDiscoveryDependencies,
         dataStore: DataStore<Preferences>,

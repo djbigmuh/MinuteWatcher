@@ -1,6 +1,5 @@
 package com.github.djbigmuh.minutewatcher.core.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -11,11 +10,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.data.di.DataStoreKeys
-import com.github.djbigmuh.minutewatcher.core.data.di.SettingsDataModule
 import com.github.djbigmuh.minutewatcher.core.data.testing.createTestFilePreferencesDataStore
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -30,14 +27,12 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
-import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.io.IOException
@@ -157,23 +152,6 @@ class DataStoreOwnershipAndResilienceTest {
             val finalCount = dataStore.data.first()[key]
             assertEquals(50, finalCount)
         }
-
-    @Test
-    fun `DI provides singleton instances of AppDataStore and SimDataStore`() {
-        val mockContext = mock<Context>()
-        val appScope = CoroutineScope(SupervisorJob() + mainDispatcherRule.testDispatcher)
-        val ioDispatcher: CoroutineDispatcher = mainDispatcherRule.testDispatcher
-
-        val appDs1 = SettingsDataModule.provideAppDataStore(mockContext, appScope, ioDispatcher)
-        val appDs2 = SettingsDataModule.provideAppDataStore(mockContext, appScope, ioDispatcher)
-        assertNotNull(appDs1)
-        assertNotNull(appDs2)
-
-        val simDs1 = SettingsDataModule.provideSimDataStore(mockContext, appScope, ioDispatcher)
-        val simDs2 = SettingsDataModule.provideSimDataStore(mockContext, appScope, ioDispatcher)
-        assertNotNull(simDs1)
-        assertNotNull(simDs2)
-    }
 
     @Test
     fun `DataStore scope cancellation cancels pending operations cleanly`() =

@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">ٹریفک کی حد دکھائیں</string>
     <string name="display_name">نام دکھائیں</string>
     <string name="display_icon">آئیکن دکھائیں</string>
-    <string name="show_sim_checkbox">یہ SIM کارڈ دکھائیں</string>
     <string name="preview">پیش منظر</string>
     <string name="layout_mode_title">لے آؤٹ موڈ</string>
     <string name="sim_arrangement_prompt">SIM کی ترتیب منتخب کریں</string>

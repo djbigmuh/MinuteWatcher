@@ -135,6 +135,10 @@ subprojects {
     val detektAggregate = allDetekt
     val ktlintAggregate = allKtlint
 
+    tasks.matching { it.name.endsWith("AarMetadata") }.configureEach {
+        enabled = false
+    }
+
     plugins.withId("com.android.application") {
         testAggregate.configure { dependsOn("$modulePath:testDebugUnitTest") }
         detektAggregate.configure { dependsOn("$modulePath:detekt") }
@@ -317,20 +321,20 @@ tasks.register<VerifyQuietTask>("verifyQuiet") {
         allKtlint,
         allDetekt,
         allUnitTests,
-        tasks.matching { it.name == "lintDebug" || it.name == "assembleDebug" }
+        rootProject.subprojects.flatMap { sub -> sub.tasks.matching { t -> t.name == "lintDebug" || t.name == "assembleDebug" } },
     )
 
     testResultXmls.from(
-        subprojects.map { sub ->
+        rootProject.subprojects.map { sub ->
             sub.layout.buildDirectory.dir("test-results").map { dir ->
                 dir.asFileTree.matching { include("**/*.xml") }
             }
-        }
+        },
     )
 
     reportDirs.set(
-        subprojects.map { sub ->
+        rootProject.subprojects.map { sub ->
             sub.layout.buildDirectory.dir("reports").get().asFile.absolutePath
-        }
+        },
     )
 }

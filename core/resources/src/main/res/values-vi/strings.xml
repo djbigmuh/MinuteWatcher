@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">Hiển thị hạn mức dữ liệu</string>
     <string name="display_name">Hiển thị tên</string>
     <string name="display_icon">Hiển thị biểu tượng</string>
-    <string name="show_sim_checkbox">Hiển thị thẻ SIM này</string>
     <string name="preview">Xem trước</string>
     <string name="layout_mode_title">Chế độ bố cục</string>
     <string name="sim_arrangement_prompt">Chọn cách sắp xếp SIM</string>

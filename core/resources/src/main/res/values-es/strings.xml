@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">Mostrar límite de tráfico</string>
     <string name="display_name">Mostrar nombre</string>
     <string name="display_icon">Mostrar icono</string>
-    <string name="show_sim_checkbox">Mostrar esta tarjeta SIM</string>
     <string name="preview">Vista previa</string>
     <string name="layout_mode_title">Modo de diseño</string>
     <string name="sim_arrangement_prompt">Elegir disposición de SIM</string>

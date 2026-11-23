@@ -106,6 +106,7 @@ class TrafficBaselineManager
             incrementRetryOnFailure: Boolean = false,
             onSuccess: suspend () -> Unit = {},
         ) {
+            // Caught Exception required for robust baseline reset error handling and status updating
             @Suppress("TooGenericExceptionCaught")
             try {
                 // Ensure tracking window is initialized. If lastResetDate was 0, it becomes 'now'.
@@ -192,7 +193,7 @@ class TrafficBaselineManager
                     } catch (e: CancellationException) {
                         throw e
                     } catch (
-                        // Catch Exception to fall back safely if telephony manager query fails.
+                        // Caught Exception required for telephony fallback on failure
                         @Suppress("TooGenericExceptionCaught")
                         e: Exception,
                     ) {
@@ -214,8 +215,7 @@ class TrafficBaselineManager
             } catch (e: CancellationException) {
                 throw e
             } catch (
-                // Synchronization is non-critical; catch Exception to prevent secondary
-                // telemetry/permission errors from aborting successful baseline reset.
+                // Caught Exception required for non-critical synchronization error fallback
                 @Suppress("TooGenericExceptionCaught")
                 e: Exception,
             ) {

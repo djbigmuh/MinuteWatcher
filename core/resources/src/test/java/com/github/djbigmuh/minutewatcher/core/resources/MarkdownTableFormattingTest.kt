@@ -20,13 +20,17 @@ class MarkdownTableFormattingTest {
     @Test
     fun `all tracked markdown files have valid table formatting`() {
         val rootDir = getProjectRootDir()
+        val excludedSegments = setOf(".git", ".gradle", ".robolectric", "build", "audit_dump", "node_modules")
         val mdFiles =
             rootDir
                 .walkTopDown()
-                .filter {
-                    it.extension.lowercase() == "md" &&
-                        !it.absolutePath.contains(".git") &&
-                        !it.absolutePath.contains("build")
+                .filter { it.isFile && it.extension.equals("md", ignoreCase = true) }
+                .filter { file ->
+                    file
+                        .relativeTo(rootDir)
+                        .invariantSeparatorsPath
+                        .split('/')
+                        .none { it in excludedSegments }
                 }.toList()
 
         assertTrue("Markdown files must exist", mdFiles.isNotEmpty())

@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">Tampilkan watesan data</string>
     <string name="display_name">Tampilkan jeneng</string>
     <string name="display_icon">Tampilkan lambang</string>
-    <string name="show_sim_checkbox">Tampilkan kertu SIM iki</string>
     <string name="preview">Pratonton</string>
     <string name="layout_mode_title">Mode Tata Letak</string>
     <string name="sim_arrangement_prompt">Pilih tata letak SIM</string>

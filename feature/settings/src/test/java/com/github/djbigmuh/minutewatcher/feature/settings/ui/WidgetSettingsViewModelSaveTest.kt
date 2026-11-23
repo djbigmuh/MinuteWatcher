@@ -238,18 +238,12 @@ class WidgetSettingsViewModelSaveTest : BaseWidgetSettingsViewModelFixture() {
         }
 
     @Test
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge(
-        "Cancellation exception assertion bridge",
-    )
     fun `performEmergencySave rethrows CancellationException`() =
         runTest {
             initViewModel()
             whenever(saver.save(any(), any())).thenThrow(CancellationException("Emergency save canceled"))
 
-            org.junit.Assert.assertThrows(CancellationException::class.java) {
-                kotlinx.coroutines.runBlocking {
-                    viewModel.performEmergencySave(WidgetSettingsState())
-                }
-            }
+            val failure = runCatching { viewModel.performEmergencySave(WidgetSettingsState()) }.exceptionOrNull()
+            assertTrue(failure is CancellationException)
         }
 }

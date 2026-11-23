@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">डेटा सीमा देखावीं</string>
     <string name="display_name">नाम देखावीं</string>
     <string name="display_icon">आइकन देखावीं</string>
-    <string name="show_sim_checkbox">ई सिम कार्ड देखावीं</string>
     <string name="preview">पूर्वावलोकन</string>
     <string name="layout_mode_title">लेआउट मोड</string>
     <string name="sim_arrangement_prompt">सिम व्यवस्था चुनीं</string>

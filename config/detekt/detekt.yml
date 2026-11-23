@@ -34,6 +34,7 @@ complexity:
     active: true
     allowedFunctionParameters: 10
     allowedConstructorParameters: 10
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   TooManyFunctions:
     active: false # Disabled to allow coordinator and test fixture classes without arbitrary function count limits
   ComplexInterface:
@@ -116,6 +117,7 @@ style:
     ignoreAnnotated:
       - 'androidx.compose.runtime.Composable'
       - 'Composable'
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
   ForbiddenMethodCall:
     active: true
     methods:

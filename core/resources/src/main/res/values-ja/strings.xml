@@ -32,7 +32,6 @@
     <string name="display_traffic_limit">通信量の制限を表示</string>
     <string name="display_name">名前を表示</string>
     <string name="display_icon">アイコンを表示</string>
-    <string name="show_sim_checkbox">このSIMカードを表示</string>
     <string name="preview">プレビュー</string>
     <string name="layout_mode_title">レイアウトモード</string>
     <string name="sim_arrangement_prompt">SIMの配置を選択</string>

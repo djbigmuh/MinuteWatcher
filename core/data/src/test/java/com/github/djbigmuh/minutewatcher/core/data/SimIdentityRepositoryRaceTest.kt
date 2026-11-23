@@ -49,6 +49,10 @@ import kotlin.time.Duration.Companion.seconds
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityRepositoryRaceTest {
+    companion object {
+        private const val CONCURRENT_REQUESTS = 5
+    }
+
     @get:Rule
     val tmpFolder = TemporaryFolder()
 
@@ -254,8 +258,7 @@ class SimIdentityRepositoryRaceTest {
                 )
 
             val jobs =
-                List(5) {
-                    // Reduced from 10 to 5 for stability in test environment
+                List(CONCURRENT_REQUESTS) {
                     launch {
                         repository.getSimIdentity(0).stableId
                     }

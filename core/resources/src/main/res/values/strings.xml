@@ -60,7 +60,6 @@
     <string name="display_traffic_limit">Show traffic limit</string>
     <string name="display_name">Show name</string>
     <string name="display_icon">Show icon</string>
-    <string name="show_sim_checkbox">Show this SIM card</string>
     <string name="preview">Preview</string>
     <string name="layout_mode_title">Layout mode</string>
     <string name="sim_arrangement_prompt">Choose SIM arrangement</string>

@@ -53,6 +53,7 @@ internal class SimIdentitySeedRepositoryImpl
          * @throws CancellationException if the coroutine is canceled.
          */
         override suspend fun setSeed(seed: String) {
+            // Caught Exception required for safe DataStore edit error handling during seed persistence
             @Suppress("TooGenericExceptionCaught")
             try {
                 val writeResult =
@@ -103,6 +104,7 @@ internal class SimIdentitySeedRepositoryImpl
         private suspend fun tryGetPersistentSeed(generator: () -> String): SeedResolutionResult? {
             var attempt = 0
             while (attempt < MAX_RETRIES) {
+                // Caught Exception required for persistent seed read retry handling on storage errors
                 @Suppress("TooGenericExceptionCaught")
                 val result =
                     try {

@@ -43,11 +43,9 @@ class WidgetResourceIntegrityTest {
         assertTrue("preview layout must not contain ProgressBar", !previewContent.contains("ProgressBar"))
     }
 
-    private fun findResDir(): File {
-        var dir = File("src/main/res")
-        if (!dir.exists()) {
-            dir = File("core/resources/src/main/res")
-        }
-        return dir
-    }
+    private fun findResDir(): File =
+        File(
+            System.getProperty("minutewatcher.coreResourcesResDir")
+                ?: error("System property minutewatcher.coreResourcesResDir is not set"),
+        )
 }

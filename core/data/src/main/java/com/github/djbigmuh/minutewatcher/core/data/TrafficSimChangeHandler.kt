@@ -37,6 +37,7 @@ class TrafficSimChangeHandler
 
         suspend fun ensureInMemoryLastDataSubId() {
             if (!lastDataSubIdLoaded.get()) {
+                // Caught Exception required for loading subId robust error handling
                 @Suppress("TooGenericExceptionCaught")
                 try {
                     val loaded =
@@ -128,6 +129,7 @@ class TrafficSimChangeHandler
             if (!isSimChanged) return
 
             AppLogger.d("Default data SIM changed from $savedLastDataSubId to $currentDataSubId. Resetting baseline.")
+            // Caught Exception required for SIM change handling robust error handling
             @Suppress("TooGenericExceptionCaught")
             try {
                 // Update the last seen data subId immediately to "commit" the detection of the SIM change.
@@ -161,6 +163,7 @@ class TrafficSimChangeHandler
             if (lastDataSubIdLoaded.get() && dataSubId == inMemoryLastDataSubId.get()) return
             inMemoryLastDataSubId.set(dataSubId)
             lastDataSubIdLoaded.set(true)
+            // Caught Exception required for persisting last data subId error fallback
             @Suppress("TooGenericExceptionCaught")
             try {
                 callSessionRepository.setLastDataSubId(dataSubId)

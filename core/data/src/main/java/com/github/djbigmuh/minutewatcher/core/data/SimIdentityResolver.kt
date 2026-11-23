@@ -134,6 +134,7 @@ internal class SimIdentityResolver
             slot: Int,
             identity: SimIdentity,
         ) {
+            // Caught Exception required for robust persistence fallback and rollback on arbitrary storage errors
             @Suppress("TooGenericExceptionCaught")
             try {
                 persistIdentity(slot, identity)
@@ -148,6 +149,7 @@ internal class SimIdentityResolver
             slot: Int,
             identity: SimIdentity,
         ) {
+            // Caught Exception required to catch any unexpected storage failure during persistence
             @Suppress("TooGenericExceptionCaught")
             val error: Exception? =
                 try {
