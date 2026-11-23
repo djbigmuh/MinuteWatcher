@@ -7,7 +7,8 @@ This document lists the non-stable (alpha, beta, RC) dependencies used in the pr
 ### 1. Android Gradle Plugin
 
 - **Version**: `9.5.2`
-- **Reason**: The project requires the latest build system features to support SDK 37 and experimental Gradle 9.x integrations.
+- **Reason**: The project requires the latest build system features to support SDK 37.1 and experimental Gradle 9.x
+  integrations.
 - **Plan**: Continue using the latest preview versions until a stable branch for the 9.x series is established.
 
 ### 2. Detekt (Alpha)

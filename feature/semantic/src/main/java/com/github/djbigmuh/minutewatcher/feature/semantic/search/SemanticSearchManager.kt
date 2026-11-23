@@ -160,7 +160,6 @@ class SemanticSearchManager
                 true
             } ?: false
 
-        @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             initMutex.withLock {
                 val acquired =

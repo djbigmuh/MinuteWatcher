@@ -6,11 +6,12 @@
  * [JAVA_TOOLCHAIN_VERSION] is used as the JVM toolchain version across all project modules.
  *
  * IMPORTANT: DO NOT DOWNGRADE SDK VERSIONS.
- * minSdk 26, targetSdk 37, compileSdk 37 are strict project requirements.
+ * minSdk 26, targetSdk 37, compileSdk 37.1 are strict project requirements.
  */
 object SdkVersions {
     const val MIN_SDK = 26
     const val TARGET_SDK = 37
     const val COMPILE_SDK = 37
+    const val COMPILE_MINOR_SDK = 1
     const val JAVA_TOOLCHAIN_VERSION = 21
 }

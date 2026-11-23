@@ -9,7 +9,11 @@ plugins {
 }
 
 extensions.configure<TestExtension> {
-    compileSdk = SdkVersions.COMPILE_SDK
+    compileSdk {
+        version = release(SdkVersions.COMPILE_SDK) {
+            minorApiLevel = SdkVersions.COMPILE_MINOR_SDK
+        }
+    }
 
     defaultConfig {
         minSdk = SdkVersions.MIN_SDK

@@ -61,7 +61,7 @@ if (!hasReleaseSigning) {
 
     val isReleaseBuildRequested =
         rootProject.gradle.startParameter.taskNames.any {
-            it.contains("Release", ignoreCase = true)
+            it.contains("Release", ignoreCase = true) && !it.contains("Test", ignoreCase = true)
         }
     if (isReleaseBuildRequested) {
         throw GradleException(
@@ -100,11 +100,6 @@ configure<ApplicationExtension> {
                 "proguard-rules.pro",
             )
         }
-        create("benchmark") {
-            initWith(getByName("release"))
-            matchingFallbacks += listOf("release")
-            signingConfig = signingConfigs.getByName("debug")
-        }
     }
 
     compileOptions {
@@ -114,6 +109,17 @@ configure<ApplicationExtension> {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    sourceSets {
+        getByName("benchmark") {
+            java.directories.add("src/benchmark/java")
+            kotlin.directories.add("src/benchmark/java")
+        }
+        getByName("testBenchmark") {
+            java.directories.add("src/testBenchmark/java")
+            kotlin.directories.add("src/testBenchmark/java")
+        }
     }
 
     packaging {

@@ -290,7 +290,7 @@ object OperatorResolver {
         if (operatorName.isEmpty()) return null
         val cached = brandKeyCache[operatorName]
         if (cached != null) {
-            return if (cached.isEmpty()) null else cached
+            return cached.ifEmpty { null }
         }
         val normalized = operatorName.lowercase(Locale.ROOT)
         val stripped = operatorName.stripDiacritics().lowercase(Locale.ROOT)

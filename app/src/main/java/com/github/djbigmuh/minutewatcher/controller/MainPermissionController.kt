@@ -13,7 +13,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -194,7 +193,7 @@ class MainPermissionController
             actionName: String,
         ): AppSettings? =
             withTimeoutOrNull(Constants.Flow.LONG_TIMEOUT_MS.milliseconds) {
-                appSettingsLoaded.filter { it.isLoaded }.firstOrNull()
+                appSettingsLoaded.firstOrNull { it.isLoaded }
             } ?: run {
                 AppLogger.w(
                     "MainPermissionController: AppSettings read timed " +

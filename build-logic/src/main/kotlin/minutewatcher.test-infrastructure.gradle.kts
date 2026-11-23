@@ -1,4 +1,6 @@
-apply(plugin = "jacoco")
+plugins {
+    id("jacoco")
+}
 
 configure<JacocoPluginExtension> {
     toolVersion = "0.8.12"
@@ -65,7 +67,7 @@ tasks.withType<Test>().configureEach {
     }
 
     extensions.findByType(JacocoTaskExtension::class.java)?.apply {
-        isEnabled = providers.gradleProperty("coverage").isPresent
+        isEnabled = true
         isIncludeNoLocationClasses = true
         excludes = listOf("jdk.internal.*")
     }

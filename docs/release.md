@@ -7,7 +7,7 @@ clean-clone build verification, store publishing procedures, and release prohibi
 
 - **JDK**: JDK 21 (Temurin 21.0.12+) is mandatory for building release artifacts. No other JDK versions (e.g., JDK 25)
   should be present in the system `PATH`.
-- **Android SDK**: Must have `compileSdk 37` installed with corresponding build-tools and platform-tools.
+- **Android SDK**: Must have `compileSdk 37.1` installed with corresponding build-tools and platform-tools.
 - **Gradle Properties**: Machine-specific properties (such as local path overrides) belong in user-level
   `~/.gradle/gradle.properties` and are never committed.
 
@@ -132,7 +132,8 @@ To ensure readiness for automated build systems (such as F-Droid build servers a
       ```
 3. **Reproducibility & Build Environment**:
    F-Droid builds artifacts in a reproducible Debian container environment using JDK 21 (Temurin 21.0.12+),
-   Gradle wrapper, and official Android SDK `compileSdk 37`. Releasing only artifacts built in this environment is recommended.
+   Gradle wrapper, and official Android SDK `compileSdk 37.1`. Releasing only artifacts built in this environment is
+   recommended.
 4. **Automated Updates**: Once the recipe is merged, F-Droid automatically detects new release tags matching `v*`
    and builds updated APKs.
 

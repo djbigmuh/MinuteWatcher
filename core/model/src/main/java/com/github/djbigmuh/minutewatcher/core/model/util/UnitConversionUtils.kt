@@ -28,14 +28,6 @@ object UnitConversionUtils {
     }
 
     /**
-     * Converts bytes to GB using binary prefix (1024 * 1024 * 1024 bytes per GB).
-     */
-    fun bytesToGb(bytes: Long): Float {
-        if (bytes <= 0L) return 0f
-        return (bytes.toDouble() / Constants.BYTES_PER_GB).toFloat()
-    }
-
-    /**
      * Converts GB to bytes using binary prefix (1024 * 1024 * 1024 bytes per GB).
      */
     fun gbToBytes(gb: Float): Long {

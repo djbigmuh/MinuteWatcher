@@ -239,7 +239,6 @@ object Constants {
         const val DEBOUNCE_MS = 100L
         const val SHORT_TIMEOUT_MS = 5_000L
         const val LONG_TIMEOUT_MS = 10_000L
-        const val INITIAL_SETUP_RETRY_TIMEOUT_MS = 15_000L
         const val RETRY_READ_ATTEMPT_TIMEOUT_MS = 2_000L
         const val SEED_GENERATION_TIMEOUT_MS = 10_000L
         const val RETRY_DELAY_MS = 1_000L

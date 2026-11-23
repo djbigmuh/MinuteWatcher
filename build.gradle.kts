@@ -135,8 +135,9 @@ subprojects {
     val detektAggregate = allDetekt
     val ktlintAggregate = allKtlint
 
-    tasks.matching { it.name.endsWith("AarMetadata") }.configureEach {
-        enabled = false
+    tasks.matching { it.name == "testBenchmarkUnitTest" }.configureEach {
+        val benchmarkTest = this
+        testAggregate.configure { dependsOn(benchmarkTest) }
     }
 
     plugins.withId("com.android.application") {
@@ -158,6 +159,7 @@ subprojects {
 
         if (threshold != null) {
             val reportTask = tasks.register<JacocoReport>("jacocoCoverageReport") {
+                description = "Generates JaCoCo code coverage report for library module."
                 dependsOn("testDebugUnitTest")
                 reports {
                     xml.required.set(true)
@@ -178,6 +180,7 @@ subprojects {
             }
 
             tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
+                description = "Verifies JaCoCo code coverage rules for library module."
                 dependsOn(reportTask)
                 val mainClasses = fileTree("build/tmp/kotlin-classes/debug") {
                     exclude(jacocoExclusions)
@@ -208,6 +211,7 @@ subprojects {
 
         if (modulePath == ":core:model") {
             val reportTask = tasks.register<JacocoReport>("jacocoCoverageReport") {
+                description = "Generates JaCoCo code coverage report for model module."
                 dependsOn("test")
                 reports {
                     xml.required.set(true)
@@ -223,6 +227,7 @@ subprojects {
             }
 
             tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
+                description = "Verifies JaCoCo code coverage rules for model module."
                 dependsOn(reportTask)
                 val mainClasses = fileTree("build/classes/kotlin/main") {
                     exclude(jacocoExclusions)

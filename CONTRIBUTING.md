@@ -106,6 +106,10 @@ As a general rule, we prefer stable releases. However, some non-stable versions 
 
 - **Gradle Version Catalog:** When updating `AGP` (Android Gradle Plugin) or `Kotlin` versions, you MUST update both
   `gradle/libs.versions.toml` and `gradle/build-logic.versions.toml` to keep the main project and build-logic in sync.
+- **SDK Upgrades for Dependencies:** Never downgrade library versions to match an older `compileSdk` or `targetSdk`.
+  When a dependency update requires a higher SDK version (e.g., `37.1`), upgrade `compileSdk` (and `targetSdk` if
+  required) in the version catalog and `build-logic` convention plugins, and update the corresponding SDK references in
+  project documentation.
 
 ## Build Performance & Unit Test Stability
 

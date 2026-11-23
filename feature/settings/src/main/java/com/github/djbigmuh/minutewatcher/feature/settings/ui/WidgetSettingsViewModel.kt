@@ -256,7 +256,7 @@ class WidgetSettingsViewModel
                         val existing = pendingUpdates.toList()
                         pendingUpdates.clear()
                         pendingUpdates.add { base ->
-                            existing.fold(base) { acc, t -> t(acc) }.let { transform(it) }
+                            transform(existing.fold(base) { acc, t -> t(acc) })
                         }
                     } else {
                         pendingUpdates.add(transform)

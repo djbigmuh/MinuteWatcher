@@ -101,7 +101,6 @@ class ShortcutManager
          * **Thread Safety:** Safe to call from any coroutine context.
          * **Error Handling:** Propagates [CancellationException].
          */
-        @OptIn(FlowPreview::class)
         suspend fun initialize(snapshotFlow: StateFlow<GlobalSnapshot>) {
             setupObservation(snapshotFlow)
         }

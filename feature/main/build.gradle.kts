@@ -39,7 +39,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidxUiTestJunit4)
-    androidTestImplementation(libs.androidxUiTestJunit4)
     debugImplementation(libs.androidxUiTestManifest)
     testImplementation(libs.mockingKotlin)
     testImplementation(testFixtures(project(":core:android")))

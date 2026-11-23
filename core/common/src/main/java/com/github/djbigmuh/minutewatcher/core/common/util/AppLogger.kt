@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.github.djbigmuh.minutewatcher.core.common.BuildConfig
 import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
+import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger.logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,6 +25,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Centralized logging utility.
@@ -201,7 +203,7 @@ object AppLogger {
 
     private suspend fun joinAndWarnTimeout(oldJob: Job) {
         val joined =
-            withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS) {
+            withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS.milliseconds) {
                 oldJob.join()
             }
         if (joined == null) {

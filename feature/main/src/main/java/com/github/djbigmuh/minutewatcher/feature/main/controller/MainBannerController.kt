@@ -16,7 +16,6 @@ import com.github.djbigmuh.minutewatcher.feature.main.util.TrackingBannerMapper
 import dagger.Lazy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -100,7 +99,6 @@ class MainBannerController
                 )
         }
 
-        @OptIn(ExperimentalCoroutinesApi::class)
         val trackingBannerState: StateFlow<TrackingBannerState> by lazy {
             combine(
                 trackingStatus,

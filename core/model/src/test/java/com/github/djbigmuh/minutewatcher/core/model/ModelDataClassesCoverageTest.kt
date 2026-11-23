@@ -521,4 +521,110 @@ class ModelDataClassesCoverageTest {
         assertEquals(10240f, Constants.MAX_TRAFFIC_LIMIT_GB, 0.001f)
         assertEquals((10240f * 1024.0f).toInt(), Constants.MAX_TRAFFIC_LIMIT_MB)
     }
+
+    @Test
+    fun testRemainingDataClassesCoverage() {
+        val appSettings =
+            AppSettings(
+                theme = AppTheme.DARK,
+                language = "en",
+                notifyLowMinutes = true,
+                notifyLowTraffic = false,
+                aodSummaryEnabled = true,
+                onboardingCompleted = true,
+                notificationPermissionRequested = true,
+                wasPhonePermissionRequestedBefore = true,
+                benchmarkSimCount = 2,
+            )
+        assertEquals(AppTheme.DARK, appSettings.theme)
+        assertEquals("en", appSettings.language)
+        assertTrue(appSettings.notifyLowMinutes)
+        assertFalse(appSettings.notifyLowTraffic)
+        assertTrue(appSettings.aodSummaryEnabled)
+        assertTrue(appSettings.onboardingCompleted)
+        assertTrue(appSettings.notificationPermissionRequested)
+        assertTrue(appSettings.wasPhonePermissionRequestedBefore)
+        assertEquals(2, appSettings.benchmarkSimCount)
+        assertEquals(appSettings, appSettings.copy())
+        assertEquals(appSettings.hashCode(), appSettings.hashCode())
+        assertNotNull(appSettings.toString())
+
+        val simUiState =
+            SimUiState(
+                slot = 0,
+                operatorName = "Operator",
+                operatorIconRes = 1,
+                showSim = true,
+                showIcon = true,
+                showName = true,
+                showMinutes = true,
+                minutesText = "100",
+                minutesSuffix = "m",
+                minutesColor = 0,
+                showMinutesLimit = true,
+                minutesLimitText = "200",
+                showTraffic = true,
+                trafficText = "10",
+                trafficSuffix = "GB",
+                trafficColor = 0,
+                showTrafficLimit = true,
+                trafficLimitText = "20",
+                fontMultiplier = 1.0f,
+                textColor = 0,
+                secondaryTextColor = 0,
+                layoutSpec = SimLayoutSpec(emptyList()),
+            )
+        assertEquals(0, simUiState.slot)
+        assertEquals("Operator", simUiState.operatorName)
+        assertEquals(simUiState, simUiState.copy())
+        assertEquals(simUiState.hashCode(), simUiState.hashCode())
+        assertNotNull(simUiState.toString())
+
+        val widgetStrings =
+            WidgetStrings(
+                usedText = "used",
+                minutesAbbr = "min",
+                limitText = "limit",
+                gbAbbr = "gb",
+                refreshErrorText = "err",
+                settingsLoadErrorText = "load_err",
+                noDataText = "no_data",
+                noSimFoundText = "no_sim",
+                staleDataWarningText = "stale",
+                simStatusSummaryFormat = "%1\$s",
+                valuePlaceholder = "-",
+                labelValueFormat = "%1\$s %2\$s",
+                limitSuffixFormat = "/%1\$s",
+                locale = Locale.US,
+            )
+        assertEquals("used", widgetStrings.usedText)
+        assertEquals(widgetStrings, widgetStrings.copy())
+        assertEquals(widgetStrings.hashCode(), widgetStrings.hashCode())
+        assertNotNull(widgetStrings.toString())
+
+        val widgetUiState =
+            WidgetUiState(
+                layoutMode = 1,
+                simArrangement = 0,
+                backgroundColor = 0,
+                transparency = 50,
+                simUiStates = listOf(simUiState),
+                isHorizontal = false,
+                strings = widgetStrings,
+            )
+        assertEquals(1, widgetUiState.layoutMode)
+        assertEquals(widgetUiState, widgetUiState.copy())
+        assertEquals(widgetUiState.hashCode(), widgetUiState.hashCode())
+        assertNotNull(widgetUiState.toString())
+
+        val textComp = SimLayoutComponent.Text("hello", 0, 12f, true)
+        assertEquals(textComp, textComp.copy())
+        assertEquals(textComp.hashCode(), textComp.hashCode())
+        assertNotNull(textComp.toString())
+
+        val spacerComp = SimLayoutComponent.Spacer(10, 10)
+        assertEquals(spacerComp, spacerComp.copy())
+        assertEquals(spacerComp.hashCode(), spacerComp.hashCode())
+        assertNotNull(spacerComp.toString())
+    }
 }

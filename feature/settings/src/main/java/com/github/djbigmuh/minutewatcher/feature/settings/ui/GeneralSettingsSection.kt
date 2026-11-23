@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -124,11 +125,15 @@ private fun TransparencySetting(
     onUpdateTransparency: (Int) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.background_transparency))
+    val sliderState =
+        rememberSliderState(
+            value = state.transparency.toFloat(),
+            steps = 99,
+            trackRange = 0f..100f,
+        )
     Slider(
-        value = state.transparency.toFloat(),
+        state = sliderState,
         onValueChange = { onUpdateTransparency(it.roundToInt()) },
-        valueRange = 0f..100f,
-        steps = 99,
         enabled = enabled,
     )
 }
@@ -140,11 +145,15 @@ private fun FontSizeSetting(
     onUpdateFontSize: (Int) -> Unit,
 ) {
     SettingLabel(stringResource(id = R.string.font_size))
+    val sliderState =
+        rememberSliderState(
+            value = state.fontSize.toFloat(),
+            steps = 3,
+            trackRange = 0f..4f,
+        )
     Slider(
-        value = state.fontSize.toFloat(),
+        state = sliderState,
         onValueChange = { onUpdateFontSize(it.roundToInt()) },
-        valueRange = 0f..4f,
-        steps = 3,
         enabled = enabled,
     )
 }

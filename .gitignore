@@ -10,7 +10,6 @@
 .artifacts/
 .agents/
 app/release/
-app/src/testBenchmark/
 
 # IDE and OS
 *.iml

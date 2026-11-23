@@ -9,7 +9,11 @@ plugins {
 }
 
 extensions.configure<LibraryExtension> {
-    compileSdk = SdkVersions.COMPILE_SDK
+    compileSdk {
+        version = release(SdkVersions.COMPILE_SDK) {
+            minorApiLevel = SdkVersions.COMPILE_MINOR_SDK
+        }
+    }
 
     defaultConfig {
         minSdk = SdkVersions.MIN_SDK
@@ -20,6 +24,18 @@ extensions.configure<LibraryExtension> {
     buildTypes {
         getByName("debug") {
             enableUnitTestCoverage = true
+        }
+        create("benchmark") {
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("debug", "release")
+            enableUnitTestCoverage = true
+        }
+    }
+
+    sourceSets {
+        getByName("testBenchmark") {
+            java.directories.add("src/testBenchmark/java")
+            kotlin.directories.add("src/testBenchmark/java")
         }
     }
 

@@ -1,6 +1,5 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.main.ui.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -97,7 +96,6 @@ private fun rememberSelectedDay(listState: LazyListState) =
         }
     }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DayPickerContent(
     listState: LazyListState,
