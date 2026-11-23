@@ -203,11 +203,7 @@ class AppSettingsRepositoryImpl
         }
 
         private fun Preferences.toAppSettings(): AppSettings =
-            AppSettings()
-                .let { mapBasicSettings(it) }
-                .let { mapSystemSettings(it) }
-                .let { mapTrackingSettings(it) }
-                .let { mapWidgetSettings(it) }
+            mapWidgetSettings(mapTrackingSettings(mapSystemSettings(mapBasicSettings(AppSettings()))))
                 .copy(isLoaded = true)
 
         private fun Preferences.mapBasicSettings(current: AppSettings): AppSettings {

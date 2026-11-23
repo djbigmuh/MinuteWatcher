@@ -104,7 +104,6 @@ sealed interface TrafficUpdateOutcome {
  * the class would scatter shared mutable state across collaborators without reducing it.
  */
 @Singleton
-@Suppress("LargeClass")
 class TrafficTracker
     @Inject
     constructor(
@@ -758,45 +757,12 @@ class TrafficTracker
             transitionStatus(TrackingStatus.Error(type, message, code = code))
         }
 
-        @Suppress("ThrowsCount") // Multiple error categories
         private suspend fun updateTrafficUsageLogic(force: Boolean): TrafficUpdateOutcome {
             val startElapsed = timeProvider.elapsedRealtime()
             val outcome =
                 withTimeoutOrNull(Constants.Flow.TRAFFIC_UPDATE_TOTAL_TIMEOUT_MS.milliseconds) {
                     updateMutex.withLock {
-                        // Operation must complete without propagating exception for traffic update execution;
-                        // failures are reported via TrackingStatus and typed outcomes.
-                        @Suppress("TooGenericExceptionCaught")
-                        try {
-                            val activeSims = fetchActiveSims()
-                            if (activeSims == null) {
-                                updateStatusOnError(
-                                    startElapsed,
-                                    "Timeout fetching active sims",
-                                    code = TrackingStatus.ErrorCode.TIMEOUT,
-                                )
-                                return@withLock TrafficUpdateOutcome.TimedOut(startElapsed)
-                            }
-
-                            clearPreviousTimeoutError()
-
-                            if (!permissionChecker.checkPermissions { transitionStatus(it) }) {
-                                return@withLock TrafficUpdateOutcome.Failed(
-                                    TrackingStatus.ErrorType.PERMISSION_MISSING,
-                                    null,
-                                )
-                            }
-
-                            handleActiveSims(startElapsed, activeSims, force)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: SecurityException) {
-                            AppLogger.e("TrafficTracker: SecurityException during update", e)
-                            throw e
-                        } catch (e: Exception) {
-                            AppLogger.e("TrafficTracker: Unexpected error during update", e)
-                            throw e
-                        }
+                        executeTrafficUpdateSafely(startElapsed, force)
                     }
                 }
             if (outcome == null) {
@@ -804,6 +770,42 @@ class TrafficTracker
                 throw TrafficUpdateTimeoutException(startElapsed)
             }
             return outcome
+        }
+
+        private suspend fun executeTrafficUpdateSafely(
+            startElapsed: Long,
+            force: Boolean,
+        ): TrafficUpdateOutcome {
+            // Operation must complete without propagating exception for traffic update execution;
+            // failures are reported via TrackingStatus and typed outcomes.
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                val activeSims = fetchActiveSims()
+                if (activeSims == null) {
+                    updateStatusOnError(
+                        startElapsed,
+                        "Timeout fetching active sims",
+                        code = TrackingStatus.ErrorCode.TIMEOUT,
+                    )
+                    return TrafficUpdateOutcome.TimedOut(startElapsed)
+                }
+
+                clearPreviousTimeoutError()
+
+                if (!permissionChecker.checkPermissions { transitionStatus(it) }) {
+                    return TrafficUpdateOutcome.Failed(
+                        TrackingStatus.ErrorType.PERMISSION_MISSING,
+                        null,
+                    )
+                }
+
+                return handleActiveSims(startElapsed, activeSims, force)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.e("TrafficTracker: Error during update", e)
+                throw e
+            }
         }
 
         private fun clearPreviousTimeoutError() {

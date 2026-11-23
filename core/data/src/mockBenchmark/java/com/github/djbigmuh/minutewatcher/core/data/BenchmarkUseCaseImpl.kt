@@ -54,7 +54,7 @@ class BenchmarkUseCaseImpl
             migrationFlagsRepository.setMigrationIdentityStabilityCompleted(completed = true)
 
             // 2. Wait for active SIMs to appear with timeout
-            val timeout = Constants.Flow.INITIAL_SETUP_RETRY_TIMEOUT_MS.milliseconds
+            val timeout = Constants.Semantic.INITIAL_SNAPSHOT_TIMEOUT_MS.milliseconds
             val activeSims =
                 withTimeoutOrNull(timeout) {
                     simIdentityRepository.observeActiveSims().firstOrNull { it.isNotEmpty() }

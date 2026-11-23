@@ -163,7 +163,7 @@ internal class SimIdentityResolver
                     throw e
                 } catch (e: Exception) {
                     AppLogger.e("SimIdentityResolver: failed to persist identity for slot $slot", e)
-                    if (e is IOException) e else IOException("Failed to save SIM identity for slot $slot", e)
+                    e as? IOException ?: IOException("Failed to save SIM identity for slot $slot", e)
                 }
             if (error != null) {
                 throw error

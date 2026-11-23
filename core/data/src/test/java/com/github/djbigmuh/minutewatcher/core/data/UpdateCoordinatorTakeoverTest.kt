@@ -32,6 +32,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -64,7 +65,7 @@ class UpdateCoordinatorTakeoverTest {
 
             // 1. Initial update
             runCurrent()
-            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            advanceTimeBy((Constants.Widget.DEBOUNCE_MS + 100).milliseconds)
             runCurrent()
             assertEquals("Initial update should have happened", 1, widgetUpdater.callCount)
 
@@ -76,7 +77,7 @@ class UpdateCoordinatorTakeoverTest {
             // Emit snapshot "A" with different 'used' value to ensure hash mismatch
             snapshotFlow.value = createSnapshot(1000L, "A", used = 10)
 
-            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            advanceTimeBy((Constants.Widget.DEBOUNCE_MS + 100).milliseconds)
             runCurrent()
 
             withTimeout(5.seconds) {
@@ -101,7 +102,7 @@ class UpdateCoordinatorTakeoverTest {
             // Snapshot "B" must also have different 'used' value
             snapshotFlow.value = createSnapshot(2000L, "B", used = 20)
 
-            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            advanceTimeBy((Constants.Widget.DEBOUNCE_MS + 100).milliseconds)
             runCurrent()
 
             assertEquals("Observation cycle should still be alive", 4, widgetUpdater.callCount)
@@ -119,7 +120,7 @@ class UpdateCoordinatorTakeoverTest {
 
             // 1. Initial update
             runCurrent()
-            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            advanceTimeBy((Constants.Widget.DEBOUNCE_MS + 100).milliseconds)
             runCurrent()
             assertEquals("Initial update should have happened", 1, widgetUpdater.callCount)
 
@@ -129,7 +130,7 @@ class UpdateCoordinatorTakeoverTest {
             widgetUpdater.onUpdateStarted = { if (widgetUpdater.shouldHang) hangStarted.complete(Unit) }
 
             snapshotFlow.value = createSnapshot(1000L, "A", used = 10)
-            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            advanceTimeBy((Constants.Widget.DEBOUNCE_MS + 100).milliseconds)
             runCurrent()
 
             withTimeout(5.seconds) {
@@ -157,7 +158,7 @@ class UpdateCoordinatorTakeoverTest {
 
             // 4. Emit another snapshot and verify observation cycle continues immediately
             snapshotFlow.value = createSnapshot(2000L, "B", used = 20)
-            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            advanceTimeBy((Constants.Widget.DEBOUNCE_MS + 100).milliseconds)
             runCurrent()
 
             assertEquals(
@@ -178,7 +179,7 @@ class UpdateCoordinatorTakeoverTest {
             coordinator.start()
 
             runCurrent()
-            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            advanceTimeBy((Constants.Widget.DEBOUNCE_MS + 100).milliseconds)
             runCurrent()
 
             widgetUpdater.shouldHang = true
@@ -186,7 +187,7 @@ class UpdateCoordinatorTakeoverTest {
             widgetUpdater.onUpdateStarted = { if (widgetUpdater.shouldHang) hangStarted.complete(Unit) }
 
             snapshotFlow.value = createSnapshot(1000L, "A", used = 10)
-            advanceTimeBy(Constants.Widget.DEBOUNCE_MS + 100)
+            advanceTimeBy((Constants.Widget.DEBOUNCE_MS + 100).milliseconds)
             runCurrent()
 
             withTimeout(5.seconds) { hangStarted.await() }

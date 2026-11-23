@@ -15,7 +15,6 @@ import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.MinutesModel
 import com.github.djbigmuh.minutewatcher.core.model.PackageType
-import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.SimUsage
@@ -233,7 +232,7 @@ class UsageStateRepositoryImpl
 
             val zoneId = deps.timeProvider.zoneId()
             val entities =
-                mutableMapOf<PackageType, SemanticEntity>(
+                mutableMapOf(
                     PackageType.MINUTES to
                         SemanticMapper.mapMinutes(
                             slot,
@@ -301,14 +300,17 @@ class UsageStateRepositoryImpl
             val startRevision = snapshotFlow.value.revision
             val timeout = Constants.Data.SNAPSHOT_TIMEOUT_MS.milliseconds
 
-            // Trigger notification.
-            @Suppress("TooGenericExceptionCaught")
             try {
                 deps.dataRefreshNotifier.notifyRefresh(isManual = true)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                // Operation must complete without propagating exception for data refresh notification.
+            } catch (e: java.io.IOException) {
+                AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
+            } catch (e: SecurityException) {
+                AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
+            } catch (e: IllegalStateException) {
+                AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
+            } catch (e: IllegalArgumentException) {
                 AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
             }
 

@@ -18,6 +18,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 internal class CallEndHandler
@@ -212,7 +213,7 @@ internal class CallEndHandler
                 try {
                     val startTime = System.currentTimeMillis()
                     val result =
-                        withTimeoutOrNull(Constants.Flow.NON_CANCELLABLE_CLEANUP_TIMEOUT_MS) {
+                        withTimeoutOrNull(Constants.Flow.NON_CANCELLABLE_CLEANUP_TIMEOUT_MS.milliseconds) {
                             context.refreshStatus(false)
                         }
                     if (result == null) {
@@ -349,7 +350,7 @@ internal class CallEndHandler
          *         [CallEndResult.CLEANUP_ONLY] if session was cleaned up due to stale elapsed realtime
          *         or exceeded max duration.
          */
-        private suspend fun validateCallDuration(
+        private fun validateCallDuration(
             subId: Int,
             data: CallEndData,
             context: CallTrackingContext,

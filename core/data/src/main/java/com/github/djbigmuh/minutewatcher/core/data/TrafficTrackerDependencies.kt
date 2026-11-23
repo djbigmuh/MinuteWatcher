@@ -17,10 +17,6 @@ import javax.inject.Singleton
  * and maintain clean separation of concerns.
  */
 @Singleton
-// Suppressing LongParameterList is justified: TrafficTrackerDependencies is a helper class
-// for dependency injection (Dependency Aggregator). This avoids inflating the parameter list
-// of TrafficTracker constructor while preserving testability and separation of concerns.
-@Suppress("LongParameterList")
 class TrafficTrackerDependencies
     @Inject
     constructor(

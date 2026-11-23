@@ -51,7 +51,6 @@ import kotlin.time.Duration.Companion.milliseconds
  * update/takeover slots are mutated together under one ownership and one mutex.
  */
 @Singleton
-@Suppress("LargeClass")
 class UpdateCoordinator
     @Inject
     constructor(

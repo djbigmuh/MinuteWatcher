@@ -29,7 +29,7 @@ complexity:
     ignoreAnnotated: [ 'Composable', 'androidx.compose.runtime.Composable' ]
   LargeClass:
     active: true
-    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**' ]
+    excludes: [ '**/src/test/**', '**/src/androidTest/**', '**/src/testFixtures/**', '**/core/data/TrafficTracker.kt', '**/core/data/UpdateCoordinator.kt' ]
   LongParameterList:
     active: true
     allowedFunctionParameters: 10

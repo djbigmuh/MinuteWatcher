@@ -400,7 +400,6 @@ internal class SimIdentityObserver
          * StateFlow of resolved active SIMs (null until the first discovery completes),
          * prioritizing mock SIMs in benchmark builds.
          */
-        @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
         val resolvedActiveSimsCache: StateFlow<List<ActiveSimInfo>?> =
             combine(
                 physicalActiveSims,

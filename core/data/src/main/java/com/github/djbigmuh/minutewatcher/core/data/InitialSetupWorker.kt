@@ -145,15 +145,13 @@ class InitialSetupWorker
             } ?: throw IOException("DataStore timeout reading $name flag")
 
         private suspend fun handleMigrationWithoutPermission(v1Completed: Boolean): MigrationDecision {
-            val hasLegacyData = deps.migrationService.hasLegacyData()
-            if (hasLegacyData == null) {
-                return if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
+            val hasLegacyData =
+                deps.migrationService.hasLegacyData() ?: return if (runAttemptCount < MAX_MIGRATION_ATTEMPTS) {
                     MigrationDecision.RETRY
                 } else {
                     markMigrationSkippedPermanently()
                     MigrationDecision.PROCEED
                 }
-            }
 
             if (!hasLegacyData) {
                 if (!v1Completed) {

@@ -244,11 +244,7 @@ class IdentityMigrationService
                                 val name = key.name
                                 val isIdentityKey =
                                     SIM_IDENTITY_KEY_PREFIXES.any { prefix -> name.startsWith(prefix) }
-                                if (isIdentityKey) {
-                                    activeIdentities.none { identity -> name.endsWith("_$identity") }
-                                } else {
-                                    false
-                                }
+                                isIdentityKey && activeIdentities.none { identity -> name.endsWith("_$identity") }
                             }
                         keysToRemove.forEach { prefs.remove(it) }
                     }

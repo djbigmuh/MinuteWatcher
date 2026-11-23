@@ -11,10 +11,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-// Suppressing LongParameterList is justified: InitialSetupWorkerDependencies is a helper class
-// for dependency injection (Dependency Aggregator). This avoids inflating the parameter list
-// of InitialSetupWorker constructor while preserving testability and separation of concerns.
-@Suppress("LongParameterList")
 class InitialSetupWorkerDependencies
     @Inject
     constructor(

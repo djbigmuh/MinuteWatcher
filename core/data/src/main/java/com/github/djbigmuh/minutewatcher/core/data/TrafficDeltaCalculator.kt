@@ -26,9 +26,6 @@ class TrafficDeltaCalculator
             target: TargetInfo,
             expectedLastResetDate: Long,
         ): Boolean {
-            // Operation must complete without propagating exception for baseline and usage update;
-            // failure degrades to a skipped update.
-            // Caught Exception required for safe delta update fallback on storage errors
             @Suppress("TooGenericExceptionCaught")
             try {
                 if ((lastTotalBytes == -1L) || (currentBytes < lastTotalBytes)) {
@@ -61,7 +58,6 @@ class TrafficDeltaCalculator
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for traffic delta update logging.
                 AppLogger.e(
                     "TrafficDeltaCalculator: Critical error updating baseline/usage for $targetIdentity",
                     e,
@@ -78,9 +74,6 @@ class TrafficDeltaCalculator
             dataSubId: Int,
             expectedLastResetDate: Long,
         ): Boolean {
-            // Operation must complete without propagating exception for delta handling;
-            // failure degrades to a skipped update.
-            // Caught Exception required for safe traffic delta calculation error fallback
             @Suppress("TooGenericExceptionCaught")
             try {
                 val deltaBytes = currentBytes - lastTotalBytes
@@ -110,7 +103,6 @@ class TrafficDeltaCalculator
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for traffic delta handling logging.
                 AppLogger.e(
                     "TrafficDeltaCalculator: Error calculating/persisting delta for $identity",
                     e,

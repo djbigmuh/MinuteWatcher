@@ -11,16 +11,6 @@ android {
         buildConfig = true
     }
 
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-        create("benchmark") {
-            initWith(getByName("release"))
-            matchingFallbacks += listOf("release")
-        }
-    }
-
     sourceSets {
         getByName("debug") {
             java.directories.add("src/noop/java")

@@ -85,12 +85,6 @@ class CallTracker
         private var initDeferred = CompletableDeferred<Unit>()
         private val initMutex = Mutex()
 
-        init {
-            // No coroutines launched here to avoid side effects during construction.
-            // Initialization is triggered explicitly via ensureStarted() from public entry points
-            // or through the DI layer for eager start.
-        }
-
         /**
          * Ensures the tracker is started.
          *

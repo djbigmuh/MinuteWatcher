@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Controller that keeps the persistent Always-on Display summary notification in sync with usage data and settings.
@@ -83,12 +84,12 @@ class AodSummaryController
                         flow {
                             while (true) {
                                 emit(Unit)
-                                delay(Constants.Aod.HEARTBEAT_INTERVAL_MS)
+                                delay(Constants.Aod.HEARTBEAT_INTERVAL_MS.milliseconds)
                             }
                         },
                     ) { snapshot, settings, _, _ ->
                         snapshot to settings
-                    }.debounce(Constants.Flow.DEBOUNCE_MS)
+                    }.debounce(Constants.Flow.DEBOUNCE_MS.milliseconds)
                         .collect { (snapshot, settings) ->
                             processUpdate(snapshot, settings)
                         }
