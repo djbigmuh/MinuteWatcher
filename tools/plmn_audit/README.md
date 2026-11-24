@@ -26,7 +26,7 @@ The script is idempotent and can be re-run at any time.
 
 - `audit_plmn.py`: Main audit script (Python 3, standard library only).
 - `cache/`: Local dataset cache and metadata (`p1_mnc.json`, `metadata.json`).
-- `reports/`: Generated markdown audit report (`plmn_audit_report.md`).
+- `reports/`: Generated Markdown audit report (`plmn_audit_report.md`).
 
 ## Report Structure
 

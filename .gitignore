@@ -1,7 +1,6 @@
 # Build outputs, cache, and generated files
 /build/
 **/build/
-**/generated/
 .gradle/
 .gradle_home/
 .externalNativeBuild/
@@ -15,6 +14,8 @@ app/release/
 *.iml
 .idea/*
 !.idea/inspectionProfiles/
+!.idea/scopes/
+!.idea/dictionaries/
 .DS_Store
 Thumbs.db
 .settings/

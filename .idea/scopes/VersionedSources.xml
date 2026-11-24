@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="VersionedSources" pattern="!file[MinuteWatcher]:.agents//*&amp;&amp;!file[MinuteWatcher]:audit_dump//*&amp;&amp;!file[MinuteWatcher]:tools/plmn_audit/cache//*&amp;&amp;!file[MinuteWatcher]:tools/plmn_audit/reports//*&amp;&amp;!file[MinuteWatcher]:tools/iconforge/out//*&amp;&amp;!file[MinuteWatcher]:build//*&amp;&amp;!file[MinuteWatcher]:*/build//*" />
+</component>
