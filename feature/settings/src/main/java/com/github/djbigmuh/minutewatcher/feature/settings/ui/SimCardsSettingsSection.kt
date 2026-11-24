@@ -148,8 +148,7 @@ private fun SimHeaderRow(
                     enabled = enabled,
                     role = Role.Checkbox,
                     onValueChange = onToggleShowSim,
-                )
-                .padding(vertical = 4.dp),
+                ).padding(vertical = 4.dp),
     ) {
         if (operatorIconRes != 0) {
             Image(

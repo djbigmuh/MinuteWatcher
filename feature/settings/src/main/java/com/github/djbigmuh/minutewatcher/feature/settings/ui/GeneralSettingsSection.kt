@@ -172,8 +172,7 @@ private fun BackgroundColorSetting(
                 .fillMaxWidth()
                 .clickable(enabled = enabled) {
                     onShowColorPicker()
-                }
-                .padding(vertical = 8.dp),
+                }.padding(vertical = 8.dp),
     ) {
         Box(
             modifier =

@@ -1,0 +1,2 @@
+HSPLcom/github/djbigmuh/minutewatcher/MinuteWatcherApp;->onCreate()V
+HSPLcom/github/djbigmuh/minutewatcher/MainActivity;->onCreate(Landroid/os/Bundle;)V

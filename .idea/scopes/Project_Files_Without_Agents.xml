@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Project Files Without Agents" pattern="file[MinuteWatcher]:*/&amp;&amp;!file[MinuteWatcher]:.agents/*" />
+</component>

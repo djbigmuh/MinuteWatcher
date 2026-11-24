@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="ProjectHandWrittenSources" pattern="src:*[app]*||src:*[core*]*||src:*[feature*]*||src:*[macrobenchmark]*||src:*[baselineprofile]*||src:*[build-logic]*&amp;&amp;!file[build-logic]:build/generated-sources//*&amp;&amp;!file[build-logic]:build/generated//**" />
+</component>

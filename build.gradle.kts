@@ -273,13 +273,17 @@ val jacocoExclusions = listOf(
     "**/*_MembersInjector.*",
     "**/*_Provide*Factory.*",
     "**/Hilt_*",
+    "**/*_HiltModules*",
+    "**/*_HiltComponents*",
     "**/hilt_aggregated_deps/**",
-    "**/*Hilt*.*",
-    "**/*AppFunction*.*",
-    "**/testFixtures/**",
-    "**/testing/**",
-    "**/CoreDataFakes*.*",
-    "**/*Test*.*",
+    "**/Dagger*Component*",
+    "**/*_GeneratedInjector*",
+    "**/\u0024BaseMinuteWatcherAppFunctionService_AppFunctionInventory.*",
+    "**/\u0024SimUsageSummaryFactory.*",
+    "**/\u0024UsageSummaryFactory.*",
+    "**/\u0024Semantic_SchemaDefinitionComponentRegistry.*",
+    "**/\u0024Semantic_SerializableComponentRegistry.*",
+    "**/MinuteWatcherAppFunctionService.*",
 )
 
 subprojects {
@@ -337,9 +341,14 @@ subprojects {
                     html.required.set(true)
                 }
                 val mainSrc = files("src/main/java")
-                val mainClasses = fileTree("build/tmp/kotlin-classes/debug") {
-                    exclude(jacocoExclusions)
-                }
+                val mainClasses = files(
+                    fileTree("build/tmp/kotlin-classes/debug") {
+                        exclude(jacocoExclusions)
+                    },
+                    fileTree("build/intermediates/javac/debug/classes") {
+                        exclude(jacocoExclusions)
+                    },
+                )
                 sourceDirectories.setFrom(mainSrc)
                 classDirectories.setFrom(mainClasses)
                 executionData.setFrom(
@@ -353,9 +362,14 @@ subprojects {
             tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
                 description = "Verifies JaCoCo code coverage rules for library module."
                 dependsOn(reportTask)
-                val mainClasses = fileTree("build/tmp/kotlin-classes/debug") {
-                    exclude(jacocoExclusions)
-                }
+                val mainClasses = files(
+                    fileTree("build/tmp/kotlin-classes/debug") {
+                        exclude(jacocoExclusions)
+                    },
+                    fileTree("build/intermediates/javac/debug/classes") {
+                        exclude(jacocoExclusions)
+                    },
+                )
                 classDirectories.setFrom(mainClasses)
                 executionData.setFrom(
                     files(
@@ -391,9 +405,14 @@ subprojects {
                     html.required.set(true)
                 }
                 val mainSrc = files("src/main/java")
-                val mainClasses = fileTree("build/classes/kotlin/main") {
-                    exclude(jacocoExclusions)
-                }
+                val mainClasses = files(
+                    fileTree("build/classes/kotlin/main") {
+                        exclude(jacocoExclusions)
+                    },
+                    fileTree("build/classes/java/main") {
+                        exclude(jacocoExclusions)
+                    },
+                )
                 sourceDirectories.setFrom(mainSrc)
                 classDirectories.setFrom(mainClasses)
                 executionData.setFrom(fileTree("build/jacoco") { include("*.exec") })
@@ -402,9 +421,14 @@ subprojects {
             tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
                 description = "Verifies JaCoCo code coverage rules for model module."
                 dependsOn(reportTask)
-                val mainClasses = fileTree("build/classes/kotlin/main") {
-                    exclude(jacocoExclusions)
-                }
+                val mainClasses = files(
+                    fileTree("build/classes/kotlin/main") {
+                        exclude(jacocoExclusions)
+                    },
+                    fileTree("build/classes/java/main") {
+                        exclude(jacocoExclusions)
+                    },
+                )
                 classDirectories.setFrom(mainClasses)
                 executionData.setFrom(fileTree("build/jacoco") { include("*.exec") })
                 violationRules {

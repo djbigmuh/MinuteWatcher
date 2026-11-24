@@ -191,29 +191,29 @@ class MainSettingsController
             }
         }
 
-    /**
-     * Dismisses the swipe navigation affordance hint once upon successful swipe.
-     *
-     * Executes in application scope with [ioDispatcher].
-     * Recorded exactly once; subsequent calls are ignored if already dismissed.
-     * Non-blocking, catches generic exceptions, rethrows [CancellationException].
-     */
-    fun dismissSwipeHint() {
-        if (appSettingsRepository.observeAppSettings().value.swipeHintDismissed) return
-        scope.launch(ioDispatcher) {
-            if (appSettingsRepository.observeAppSettings().value.swipeHintDismissed) return@launch
-            @Suppress("TooGenericExceptionCaught")
-            try {
-                appSettingsRepository.updateAppSettings { current ->
-                    if (current.swipeHintDismissed) current else current.copy(swipeHintDismissed = true)
+        /**
+         * Dismisses the swipe navigation affordance hint once upon successful swipe.
+         *
+         * Executes in application scope with [ioDispatcher].
+         * Recorded exactly once; subsequent calls are ignored if already dismissed.
+         * Non-blocking, catches generic exceptions, rethrows [CancellationException].
+         */
+        fun dismissSwipeHint() {
+            if (appSettingsRepository.observeAppSettings().value.swipeHintDismissed) return
+            scope.launch(ioDispatcher) {
+                if (appSettingsRepository.observeAppSettings().value.swipeHintDismissed) return@launch
+                @Suppress("TooGenericExceptionCaught")
+                try {
+                    appSettingsRepository.updateAppSettings { current ->
+                        if (current.swipeHintDismissed) current else current.copy(swipeHintDismissed = true)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("MainSettingsController: dismissSwipeHint failed", e)
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLogger.e("MainSettingsController: dismissSwipeHint failed", e)
             }
         }
-    }
 
         private fun launchSafely(
             operationName: String,

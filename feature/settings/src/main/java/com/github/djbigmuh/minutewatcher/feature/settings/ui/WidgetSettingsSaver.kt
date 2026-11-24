@@ -54,7 +54,7 @@ class WidgetSettingsSaver
             }
         }
 
-    @Suppress("TooGenericExceptionCaught", "ThrowsCount")
+        @Suppress("TooGenericExceptionCaught", "ThrowsCount")
         private suspend fun performSave(
             state: WidgetSettingsState,
             skipSimSettings: Boolean,
