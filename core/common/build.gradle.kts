@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.javaxInject)
 
     testImplementation(libs.junit)
+    testImplementation(testFixtures(project(":core:resources")))
     testImplementation(libs.mockingKotlin)
     testImplementation(libs.mockingCore)
     testImplementation(libs.kotlinxCoroutinesTesting)

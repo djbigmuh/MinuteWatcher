@@ -1,8 +1,8 @@
 package com.github.djbigmuh.minutewatcher.core.common.annotation
 
 /**
- * Marks explicit synchronous-to-asynchronous coroutine bridges where runBlocking
- * is intentionally allowed by architecture policy.
+ * Marks explicit synchronous-to-asynchronous coroutine bridges
+ * intentionally allowed by architecture policy.
  */
 @Target(
     AnnotationTarget.FUNCTION,

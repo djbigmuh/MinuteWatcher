@@ -104,4 +104,60 @@ class CoroutineRegressionTest {
                 jobCanceled,
             )
         }
+
+    @Test
+    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test token list")
+    fun `no forbidden coroutine or threading tokens in production src main code`() {
+        val projectRootProp =
+            System.getProperty("minutewatcher.projectRoot")
+                ?: throw IllegalStateException("System property 'minutewatcher.projectRoot' is not set.")
+        val rootDir = java.io.File(projectRootProp)
+        val allowedFileNames = setOf("DispatchersModule.kt", "AppLogger.kt")
+        val excludedDirNames =
+            setOf(".git", ".gradle", ".gradle_home", ".robolectric", ".kotlin", ".artifacts", "build", "node_modules")
+
+        val forbiddenTokens =
+            listOf(
+                "Dispatchers.IO",
+                "Dispatchers.Default",
+                "Dispatchers.Main.immediate",
+                "Dispatchers.Main",
+                "Dispatchers.Unconfined",
+                "newFixedThreadPoolContext",
+                "newSingleThreadContext",
+                "Executors.new",
+                "GlobalScope",
+                "runBlocking",
+                "Thread.sleep",
+                "SystemClock.sleep",
+            )
+
+        val violations = mutableListOf<String>()
+
+        rootDir
+            .walkTopDown()
+            .onEnter { dir -> !excludedDirNames.contains(dir.name) }
+            .filter { file ->
+                file.isFile &&
+                    file.extension in setOf("kt", "java") &&
+                    file.invariantSeparatorsPath.contains("/src/main/") &&
+                    file.name !in allowedFileNames
+            }.forEach { file ->
+                val lines = file.readLines()
+                lines.forEachIndexed { lineIndex, lineText ->
+                    for (token in forbiddenTokens) {
+                        if (lineText.contains(token)) {
+                            violations.add(
+                                "Forbidden token '$token' found in production file '${file.absolutePath}' at line ${lineIndex + 1}: '$lineText'",
+                            )
+                        }
+                    }
+                }
+            }
+
+        assertTrue(
+            "Production src/main code contains forbidden coroutine/threading tokens:\n" + violations.joinToString("\n"),
+            violations.isEmpty(),
+        )
+    }
 }
