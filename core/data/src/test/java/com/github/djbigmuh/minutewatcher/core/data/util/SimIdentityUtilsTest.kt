@@ -127,17 +127,16 @@ class SimIdentityUtilsTest {
         assertEquals(identity0.stableId, identity1.stableId)
     }
 
-    /**
-     * Helper to invoke deprecated [SubscriptionInfo.mcc] and [SubscriptionInfo.mnc]
-     * specifically for SDK 28 legacy fallback tests where newer MCC/MNC string APIs are unavailable.
-     */
-    @Suppress("DEPRECATION")
     private fun setLegacyMccMnc(
         info: SubscriptionInfo,
         mcc: Int,
         mnc: Int,
     ) {
+        // Deprecated SubscriptionInfo.getMcc() replaced by SubscriptionInfo.getMccString()
+        @Suppress("DEPRECATION")
         whenever(info.mcc).thenReturn(mcc)
+        // Deprecated SubscriptionInfo.getMnc() replaced by SubscriptionInfo.getMncString()
+        @Suppress("DEPRECATION")
         whenever(info.mnc).thenReturn(mnc)
     }
 }
