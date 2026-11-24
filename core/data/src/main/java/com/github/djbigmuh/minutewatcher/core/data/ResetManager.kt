@@ -18,8 +18,8 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Manages automatic resets of SIM usage stats based on billing cycles.
@@ -99,7 +99,7 @@ class ResetManager
             var skippedCount = 0
 
             val allProcessed =
-                withTimeoutOrNull(RESET_TOTAL_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(RESET_TOTAL_TIMEOUT) {
                     for (simInfo in activeSims) {
                         @Suppress("TooGenericExceptionCaught")
                         try {
@@ -125,7 +125,7 @@ class ResetManager
                     }
                     true
                 } ?: run {
-                    AppLogger.e("ResetManager: total reset timeout after ${RESET_TOTAL_TIMEOUT_MS}ms")
+                    AppLogger.e("ResetManager: total reset timeout after $RESET_TOTAL_TIMEOUT")
                     false
                 }
 
@@ -260,6 +260,6 @@ class ResetManager
 
         companion object {
             private val CHECK_INTERVAL_MS = 45.minutes.inWholeMilliseconds
-            private const val RESET_TOTAL_TIMEOUT_MS = 30_000L
+            private val RESET_TOTAL_TIMEOUT = 30.seconds
         }
     }

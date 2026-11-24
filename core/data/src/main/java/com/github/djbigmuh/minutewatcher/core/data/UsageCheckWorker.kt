@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * UsageCheckWorker encapsulates a single background check cycle
@@ -71,10 +72,10 @@ class UsageCheckWorker
          */
         override suspend fun doWork(): Result =
             withContext(ioDispatcher) {
-                withTimeoutOrNull(WORKER_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(WORKER_TIMEOUT) {
                     executeWork()
                 } ?: run {
-                    AppLogger.e("UsageCheckWorker: timed out after ${WORKER_TIMEOUT_MS}ms")
+                    AppLogger.e("UsageCheckWorker: timed out after $WORKER_TIMEOUT")
                     Result.retry()
                 }
             }
@@ -82,7 +83,7 @@ class UsageCheckWorker
         private suspend fun executeWork(): Result =
             @Suppress("TooGenericExceptionCaught")
             try {
-                withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(WORKER_REFRESH_TIMEOUT) {
                     deps.usageUseCase.refreshOperatorInfo()
                 } ?: run {
                     AppLogger.w("UsageCheckWorker: refreshOperatorInfo timed out, continuing")
@@ -120,10 +121,10 @@ class UsageCheckWorker
 
         private suspend fun executeRefreshAndProcess(): Result {
             val refreshResult =
-                withTimeoutOrNull(WORKER_REFRESH_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(WORKER_REFRESH_TIMEOUT) {
                     deps.usageStateRepository.refresh()
                 } ?: run {
-                    AppLogger.e("UsageCheckWorker: refresh timed out after ${WORKER_REFRESH_TIMEOUT_MS}ms")
+                    AppLogger.e("UsageCheckWorker: refresh timed out after $WORKER_REFRESH_TIMEOUT")
                     null
                 }
 
@@ -536,11 +537,11 @@ class UsageCheckWorker
             val body =
                 if (isMinutes) {
                     val remText = FormatUtils.formatMinutesPlural(appLocaleContext, entity.remaining.toInt())
-                    val remainingPercent = ((entity.remaining * HUNDRED) / entity.limit).toInt()
+                    val remainingPercent = ((entity.remaining * PERCENT_MULTIPLIER) / entity.limit).toInt()
                     formatLowMinutesBody(appLocaleContext, autoReset, level, remText, remainingPercent, daysRem)
                 } else {
                     val remainingGb = (entity.remaining.toDouble() / Constants.BYTES_PER_GB).toFloat()
-                    val remainingPercent = ((entity.remaining * HUNDRED) / entity.limit).toInt()
+                    val remainingPercent = ((entity.remaining * PERCENT_MULTIPLIER) / entity.limit).toInt()
                     formatLowTrafficBody(appLocaleContext, autoReset, level, remainingGb, remainingPercent, daysRem)
                 }
 
@@ -647,18 +648,18 @@ class UsageCheckWorker
             }
 
         companion object {
-            private const val HUNDRED = 100
+            private const val PERCENT_MULTIPLIER = 100
 
             /**
              * Overall worker execution timeout (upper bound: 120 seconds).
              * Result on trigger: [Result.retry].
              */
-            private const val WORKER_TIMEOUT_MS = 120_000L
+            private val WORKER_TIMEOUT = 120.seconds
 
             /**
              * Worker refresh operation timeout (upper bound: 30 seconds).
              * Result on trigger: [Result.retry] or fallback.
              */
-            private const val WORKER_REFRESH_TIMEOUT_MS = 30_000L
+            private val WORKER_REFRESH_TIMEOUT = 30.seconds
         }
     }

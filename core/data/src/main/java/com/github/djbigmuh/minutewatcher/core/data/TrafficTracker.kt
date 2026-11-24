@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 internal class TrafficUpdateTimeoutException(
     val startElapsed: Long = 0L,
@@ -310,9 +311,9 @@ class TrafficTracker
             attempt: Int,
         ): Boolean {
             if (cause is CancellationException) throw cause
-            if (attempt > MAX_OBSERVER_RETRIES) {
+            if (attempt > MAX_OBSERVER_ATTEMPTS) {
                 AppLogger.e(
-                    "TrafficTracker: $observerName observer max retries ($MAX_OBSERVER_RETRIES) exhausted",
+                    "TrafficTracker: $observerName observer max retries ($MAX_OBSERVER_ATTEMPTS) exhausted",
                     cause,
                 )
                 transitionStatus(
@@ -324,16 +325,16 @@ class TrafficTracker
                 )
                 return false
             }
-            val delayMs =
+            val backoff =
                 minOf(
-                    OBSERVER_RETRY_BASE_MS * (1L shl ((attempt - 1).coerceAtMost(30))),
-                    OBSERVER_RETRY_MAX_MS,
+                    OBSERVER_RETRY_BASE_DURATION * (1 shl ((attempt - 1).coerceAtMost(MAX_EXPONENTIAL_SHIFT))),
+                    OBSERVER_RETRY_MAX_DURATION,
                 )
             AppLogger.w(
-                "TrafficTracker: $observerName observer error (attempt $attempt), retrying in ${delayMs}ms",
+                "TrafficTracker: $observerName observer error (attempt $attempt), retrying in $backoff",
                 cause,
             )
-            delay(delayMs.milliseconds)
+            delay(backoff)
             return true
         }
 
@@ -511,12 +512,12 @@ class TrafficTracker
                     is InitAttemptResult.RetryableError -> {
                         lastException = result.exception
                         if (attempt < MAX_INIT_ATTEMPTS) {
-                            val delayMs = INIT_RETRY_BASE_MS * (1 shl (attempt - 1))
+                            val backoff = INIT_RETRY_BASE_DURATION * (1 shl (attempt - 1))
                             AppLogger.w(
-                                "TrafficTracker: init attempt $attempt failed, retry in ${delayMs}ms",
+                                "TrafficTracker: init attempt $attempt failed, retry in $backoff",
                                 result.exception,
                             )
-                            delay(delayMs.milliseconds)
+                            delay(backoff)
                         }
                     }
                 }
@@ -1337,15 +1338,17 @@ class TrafficTracker
 
         private companion object {
             private const val MAX_INIT_ATTEMPTS = 3
-            private const val INIT_RETRY_BASE_MS = 1000L
+            private val INIT_RETRY_BASE_DURATION = 1.seconds
 
             /** Maximum consecutive observer retry attempts before failing with [TrackingStatus.Error]. */
-            private const val MAX_OBSERVER_RETRIES = 10
+            private const val MAX_OBSERVER_ATTEMPTS = 10
 
-            /** Base delay in milliseconds for observer exponential backoff retry. */
-            private const val OBSERVER_RETRY_BASE_MS = 1000L
+            /** Base duration for observer exponential backoff retry. */
+            private val OBSERVER_RETRY_BASE_DURATION = 1.seconds
 
-            /** Maximum delay in milliseconds for observer exponential backoff retry. */
-            private const val OBSERVER_RETRY_MAX_MS = 30000L
+            /** Maximum duration for observer exponential backoff retry. */
+            private val OBSERVER_RETRY_MAX_DURATION = 30.seconds
+
+            private const val MAX_EXPONENTIAL_SHIFT = 30
         }
     }
