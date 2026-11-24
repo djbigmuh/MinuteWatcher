@@ -1,20 +1,12 @@
 ﻿package com.github.djbigmuh.minutewatcher
 
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 class LicenseConsistencyTest {
-    private fun findProjectRoot(): File {
-        val rootPath =
-            System.getProperty("minutewatcher.projectRoot")
-                ?: error("System property 'minutewatcher.projectRoot' is not set")
-        val dir = File(rootPath)
-        if (!dir.exists()) {
-            error("Project root does not exist at $rootPath")
-        }
-        return dir
-    }
+    private fun findProjectRoot(): File = ProjectPaths.root
 
     @Test
     fun `license file exists in project root and contains valid mit text and copyright`() {

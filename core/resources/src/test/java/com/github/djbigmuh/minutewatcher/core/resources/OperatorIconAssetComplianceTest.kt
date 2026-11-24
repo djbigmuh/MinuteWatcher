@@ -8,6 +8,7 @@ import android.graphics.PorterDuff
 import android.graphics.RectF
 import androidx.core.graphics.PathParser
 import androidx.test.core.app.ApplicationProvider
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -499,13 +500,7 @@ class OperatorIconAssetComplianceTest {
             }.sortedBy { context.resources.getResourceEntryName(it) }
     }
 
-    private fun getResDir(): File {
-        val prop = System.getProperty("minutewatcher.coreResourcesResDir")
-        require(!prop.isNullOrEmpty()) { "System property minutewatcher.coreResourcesResDir is not set" }
-        val dir = File(prop)
-        require(dir.exists()) { "Core resources directory does not exist at $prop" }
-        return dir
-    }
+    private fun getResDir(): File = ProjectPaths.resDir
 
     private fun validateNamespaces(
         resName: String,

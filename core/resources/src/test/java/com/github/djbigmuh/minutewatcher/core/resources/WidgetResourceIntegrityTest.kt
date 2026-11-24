@@ -1,5 +1,6 @@
 ﻿package com.github.djbigmuh.minutewatcher.core.resources
 
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -43,9 +44,5 @@ class WidgetResourceIntegrityTest {
         assertTrue("preview layout must not contain ProgressBar", !previewContent.contains("ProgressBar"))
     }
 
-    private fun findResDir(): File =
-        File(
-            System.getProperty("minutewatcher.coreResourcesResDir")
-                ?: error("System property minutewatcher.coreResourcesResDir is not set"),
-        )
+    private fun findResDir(): File = ProjectPaths.resDir
 }

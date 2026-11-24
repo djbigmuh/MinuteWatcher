@@ -2,6 +2,7 @@
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,25 +16,9 @@ import javax.xml.parsers.DocumentBuilderFactory
 @RunWith(RobolectricTestRunner::class)
 @Config(application = MinuteWatcherTestApp::class)
 class NotificationIconConsistencyTest {
-    private fun findProjectRoot(): File {
-        val rootPath =
-            System.getProperty("minutewatcher.projectRoot")
-                ?: error("System property 'minutewatcher.projectRoot' is not set")
-        val dir = File(rootPath)
-        if (!dir.exists()) {
-            error("Project root does not exist at $rootPath")
-        }
-        return dir
-    }
+    private fun findProjectRoot(): File = ProjectPaths.root
 
-    private fun findAppManifestFile(): File {
-        val path =
-            System.getProperty("minutewatcher.appManifestPath")
-                ?: error("System property 'minutewatcher.appManifestPath' is not set")
-        val file = File(path)
-        assertTrue("Manifest file must exist at $path", file.exists())
-        return file
-    }
+    private fun findAppManifestFile(): File = ProjectPaths.appManifest
 
     @Test
     fun `usage tile service in manifest uses ic_stat_minutewatcher`() {

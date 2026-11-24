@@ -1,26 +1,16 @@
 ﻿package com.github.djbigmuh.minutewatcher.core.resources
 
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 class MarkdownTableFormattingTest {
-    private fun getProjectRootDir(): File {
-        val rootPath =
-            System.getProperty("minutewatcher.projectRoot")
-                ?: error("System property 'minutewatcher.projectRoot' is not set")
-        val dir = File(rootPath)
-        if (!dir.exists()) {
-            error("Project root does not exist at $rootPath")
-        }
-        return dir
-    }
-
     @Test
     fun `all tracked markdown files have valid table formatting`() {
-        val rootDir = getProjectRootDir()
-        val excludedSegments = setOf(".git", ".gradle", ".robolectric", "build", "audit_dump", "node_modules")
+        val rootDir = ProjectPaths.root
+        val excludedSegments = ProjectPaths.excludedDirNames
         val mdFiles =
             rootDir
                 .walkTopDown()

@@ -1,6 +1,7 @@
 ﻿package com.github.djbigmuh.minutewatcher.core.resources
 
 import com.github.djbigmuh.minutewatcher.core.resources.testing.LocaleResourceDirs
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -516,18 +517,7 @@ class LocaleConfigConsistencyTest {
         return result
     }
 
-    private fun findProjectRoot(): File {
-        val resDir = findResDir()
-        return resDir.parentFile?.parentFile?.parentFile ?: error("Cannot find project root")
-    }
+    private fun findProjectRoot(): File = ProjectPaths.root
 
-    private fun findResDir(): File {
-        var dir: File? = File(System.getProperty("user.dir") ?: ".")
-        while (dir != null) {
-            val candidate = File(dir, "core/resources/src/main/res")
-            if (candidate.exists() && candidate.isDirectory) return candidate
-            dir = dir.parentFile
-        }
-        error("Could not locate core/resources/src/main/res")
-    }
+    private fun findResDir(): File = ProjectPaths.resDir
 }

@@ -1,21 +1,13 @@
 ﻿package com.github.djbigmuh.minutewatcher
 
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 class FastlaneMetadataConsistencyTest {
-    private fun findProjectRoot(): File {
-        val rootPath =
-            System.getProperty("minutewatcher.projectRoot")
-                ?: error("System property 'minutewatcher.projectRoot' is not set")
-        val dir = File(rootPath)
-        if (!dir.exists()) {
-            error("Project root does not exist at $rootPath")
-        }
-        return dir
-    }
+    private fun findProjectRoot(): File = ProjectPaths.root
 
     private fun getPngDimensionsFromIhdr(file: File): Pair<Int, Int> {
         val bytes = file.readBytes()

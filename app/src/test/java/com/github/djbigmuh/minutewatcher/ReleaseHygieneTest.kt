@@ -1,5 +1,6 @@
 package com.github.djbigmuh.minutewatcher
 
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -7,12 +8,8 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 class ReleaseHygieneTest {
-    private val projectRoot: File by lazy {
-        val rootPath =
-            System.getProperty("minutewatcher.projectRoot")
-                ?: error("System property minutewatcher.projectRoot is not set")
-        File(rootPath)
-    }
+    private val projectRoot: File
+        get() = ProjectPaths.root
 
     @Test
     fun `verify no benchmark population code exists in main source sets`() {
@@ -47,7 +44,7 @@ class ReleaseHygieneTest {
 
     @Test
     fun `verify release manifest does not contain benchmark receiver or exported debug components`() {
-        val manifestFile = File(projectRoot, "app/src/main/AndroidManifest.xml")
+        val manifestFile = ProjectPaths.appManifest
         assertTrue("Main manifest must exist", manifestFile.exists())
 
         val dbFactory = DocumentBuilderFactory.newInstance()

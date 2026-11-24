@@ -32,6 +32,28 @@ tasks.withType<Test>().configureEach {
         rootProject.layout.projectDirectory.dir("feature/semantic/src/main/AndroidManifest.xml").asFile.absolutePath,
     )
 
+    inputs.dir(rootProject.layout.projectDirectory.dir("core/resources/src/main/res"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("coreResourcesResDir")
+    inputs.dir(rootProject.layout.projectDirectory.dir("fastlane/metadata/android"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("fastlaneMetadataDir")
+    inputs.file(rootProject.layout.projectDirectory.file("app/src/main/AndroidManifest.xml"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("appManifestFile")
+    inputs.file(rootProject.layout.projectDirectory.file("feature/semantic/src/main/AndroidManifest.xml"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("semanticManifestFile")
+    inputs.file(rootProject.layout.projectDirectory.file("core/resources/src/main/assets/ATTRIBUTIONS.txt"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("attributionsFile")
+    inputs.file(rootProject.layout.projectDirectory.file("core/resources/src/main/assets/OFL-1.1.txt"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("oflFile")
+    inputs.dir(rootProject.layout.projectDirectory.dir("docs"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("docsDir")
+
     val moduleCacheName = project.path.removePrefix(":").replace(':', '.').ifEmpty { "root" }
     val roboUserHomeFile = rootProject.layout.projectDirectory.dir(".robolectric/$moduleCacheName/home").asFile
     val testTmpDirFile = project.layout.buildDirectory.dir("tmp").get().asFile

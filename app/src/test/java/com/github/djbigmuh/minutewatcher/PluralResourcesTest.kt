@@ -2,6 +2,7 @@
 
 import android.icu.text.PluralRules
 import com.github.djbigmuh.minutewatcher.core.resources.testing.LocaleResourceDirs
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -216,13 +217,5 @@ class PluralResourcesTest {
         return itemsMap
     }
 
-    private fun findResDir(): File {
-        val rootPath =
-            System.getProperty("minutewatcher.projectRoot")
-                ?: error("System property 'minutewatcher.projectRoot' is not set")
-        val rootDir = File(rootPath)
-        val candidate = File(rootDir, "core/resources/src/main/res")
-        assertTrue("core/resources/src/main/res must exist at $candidate", candidate.exists() && candidate.isDirectory)
-        return candidate
-    }
+    private fun findResDir(): File = ProjectPaths.resDir
 }

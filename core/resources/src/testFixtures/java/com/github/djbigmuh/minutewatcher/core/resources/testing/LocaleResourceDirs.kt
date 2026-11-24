@@ -1,10 +1,15 @@
 ﻿package com.github.djbigmuh.minutewatcher.core.resources.testing
 
+import java.io.File
+
 /**
  * Utility for mapping between language tags and Android resource directories (qualifiers),
  * including ISO 639 mapping table for localization tests and consistency checks.
  */
 object LocaleResourceDirs {
+    val resDir: File
+        get() = ProjectPaths.resDir
+
     /**
      * Supported language tags in the application.
      */

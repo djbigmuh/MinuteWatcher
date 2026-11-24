@@ -1,5 +1,6 @@
 ﻿package com.github.djbigmuh.minutewatcher.core.resources
 
+import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -7,7 +8,7 @@ import java.io.File
 class OperatorIconDocumentationConsistencyTest {
     @Test
     fun `validate operator icon documentation and attributions consistency`() {
-        val rootDir = getProjectRootDir()
+        val rootDir = ProjectPaths.root
         val drawableDir = File(rootDir, "core/resources/src/main/res/drawable")
         assertTrue("Drawable dir must exist", drawableDir.exists())
 
@@ -67,16 +68,5 @@ class OperatorIconDocumentationConsistencyTest {
         // Verify OFL-1.1.txt exists
         val oflFile = File(rootDir, "core/resources/src/main/assets/OFL-1.1.txt")
         assertTrue("OFL-1.1.txt must exist", oflFile.exists())
-    }
-
-    private fun getProjectRootDir(): File {
-        val rootPath =
-            System.getProperty("minutewatcher.projectRoot")
-                ?: error("System property 'minutewatcher.projectRoot' is not set")
-        val dir = File(rootPath)
-        if (!dir.exists()) {
-            error("Project root does not exist at $rootPath")
-        }
-        return dir
     }
 }
