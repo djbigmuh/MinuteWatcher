@@ -11,4 +11,9 @@
         <item>பக்கவாட்டில்</item>
         <item>ஒரு பத்தியில்</item>
     </string-array>
+
+    <string-array name="supported_languages" translatable="false">
+        <item>en-US</item>
+        <item>ru</item>
+    </string-array>
 </resources>

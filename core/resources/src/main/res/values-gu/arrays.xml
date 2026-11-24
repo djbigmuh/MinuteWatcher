@@ -11,4 +11,9 @@
         <item>પાસપાસે</item>
         <item>એક કોલમમાં</item>
     </string-array>
+
+    <string-array name="supported_languages" translatable="false">
+        <item>en-US</item>
+        <item>ru</item>
+    </string-array>
 </resources>

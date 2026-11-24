@@ -11,4 +11,9 @@
         <item>나란히</item>
         <item>세로 열로</item>
     </string-array>
+
+    <string-array name="supported_languages" translatable="false">
+        <item>en-US</item>
+        <item>ru</item>
+    </string-array>
 </resources>

@@ -11,4 +11,9 @@
         <item>کنار هم</item>
         <item>در یک ستون</item>
     </string-array>
+
+    <string-array name="supported_languages" translatable="false">
+        <item>en-US</item>
+        <item>ru</item>
+    </string-array>
 </resources>

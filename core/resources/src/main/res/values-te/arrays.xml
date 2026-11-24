@@ -11,4 +11,9 @@
         <item>పక్కపక్కనే</item>
         <item>నిలువు వరుసలో</item>
     </string-array>
+
+    <string-array name="supported_languages" translatable="false">
+        <item>en-US</item>
+        <item>ru</item>
+    </string-array>
 </resources>

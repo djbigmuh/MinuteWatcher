@@ -11,4 +11,9 @@
         <item>शेजारी शेजारी</item>
         <item>एका स्तंभात</item>
     </string-array>
+
+    <string-array name="supported_languages" translatable="false">
+        <item>en-US</item>
+        <item>ru</item>
+    </string-array>
 </resources>
