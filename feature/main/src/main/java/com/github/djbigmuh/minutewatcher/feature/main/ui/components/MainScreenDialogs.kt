@@ -38,6 +38,8 @@ fun ResetConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = titleRes)) },
         text = { Text(stringResource(id = textRes)) },
         confirmButton = {
