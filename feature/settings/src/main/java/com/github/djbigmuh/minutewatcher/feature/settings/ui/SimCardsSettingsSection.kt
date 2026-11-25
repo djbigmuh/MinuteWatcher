@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +32,7 @@ import com.github.djbigmuh.minutewatcher.core.model.WidgetUiState
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 private val SIM_CARD_VERTICAL_PADDING = 8.dp
-private val SIM_CARD_CONTENT_PADDING = 8.dp
+private val SIM_CARD_CONTENT_PADDING = 12.dp
 private val SIM_HEADER_MIN_HEIGHT = 48.dp
 private val SIM_HEADER_ICON_SIZE = 24.dp
 private val SIM_HEADER_SPACING = 12.dp
@@ -104,6 +106,9 @@ fun SimSettingsSection(
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = SIM_CARD_VERTICAL_PADDING),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(SIM_CARD_CONTENT_PADDING)) {
             SimHeaderRow(
