@@ -1,20 +1,19 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.MaterialTheme
-import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
-import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.model.WidgetUiState
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import com.github.djbigmuh.minutewatcher.feature.settings.ui.components.WidgetPreview
@@ -26,7 +25,7 @@ fun BottomPreviewBar(uiState: WidgetUiState?) {
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = MwSpacing.md),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(MwSpacing.lg),
+        contentPadding = PaddingValues(MwSpacing.lg),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         // Text is used for headers and setting labels.
@@ -46,8 +45,7 @@ fun BottomPreviewBar(uiState: WidgetUiState?) {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight()
-                    ,
+                    .wrapContentHeight(),
             contentAlignment = Alignment.Center,
         ) {
             uiState?.let {
