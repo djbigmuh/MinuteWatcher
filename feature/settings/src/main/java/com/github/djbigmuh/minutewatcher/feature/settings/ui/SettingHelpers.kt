@@ -1,6 +1,5 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
