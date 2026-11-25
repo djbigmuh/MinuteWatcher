@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,16 +33,6 @@ import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import java.util.Locale
 
-/**
- * Renders traffic section for SIM card.
- * Contains traffic used, traffic limit, and traffic remaining.
- * Traffic remaining is editable (EditableValueBox).
- *
- * @param model SIM card model.
- * @param statusColor Status color (normal/low/critical).
- * @param onAdjustTraffic Callback for adjusting traffic.
- * @param onShowTrafficInfo Callback for showing traffic info.
- */
 @Composable
 fun TrafficSection(
     model: SimCardUiModel,
@@ -52,11 +43,26 @@ fun TrafficSection(
     if (!model.isTrafficLimitSet && model.trafficUsedMb <= 0) return
     val context = LocalContext.current
 
-    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
     Column(modifier = Modifier.fillMaxWidth()) {
         TrafficHeader(onShowTrafficInfo)
+        Spacer(modifier = Modifier.height(2.dp))
         TrafficUsageRow(context, model)
-        Spacer(modifier = Modifier.height(8.dp))
+        if (model.isTrafficLimitSet && model.effectiveTrafficLimitGb > 0f) {
+            Spacer(modifier = Modifier.height(10.dp))
+            LinearProgressIndicator(
+                progress = {
+                    ((model.trafficUsedMb / Constants.MB_PER_GB) / model.effectiveTrafficLimitGb).coerceIn(0f, 1f)
+                },
+                modifier = Modifier.fillMaxWidth().height(6.dp),
+                color = statusColor,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
         TrafficRemainingRow(context, model, statusColor, onAdjustTraffic)
         TrafficAdjustment(model)
     }
@@ -69,14 +75,15 @@ private fun TrafficHeader(onShowTrafficInfo: () -> Unit) {
             text = stringResource(id = R.string.traffic_label),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.width(4.dp))
-        IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(24.dp)) {
+        IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(28.dp)) {
             Icon(
                 Icons.Default.Info,
                 contentDescription = stringResource(R.string.traffic_info_content_desc),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                modifier = Modifier.size(17.dp),
             )
         }
     }
@@ -101,6 +108,7 @@ private fun TrafficUsageRow(
                     FormatUtils.formatMbAsGb(context, model.trafficUsedMb),
                 ),
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (model.isTrafficLimitSet) {
             Text(
@@ -115,6 +123,7 @@ private fun TrafficUsageRow(
                         ),
                     ),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
