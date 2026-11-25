@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,6 +18,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppOutlinedButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import com.github.skydoves.colorpicker.compose.AlphaSlider
 import com.github.skydoves.colorpicker.compose.BrightnessSlider
@@ -42,7 +44,7 @@ fun ColorPickerWrapper(
         }
     }
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = { dismissOnce() },
         title = { Text(stringResource(id = R.string.color_background)) },
         text = {
@@ -60,7 +62,7 @@ fun ColorPickerWrapper(
                     controller = controller,
                     initialColor = Color(initialColor),
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(MwSpacing.lg))
                 BrightnessSlider(
                     modifier =
                         Modifier
@@ -68,7 +70,7 @@ fun ColorPickerWrapper(
                             .height(35.dp),
                     controller = controller,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(MwSpacing.sm))
                 AlphaSlider(
                     modifier =
                         Modifier
@@ -79,22 +81,20 @@ fun ColorPickerWrapper(
             }
         },
         confirmButton = {
-            Button(
+            AppButton(
+                text = stringResource(id = R.string.save_button),
                 onClick = {
                     val colorInt = controller.selectedColor.value.toArgb()
                     onColorSelected(colorInt)
                     dismissOnce()
                 },
-            ) {
-                Text(stringResource(id = R.string.save_button))
-            }
+            )
         },
         dismissButton = {
-            Button(
+            AppOutlinedButton(
+                text = stringResource(id = R.string.cancel_button),
                 onClick = { dismissOnce() },
-            ) {
-                Text(stringResource(id = R.string.cancel_button))
-            }
+            )
         },
     )
 }
