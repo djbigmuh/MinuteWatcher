@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,7 +24,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +49,8 @@ import com.github.djbigmuh.minutewatcher.core.android.ui.onHorizontalSwipe
 import com.github.djbigmuh.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
 import com.github.djbigmuh.minutewatcher.core.android.util.WidgetStringsFactory
 import com.github.djbigmuh.minutewatcher.core.android.util.WidgetUiMapper
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTopBar
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
@@ -180,9 +180,10 @@ private fun ErrorState(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onRetry) {
-                    Text(text = stringResource(id = R.string.action_retry))
-                }
+                AppButton(
+                    text = stringResource(id = R.string.action_retry),
+                    onClick = onRetry,
+                )
             }
         }
     }
@@ -246,8 +247,8 @@ private fun WidgetSettingsContent(
 
 @Composable
 private fun SettingsTopAppBar(onBack: () -> Unit) {
-    TopAppBar(
-        title = { Text(stringResource(id = R.string.settings_widget_title)) },
+    AppTopBar(
+        title = stringResource(id = R.string.settings_widget_title),
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(

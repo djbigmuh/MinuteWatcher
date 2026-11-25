@@ -1,15 +1,11 @@
-﻿package com.github.djbigmuh.minutewatcher.feature.main.ui.components
+package com.github.djbigmuh.minutewatcher.feature.main.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -19,10 +15,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextFieldValue
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import java.util.Locale
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun AdjustmentComposeDialog(
@@ -63,10 +60,8 @@ fun AdjustmentComposeDialog(
             maxLimit.toInt().toString(),
         )
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Text(
                 stringResource(
@@ -125,7 +120,7 @@ private fun AdjustmentDialogContent(
     isMinutes: Boolean,
 ) {
     Column {
-        OutlinedTextField(
+        AppTextFieldValue(
             value = state.text,
             onValueChange = { state.onTextChange(it) },
             label = {

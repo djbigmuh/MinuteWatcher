@@ -1,4 +1,4 @@
-﻿package com.github.djbigmuh.minutewatcher
+package com.github.djbigmuh.minutewatcher
 
 import android.appwidget.AppWidgetManager
 import android.content.Intent
@@ -13,7 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.github.djbigmuh.minutewatcher.feature.settings.ui.WidgetSettingsScreen
 import com.github.djbigmuh.minutewatcher.feature.settings.ui.WidgetSettingsViewModel

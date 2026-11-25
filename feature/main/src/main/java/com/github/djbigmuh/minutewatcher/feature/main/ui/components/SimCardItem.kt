@@ -1,4 +1,4 @@
-﻿package com.github.djbigmuh.minutewatcher.feature.main.ui.components
+package com.github.djbigmuh.minutewatcher.feature.main.ui.components
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
@@ -14,11 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -38,6 +35,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppSwitch
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.util.ColorProvider
@@ -65,28 +65,17 @@ fun SimCardItem(
     onAdjustTraffic: () -> Unit = {},
     onShowTrafficInfo: () -> Unit = {},
 ) {
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 7.dp)
-                .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
-        shape = RoundedCornerShape(24.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border =
-            BorderStroke(
-                width = if (highlighted) 2.dp else 1.dp,
-                color =
-                    if (highlighted) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant
-                    },
-            ),
+    AppCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 7.dp)
+            .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
+        contentPadding = PaddingValues(0.dp),
+        border = BorderStroke(
+            width = if (highlighted) 2.dp else 1.dp,
+            color = if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+        ),
+        shape = RoundedCornerShape(MwShape.extraLarge),
     ) {
         SimCardContent(
             model = model,
@@ -223,7 +212,7 @@ private fun AutoResetSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
-        Switch(
+        AppSwitch(
             checked = model.autoResetEnabled,
             onCheckedChange = onToggleAutoReset,
             modifier =

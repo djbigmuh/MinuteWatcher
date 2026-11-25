@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 @Composable
@@ -36,10 +36,8 @@ fun ResetConfirmationDialog(
     @StringRes titleRes: Int = R.string.reset_confirmation_title,
     @StringRes textRes: Int = R.string.reset_confirmation_body,
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = titleRes)) },
         text = { Text(stringResource(id = textRes)) },
         confirmButton = {

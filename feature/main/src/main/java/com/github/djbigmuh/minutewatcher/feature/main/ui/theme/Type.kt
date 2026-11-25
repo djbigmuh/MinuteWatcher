@@ -1,19 +1,6 @@
-﻿package com.github.djbigmuh.minutewatcher.feature.main.ui.theme
+package com.github.djbigmuh.minutewatcher.feature.main.ui.theme
 
-import androidx.compose.material3.Typography
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTypography
 
-val Typography =
-    Typography(
-        bodyLarge =
-            TextStyle(
-                fontFamily = FontFamily.Default,
-                fontWeight = FontWeight.Normal,
-                fontSize = 16.sp,
-                lineHeight = 24.sp,
-                letterSpacing = 0.5.sp,
-            ),
-    )
+// Compatibility alias; typography is owned by core:designsystem.
+val Typography = MinuteWatcherTypography
