@@ -11,6 +11,7 @@ Use semantic Material 3 values in feature code:
 - `MaterialTheme.colorScheme.surfaceContainerLow` for grouped cards
 - `MaterialTheme.colorScheme.onSurface` and `onSurfaceVariant` for text hierarchy
 - `MaterialTheme.typography` for all text styles
+- `MaterialTheme.shapes` for the shared Material 3 shape scale
 
 Avoid copying palette hex values into feature modules.
 
