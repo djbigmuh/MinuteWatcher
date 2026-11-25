@@ -75,7 +75,7 @@ internal fun EditableValueBox(
             Modifier
                 .background(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(4.dp),
+                    shape = RoundedCornerShape(10.dp),
                 ).drawBehind {
                     val strokeWidth = 2.dp.toPx()
                     val y = size.height - strokeWidth / 2
@@ -90,7 +90,7 @@ internal fun EditableValueBox(
                     role = Role.Button
                     contentDescription?.let { this.contentDescription = it }
                 }.clickable { onClick() }
-                .padding(horizontal = horizontalPadding.dp, vertical = 4.dp),
+                .padding(horizontal = horizontalPadding.dp, vertical = 6.dp),
     ) {
         Text(
             text = value,

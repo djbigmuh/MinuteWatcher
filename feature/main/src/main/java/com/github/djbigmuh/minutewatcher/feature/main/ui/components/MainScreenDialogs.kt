@@ -38,6 +38,8 @@ fun ResetConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = titleRes)) },
         text = { Text(stringResource(id = textRes)) },
         confirmButton = {
@@ -61,6 +63,8 @@ fun SimpleMessageDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = {
@@ -78,6 +82,8 @@ fun UsageAccessDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = R.string.usage_access_dialog_title)) },
         text = { Text(stringResource(id = R.string.usage_access_dialog_description)) },
         confirmButton = {
@@ -230,6 +236,8 @@ fun AboutDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = R.string.about_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
