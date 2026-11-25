@@ -78,7 +78,6 @@ fun SimCardItem(
         shape = RoundedCornerShape(MwShape.extraLarge),
     ) {
         SimCardContent(
-        SimCardContent(
             model = model,
             onSetLimits = onSetLimits,
             onResetCounters = onResetCounters,
