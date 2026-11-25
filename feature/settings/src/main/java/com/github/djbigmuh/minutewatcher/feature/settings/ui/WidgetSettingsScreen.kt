@@ -15,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -180,9 +180,10 @@ private fun ErrorState(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onRetry) {
-                    Text(text = stringResource(id = R.string.action_retry))
-                }
+                AppButton(
+                    text = stringResource(id = R.string.action_retry),
+                    onClick = onRetry,
+                )
             }
         }
     }
