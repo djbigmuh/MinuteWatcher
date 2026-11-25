@@ -6,7 +6,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.github.djbigmuh.minutewatcher.core.model.AppTheme
@@ -23,8 +23,13 @@ fun SimCardTopBar(
     onOpenSettings: () -> Unit,
     onShowAbout: () -> Unit,
 ) {
-    TopAppBar(
-        title = { Text(stringResource(id = R.string.app_name)) },
+    CenterAlignedTopAppBar(
+        title = {
+            Text(
+                text = stringResource(id = R.string.app_name),
+                style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+            )
+        },
         actions = {
             ThemeMenu(currentTheme = currentTheme, onThemeChange = onThemeChange)
             LanguageMenu(currentLanguage = currentLanguage, onLanguageChange = onLanguageChange)
