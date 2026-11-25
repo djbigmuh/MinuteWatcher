@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
 import com.github.djbigmuh.minutewatcher.core.common.util.NumberInputNormalizer
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSize
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSize
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
@@ -79,12 +80,12 @@ private fun TrafficHeader(onShowTrafficInfo: () -> Unit) {
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.width(MwSpacing.xs))
-        IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(28.dp)) {
+        IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(MwSize.trafficInfoButtonSize)) {
             Icon(
                 Icons.Default.Info,
                 contentDescription = stringResource(R.string.traffic_info_content_desc),
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                modifier = Modifier.size(17.dp),
+                modifier = Modifier.size(MwSize.trafficInfoIconSize),
             )
         }
     }
