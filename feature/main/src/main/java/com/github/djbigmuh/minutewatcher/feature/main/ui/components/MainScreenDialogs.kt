@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 @Composable
@@ -109,7 +111,7 @@ fun OnboardingDialog(onDismiss: () -> Unit) {
                     .fillMaxWidth()
                     .heightIn(max = 440.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(MwSpacing.lg),
             ) {
                 Surface(
                     modifier = Modifier
@@ -131,7 +133,7 @@ fun OnboardingDialog(onDismiss: () -> Unit) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(MwSpacing.sm),
                 ) {
                     Text(
                         text = stringResource(id = R.string.onboarding_title),
@@ -180,13 +182,13 @@ private fun OnboardingStep(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(MwShape.large),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(MwSpacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(MwSpacing.md),
             verticalAlignment = Alignment.Top,
         ) {
             Surface(
@@ -205,7 +207,7 @@ private fun OnboardingStep(
             }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(MwSpacing.xs),
             ) {
                 Text(
                     text = title,
