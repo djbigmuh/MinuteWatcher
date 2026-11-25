@@ -17,8 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSize
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.resources.R
@@ -35,7 +35,7 @@ fun MinutesSection(
             Spacer(modifier = Modifier.height(MwSpacing.sm))
             LinearProgressIndicator(
                 progress = { (model.minutesUsed.toFloat() / model.effectiveMinutesLimit).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(6.dp),
+                modifier = Modifier.fillMaxWidth().height(MwSize.usageProgressIndicatorHeight),
                 color = statusColor,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
