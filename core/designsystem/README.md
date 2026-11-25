@@ -20,7 +20,7 @@ Avoid copying palette hex values into feature modules.
 Prefer the shared components in `component` over styling Material components locally:
 
 - `AppCard`, `AppDialog`, `AppDropdownMenu`
-- `AppButton`, `AppOutlinedButton`
+- `AppButton`, `AppOutlinedButton`, `AppTextButton`, `AppExtendedFab`
 - `AppTextField`, `AppTextFieldValue`
 - `AppCheckbox`, `AppSwitch`, `AppTopBar`
 - `AppSectionHeader`
