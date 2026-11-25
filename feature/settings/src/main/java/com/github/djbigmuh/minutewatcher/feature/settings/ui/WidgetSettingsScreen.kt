@@ -5,16 +5,16 @@ import android.content.res.Resources
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,12 +22,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,23 +38,26 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.djbigmuh.minutewatcher.core.android.ui.onHorizontalSwipe
 import com.github.djbigmuh.minutewatcher.core.android.ui.resolveNavigationSwipeDirection
 import com.github.djbigmuh.minutewatcher.core.android.util.WidgetStringsFactory
 import com.github.djbigmuh.minutewatcher.core.android.util.WidgetUiMapper
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTopBar
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.model.Constants
+import com.github.djbigmuh.minutewatcher.core.model.showLayoutMode
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetUiState
-import com.github.djbigmuh.minutewatcher.core.model.showLayoutMode
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 private typealias SimSettingsTransform = (SimSettingsState) -> SimSettingsState
@@ -328,8 +330,8 @@ private fun WidgetSettingsList(
     Column(
         modifier = modifier
             .verticalScroll(scrollState)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = MwSpacing.screenHorizontal, vertical = MwSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(MwSpacing.md),
     ) {
         SettingsGroup {
             GeneralSettingsSection(
@@ -395,7 +397,7 @@ private fun ObserveResumeEffect(onResume: () -> Unit) {
 @Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 private fun WidgetSettingsScreenPreview() {
-    MaterialTheme {
+    MinuteWatcherTheme {
         WidgetSettingsScreenBody(
             isLoadError = false,
             settings = WidgetSettingsState(),
@@ -414,14 +416,10 @@ private fun WidgetSettingsScreenPreview() {
 
 @Composable
 private fun SettingsGroup(content: @Composable () -> Unit) {
-    Surface(
+    AppCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 1.dp,
+        contentPadding = PaddingValues(MwSpacing.lg),
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            content()
-        }
+        content()
     }
 }

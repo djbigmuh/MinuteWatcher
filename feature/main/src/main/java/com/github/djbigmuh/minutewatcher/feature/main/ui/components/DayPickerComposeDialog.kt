@@ -3,22 +3,19 @@
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -30,6 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import kotlin.math.abs
@@ -46,10 +46,8 @@ fun DayPickerComposeDialog(
         )
     val selectedDay by rememberSelectedDay(listState)
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         title = { Text(stringResource(id = R.string.choose_reset_day_dialog_title)) },
         text = {
             DayPickerContent(listState = listState, selectedDay = selectedDay)
@@ -69,19 +67,19 @@ fun DayPickerComposeDialog(
 
 @Composable
 private fun DayPickerConfirmButton(onConfirm: () -> Unit) {
-    Button(
+    AppButton(
+        text = stringResource(id = R.string.set_button),
         onClick = onConfirm,
         modifier = Modifier.padding(horizontal = 8.dp),
-    ) {
-        Text(stringResource(id = R.string.set_button))
-    }
+    )
 }
 
 @Composable
 private fun DayPickerCancelButton(onDismiss: () -> Unit) {
-    TextButton(onClick = onDismiss) {
-        Text(stringResource(id = R.string.cancel_button))
-    }
+    AppTextButton(
+        text = stringResource(id = R.string.cancel_button),
+        onClick = onDismiss,
+    )
 }
 
 @Composable

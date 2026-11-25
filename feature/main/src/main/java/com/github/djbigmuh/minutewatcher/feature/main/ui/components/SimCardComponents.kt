@@ -8,18 +8,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 /**
@@ -47,7 +49,7 @@ internal fun AdjustmentLabel(
             ),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 4.dp, start = 4.dp),
+        modifier = Modifier.padding(top = MwSpacing.xs, start = MwSpacing.xs),
     )
 }
 
@@ -75,7 +77,7 @@ internal fun EditableValueBox(
             Modifier
                 .background(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(MwShape.extraSmall),
                 ).drawBehind {
                     val strokeWidth = 2.dp.toPx()
                     val y = size.height - strokeWidth / 2
@@ -85,7 +87,7 @@ internal fun EditableValueBox(
                         end = Offset(size.width, y),
                         strokeWidth = strokeWidth,
                     )
-                }.clip(RoundedCornerShape(4.dp))
+                }.clip(RoundedCornerShape(MwShape.extraSmall))
                 .semantics {
                     role = Role.Button
                     contentDescription?.let { this.contentDescription = it }

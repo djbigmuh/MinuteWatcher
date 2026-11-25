@@ -1,17 +1,11 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCheckbox
+import androidx.compose.ui.Modifier
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCheckboxRow
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppSettingLabel
 
 /**
  * Returns the content color based on the enabled state.
@@ -29,11 +23,7 @@ fun enabledContentColor(enabled: Boolean): Color =
  */
 @Composable
 fun SettingLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.padding(top = 8.dp),
-    )
+    AppSettingLabel(text = text)
 }
 
 /**
@@ -47,19 +37,11 @@ fun CheckboxSetting(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clickable(enabled = enabled, onClick = { onCheckedChange(!checked) })
-                .padding(vertical = 4.dp),
-    ) {
-        AppCheckbox(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = enabledContentColor(enabled),
-        )
-    }
+    AppCheckboxRow(
+        label = label,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        enabled = enabled,
+    )
 }

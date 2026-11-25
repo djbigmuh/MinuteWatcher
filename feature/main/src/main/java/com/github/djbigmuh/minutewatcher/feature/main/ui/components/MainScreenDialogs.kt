@@ -5,20 +5,18 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +24,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 @Composable
@@ -41,14 +43,16 @@ fun ResetConfirmationDialog(
         title = { Text(stringResource(id = titleRes)) },
         text = { Text(stringResource(id = textRes)) },
         confirmButton = {
-            Button(onClick = onConfirm) {
-                Text(stringResource(id = R.string.reset_label))
-            }
+            AppButton(
+                text = stringResource(id = R.string.reset_label),
+                onClick = onConfirm,
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(id = R.string.cancel_button))
-            }
+            AppTextButton(
+                text = stringResource(id = R.string.cancel_button),
+                onClick = onDismiss,
+            )
         },
     )
 }
@@ -59,16 +63,15 @@ fun SimpleMessageDialog(
     text: String,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = {
-            Button(onClick = onDismiss) {
-                Text(stringResource(id = R.string.action_ok))
-            }
+            AppButton(
+                text = stringResource(id = R.string.action_ok),
+                onClick = onDismiss,
+            )
         },
     )
 }
@@ -78,31 +81,29 @@ fun UsageAccessDialog(
     onDismiss: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = R.string.usage_access_dialog_title)) },
         text = { Text(stringResource(id = R.string.usage_access_dialog_description)) },
         confirmButton = {
-            Button(onClick = onSettings) {
-                Text(stringResource(id = R.string.action_settings))
-            }
+            AppButton(
+                text = stringResource(id = R.string.action_settings),
+                onClick = onSettings,
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(id = R.string.cancel_button))
-            }
+            AppTextButton(
+                text = stringResource(id = R.string.cancel_button),
+                onClick = onDismiss,
+            )
         },
     )
 }
 
 @Composable
 fun OnboardingDialog(onDismiss: () -> Unit) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = null,
         text = {
             Column(
@@ -110,7 +111,7 @@ fun OnboardingDialog(onDismiss: () -> Unit) {
                     .fillMaxWidth()
                     .heightIn(max = 440.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(MwSpacing.lg),
             ) {
                 Surface(
                     modifier = Modifier
@@ -132,7 +133,7 @@ fun OnboardingDialog(onDismiss: () -> Unit) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(MwSpacing.sm),
                 ) {
                     Text(
                         text = stringResource(id = R.string.onboarding_title),
@@ -164,13 +165,11 @@ fun OnboardingDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            Button(
+            AppButton(
+                text = stringResource(id = R.string.onboarding_button),
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Text(stringResource(id = R.string.onboarding_button))
-            }
+            )
         },
     )
 }
@@ -183,13 +182,13 @@ private fun OnboardingStep(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(MwShape.large),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(MwSpacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(MwSpacing.md),
             verticalAlignment = Alignment.Top,
         ) {
             Surface(
@@ -208,7 +207,7 @@ private fun OnboardingStep(
             }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(MwSpacing.xs),
             ) {
                 Text(
                     text = title,
@@ -232,10 +231,8 @@ fun AboutDialog(
     onDismiss: () -> Unit,
     versionCode: Int,
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = R.string.about_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -262,9 +259,11 @@ fun AboutDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(id = R.string.action_ok))
-            }
+            AppButton(
+                text = stringResource(id = R.string.action_ok),
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+            )
         },
     )
 }

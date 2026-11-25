@@ -3,19 +3,19 @@ package com.github.djbigmuh.minutewatcher.feature.main.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextFieldValue
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.resources.R
@@ -81,7 +81,10 @@ fun AdjustmentComposeDialog(
             )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(id = R.string.cancel_button)) }
+            AppTextButton(
+                text = stringResource(id = R.string.cancel_button),
+                onClick = onDismiss,
+            )
         },
     )
 }
@@ -95,23 +98,24 @@ private fun AdjustmentConfirmButton(
     invalidRangeMsg: String,
     onConfirm: (Float) -> Unit,
 ) {
-    Button(onClick = {
-        when (
-            val result =
-                AdjustmentValidator.validate(
-                    text = state.text.text,
-                    isMinutes = isMinutes,
-                    locale = locale,
-                    invalidNumberMsg = invalidNumberMsg,
-                    invalidRangeMsg = invalidRangeMsg,
-                )
-        ) {
-            is AdjustmentValidationResult.Valid -> onConfirm(result.value)
-            is AdjustmentValidationResult.Invalid -> state.errorText = result.errorText
-        }
-    }) {
-        Text(stringResource(id = R.string.save_button))
-    }
+    AppButton(
+        text = stringResource(id = R.string.save_button),
+        onClick = {
+            when (
+                val result =
+                    AdjustmentValidator.validate(
+                        text = state.text.text,
+                        isMinutes = isMinutes,
+                        locale = locale,
+                        invalidNumberMsg = invalidNumberMsg,
+                        invalidRangeMsg = invalidRangeMsg,
+                    )
+            ) {
+                is AdjustmentValidationResult.Valid -> onConfirm(result.value)
+                is AdjustmentValidationResult.Invalid -> state.errorText = result.errorText
+            }
+        },
+    )
 }
 
 @Composable

@@ -1,30 +1,28 @@
 package com.github.djbigmuh.minutewatcher.feature.main.ui.components
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -34,10 +32,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppOutlinedButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppSwitch
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.util.ColorProvider
@@ -68,7 +68,7 @@ fun SimCardItem(
     AppCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 7.dp)
+            .padding(vertical = MwSpacing.sm)
             .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
         contentPadding = PaddingValues(0.dp),
         border = BorderStroke(
@@ -101,9 +101,9 @@ private fun SimCardContent(
     onAdjustTraffic: () -> Unit,
     onShowTrafficInfo: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp)) {
+    Column(modifier = Modifier.padding(MwSpacing.lg)) {
         SimCardHeader(model = model, onSetLimits = onSetLimits)
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(MwSpacing.xl))
         MinutesSection(
             model = model,
             statusColor =
@@ -124,9 +124,11 @@ private fun SimCardContent(
             onAdjustTraffic = onAdjustTraffic,
             onShowTrafficInfo = onShowTrafficInfo,
         )
-        TextButton(onClick = onResetCounters, modifier = Modifier.padding(top = 6.dp)) {
-            Text(text = stringResource(id = R.string.reset_counters))
-        }
+        AppTextButton(
+            text = stringResource(id = R.string.reset_counters),
+            onClick = onResetCounters,
+            modifier = Modifier.padding(top = MwSpacing.xs),
+        )
         AutoResetSection(
             model = model,
             onToggleAutoReset = onToggleAutoReset,
@@ -153,7 +155,7 @@ private fun SimCardHeader(
                     .background(MaterialTheme.colorScheme.primaryContainer)
                     .padding(7.dp),
         )
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(MwSpacing.md))
         Text(
             text = model.operatorName,
             style = MaterialTheme.typography.titleLarge,
@@ -165,16 +167,15 @@ private fun SimCardHeader(
                     .weight(1f)
                     .semantics { contentDescription = simCardDetailsDesc },
         )
-        OutlinedButton(
+        AppOutlinedButton(
+            text = stringResource(id = R.string.limit_button),
             onClick = onSetLimits,
             contentPadding = PaddingValues(horizontal = 13.dp, vertical = 5.dp),
             modifier =
                 Modifier
                     .height(36.dp)
                     .semantics { contentDescription = setLimitsDesc },
-        ) {
-            Text(text = stringResource(id = R.string.limit_button), fontSize = 12.sp)
-        }
+        )
     }
 }
 
