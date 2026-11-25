@@ -2,6 +2,7 @@
 
 import android.content.res.Configuration
 import android.content.res.Resources
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -39,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -321,44 +324,42 @@ private fun WidgetSettingsList(
     val scrollState = rememberScrollState()
     val showLayoutMode = uiState?.showLayoutMode ?: state.showLayoutMode
     Column(
-        modifier =
-            modifier
-                .verticalScroll(scrollState)
-                .padding(16.dp),
+        modifier = modifier.verticalScroll(scrollState).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        GeneralSettingsSection(
-            state = state,
-            showLayoutMode = showLayoutMode,
-            enabled = true,
-            onUpdateLayoutMode = { mode -> onUpdateSettings { it.copy(layoutMode = mode) } },
-            onUpdateSimArrangement = { arr -> onUpdateSettings { it.copy(simArrangement = arr) } },
-            onUpdateTransparency = { tr -> onUpdateSettings { it.copy(transparency = tr) } },
-            onUpdateFontSize = { fs -> onUpdateSettings { it.copy(fontSize = fs) } },
-            onShowColorPicker = onShowColorPicker,
-        )
+        SettingsGroup {
+            GeneralSettingsSection(
+                state = state,
+                showLayoutMode = showLayoutMode,
+                enabled = true,
+                onUpdateLayoutMode = { mode -> onUpdateSettings { it.copy(layoutMode = mode) } },
+                onUpdateSimArrangement = { arr -> onUpdateSettings { it.copy(simArrangement = arr) } },
+                onUpdateTransparency = { tr -> onUpdateSettings { it.copy(transparency = tr) } },
+                onUpdateFontSize = { fs -> onUpdateSettings { it.copy(fontSize = fs) } },
+                onShowColorPicker = onShowColorPicker,
+            )
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        SettingsGroup {
+            TrackingSettingsSection(
+                state = state,
+                enabled = true,
+                onUpdateCallTracking = { en -> onUpdateSettings { it.copy(callTrackingEnabled = en) } },
+                onUpdateAssistantAccess = { en -> onUpdateSettings { it.copy(assistantAccessEnabled = en) } },
+            )
+        }
 
-        TrackingSettingsSection(
-            state = state,
-            enabled = true,
-            onUpdateCallTracking = { en -> onUpdateSettings { it.copy(callTrackingEnabled = en) } },
-            onUpdateAssistantAccess = { en -> onUpdateSettings { it.copy(assistantAccessEnabled = en) } },
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        NotificationSettingsSection(
-            state = state,
-            enabled = true,
-            aodSummaryAvailable = aodSummaryAvailable,
-            aodSummaryHasContent = aodSummaryHasContent,
-            onUpdateNotifyMinutes = { en -> onUpdateSettings { it.copy(notifyLowMinutes = en) } },
-            onUpdateNotifyTraffic = { en -> onUpdateSettings { it.copy(notifyLowTraffic = en) } },
-            onUpdateAodSummary = { en -> onUpdateSettings { it.copy(aodSummaryEnabled = en) } },
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
+        SettingsGroup {
+            NotificationSettingsSection(
+                state = state,
+                enabled = true,
+                aodSummaryAvailable = aodSummaryAvailable,
+                aodSummaryHasContent = aodSummaryHasContent,
+                onUpdateNotifyMinutes = { en -> onUpdateSettings { it.copy(notifyLowMinutes = en) } },
+                onUpdateNotifyTraffic = { en -> onUpdateSettings { it.copy(notifyLowTraffic = en) } },
+                onUpdateAodSummary = { en -> onUpdateSettings { it.copy(aodSummaryEnabled = en) } },
+            )
+        }
 
         SimCardsSettingsSection(
             state = state,
@@ -404,5 +405,20 @@ private fun WidgetSettingsScreenPreview() {
             onUpdateSimSettings = { _, _ -> },
             onBack = {},
         )
+    }
+}
+
+
+@Composable
+private fun SettingsGroup(content: @Composable () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 1.dp,
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            content()
+        }
     }
 }
