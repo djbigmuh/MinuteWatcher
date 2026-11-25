@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.feature.main.ui.components.ResetConfirmationDialog
 import com.github.djbigmuh.minutewatcher.feature.main.ui.components.SimCardItem
@@ -41,7 +42,7 @@ fun SimCardList(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MwSpacing.screenHorizontal),
         contentPadding = PaddingValues(bottom = 80.dp),
     ) {
         items(
