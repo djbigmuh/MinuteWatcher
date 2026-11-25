@@ -5,6 +5,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 
 @Composable
@@ -25,6 +26,6 @@ fun AppDialog(
         text = text,
         shape = RoundedCornerShape(MwShape.extraLarge),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = androidx.compose.ui.unit.dp(0),
+        tonalElevation = 0.dp,
     )
 }
