@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,15 +22,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
-/**
- * Renders minutes section of a SIM card.
- * Contains minutes used, minutes limit, and minutes remaining.
- * Minutes remaining is editable (EditableValueBox).
- *
- * @param model SIM card model.
- * @param statusColor Status color (normal/low/critical).
- * @param onAdjustMinutes Callback for adjusting minutes.
- */
 @Composable
 fun MinutesSection(
     model: SimCardUiModel,
@@ -38,7 +30,16 @@ fun MinutesSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         MinutesUsageAndLimitRow(model = model)
-        Spacer(modifier = Modifier.height(8.dp))
+        if (model.isMinutesLimitSet && model.effectiveMinutesLimit > 0) {
+            Spacer(modifier = Modifier.height(10.dp))
+            LinearProgressIndicator(
+                progress = { (model.minutesUsed.toFloat() / model.effectiveMinutesLimit).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(6.dp),
+                color = statusColor,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(id = R.string.remaining_text),
@@ -85,6 +86,7 @@ private fun MinutesUsageAndLimitRow(model: SimCardUiModel) {
                     ),
                 ),
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (model.isMinutesLimitSet) {
             Text(
@@ -99,6 +101,7 @@ private fun MinutesUsageAndLimitRow(model: SimCardUiModel) {
                         ),
                     ),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

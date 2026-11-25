@@ -1,6 +1,5 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.main.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -19,28 +18,51 @@ import com.github.djbigmuh.minutewatcher.core.model.util.UsageStatus
 
 private val DarkColorScheme =
     darkColorScheme(
-        primary = Purple80,
-        secondary = PurpleGrey80,
-        tertiary = Pink80,
+        primary = Teal100,
+        onPrimary = Teal900,
+        primaryContainer = Teal800,
+        onPrimaryContainer = Teal100,
+        secondary = DarkMuted,
+        tertiary = Color(0xFFF0C477),
+        background = DarkBackground,
+        onBackground = DarkText,
+        surface = DarkSurface,
+        onSurface = DarkText,
+        surfaceVariant = DarkSurfaceVariant,
+        onSurfaceVariant = DarkMuted,
+        outline = DarkOutline,
+        outlineVariant = Color(0xFF354743),
     )
 
 private val LightColorScheme =
     lightColorScheme(
-        primary = Purple40,
-        secondary = PurpleGrey40,
-        tertiary = Pink40,
+        primary = Teal700,
+        onPrimary = White,
+        primaryContainer = Teal100,
+        onPrimaryContainer = Teal900,
+        secondary = Slate700,
+        onSecondary = White,
+        tertiary = Amber600,
+        background = Warm50,
+        onBackground = Ink900,
+        surface = White,
+        onSurface = Ink900,
+        surfaceVariant = Teal50,
+        onSurfaceVariant = Slate600,
+        outline = Slate300,
+        outlineVariant = Slate200,
     )
 
 @Composable
 fun MinuteWatcherTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Keep a recognizable MinuteWatcher identity by default; users can still opt into system dynamic colors.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme =
         when {
-            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            dynamicColor && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S -> {
                 val context = LocalContext.current
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
