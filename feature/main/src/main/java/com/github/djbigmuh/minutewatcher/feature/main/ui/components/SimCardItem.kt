@@ -70,7 +70,7 @@ fun SimCardItem(
             .fillMaxWidth()
             .padding(vertical = 7.dp)
             .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
+        contentPadding = PaddingValues(0.dp),
         border = BorderStroke(
             width = if (highlighted) 2.dp else 1.dp,
             color = if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
