@@ -3,6 +3,7 @@
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
@@ -10,12 +11,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.github.djbigmuh.minutewatcher.core.model.AppTheme
 import com.github.djbigmuh.minutewatcher.core.resources.R
@@ -35,7 +38,12 @@ fun LanguageMenu(
                 contentDescription = stringResource(R.string.menu_language_content_desc),
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
             supportedLanguageOptions.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(stringResource(option.nameRes)) },
