@@ -37,6 +37,11 @@ object MwShape {
     val full = 100.dp
 }
 
+/** Shared dimensions for recurring component geometry. */
+object MwSize {
+    val usageProgressIndicatorHeight = 6.dp
+}
+
 object MwSpacing {
     val none = 0.dp
     val xxs = 2.dp
