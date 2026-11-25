@@ -27,18 +27,18 @@ import com.github.djbigmuh.minutewatcher.controller.MainPermissionController
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import com.github.djbigmuh.minutewatcher.core.data.NotificationHelper
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import com.github.djbigmuh.minutewatcher.core.model.Constants.IntentExtras
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import com.github.djbigmuh.minutewatcher.feature.main.MainViewModel
 import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreen
 import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreenActions
-import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.github.djbigmuh.minutewatcher.feature.widget.MinutesGlanceWidget
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
