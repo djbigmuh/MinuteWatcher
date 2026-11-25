@@ -45,6 +45,7 @@ rootProject.name = "MinuteWatcher"
 include(":app")
 include(":core:model")
 include(":core:common")
+include(":core:designsystem")
 include(":core:android")
 include(":core:resources")
 include(":core:domain")
