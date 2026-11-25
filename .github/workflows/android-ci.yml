@@ -36,7 +36,7 @@ jobs:
           cache-provider: basic
 
       - name: Run verification
-        run: ./gradlew verifyQuiet --stacktrace
+        run: bash ./gradlew verifyQuiet --stacktrace
 
       - name: Upload test and lint reports
         if: always()
