@@ -25,7 +25,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTopBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -247,8 +247,8 @@ private fun WidgetSettingsContent(
 
 @Composable
 private fun SettingsTopAppBar(onBack: () -> Unit) {
-    TopAppBar(
-        title = { Text(stringResource(id = R.string.settings_widget_title)) },
+    AppTopBar(
+        title = stringResource(id = R.string.settings_widget_title),
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
