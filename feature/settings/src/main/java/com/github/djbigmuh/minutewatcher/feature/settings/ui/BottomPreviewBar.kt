@@ -28,19 +28,12 @@ fun BottomPreviewBar(uiState: WidgetUiState?) {
         contentPadding = PaddingValues(MwSpacing.lg),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        // Text is used for headers and setting labels.
-        // style = MaterialTheme.typography.titleSmall for section headers.
-        // style = MaterialTheme.typography.bodyMedium for labels.
         Text(
             text = stringResource(id = R.string.preview),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = MwSpacing.sm),
         )
 
-        // Box provides widget preview centering.
-        // contentAlignment = Alignment.Center centers content.
-        // wrapContentHeight() grows the preview to fit any layout mode, including 6-line mode.
-        // background(MaterialTheme.colorScheme.surface) provides preview background.
         Box(
             modifier =
                 Modifier
