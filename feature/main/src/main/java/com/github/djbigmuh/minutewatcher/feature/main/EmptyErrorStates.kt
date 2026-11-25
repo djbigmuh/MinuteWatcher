@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 /**
@@ -46,9 +46,10 @@ fun EmptyState(onGrantPermission: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onGrantPermission) {
-            Text(text = stringResource(id = R.string.action_grant))
-        }
+        AppButton(
+            text = stringResource(id = R.string.action_grant),
+            onClick = onGrantPermission,
+        )
     }
 }
 
@@ -82,8 +83,9 @@ fun ErrorState(
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = stringResource(id = messageRes), style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text(text = stringResource(id = R.string.action_retry))
-        }
+        AppButton(
+            text = stringResource(id = R.string.action_retry),
+            onClick = onRetry,
+        )
     }
 }
