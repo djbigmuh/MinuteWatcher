@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextFieldValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
@@ -410,7 +410,7 @@ private fun DialogFields(state: SimLimitState) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
+        AppTextFieldValue(
             value = state.minutesText,
             onValueChange = { state.onMinutesChange(it) },
             label = { Text(stringResource(id = R.string.set_minutes_limit)) },
