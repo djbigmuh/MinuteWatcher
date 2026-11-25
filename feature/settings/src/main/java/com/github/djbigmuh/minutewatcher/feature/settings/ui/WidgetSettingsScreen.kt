@@ -49,9 +49,10 @@ import com.github.djbigmuh.minutewatcher.core.android.util.WidgetStringsFactory
 import com.github.djbigmuh.minutewatcher.core.android.util.WidgetUiMapper
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
-import androidx.compose.foundation.layout.PaddingValues
-import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTopBar
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
+import androidx.compose.foundation.layout.PaddingValues
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
@@ -396,7 +397,7 @@ private fun ObserveResumeEffect(onResume: () -> Unit) {
 @Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 private fun WidgetSettingsScreenPreview() {
-    MaterialTheme {
+    MinuteWatcherTheme {
         WidgetSettingsScreenBody(
             isLoadError = false,
             settings = WidgetSettingsState(),
