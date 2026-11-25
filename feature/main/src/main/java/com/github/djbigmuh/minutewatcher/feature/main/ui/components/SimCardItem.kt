@@ -38,6 +38,7 @@ import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppSwitch
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.util.ColorProvider
@@ -191,10 +192,10 @@ private fun AutoResetSection(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(top = 4.dp),
+                .padding(top = MwSpacing.xs),
     ) {
         Text(text = stringResource(id = R.string.reset_label), style = MaterialTheme.typography.bodyMedium)
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(MwSpacing.sm))
         EditableValueBox(
             value = model.autoResetDay.toString(),
             color = MaterialTheme.colorScheme.onSurface,
@@ -229,7 +230,7 @@ private fun AutoResetSection(
 @Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 private fun SimCardItemPreview() {
-    com.github.djbigmuh.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme {
+    MinuteWatcherTheme {
         SimCardItem(
             model =
                 SimCardUiModel(
