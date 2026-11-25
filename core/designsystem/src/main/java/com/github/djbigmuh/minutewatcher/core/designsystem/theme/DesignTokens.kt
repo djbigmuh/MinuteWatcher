@@ -1,8 +1,8 @@
 package com.github.djbigmuh.minutewatcher.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 
 /** Semantic palette primitives. Prefer MaterialTheme.colorScheme in feature code. */
 object MinuteWatcherPalette {
