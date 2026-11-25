@@ -4,7 +4,6 @@ import com.github.djbigmuh.minutewatcher.core.android.util.SimCardMapper
 import com.github.djbigmuh.minutewatcher.core.common.di.ApplicationScope
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.common.util.observeWithRetry
-import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SeedResolutionResult
 import com.github.djbigmuh.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.github.djbigmuh.minutewatcher.core.domain.TrackingStatusProvider
@@ -27,7 +26,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -62,8 +60,6 @@ internal class SimIdentityObserver
     constructor(
         discovery: SimIdentityDiscovery,
         private val seedRepository: SimIdentitySeedRepository,
-        private val appSettingsRepository: AppSettingsRepository,
-        mockSimProvider: MockSimProvider,
         fetcher: ActiveSimsFetcher,
         private val migrationService: IdentityMigrationService,
         @ApplicationScope private val scope: CoroutineScope,
@@ -397,17 +393,11 @@ internal class SimIdentityObserver
         }
 
         /**
-         * StateFlow of resolved active SIMs (null until the first discovery completes),
-         * prioritizing mock SIMs in benchmark builds.
+         * StateFlow of resolved active SIMs (null until the first discovery completes).
          */
         val resolvedActiveSimsCache: StateFlow<List<ActiveSimInfo>?> =
-            combine(
-                physicalActiveSims,
-                observeBenchmarkSimCount(),
-            ) { physical, benchmarkSimCount ->
-                val mocks = mockSimProvider.getMockSims(benchmarkSimCount)
-                mocks ?: physical
-            }.distinctUntilChanged()
+            physicalActiveSims
+                .distinctUntilChanged()
                 .observeWithRetry(
                     label = "SimIdentityObserver: activeSims",
                     logThreshold = 5,
@@ -448,12 +438,6 @@ internal class SimIdentityObserver
             cache.cleanupManual(activeSlots)
             SimCardMapper.cleanupSlots(activeSlots)
         }
-
-        private fun observeBenchmarkSimCount(): Flow<Int> =
-            appSettingsRepository
-                .observeAppSettings()
-                .map { it.benchmarkSimCount }
-                .distinctUntilChanged()
 
         /**
          * Checks if a transition from Fallback (ephemeral) seed to Real (persistent) seed

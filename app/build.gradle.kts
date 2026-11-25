@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import java.util.Properties
 
 plugins {
@@ -25,9 +26,9 @@ val keyPass =
 
 val keystoreFile =
     if (storePath != null) {
-        file(storePath)
+        rootProject.file(storePath)
     } else {
-        layout.projectDirectory.file("release.keystore").asFile
+        rootProject.file("release.keystore")
     }
 
 val hasReleaseSigning =
@@ -125,6 +126,24 @@ configure<ApplicationExtension> {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+configure<ApplicationAndroidComponentsExtension> {
+    onVariants(selector().withBuildType("release")) { variant ->
+        val mergedManifestProvider =
+            variant.artifacts.get(
+                com.android.build.api.artifact.SingleArtifact.MERGED_MANIFEST,
+            )
+        tasks.withType<Test>().configureEach {
+            inputs.file(mergedManifestProvider)
+            doFirst {
+                systemProperty(
+                    "minutewatcher.releaseMergedManifestPath",
+                    mergedManifestProvider.get().asFile.absolutePath,
+                )
+            }
         }
     }
 }

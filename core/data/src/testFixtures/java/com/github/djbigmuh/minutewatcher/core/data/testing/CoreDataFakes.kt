@@ -1,6 +1,5 @@
 package com.github.djbigmuh.minutewatcher.core.data.testing
 
-import com.github.djbigmuh.minutewatcher.core.data.MockSimProvider
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
@@ -31,14 +30,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
-
-class FakeMockSimProvider : MockSimProvider {
-    /**
-     * Returns `null` as test double default stub behavior; other test configurations
-     * or benchmark variants supply actual mock SIM data.
-     */
-    override fun getMockSims(count: Int): List<ActiveSimInfo>? = null
-}
 
 class FakeDataChangeNotifier : DataChangeNotifier {
     override suspend fun notifyDataChanged(

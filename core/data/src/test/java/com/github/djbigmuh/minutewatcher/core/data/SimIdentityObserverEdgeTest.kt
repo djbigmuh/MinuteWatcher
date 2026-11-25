@@ -46,8 +46,6 @@ class SimIdentityObserverEdgeTest {
         SimIdentityObserver(
             discovery = discovery,
             seedRepository = seedRepository,
-            appSettingsRepository = appSettingsRepository,
-            mockSimProvider = mockSimProvider,
             fetcher = fetcher,
             migrationService = migrationService,
             scope = scope,

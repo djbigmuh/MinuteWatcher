@@ -3,6 +3,7 @@ package com.github.djbigmuh.minutewatcher.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
+import com.github.djbigmuh.minutewatcher.core.data.testing.FakeAppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimIdentitySeedRepository
 import kotlinx.coroutines.CoroutineScope
@@ -12,9 +13,9 @@ object SimIdentityRepositoryTestHelper {
         discoveryDeps: SimDiscoveryDependencies,
         dataStore: DataStore<Preferences>,
         seedRepository: SimIdentitySeedRepository,
-        appSettingsRepository: AppSettingsRepository,
+        appSettingsRepository: AppSettingsRepository = FakeAppSettingsRepository(),
         migrationService: IdentityMigrationService,
-        mockSimProvider: MockSimProvider,
+        mockSimProvider: Any? = null,
         timeProvider: TimeProvider,
         scope: CoroutineScope,
     ): SimIdentityRepositoryImpl {
@@ -27,8 +28,6 @@ object SimIdentityRepositoryTestHelper {
             SimIdentityObserver(
                 discovery = discovery,
                 seedRepository = seedRepository,
-                appSettingsRepository = appSettingsRepository,
-                mockSimProvider = mockSimProvider,
                 fetcher = fetcher,
                 migrationService = migrationService,
                 scope = scope,

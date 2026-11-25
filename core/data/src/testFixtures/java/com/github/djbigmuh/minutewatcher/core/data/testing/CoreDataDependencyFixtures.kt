@@ -9,7 +9,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import com.github.djbigmuh.minutewatcher.core.data.CallTracker
 import com.github.djbigmuh.minutewatcher.core.data.IdentityMigrationService
 import com.github.djbigmuh.minutewatcher.core.data.InitialSetupWorkerDependencies
-import com.github.djbigmuh.minutewatcher.core.data.MockSimProvider
 import com.github.djbigmuh.minutewatcher.core.data.NotificationHelper
 import com.github.djbigmuh.minutewatcher.core.data.SimDiscoveryDependencies
 import com.github.djbigmuh.minutewatcher.core.data.SimIdentityRepositoryImpl
@@ -158,12 +157,10 @@ fun createTestSimIdentityRepository(
     discoveryDeps: SimDiscoveryDependencies = createSimDiscoveryDependencies(),
     dataStore: DataStore<Preferences> = createTestDataStore(),
     seedRepository: SimIdentitySeedRepository = FakeSimIdentitySeedRepository(),
-    appSettingsRepository: AppSettingsRepository = FakeAppSettingsRepository(),
     migrationService: IdentityMigrationService =
         mock {
             on { migrateLegacyData(any()) } doReturn IdentityMigrationService.MigrationOutcome()
         },
-    mockSimProvider: MockSimProvider = FakeMockSimProvider(),
     timeProvider: TimeProvider = createFixedTimeProvider(),
     scope: CoroutineScope = TestScope(),
 ): SimIdentityRepositoryImpl =
@@ -171,9 +168,7 @@ fun createTestSimIdentityRepository(
         discoveryDeps = discoveryDeps,
         dataStore = dataStore,
         seedRepository = seedRepository,
-        appSettingsRepository = appSettingsRepository,
         migrationService = migrationService,
-        mockSimProvider = mockSimProvider,
         timeProvider = timeProvider,
         scope = scope,
     )

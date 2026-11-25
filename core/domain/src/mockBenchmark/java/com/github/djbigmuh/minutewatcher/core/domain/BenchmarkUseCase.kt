@@ -1,4 +1,4 @@
-﻿package com.github.djbigmuh.minutewatcher.core.domain
+package com.github.djbigmuh.minutewatcher.core.domain
 
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException

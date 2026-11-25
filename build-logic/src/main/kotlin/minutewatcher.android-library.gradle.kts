@@ -33,6 +33,10 @@ extensions.configure<LibraryExtension> {
     }
 
     sourceSets {
+        getByName("benchmark") {
+            java.directories.add("src/mockBenchmark/java")
+            kotlin.directories.add("src/mockBenchmark/java")
+        }
         getByName("testBenchmark") {
             java.directories.add("src/testBenchmark/java")
             kotlin.directories.add("src/testBenchmark/java")

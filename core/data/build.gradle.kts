@@ -13,12 +13,12 @@ android {
 
     sourceSets {
         getByName("debug") {
-            java.directories.add("src/noop/java")
-            kotlin.directories.add("src/noop/java")
+            java.directories.add("src/production/java")
+            kotlin.directories.add("src/production/java")
         }
         getByName("release") {
-            java.directories.add("src/noop/java")
-            kotlin.directories.add("src/noop/java")
+            java.directories.add("src/production/java")
+            kotlin.directories.add("src/production/java")
         }
         getByName("benchmark") {
             java.directories.add("src/mockBenchmark/java")

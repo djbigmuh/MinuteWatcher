@@ -13,11 +13,19 @@ class ReleaseHygieneTest {
 
     @Test
     fun `verify no benchmark population code exists in main source sets`() {
-        val forbiddenNames =
-            listOf(
-                "BenchmarkPopulateWorker",
-                "BenchmarkUseCaseImpl",
-            )
+        val forbiddenDirs = listOf("src/mockBenchmark", "src/benchmark", "src/testBenchmark", "src/testFixtures")
+
+        val forbiddenNames = mutableSetOf<String>()
+        projectRoot.walkTopDown().forEach { file ->
+            if (file.isFile) {
+                val path = file.absolutePath.replace('\\', '/')
+                if (forbiddenDirs.any { path.contains("/$it/") } &&
+                    (file.extension == "kt" || file.extension == "java")
+                ) {
+                    forbiddenNames.add(file.nameWithoutExtension)
+                }
+            }
+        }
 
         val prodFiles =
             projectRoot
@@ -35,7 +43,7 @@ class ReleaseHygieneTest {
             val content = file.readText()
             for (forbidden in forbiddenNames) {
                 assertFalse(
-                    "Forbidden benchmark/mock class '$forbidden' found in production code: ${file.absolutePath}",
+                    "Forbidden benchmark/mock class '$forbidden' found in production file ${file.absolutePath}",
                     content.contains(forbidden),
                 )
             }
@@ -43,23 +51,34 @@ class ReleaseHygieneTest {
     }
 
     @Test
-    fun `verify release manifest does not contain benchmark receiver or exported debug components`() {
-        val manifestFile = ProjectPaths.appManifest
-        assertTrue("Main manifest must exist", manifestFile.exists())
+    fun `verify release merged manifest does not contain benchmark receiver or benchmark components`() {
+        val manifestPath = System.getProperty("minutewatcher.releaseMergedManifestPath")
+        val manifestFile =
+            if (manifestPath != null) {
+                File(manifestPath)
+            } else {
+                File(
+                    projectRoot,
+                    "app/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml",
+                )
+            }
+        assertTrue("Release merged manifest must exist at $manifestFile", manifestFile.exists())
 
         val dbFactory = DocumentBuilderFactory.newInstance()
         val dBuilder = dbFactory.newDocumentBuilder()
         val doc = dBuilder.parse(manifestFile)
         doc.documentElement.normalize()
 
-        val receivers = doc.getElementsByTagName("receiver")
-        for (i in 0 until receivers.length) {
-            val receiver = receivers.item(i)
-            val name = receiver.attributes?.getNamedItem("android:name")?.nodeValue ?: continue
-            assertFalse(
-                "BenchmarkReceiver must not be in main manifest: $name",
-                name.contains("BenchmarkReceiver"),
-            )
+        listOf("receiver", "service", "activity", "provider").forEach { tag ->
+            val elements = doc.getElementsByTagName(tag)
+            for (i in 0 until elements.length) {
+                val el = elements.item(i)
+                val name = el.attributes?.getNamedItem("android:name")?.nodeValue ?: continue
+                assertFalse(
+                    "Benchmark component '$name' must not be in release merged manifest (${manifestFile.absolutePath})",
+                    name.contains("Benchmark") || name.contains("benchmark"),
+                )
+            }
         }
     }
 }

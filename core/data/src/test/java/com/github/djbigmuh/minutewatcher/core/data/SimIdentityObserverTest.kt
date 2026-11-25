@@ -65,8 +65,6 @@ class SimIdentityObserverTest {
         SimIdentityObserver(
             discovery = discovery,
             seedRepository = seedRepository,
-            appSettingsRepository = appSettingsRepository,
-            mockSimProvider = mockSimProvider,
             fetcher = fetcher,
             migrationService = migrationService,
             scope = scope,
@@ -204,8 +202,6 @@ class SimIdentityObserverTest {
                 SimIdentityObserver(
                     discovery,
                     fakeRepo,
-                    appSettingsRepository,
-                    mockSimProvider,
                     fetcher,
                     migrationService,
                     backgroundScope,
@@ -248,8 +244,6 @@ class SimIdentityObserverTest {
                 SimIdentityObserver(
                     discovery,
                     fakeRepo,
-                    appSettingsRepository,
-                    mockSimProvider,
                     fetcher,
                     migrationService,
                     backgroundScope,
@@ -326,8 +320,6 @@ class SimIdentityObserverTest {
                 SimIdentityObserver(
                     discovery,
                     fakeRepo,
-                    appSettingsRepository,
-                    mockSimProvider,
                     fetcher,
                     migrationService,
                     backgroundScope,
@@ -409,8 +401,6 @@ class SimIdentityObserverTest {
                     SimIdentityObserver(
                         discovery,
                         fakeRepo,
-                        appSettingsRepository,
-                        mockSimProvider,
                         fetcher,
                         migrationService,
                         backgroundScope,
