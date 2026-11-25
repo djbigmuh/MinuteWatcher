@@ -11,6 +11,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 
+@Suppress("LongParameterList")
 @Composable
 fun AppTextFieldValue(
     value: TextFieldValue,
