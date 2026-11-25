@@ -250,7 +250,6 @@ private fun SimCardItemPreview() {
                     trafficRemainingGb = 1.5f,
                     effectiveTrafficLimitGb = 2.0f,
                     trafficAdjustmentGb = 0f,
-                    isMinutesLimitSet = true,
                     isTrafficLimitSet = true,
                     autoResetEnabled = true,
                     autoResetDay = 1,
