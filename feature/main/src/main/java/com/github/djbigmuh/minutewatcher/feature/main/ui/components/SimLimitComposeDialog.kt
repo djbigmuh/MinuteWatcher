@@ -7,12 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -38,7 +34,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
 import com.github.djbigmuh.minutewatcher.core.common.util.NumberInputNormalizer
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCheckbox
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppOutlinedButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextFieldValue
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.resources.R
@@ -426,7 +426,7 @@ private fun DialogFields(state: SimLimitState) {
                     .focusRequester(minutesFocusRequester)
                     .onFocusChanged { state.onMinutesFocusChanged(it.isFocused) },
         )
-        OutlinedTextField(
+        AppTextFieldValue(
             value = state.trafficText,
             onValueChange = { state.onTrafficChange(it) },
             label = { Text(stringResource(id = R.string.set_traffic_limit)) },
@@ -444,7 +444,7 @@ private fun DialogFields(state: SimLimitState) {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Checkbox(checked = state.rolloverEnabled, onCheckedChange = { state.rolloverEnabled = it })
+            AppCheckbox(checked = state.rolloverEnabled, onCheckedChange = { state.rolloverEnabled = it })
             Spacer(Modifier.width(8.dp))
             Text(text = stringResource(id = R.string.rollover_label), style = MaterialTheme.typography.bodyMedium)
         }
@@ -461,15 +461,21 @@ private fun DialogButtons(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Button(onClick = onConfirm, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(id = R.string.set_button))
-        }
-        OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(id = R.string.reset_limits_button))
-        }
-        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(id = R.string.cancel_button))
-        }
+        AppButton(
+            text = stringResource(id = R.string.set_button),
+            onClick = onConfirm,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        AppOutlinedButton(
+            text = stringResource(id = R.string.reset_limits_button),
+            onClick = onReset,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        AppTextButton(
+            text = stringResource(id = R.string.cancel_button),
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
