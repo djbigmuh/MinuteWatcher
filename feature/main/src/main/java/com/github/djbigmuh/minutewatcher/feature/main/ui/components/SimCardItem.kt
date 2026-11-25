@@ -3,6 +3,7 @@
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +25,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -49,15 +52,6 @@ private fun getStatusColor(status: UsageStatus): Color = MaterialTheme.colorSche
  * Renders SIM card item.
  * Contains icon, operator name, minutes and traffic state,
  * limit setting and reset buttons.
- *
- * @param model SIM card model.
- * @param onSetLimits Callback for setting limits.
- * @param onResetCounters Callback for resetting counters.
- * @param onToggleAutoReset Callback for toggling auto-reset.
- * @param onEditAutoResetDay Callback for editing auto-reset day.
- * @param onAdjustMinutes Callback for adjusting minutes.
- * @param onAdjustTraffic Callback for adjusting traffic.
- * @param onShowTrafficInfo Callback for showing traffic info.
  */
 @Composable
 fun SimCardItem(
@@ -75,10 +69,16 @@ fun SimCardItem(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp)
+                .padding(vertical = 7.dp)
                 .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = if (highlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border =
+            BorderStroke(
+                width = if (highlighted) 2.dp else 1.dp,
+                color = if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+            ),
     ) {
         SimCardContent(
             model = model,
@@ -104,9 +104,9 @@ private fun SimCardContent(
     onAdjustTraffic: () -> Unit,
     onShowTrafficInfo: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(16.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp)) {
         SimCardHeader(model = model, onSetLimits = onSetLimits)
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         MinutesSection(
             model = model,
             statusColor =
@@ -127,7 +127,7 @@ private fun SimCardContent(
             onAdjustTraffic = onAdjustTraffic,
             onShowTrafficInfo = onShowTrafficInfo,
         )
-        TextButton(onClick = onResetCounters, modifier = Modifier.padding(top = 4.dp)) {
+        TextButton(onClick = onResetCounters, modifier = Modifier.padding(top = 6.dp)) {
             Text(text = stringResource(id = R.string.reset_counters))
         }
         AutoResetSection(
@@ -138,13 +138,6 @@ private fun SimCardContent(
     }
 }
 
-/**
- * Renders SIM card item header.
- * Contains operator icon, operator name, and set limits button.
- *
- * @param model SIM card model.
- * @param onSetLimits Callback for setting limits.
- */
 @Composable
 private fun SimCardHeader(
     model: SimCardUiModel,
@@ -153,18 +146,21 @@ private fun SimCardHeader(
     val simCardDetailsDesc = stringResource(id = R.string.sim_card_details_content_desc, model.operatorName)
     val setLimitsDesc = stringResource(id = R.string.set_limits_content_desc, model.operatorName)
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        val iconPainter = painterResource(id = model.iconRes)
-        val iconDescription = stringResource(id = R.string.sim_icon_content_desc)
         Image(
-            painter = iconPainter,
-            contentDescription = iconDescription,
-            modifier = Modifier.size(32.dp),
+            painter = painterResource(id = model.iconRes),
+            contentDescription = stringResource(id = R.string.sim_icon_content_desc),
+            modifier =
+                Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(7.dp),
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = model.operatorName,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier =
@@ -174,27 +170,17 @@ private fun SimCardHeader(
         )
         OutlinedButton(
             onClick = onSetLimits,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            contentPadding = PaddingValues(horizontal = 13.dp, vertical = 5.dp),
             modifier =
                 Modifier
-                    .height(32.dp)
-                    .semantics {
-                        contentDescription = setLimitsDesc
-                    },
+                    .height(36.dp)
+                    .semantics { contentDescription = setLimitsDesc },
         ) {
             Text(text = stringResource(id = R.string.limit_button), fontSize = 12.sp)
         }
     }
 }
 
-/**
- * Renders auto-reset section for SIM card.
- * Contains auto-reset toggle switch and editable auto-reset day.
- *
- * @param model SIM card model.
- * @param onToggleAutoReset Callback for toggling auto-reset.
- * @param onEditAutoResetDay Callback for editing auto-reset day.
- */
 @Composable
 private fun AutoResetSection(
     model: SimCardUiModel,
@@ -226,6 +212,7 @@ private fun AutoResetSection(
                     stringResource(id = R.string.auto_reset_day_suffix),
                 ).trim(),
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
         Switch(
@@ -235,9 +222,7 @@ private fun AutoResetSection(
                 Modifier
                     .minimumInteractiveComponentSize()
                     .scale(Constants.UI.SWITCH_SCALE)
-                    .semantics {
-                        contentDescription = toggleAutoResetDesc
-                    },
+                    .semantics { contentDescription = toggleAutoResetDesc },
         )
     }
 }
@@ -265,6 +250,7 @@ private fun SimCardItemPreview() {
                     trafficRemainingGb = 1.5f,
                     effectiveTrafficLimitGb = 2.0f,
                     trafficAdjustmentGb = 0f,
+                    isMinutesLimitSet = true,
                     isTrafficLimitSet = true,
                     autoResetEnabled = true,
                     autoResetDay = 1,
