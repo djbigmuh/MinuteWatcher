@@ -4,7 +4,7 @@ This module is the shared source of truth for Compose UI styling.
 
 ## Theme
 
-Wrap app and feature content in `MinuteWatcherTheme`. The app entry points already do this.
+Wrap app, feature content and Compose previews in `MinuteWatcherTheme`. The app entry points already do this; previews should use the same shared theme rather than a feature-local compatibility wrapper.
 Use semantic Material 3 values in feature code:
 
 - `MaterialTheme.colorScheme.primary` for primary actions and emphasis
