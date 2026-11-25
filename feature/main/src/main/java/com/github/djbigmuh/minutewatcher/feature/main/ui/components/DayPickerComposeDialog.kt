@@ -48,6 +48,8 @@ fun DayPickerComposeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         title = { Text(stringResource(id = R.string.choose_reset_day_dialog_title)) },
         text = {
             DayPickerContent(listState = listState, selectedDay = selectedDay)
