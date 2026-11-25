@@ -41,6 +41,17 @@ byteBuddyAgent = "1.18.17"
 
 [libraries]
 byteBuddyAgent = { group = "net.bytebuddy", name = "byte-buddy-agent", version.ref = "byteBuddyAgent" }
+robolectricAndroidAllSdk28 = { group = "org.robolectric", name = "android-all-instrumented", version = "9-robolectric-4913185-2-i7" }
+robolectricAndroidAllSdk29 = { group = "org.robolectric", name = "android-all-instrumented", version = "10-robolectric-5803371-i7" }
+robolectricAndroidAllSdk30 = { group = "org.robolectric", name = "android-all-instrumented", version = "11-robolectric-6757853-i7" }
+robolectricAndroidAllSdk31 = { group = "org.robolectric", name = "android-all-instrumented", version = "12-robolectric-7732740-i7" }
+robolectricAndroidAllSdk34 = { group = "org.robolectric", name = "android-all-instrumented", version = "14-robolectric-10818077-i7" }
+robolectricAndroidAllSdk35 = { group = "org.robolectric", name = "android-all-instrumented", version = "15-robolectric-13954326-i7" }
+robolectricAndroidAllSdk35Alt = { group = "org.robolectric", name = "android-all-instrumented", version = "15-robolectric-14663667-2-i7" }
+robolectricAndroidAllSdk36 = { group = "org.robolectric", name = "android-all-instrumented", version = "16-robolectric-13921718-i7" }
+robolectricAndroidAllSdk36Alt = { group = "org.robolectric", name = "android-all-instrumented", version = "16-robolectric-13921718-2-i7" }
+robolectricAndroidAllSdk37 = { group = "org.robolectric", name = "android-all-instrumented", version = "17-robolectric-15733970-i7" }
+robolectricAndroidAllSdk37Alt = { group = "org.robolectric", name = "android-all-instrumented", version = "17-robolectric-16653203-i7" }
 # DI - Hilt
 daggerHiltAndroid = { group = "com.google.dagger", name = "hilt-android", version.ref = "hiltVersion" }
 daggerHiltAndroidTesting = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hiltVersion" }

@@ -13,11 +13,49 @@ val mockitoAgentConfig = project.configurations.create("mockitoAgentConfig") {
 }
 project.dependencies.add("mockitoAgentConfig", libs.findLibrary("byteBuddyAgent").get())
 
+val robolectricAndroidAll = project.configurations.create("robolectricAndroidAll") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
+listOf(
+    "robolectricAndroidAllSdk28",
+    "robolectricAndroidAllSdk29",
+    "robolectricAndroidAllSdk30",
+    "robolectricAndroidAllSdk31",
+    "robolectricAndroidAllSdk34",
+    "robolectricAndroidAllSdk35",
+    "robolectricAndroidAllSdk35Alt",
+    "robolectricAndroidAllSdk36",
+    "robolectricAndroidAllSdk36Alt",
+    "robolectricAndroidAllSdk37",
+    "robolectricAndroidAllSdk37Alt",
+).forEach { libName ->
+    project.dependencies.add("robolectricAndroidAll", libs.findLibrary(libName).get())
+}
+
+val prepareRobolectricJars = tasks.register<Sync>("prepareRobolectricJars") {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(fileTree(rootProject.layout.projectDirectory.dir(".robolectric")) {
+        include("**/android-all-instrumented/**/*.jar")
+    })
+    into(project.layout.buildDirectory.dir("robolectric-jars"))
+    eachFile {
+        path = name
+    }
+    includeEmptyDirs = false
+}
+
 tasks.withType<Test>().configureEach {
+    dependsOn(prepareRobolectricJars)
     val isVerbose = providers.gradleProperty("verboseTests").isPresent
 
     // Centralized Robolectric configuration
     systemProperty("robolectric.graphicsMode", "NATIVE")
+    systemProperty("robolectric.offline", "true")
+    inputs.files(robolectricAndroidAll)
+        .withPathSensitivity(PathSensitivity.NAME_ONLY)
+
     systemProperty("minutewatcher.projectRoot", rootProject.layout.projectDirectory.asFile.absolutePath)
     systemProperty(
         "minutewatcher.coreResourcesResDir",
@@ -54,18 +92,14 @@ tasks.withType<Test>().configureEach {
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsDir")
 
-    val moduleCacheName = project.path.removePrefix(":").replace(':', '.').ifEmpty { "root" }
-    val roboUserHomeFile = rootProject.layout.projectDirectory.dir(".robolectric/$moduleCacheName/home").asFile
     val testTmpDirFile = project.layout.buildDirectory.dir("tmp").get().asFile
+    val robolectricJarsDirFile = project.layout.buildDirectory.dir("robolectric-jars").get().asFile
 
     doFirst {
-        roboUserHomeFile.mkdirs()
         testTmpDirFile.mkdirs()
+        systemProperty("robolectric.dependency.dir", robolectricJarsDirFile.absolutePath)
     }
 
-    systemProperty("robolectric.dependency.repo.id", "central")
-    systemProperty("robolectric.dependency.repo.url", "https://repo1.maven.org/maven2/")
-    systemProperty("user.home", roboUserHomeFile.absolutePath)
     systemProperty("java.io.tmpdir", testTmpDirFile.absolutePath)
     if (isVerbose) {
         systemProperty("robolectric.logging.enabled", "true")

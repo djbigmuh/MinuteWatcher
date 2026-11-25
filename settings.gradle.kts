@@ -15,13 +15,29 @@ pluginManagement {
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
-// Suppress UnstableApiUsage for org.gradle.api.initialization.dsl.DependencyResolutionManagement @Incubating in Gradle 9.x
+
+val robolectricDir = settings.rootDir.resolve(".robolectric")
+val repoDir = robolectricDir.resolve("repo")
+repoDir.mkdirs()
+if (robolectricDir.exists()) {
+    robolectricDir.walkTopDown().filter { it.isFile && (it.extension == "jar" || it.extension == "pom") && it.path.contains("android-all-instrumented") }.forEach { file ->
+        val idx = file.path.indexOf("org/robolectric/android-all-instrumented")
+        if (idx != -1) {
+            val relPath = file.path.substring(idx)
+            val targetFile = repoDir.resolve(relPath)
+            targetFile.parentFile.mkdirs()
+            file.copyTo(targetFile, overwrite = true)
+        }
+    }
+}
+
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
+        maven { url = settings.rootDir.resolve(".robolectric/repo").toURI() }
     }
 }
 
