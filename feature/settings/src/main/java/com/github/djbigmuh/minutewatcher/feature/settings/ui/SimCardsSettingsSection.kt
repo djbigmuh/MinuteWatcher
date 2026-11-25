@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Checkbox
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCheckbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -164,7 +164,7 @@ private fun SimHeaderRow(
             modifier = Modifier.weight(1f),
         )
         Spacer(modifier = Modifier.width(SIM_HEADER_SPACING))
-        Checkbox(
+        AppCheckbox(
             checked = showSim,
             onCheckedChange = null,
             enabled = enabled,
