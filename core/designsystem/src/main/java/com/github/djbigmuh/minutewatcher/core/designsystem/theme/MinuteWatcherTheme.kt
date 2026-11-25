@@ -1,7 +1,9 @@
 package com.github.djbigmuh.minutewatcher.core.designsystem.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -16,6 +18,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 private val P = MinuteWatcherPalette
+
+private val MinuteWatcherShapes = Shapes(
+    extraSmall = RoundedCornerShape(MwShape.extraSmall),
+    small = RoundedCornerShape(MwShape.small),
+    medium = RoundedCornerShape(MwShape.medium),
+    large = RoundedCornerShape(MwShape.large),
+    extraLarge = RoundedCornerShape(MwShape.extraLarge),
+)
 
 private val LightScheme = lightColorScheme(
     primary = P.teal700,
@@ -129,5 +139,10 @@ fun MinuteWatcherTheme(
         darkTheme -> DarkScheme
         else -> LightScheme
     }
-    MaterialTheme(colorScheme = scheme, typography = MinuteWatcherTypography, content = content)
+    MaterialTheme(
+        colorScheme = scheme,
+        typography = MinuteWatcherTypography,
+        shapes = MinuteWatcherShapes,
+        content = content,
+    )
 }
