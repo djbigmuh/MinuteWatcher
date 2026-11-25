@@ -1,4 +1,4 @@
-﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
+package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +23,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetUiState
@@ -101,16 +100,11 @@ fun SimSettingsSection(
     operatorIconRes: Int = 0,
     onUpdate: ((SimSettingsState) -> SimSettingsState) -> Unit,
 ) {
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = SIM_CARD_VERTICAL_PADDING),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    AppCard(
+        modifier = Modifier.padding(vertical = SIM_CARD_VERTICAL_PADDING),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(SIM_CARD_CONTENT_PADDING),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(MwShape.large),
     ) {
-        Column(modifier = Modifier.padding(SIM_CARD_CONTENT_PADDING)) {
             SimHeaderRow(
                 slot = slot,
                 operatorName = operatorName,
