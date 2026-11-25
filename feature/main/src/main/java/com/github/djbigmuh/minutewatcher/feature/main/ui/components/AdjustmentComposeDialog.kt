@@ -3,7 +3,7 @@ package com.github.djbigmuh.minutewatcher.feature.main.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextFieldValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
@@ -120,7 +120,7 @@ private fun AdjustmentDialogContent(
     isMinutes: Boolean,
 ) {
     Column {
-        OutlinedTextField(
+        AppTextFieldValue(
             value = state.text,
             onValueChange = { state.onTextChange(it) },
             label = {
