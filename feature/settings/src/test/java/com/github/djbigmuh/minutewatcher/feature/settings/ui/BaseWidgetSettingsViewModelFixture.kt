@@ -1,5 +1,6 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
+import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.domain.AodSummaryAvailability
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
@@ -39,7 +40,7 @@ abstract class BaseWidgetSettingsViewModelFixture {
     }
 
     @Before
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test fixture setup bridge")
+    @RunBlockingBridge("Test fixture setup bridge")
     open fun setup() {
         val snapshot = GlobalSnapshot(SchemaVersion(1, 0, 0), 0L, emptyList(), emptyList())
         val snapshotFlow = MutableStateFlow(snapshot)

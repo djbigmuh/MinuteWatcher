@@ -29,6 +29,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -443,7 +446,7 @@ class UpdateCoordinatorResilienceTest {
             testScheduler.advanceUntilIdle()
 
             val job = coordinator.setupJob.get()
-            assertTrue("setupJob should not contain a completed job", job == null || !job.isCompleted)
+            if (job != null) assertFalse("setupJob should not contain a completed job", job.isCompleted)
         }
 
     @Test
@@ -463,7 +466,7 @@ class UpdateCoordinatorResilienceTest {
             testScheduler.runCurrent()
 
             val job2 = coordinator.setupJob.get()
-            assertTrue("setupJob reference should remain the same", job1 === job2)
+            assertSame("setupJob reference should remain the same", job1, job2)
         }
 
     @Test
@@ -498,12 +501,13 @@ class UpdateCoordinatorResilienceTest {
             testScheduler.runCurrent()
 
             val oldJob = coordinator.setupJob.get()
-            assertTrue(oldJob != null && oldJob.isActive)
+            assertNotNull(oldJob)
+            assertTrue(oldJob!!.isActive)
 
             coordinator.recover()
             testScheduler.advanceUntilIdle()
 
-            assertTrue(oldJob?.isCancelled == true)
+            assertEquals(true, oldJob.isCancelled)
         }
 
     @Test
@@ -523,7 +527,8 @@ class UpdateCoordinatorResilienceTest {
             testScheduler.runCurrent()
 
             val job = coordinator.setupJob.get()
-            assertTrue("setupJob should be active", job != null && job.isActive)
+            assertNotNull("setupJob should be active", job)
+            assertTrue("setupJob should be active", job!!.isActive)
         }
 
     private fun createTestSimCardUiModel(slot: Int = 0) =

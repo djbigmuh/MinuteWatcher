@@ -350,7 +350,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             try {
                 callTracker.onCallEnded(subId)
             } catch (e: IOException) {
-                assertTrue("Expected IOException message to match", e.message?.contains("Write failed") == true)
+                assertEquals("Expected IOException message to match", true, e.message?.contains("Write failed"))
             }
             advanceUntilIdle()
 
@@ -390,7 +390,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
                     callTracker.onCallEnded(subId)
                     false
                 } catch (e: IOException) {
-                    assertTrue("Expected IOException message to match", e.message?.contains("Write failed") == true)
+                    assertEquals("Expected IOException message to match", true, e.message?.contains("Write failed"))
                     true
                 }
             assertTrue("IOException should be propagated", caught)
@@ -600,7 +600,7 @@ class CallTrackerEndTest : CallTrackerTestFixtures() {
             try {
                 callTracker.onCallEnded(subId)
             } catch (e: IOException) {
-                assertTrue("Expected IOException message to match", e.message?.contains("DataStore failure") == true)
+                assertEquals("Expected IOException message to match", true, e.message?.contains("DataStore failure"))
             }
             advanceUntilIdle()
 

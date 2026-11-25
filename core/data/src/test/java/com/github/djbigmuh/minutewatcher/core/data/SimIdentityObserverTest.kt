@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -154,7 +155,7 @@ class SimIdentityObserverTest {
             advanceTimeBy(1.seconds)
             runCurrent()
 
-            assertTrue("Should emit resolved SIMs list", resolvedEmissions.last() != null)
+            assertNotNull("Should emit resolved SIMs list", resolvedEmissions.last())
             assertEquals(emptyList<ActiveSimInfo>(), resolvedEmissions.last())
             assertEquals(emptyList<ActiveSimInfo>(), observer.activeSimsCache.value)
 

@@ -1,5 +1,6 @@
 package com.github.djbigmuh.minutewatcher.core.common.architecture
 
+import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -106,7 +107,7 @@ class CoroutineRegressionTest {
         }
 
     @Test
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test token list")
+    @RunBlockingBridge("Test token list")
     fun `no forbidden coroutine or threading tokens in production src main code`() {
         val projectRootProp =
             System.getProperty("minutewatcher.projectRoot")

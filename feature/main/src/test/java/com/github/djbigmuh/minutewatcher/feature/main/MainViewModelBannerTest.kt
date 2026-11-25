@@ -10,7 +10,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.whenever
@@ -32,7 +34,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.phonePermissionState != PermissionUiState.GRANTED)
+            assertNotEquals(PermissionUiState.GRANTED, bannerState.phonePermissionState)
         }
 
     @Test
@@ -51,7 +53,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.phonePermissionState == PermissionUiState.GRANTED)
+            assertEquals(PermissionUiState.GRANTED, bannerState.phonePermissionState)
         }
 
     @Test
@@ -79,7 +81,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             val bannerState = viewModel.trackingBannerState.value
             // Since phonePermissionFlow.value = false and phonePermissionPermanentlyDenied = true,
             // it's derived as PERMANENTLY_DENIED internally in mapper.
-            assertTrue(bannerState.phonePermissionState == PermissionUiState.PERMANENTLY_DENIED)
+            assertEquals(PermissionUiState.PERMANENTLY_DENIED, bannerState.phonePermissionState)
         }
 
     @Test
@@ -106,7 +108,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.notificationPermissionState != PermissionUiState.GRANTED)
+            assertNotEquals(PermissionUiState.GRANTED, bannerState.notificationPermissionState)
         }
 
     @Test
@@ -133,7 +135,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
+            assertEquals(PermissionUiState.GRANTED, bannerState.notificationPermissionState)
         }
 
     @Test
@@ -160,7 +162,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             var bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.phonePermissionState == PermissionUiState.NOT_REQUESTED)
+            assertEquals(PermissionUiState.NOT_REQUESTED, bannerState.phonePermissionState)
 
             // Case 2: Permanently denied
             settingsFlow.value =
@@ -171,7 +173,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.phonePermissionState == PermissionUiState.PERMANENTLY_DENIED)
+            assertEquals(PermissionUiState.PERMANENTLY_DENIED, bannerState.phonePermissionState)
         }
 
     @Test
@@ -198,7 +200,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
+            assertEquals(PermissionUiState.GRANTED, bannerState.notificationPermissionState)
         }
 
     @Test
@@ -297,7 +299,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
+            assertEquals(PermissionUiState.GRANTED, bannerState.notificationPermissionState)
         }
 
     @Test
@@ -323,7 +325,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.notificationPermissionState == PermissionUiState.GRANTED)
+            assertEquals(PermissionUiState.GRANTED, bannerState.notificationPermissionState)
         }
 
     @Test
@@ -349,7 +351,7 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.notificationPermissionState == PermissionUiState.PERMANENTLY_DENIED)
+            assertEquals(PermissionUiState.PERMANENTLY_DENIED, bannerState.notificationPermissionState)
         }
 
     @Test
@@ -375,6 +377,6 @@ class MainViewModelBannerTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val bannerState = viewModel.trackingBannerState.value
-            assertTrue(bannerState.notificationPermissionState == PermissionUiState.NOT_REQUESTED)
+            assertEquals(PermissionUiState.NOT_REQUESTED, bannerState.notificationPermissionState)
         }
 }

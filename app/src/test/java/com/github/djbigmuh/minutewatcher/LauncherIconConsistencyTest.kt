@@ -8,6 +8,7 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,7 +27,7 @@ class LauncherIconConsistencyTest {
         val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
 
         assertNotNull(appInfo)
-        assertTrue("Application icon must be non-zero", appInfo.icon != 0)
+        assertNotEquals("Application icon must be non-zero", 0, appInfo.icon)
 
         val roundIconVal =
             try {
@@ -35,7 +36,7 @@ class LauncherIconConsistencyTest {
             } catch (_: Exception) {
                 context.resources.getIdentifier("ic_launcher", "mipmap", context.packageName)
             }
-        assertTrue("Application round icon must be non-zero", roundIconVal != 0)
+        assertNotEquals("Application round icon must be non-zero", 0, roundIconVal)
 
         val iconResName = context.resources.getResourceEntryName(appInfo.icon)
         val iconResType = context.resources.getResourceTypeName(appInfo.icon)

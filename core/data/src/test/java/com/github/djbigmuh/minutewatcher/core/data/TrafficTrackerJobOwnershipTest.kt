@@ -1,5 +1,6 @@
 ﻿package com.github.djbigmuh.minutewatcher.core.data
 
+import com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
@@ -37,7 +38,7 @@ class TrafficTrackerJobOwnershipTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
     private val simUsageResetRepository: SimUsageResetRepository = mock()
-    private val permissionManager: com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager = mock()
+    private val permissionManager: PermissionManager = mock()
     private val baselineManager: TrafficBaselineManager = mock()
     private val deltaCalculator: TrafficDeltaCalculator = mock()
     private val simChangeHandler: TrafficSimChangeHandler = mock()

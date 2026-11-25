@@ -7,6 +7,7 @@ import com.github.djbigmuh.minutewatcher.core.model.MeasurementUnit
 import com.github.djbigmuh.minutewatcher.core.model.PackageType
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
+import com.github.djbigmuh.minutewatcher.core.model.SimLayoutComponent
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
@@ -160,7 +161,7 @@ class WidgetUiSnapshotMapperTest {
         val trafficRows =
             sim0.layoutSpec.rows.filter { row ->
                 row.components.any { component ->
-                    component is com.github.djbigmuh.minutewatcher.core.model.SimLayoutComponent.Text &&
+                    component is SimLayoutComponent.Text &&
                         component.text.contains("Used:") &&
                         component.text.contains("GB")
                 }

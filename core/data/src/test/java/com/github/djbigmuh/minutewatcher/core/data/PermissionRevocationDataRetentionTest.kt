@@ -126,7 +126,7 @@ class PermissionRevocationDataRetentionTest {
                 resolver.getSimIdentity(0, activeSimsCache, seedFlow, mutex)
                 fail("Expected SecurityException when SIM discovery permission is missing")
             } catch (e: SecurityException) {
-                assertTrue(e.message?.contains("Permission missing") == true)
+                assertEquals(true, e.message?.contains("Permission missing"))
             }
         }
 }

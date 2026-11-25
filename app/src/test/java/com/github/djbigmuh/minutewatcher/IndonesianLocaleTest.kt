@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.test.core.app.ApplicationProvider
 import com.github.djbigmuh.minutewatcher.core.android.util.AppLocaleContexts
+import com.github.djbigmuh.minutewatcher.core.resources.R
 import com.github.djbigmuh.minutewatcher.core.resources.testing.LocaleResourceDirs
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -34,7 +35,7 @@ class IndonesianLocaleTest {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("id"))
         val indonesianContext = AppLocaleContexts.forAppLocale(appContext)
-        val indoString = indonesianContext.getString(com.github.djbigmuh.minutewatcher.core.resources.R.string.app_name)
+        val indoString = indonesianContext.getString(R.string.app_name)
         assertNotEquals(null, indoString)
     }
 }

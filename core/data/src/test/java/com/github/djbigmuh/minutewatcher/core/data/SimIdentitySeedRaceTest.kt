@@ -5,6 +5,7 @@ import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.github.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
@@ -40,8 +41,7 @@ class SimIdentitySeedRaceTest {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var seedRepository: SimIdentitySeedRepository
     private val timeProvider =
-        com.github.djbigmuh.minutewatcher.core.common.util
-            .FixedTimeProvider(currentTime = 1000000L)
+        FixedTimeProvider(currentTime = 1000000L)
     private lateinit var appSettingsRepository: AppSettingsRepository
     private lateinit var migrationService: IdentityMigrationService
     private lateinit var discoveryDeps: SimDiscoveryDependencies

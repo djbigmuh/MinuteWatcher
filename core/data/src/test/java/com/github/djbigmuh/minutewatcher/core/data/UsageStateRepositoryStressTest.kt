@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -93,7 +94,7 @@ class UsageStateRepositoryStressTest {
                 )
 
             // Warm up: initial state
-            assertTrue(repository.observeSnapshot().value.timestamp == 0L)
+            assertEquals(0L, repository.observeSnapshot().value.timestamp)
 
             // Act: 100 parallel calls
             val results = mutableListOf<Deferred<RefreshResult>>()
@@ -108,14 +109,14 @@ class UsageStateRepositoryStressTest {
             val completedResults = results.awaitAll()
 
             // Assert: No deadlocks and all calls returned a result
-            assertTrue("Expected 100 results", completedResults.size == 100)
+            assertEquals("Expected 100 results", 100, completedResults.size)
 
             // Verify success or timeout (mostly success if logic is correct)
             val successCount = completedResults.count { it is RefreshResult.Success }
             val timeoutCount = completedResults.count { it is RefreshResult.Timeout }
 
             assertTrue("Expected at least one success, but got $successCount", successCount > 0)
-            assertTrue("All calls should complete without deadlock", (successCount + timeoutCount) == 100)
+            assertEquals("All calls should complete without deadlock", 100, successCount + timeoutCount)
 
             // Verify notifyRefresh was called exactly 100 times
             verify(dataRefreshNotifier, org.mockito.kotlin.times(100)).notifyRefresh(

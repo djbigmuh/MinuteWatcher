@@ -7,6 +7,7 @@ import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.test.core.app.ApplicationProvider
+import com.github.djbigmuh.minutewatcher.core.android.util.AppLocaleContexts
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionRepository
@@ -409,7 +410,7 @@ class AodSummaryControllerTest {
                 )
 
                 val appLocaleCtx =
-                    com.github.djbigmuh.minutewatcher.core.android.util.AppLocaleContexts.forAppLocale(
+                    AppLocaleContexts.forAppLocale(
                         context,
                     )
                 val expectedMinutesPlural = appLocaleCtx.resources.getQuantityString(R.plurals.minutes_plurals, 5, 5)

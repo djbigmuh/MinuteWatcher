@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -47,7 +48,7 @@ class SnapshotIndexerCleanupTest : SemanticSearchManagerTestFixtures() {
 
             // 3. Verify that removeByDocumentId was called for "OLD_TYPE" for all slots
             val session = appSearchWrapper.lastSession
-            assertTrue("Session should have been created", session != null)
+            assertNotNull("Session should have been created", session)
             val lastRemove = session!!.removeRequests.last()
 
             (0 until 10).forEach { slot ->

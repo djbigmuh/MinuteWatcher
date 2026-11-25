@@ -323,7 +323,7 @@ class SimLimitComposeDialogTest {
         assertTrue(result is SimLimitValidationResult.Valid)
         val valid = result as SimLimitValidationResult.Valid
         assertEquals(100, valid.minutes)
-        assertEquals(6.0f, valid.trafficGb)
+        assertEquals(6.0f, valid.trafficGb, 0.001f)
         assertEquals(6144, (valid.trafficGb * Constants.MB_PER_GB).roundToInt())
     }
 

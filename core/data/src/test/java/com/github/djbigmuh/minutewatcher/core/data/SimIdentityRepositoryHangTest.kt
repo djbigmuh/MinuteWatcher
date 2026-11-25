@@ -33,6 +33,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -254,7 +255,7 @@ class SimIdentityRepositoryHangTest {
                 }
 
             // Assert: it should have emitted (even if empty list)
-            assertTrue("Flow should have emitted a value instead of hanging", result != null)
+            assertNotNull("Flow should have emitted a value instead of hanging", result)
         }
 
     @Test
@@ -302,7 +303,7 @@ class SimIdentityRepositoryHangTest {
                 }
 
             // Assert: should be empty list, not hang
-            assertTrue("Result should be empty list after timeout", result != null)
+            assertNotNull("Result should be empty list after timeout", result)
             verify(mockSeedRepo, times(1)).getOrCreateSeedOrEphemeralFallback(any())
             verify(permissionManager, times(1)).getActiveSubscriptions()
         }
@@ -377,8 +378,8 @@ class SimIdentityRepositoryHangTest {
                     identityRepo.observeActiveSims().first()
                 }
 
-            assertTrue("Flow should have emitted empty list immediately", result != null)
-            assertTrue("Result should be empty", result?.isEmpty() == true)
+            assertNotNull("Flow should have emitted empty list immediately", result)
+            assertEquals("Result should be empty", true, result?.isEmpty())
         }
 
     @Test
@@ -467,7 +468,7 @@ class SimIdentityRepositoryHangTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
 
             val id1 = identityRepo.getSimIdentity(0)
-            assertTrue("Expected real identity", id1.source == IdentitySource.ICCID)
+            assertEquals("Expected real identity", IdentitySource.ICCID, id1.source)
 
             // 3. Advance time to trigger the withTimeoutOrNull around emitAll in seedFlow.
             // Since storedSeed (MutableSharedFlow) doesn't emit after our first emit,
@@ -525,6 +526,6 @@ class SimIdentityRepositoryHangTest {
                 withTimeoutOrNull(5.seconds) {
                     identityRepo.observeActiveSims().first { it.isEmpty() }
                 }
-            assertTrue("Should not hang even if seed repository generation hangs", result != null)
+            assertNotNull("Should not hang even if seed repository generation hangs", result)
         }
 }

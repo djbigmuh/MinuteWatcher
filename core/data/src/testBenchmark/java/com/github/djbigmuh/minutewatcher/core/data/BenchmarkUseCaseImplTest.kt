@@ -166,7 +166,7 @@ class BenchmarkUseCaseImplTest {
                 useCase.populateMockData(2)
                 fail("Expected IOException on timeout")
             } catch (e: IOException) {
-                assertTrue("Exception message should indicate timeout", e.message?.contains("Timed out") == true)
+                assertEquals("Exception message should indicate timeout", true, e.message?.contains("Timed out"))
             }
         }
 }

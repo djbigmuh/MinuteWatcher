@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.data.di.DataStoreKeys
 import com.github.djbigmuh.minutewatcher.core.model.IdentitySource
@@ -24,6 +25,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -198,7 +200,7 @@ class IdentityMigrationServiceTest {
                     ),
                 )
             assertTrue(outcome.migrated > 0)
-            assertFalse(service.hasLegacyData(setOf("some_id")) == true)
+            assertNotEquals(true, service.hasLegacyData(setOf("some_id")))
         }
 
     @Test
@@ -432,7 +434,7 @@ class IdentityMigrationServiceTest {
         }
 
     @Test
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge(
+    @RunBlockingBridge(
         "Cancellation exception assertion bridge",
     )
     fun `hasLegacyData rethrows CancellationException`() =
@@ -457,7 +459,7 @@ class IdentityMigrationServiceTest {
             val service = IdentityMigrationService(appDataStore, unreadSimDataStore)
 
             val result = service.hasLegacyData()
-            assertFalse(result == true)
+            assertNotEquals(true, result)
         }
 
     @Test
@@ -550,7 +552,7 @@ class IdentityMigrationServiceTest {
             assertEquals(0, outcome.migrated)
             assertEquals(0, outcome.failures)
             assertFalse(outcome.hasChanges())
-            assertFalse(service.hasLegacyData() == true)
+            assertNotEquals(true, service.hasLegacyData())
         }
 
     @Test

@@ -9,6 +9,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.github.djbigmuh.minutewatcher.MinuteWatcherTestApp
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.test.runTest
@@ -24,7 +25,7 @@ import org.robolectric.shadows.ShadowLooper
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = com.github.djbigmuh.minutewatcher.MinuteWatcherTestApp::class)
+@Config(application = MinuteWatcherTestApp::class)
 class SemanticInitSchedulerTest {
     private lateinit var context: Context
     private lateinit var workManager: WorkManager

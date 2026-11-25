@@ -10,6 +10,7 @@ import com.github.djbigmuh.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -87,7 +88,7 @@ class SimUtilsTest {
             assertTrue("Name resource for ${record.brandKey} must resolve", !nameStr.isNullOrEmpty())
 
             val iconDrawable = runCatching { AppCompatResources.getDrawable(appContext, record.iconResId) }.getOrNull()
-            assertTrue("Icon resource for ${record.brandKey} must resolve", iconDrawable != null)
+            assertNotNull("Icon resource for ${record.brandKey} must resolve", iconDrawable)
         }
     }
 
@@ -96,7 +97,7 @@ class SimUtilsTest {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         OperatorBrandDatabase.operatorIconMap.values.toSet().forEach { drawableResId ->
             val drawable = AppCompatResources.getDrawable(appContext, drawableResId)
-            assertTrue("Drawable $drawableResId must load successfully", drawable != null)
+            assertNotNull("Drawable $drawableResId must load successfully", drawable)
         }
     }
 
@@ -119,7 +120,7 @@ class SimUtilsTest {
                 val doc = builder.parse(file)
                 val root = doc.documentElement
                 val autoMirrored = root.getAttribute("android:autoMirrored")
-                assertFalse("Icon ${file.name} must not have android:autoMirrored=\"true\"", autoMirrored == "true")
+                assertNotEquals("Icon ${file.name} must not have android:autoMirrored=\"true\"", "true", autoMirrored)
             }
     }
 

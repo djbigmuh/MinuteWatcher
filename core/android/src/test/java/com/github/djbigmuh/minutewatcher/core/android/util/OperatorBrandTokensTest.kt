@@ -45,13 +45,20 @@ class OperatorBrandTokensTest {
             )
             fail("Expected IllegalStateException when merging duplicate keys")
         } catch (e: IllegalStateException) {
-            assertTrue(
+            assertEquals(
                 "Exception message must contain duplicate key name",
-                e.message?.contains("duplicate_key") == true,
+                true,
+                e.message?.contains("duplicate_key"),
             )
-            assertTrue(
+            assertEquals(
                 "Exception message must contain both values",
-                e.message?.contains("operator_a") == true && e.message?.contains("operator_b") == true,
+                true,
+                e.message?.contains("operator_a"),
+            )
+            assertEquals(
+                "Exception message must contain both values",
+                true,
+                e.message?.contains("operator_b"),
             )
         }
     }
@@ -65,8 +72,9 @@ class OperatorBrandTokensTest {
             )
             fail("Expected IllegalStateException")
         } catch (e: IllegalStateException) {
-            assertTrue(e.message?.contains("dup") == true)
-            assertTrue(e.message?.contains("val1") == true && e.message?.contains("val2") == true)
+            assertEquals(true, e.message?.contains("dup"))
+            assertEquals(true, e.message?.contains("val1"))
+            assertEquals(true, e.message?.contains("val2"))
         }
     }
 

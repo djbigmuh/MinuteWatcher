@@ -6,8 +6,10 @@ import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
+import com.github.djbigmuh.minutewatcher.core.domain.AppInfoProvider
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.AutoResetUseCase
+import com.github.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.MigrationFlagsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SettingsUseCase
@@ -20,14 +22,19 @@ import com.github.djbigmuh.minutewatcher.core.domain.UsageUseCase
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetUpdateCoordinator
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.AppTheme
+import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
+import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
+import com.github.djbigmuh.minutewatcher.feature.main.controller.AutoResetScheduler
 import com.github.djbigmuh.minutewatcher.feature.main.controller.MainBannerController
 import com.github.djbigmuh.minutewatcher.feature.main.controller.MainDialogController
+import com.github.djbigmuh.minutewatcher.feature.main.controller.MainInitializationController
 import com.github.djbigmuh.minutewatcher.feature.main.controller.MainResumeController
 import com.github.djbigmuh.minutewatcher.feature.main.controller.MainSettingsController
 import com.github.djbigmuh.minutewatcher.feature.main.controller.MainSimDataController
 import com.github.djbigmuh.minutewatcher.feature.main.controller.MainSimRefreshController
 import com.github.djbigmuh.minutewatcher.feature.main.controller.MainViewModelControllers
 import com.github.djbigmuh.minutewatcher.feature.main.controller.TrackingRecoveryController
+import com.github.djbigmuh.minutewatcher.feature.main.ui.components.TrackingBanners
 import com.github.djbigmuh.minutewatcher.feature.main.ui.components.UsageAccessDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -69,7 +76,7 @@ class UsageAccessNavigationTest {
     private val autoResetUseCase: AutoResetUseCase = mock()
     private val usageUseCase: UsageUseCase = mock()
     private val settingsUseCase: SettingsUseCase = mock()
-    private val dataRefreshNotifier: com.github.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier = mock()
+    private val dataRefreshNotifier: DataRefreshNotifier = mock()
     private val updateCoordinator: WidgetUpdateCoordinator = mock()
     private val permissionRepository: PermissionRepository = mock()
     private val trackingRecoveryController: TrackingRecoveryController = mock()
@@ -82,12 +89,12 @@ class UsageAccessNavigationTest {
     private val usageStatsPermissionFlow = MutableStateFlow(false)
     private val notificationPermissionFlow = MutableStateFlow(true)
     private val refreshFlow =
-        MutableSharedFlow<com.github.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier.RefreshEvent>(replay = 1)
+        MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(replay = 1)
 
     @Before
     fun setup() {
         refreshFlow.tryEmit(
-            com.github.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier
+            DataRefreshNotifier
                 .RefreshEvent(),
         )
         whenever(dataRefreshNotifier.refreshFlow).thenReturn(refreshFlow)
@@ -105,7 +112,7 @@ class UsageAccessNavigationTest {
         ).thenReturn(MutableStateFlow(listOf(createMockSimCard())))
         whenever(
             usageStateRepository.observeSnapshot(),
-        ).thenReturn(MutableStateFlow(mock<com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot>()))
+        ).thenReturn(MutableStateFlow(mock<GlobalSnapshot>()))
         whenever(appSettingsRepository.observeAppSettings()).thenReturn(MutableStateFlow(AppSettings()))
         whenever(appSettingsRepository.getAppSettings()).thenReturn(flowOf(AppSettings()))
         whenever(settingsUseCase.appTheme).thenReturn(MutableStateFlow(AppTheme.FOLLOW_SYSTEM))
@@ -121,7 +128,7 @@ class UsageAccessNavigationTest {
         val controllers = createControllers(scope)
         val initController = createInitController(controllers.refresh)
         val dialogController = MainDialogController(savedStateHandle)
-        val appInfoProvider: com.github.djbigmuh.minutewatcher.core.domain.AppInfoProvider = mock()
+        val appInfoProvider: AppInfoProvider = mock()
         whenever(appInfoProvider.versionName).thenReturn("1.0.0")
         whenever(appInfoProvider.versionCode).thenReturn(1)
 
@@ -187,10 +194,10 @@ class UsageAccessNavigationTest {
     }
 
     private fun createInitController(refreshController: MainSimRefreshController) =
-        com.github.djbigmuh.minutewatcher.feature.main.controller.MainInitializationController(
+        MainInitializationController(
             refreshController = refreshController,
             autoResetScheduler =
-                com.github.djbigmuh.minutewatcher.feature.main.controller.AutoResetScheduler(
+                AutoResetScheduler(
                     mock(),
                     autoResetUseCase,
                     timeProvider,
@@ -200,7 +207,7 @@ class UsageAccessNavigationTest {
         )
 
     private fun createMockSimCard() =
-        com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel(
+        SimCardUiModel(
             slot = 0,
             identity = "sim1",
             operatorName = "MTS",
@@ -226,7 +233,7 @@ class UsageAccessNavigationTest {
     fun bannerOpensRationaleDialog() {
         var dialogOpened = false
         composeTestRule.setContent {
-            com.github.djbigmuh.minutewatcher.feature.main.ui.components.TrackingBanners(
+            TrackingBanners(
                 state = TrackingBannerState(showUsageAccessBanner = true),
                 callbacks =
                     TrackingBannerCallbacks(

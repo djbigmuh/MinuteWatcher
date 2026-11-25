@@ -11,6 +11,7 @@ import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.SeedResolutionResult
 import com.github.djbigmuh.minutewatcher.core.domain.SimIdentitySeedRepository
+import com.github.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.SimDiscoveryResult
 import kotlinx.coroutines.CoroutineScope
@@ -176,7 +177,7 @@ class SimIdentityRepositoryRegistrationTest {
                 )
             val repository = SimIdentityRepositoryImpl(observer, resolver, persistence)
 
-            val emissions = mutableListOf<List<com.github.djbigmuh.minutewatcher.core.model.ActiveSimInfo>>()
+            val emissions = mutableListOf<List<ActiveSimInfo>>()
             val job =
                 launch {
                     repository.observeActiveSims().collect { emissions.add(it) }

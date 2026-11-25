@@ -59,7 +59,7 @@ class SimLimitValidatorTest {
         assertTrue("Result should be Valid", result is SimLimitValidationResult.Valid)
         val valid = result as SimLimitValidationResult.Valid
         assertEquals(1234, valid.minutes)
-        assertEquals(10f, valid.trafficGb)
+        assertEquals(10f, valid.trafficGb, 0.001f)
     }
 
     @Test
@@ -99,7 +99,7 @@ class SimLimitValidatorTest {
         val result = SimLimitValidator.validate("100", "1.5", required, invalid, range, range, defaultLocale)
         val valid = result as SimLimitValidationResult.Valid
         assertEquals(100, valid.minutes)
-        assertEquals(1.5f, valid.trafficGb)
+        assertEquals(1.5f, valid.trafficGb, 0.001f)
     }
 
     @Test

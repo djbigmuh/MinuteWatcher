@@ -228,7 +228,7 @@ class SimLimitInputTest {
                 Locale.GERMANY,
             )
         assertTrue(result is SimLimitValidationResult.Valid)
-        assertEquals(1.5f, (result as SimLimitValidationResult.Valid).trafficGb)
+        assertEquals(1.5f, (result as SimLimitValidationResult.Valid).trafficGb, 0.001f)
     }
 
     @Test
@@ -315,7 +315,7 @@ class SimLimitInputTest {
                 Locale.GERMANY,
             )
         assertTrue(result is SimLimitValidationResult.Valid)
-        assertEquals(1.5f, (result as SimLimitValidationResult.Valid).trafficGb)
+        assertEquals(1.5f, (result as SimLimitValidationResult.Valid).trafficGb, 0.001f)
     }
 
     @Test
@@ -336,7 +336,7 @@ class SimLimitInputTest {
                 Locale.GERMANY,
             )
         assertTrue(result is SimLimitValidationResult.Valid)
-        assertEquals(10.5f, (result as SimLimitValidationResult.Valid).trafficGb)
+        assertEquals(10.5f, (result as SimLimitValidationResult.Valid).trafficGb, 0.001f)
     }
 
     @Test
@@ -383,7 +383,7 @@ class SimLimitInputTest {
                 Locale.GERMANY,
             )
         assertTrue(result is SimLimitValidationResult.Valid)
-        assertEquals(0.5f, (result as SimLimitValidationResult.Valid).trafficGb)
+        assertEquals(0.5f, (result as SimLimitValidationResult.Valid).trafficGb, 0.001f)
     }
 
     @Test
@@ -403,6 +403,6 @@ class SimLimitInputTest {
                 Locale.US,
             )
         assertTrue(result is SimLimitValidationResult.Valid)
-        assertEquals(1234.5f, (result as SimLimitValidationResult.Valid).trafficGb)
+        assertEquals(1234.5f, (result as SimLimitValidationResult.Valid).trafficGb, 0.001f)
     }
 }

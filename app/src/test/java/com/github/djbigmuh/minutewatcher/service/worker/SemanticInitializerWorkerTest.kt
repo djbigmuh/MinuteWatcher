@@ -6,7 +6,12 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.github.djbigmuh.minutewatcher.MinuteWatcherTestApp
+import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
+import com.github.djbigmuh.minutewatcher.core.domain.AppFunctionAvailability
+import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageStateRepository
+import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
@@ -15,6 +20,7 @@ import com.github.djbigmuh.minutewatcher.feature.semantic.search.SemanticSearchM
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
@@ -35,28 +41,27 @@ import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = com.github.djbigmuh.minutewatcher.MinuteWatcherTestApp::class)
+@Config(application = MinuteWatcherTestApp::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SemanticInitializerWorkerTest {
     private lateinit var context: Context
     private val searchManager: SemanticSearchManager = mock()
     private val shortcutManager: ShortcutManager = mock()
     private val usageStateRepository: UsageStateRepository = mock()
-    private val appSettingsRepository: com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository = mock()
-    private val appFunctionAvailability: com.github.djbigmuh.minutewatcher.core.domain.AppFunctionAvailability = mock()
+    private val appSettingsRepository: AppSettingsRepository = mock()
+    private val appFunctionAvailability: AppFunctionAvailability = mock()
     private val snapshotFlow = MutableStateFlow(createEmptySnapshot())
 
     @Before
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test setup mock initialization bridge")
+    @RunBlockingBridge("Test setup mock initialization bridge")
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         whenever(usageStateRepository.observeSnapshot()).thenReturn(snapshotFlow)
         whenever(
             appSettingsRepository.getAppSettings(),
         ).thenReturn(
-            kotlinx.coroutines.flow.flowOf(
-                com.github.djbigmuh.minutewatcher.core.model
-                    .AppSettings(),
+            flowOf(
+                AppSettings(),
             ),
         )
         runBlocking {
@@ -250,7 +255,7 @@ class SemanticInitializerWorkerTest {
     fun `doWork propagates CancellationException during app settings read`() =
         runTest {
             val hangingFlow =
-                kotlinx.coroutines.flow.MutableSharedFlow<com.github.djbigmuh.minutewatcher.core.model.AppSettings>()
+                kotlinx.coroutines.flow.MutableSharedFlow<AppSettings>()
             whenever(appSettingsRepository.getAppSettings()).thenReturn(hangingFlow)
             val worker = createWorker(1)
 

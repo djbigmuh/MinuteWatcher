@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -105,8 +104,8 @@ class TrafficObserverConcurrencyTest {
                     tracker.simObserverJob.get()?.isActive == true
             }
 
-            assertTrue(tracker.permissionObserverJob.get()?.isActive == true)
-            assertTrue(tracker.simObserverJob.get()?.isActive == true)
+            assertEquals(true, tracker.permissionObserverJob.get()?.isActive)
+            assertEquals(true, tracker.simObserverJob.get()?.isActive)
 
             // 2. Capture baseline counts after stabilization
             val baselineSimCalls = simCallCount.get()
@@ -123,8 +122,8 @@ class TrafficObserverConcurrencyTest {
                     tracker.simObserverJob.get()?.isActive != true
             }
 
-            assertTrue(tracker.permissionObserverJob.get()?.isActive != true)
-            assertTrue(tracker.simObserverJob.get()?.isActive != true)
+            assertEquals(false, tracker.permissionObserverJob.get()?.isActive)
+            assertEquals(false, tracker.simObserverJob.get()?.isActive)
 
             // 4. Concurrent calls from 4 threads using CyclicBarrier
             val threadCount = 4
@@ -159,7 +158,7 @@ class TrafficObserverConcurrencyTest {
             assertEquals("Exact one new sim observer start", 1, newSimCalls)
             assertEquals("Exact one new permission observer start", 1, newChangesAccess)
 
-            assertTrue(tracker.permissionObserverJob.get()?.isActive == true)
-            assertTrue(tracker.simObserverJob.get()?.isActive == true)
+            assertEquals(true, tracker.permissionObserverJob.get()?.isActive)
+            assertEquals(true, tracker.simObserverJob.get()?.isActive)
         }
 }

@@ -14,6 +14,7 @@ import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.WidgetStrings
 import com.github.djbigmuh.minutewatcher.core.model.WidgetUiState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 
 val colorBlack: Int = Color.BLACK
@@ -101,7 +102,7 @@ fun verifyBasicUiState(uiState: WidgetUiState) {
         sim0.layoutSpec.rows
             .flatMap { it.components }
             .find { it is SimLayoutComponent.Text && it.text == "/200" }
-    assertTrue("Limit should be present in layout spec", limitComponent != null)
+    assertNotNull("Limit should be present in layout spec", limitComponent)
 
     assertTrue(sim0.minutesUsedFullText.contains("100"))
     assertTrue(sim0.minutesLimitFullText.contains("200"))

@@ -2,6 +2,7 @@
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import com.github.djbigmuh.minutewatcher.core.domain.RefreshResult
@@ -61,7 +62,7 @@ class MinutesGlanceWidgetTest {
         }
 
     @Test
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test mock answer delay bridge")
+    @RunBlockingBridge("Test mock answer delay bridge")
     fun `getUiStateInternal loads settings and snapshot in parallel`() =
         runTest {
             val settingsLoader = mock<WidgetSettingsLoader>()

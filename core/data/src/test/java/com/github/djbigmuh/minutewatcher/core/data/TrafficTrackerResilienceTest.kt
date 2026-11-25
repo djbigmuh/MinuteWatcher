@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -361,7 +362,7 @@ class TrafficTrackerResilienceTest {
                     it.first.contains("Timeout reading from Flow") ||
                         it.first.contains("activeSims")
                 }
-            assertTrue("Should not contain utility timeout log", utilityTimeoutLog == null)
+            assertNull("Should not contain utility timeout log", utilityTimeoutLog)
 
             resetAppLoggerForTest()
         }

@@ -3,6 +3,7 @@
 import com.github.djbigmuh.minutewatcher.core.domain.RefreshResult
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
+import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -198,7 +199,7 @@ class MainViewModelRefreshTest : MainViewModelTestFixtures() {
                     timestamp = 2L,
                     simSnapshots =
                         listOf(
-                            com.github.djbigmuh.minutewatcher.core.model.SimSnapshot(
+                            SimSnapshot(
                                 slot = 0,
                                 identity = "sim_0",
                                 operatorName = "Test",

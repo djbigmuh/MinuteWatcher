@@ -92,7 +92,7 @@ class AdjustmentInputStateTest {
                 invalidRangeMsg = "Invalid range",
             )
         assertTrue(validationResult is AdjustmentValidationResult.Valid)
-        assertEquals(1.5f, (validationResult as AdjustmentValidationResult.Valid).value)
+        assertEquals(1.5f, (validationResult as AdjustmentValidationResult.Valid).value, 0.001f)
     }
 
     @Test

@@ -95,8 +95,8 @@ class UsageModelsTest {
                 manualAdjustmentGb = -5f,
             )
 
-        assertEquals(0f, model.effectiveLimitGb)
-        assertEquals(0f, model.remainingGb)
+        assertEquals(0f, model.effectiveLimitGb, 0.0001f)
+        assertEquals(0f, model.remainingGb!!, 0.0001f)
     }
 
     @Test
@@ -108,8 +108,8 @@ class UsageModelsTest {
                 manualAdjustmentGb = 1f, // +1 GB
             )
 
-        assertEquals(3f, model.effectiveLimitGb)
-        assertEquals(2f, model.remainingGb)
+        assertEquals(3f, model.effectiveLimitGb, 0.0001f)
+        assertEquals(2f, model.remainingGb!!, 0.0001f)
     }
 
     @Test

@@ -21,7 +21,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -100,7 +99,7 @@ class WidgetSettingsAttributionTest {
             val batch = simWidgetVisibilityRepository.getSimSettingsBatch(listOf(identityB)).first()
             val settingsB = batch[identityB]
 
-            assertTrue("SIM B should NOT inherit 'hidden' state from SIM A", settingsB?.showSim == true)
+            assertEquals("SIM B should NOT inherit 'hidden' state from SIM A", true, settingsB?.showSim)
         }
 
     @Test

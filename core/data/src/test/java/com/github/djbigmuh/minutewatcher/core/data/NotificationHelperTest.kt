@@ -16,6 +16,7 @@ import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -295,7 +296,7 @@ class NotificationHelperTest {
         assertEquals("AOD Title", title)
         assertEquals("AOD Line", text)
         assertEquals("Expanded text", bigText)
-        assertTrue((notification.flags and Notification.FLAG_ONGOING_EVENT) != 0)
+        assertNotEquals(0, notification.flags and Notification.FLAG_ONGOING_EVENT)
         assertEquals(Notification.VISIBILITY_PUBLIC, notification.visibility)
     }
 

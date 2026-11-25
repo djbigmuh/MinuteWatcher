@@ -14,6 +14,7 @@ import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
+import com.github.djbigmuh.minutewatcher.core.resources.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
@@ -650,7 +651,7 @@ class ShortcutManagerTest {
         val drawable =
             androidx.appcompat.content.res.AppCompatResources.getDrawable(
                 context,
-                com.github.djbigmuh.minutewatcher.core.resources.R.drawable.ic_shortcut_usage,
+                R.drawable.ic_shortcut_usage,
             )
         assertNotNull(drawable)
 

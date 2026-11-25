@@ -38,7 +38,7 @@ class AdjustmentValidatorTest(
                 invalidRangeMsg = invalidRangeMsg,
             )
         assertTrue("Result should be Valid", result is AdjustmentValidationResult.Valid)
-        assertEquals(100f, (result as AdjustmentValidationResult.Valid).value)
+        assertEquals(100f, (result as AdjustmentValidationResult.Valid).value, 0.001f)
     }
 
     @Test
@@ -115,7 +115,7 @@ class AdjustmentValidatorTest(
                 invalidRangeMsg = invalidRangeMsg,
             )
         assertTrue("Result should be Valid with group separators ignored", result is AdjustmentValidationResult.Valid)
-        assertEquals(1000f, (result as AdjustmentValidationResult.Valid).value)
+        assertEquals(1000f, (result as AdjustmentValidationResult.Valid).value, 0.001f)
     }
 
     @Test
@@ -130,7 +130,7 @@ class AdjustmentValidatorTest(
                 invalidRangeMsg = invalidRangeMsg,
             )
         assertTrue("Fractional traffic value should be Valid", result is AdjustmentValidationResult.Valid)
-        assertEquals(1.5f, (result as AdjustmentValidationResult.Valid).value)
+        assertEquals(1.5f, (result as AdjustmentValidationResult.Valid).value, 0.001f)
     }
 
     @Test

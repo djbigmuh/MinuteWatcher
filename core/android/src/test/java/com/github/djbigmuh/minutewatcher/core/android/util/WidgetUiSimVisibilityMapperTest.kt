@@ -3,6 +3,7 @@
 import com.github.djbigmuh.minutewatcher.core.android.testing.SingletonResetRule
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
+import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.resolveShowSim
@@ -62,14 +63,11 @@ class WidgetUiSimVisibilityMapperTest {
         val simStates =
             mapOf(
                 0 to
-                    com.github.djbigmuh.minutewatcher.core.model
-                        .SimSettingsState(showSim = true),
+                    SimSettingsState(showSim = true),
                 1 to
-                    com.github.djbigmuh.minutewatcher.core.model
-                        .SimSettingsState(showSim = false),
+                    SimSettingsState(showSim = false),
                 2 to
-                    com.github.djbigmuh.minutewatcher.core.model
-                        .SimSettingsState(showSim = true),
+                    SimSettingsState(showSim = true),
             )
         val state = WidgetSettingsState(simStates = simStates, simListLoadFailed = false)
         val snapshot =

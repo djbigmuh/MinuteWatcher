@@ -107,7 +107,7 @@ class SimIdentityObserverResilienceTest {
                 assertTrue("Status should be Error, but was $status", status is TrackingStatus.Error)
                 val error = status as TrackingStatus.Error
                 assertEquals(TrackingStatus.ErrorType.UNKNOWN, error.type)
-                assertTrue(error.message?.startsWith("SIM discovery") == true)
+                assertEquals(true, error.message?.startsWith("SIM discovery"))
 
                 whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
                     SimDiscoveryResult.Available(emptyList()),
@@ -145,7 +145,7 @@ class SimIdentityObserverResilienceTest {
                 assertTrue("Status should be Error, but was $status", status is TrackingStatus.Error)
                 val error = status as TrackingStatus.Error
                 assertEquals(TrackingStatus.ErrorType.UNKNOWN, error.type)
-                assertTrue(error.message?.contains("consecutive IO failures") == true)
+                assertEquals(true, error.message?.contains("consecutive IO failures"))
 
                 whenever(fetcher.fetchActiveSimsWithRetry(any())).thenReturn(
                     SimDiscoveryResult.Available(emptyList()),

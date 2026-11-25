@@ -11,6 +11,7 @@ import com.github.djbigmuh.minutewatcher.core.model.MeasurementUnit
 import com.github.djbigmuh.minutewatcher.core.model.PackageType
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
+import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,8 +47,7 @@ class UsageSummaryProviderTest {
         val snapshotFlow = MutableStateFlow(initialSnapshot)
         var refreshCallCount = 0
 
-        override fun observeSimCardUiModels(): Flow<List<com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel>> =
-            flowOf(emptyList())
+        override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> = flowOf(emptyList())
 
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = snapshotFlow
 

@@ -7,7 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.mockito.kotlin.whenever
 
@@ -24,10 +24,10 @@ class MainViewModelSimDataTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val error = viewModel.lastOperationError.value
-            assertTrue("Expected OperationError but was $error", error != null)
+            assertNotNull("Expected OperationError but was $error", error)
             assertEquals(slot, error?.slot)
             assertEquals(R.string.error_storage_unavailable, error?.messageRes)
-            assertTrue("Args should contain slot", error?.args?.contains(slot) == true)
+            assertEquals("Args should contain slot", true, error?.args?.contains(slot))
         }
 
     @Test
@@ -41,9 +41,9 @@ class MainViewModelSimDataTest : MainViewModelTestFixtures() {
             advanceUntilIdle()
 
             val error = viewModel.lastOperationError.value
-            assertTrue("Expected OperationError but was $error", error != null)
+            assertNotNull("Expected OperationError but was $error", error)
             assertEquals(slot, error?.slot)
             assertEquals(R.string.error_sim_removed, error?.messageRes)
-            assertTrue("Args should contain slot", error?.args?.contains(slot) == true)
+            assertEquals("Args should contain slot", true, error?.args?.contains(slot))
         }
 }

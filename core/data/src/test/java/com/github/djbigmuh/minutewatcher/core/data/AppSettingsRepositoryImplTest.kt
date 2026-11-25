@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -73,7 +74,7 @@ class AppSettingsRepositoryImplTest {
             advanceUntilIdle()
 
             val prefs = dataStore.data.first()
-            assertFalse(prefs[DataStoreKeys.ONBOARDING_COMPLETED] == true)
+            assertNotEquals(true, prefs[DataStoreKeys.ONBOARDING_COMPLETED])
             assertEquals(AppTheme.DARK.value, prefs[DataStoreKeys.APP_THEME])
             assertEquals(10, prefs[DataStoreKeys.WIDGET_TRANSPARENCY])
         }
@@ -312,7 +313,7 @@ class AppSettingsRepositoryImplTest {
 
             val updatedSettings = repository.getAppSettings().first()
             assertTrue(updatedSettings.aodSummaryEnabled)
-            assertTrue(dataStore.data.first()[DataStoreKeys.AOD_SUMMARY_ENABLED] == true)
+            assertEquals(true, dataStore.data.first()[DataStoreKeys.AOD_SUMMARY_ENABLED])
         }
 
     @Test
@@ -330,7 +331,7 @@ class AppSettingsRepositoryImplTest {
 
             val updatedSettings = repository.getAppSettings().first()
             assertTrue(updatedSettings.assistantAccessEnabled)
-            assertTrue(dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED] == true)
+            assertEquals(true, dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED])
 
             repository.updateAppSettings {
                 it.copy(assistantAccessEnabled = false)
@@ -339,7 +340,7 @@ class AppSettingsRepositoryImplTest {
 
             val finalSettings = repository.getAppSettings().first()
             assertFalse(finalSettings.assistantAccessEnabled)
-            assertFalse(dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED] == true)
+            assertNotEquals(true, dataStore.data.first()[DataStoreKeys.ASSISTANT_ACCESS_ENABLED])
         }
 
     @Test
@@ -357,6 +358,6 @@ class AppSettingsRepositoryImplTest {
 
             val updatedSettings = repository.getAppSettings().first()
             assertTrue(updatedSettings.usageAccessDialogShown)
-            assertTrue(dataStore.data.first()[DataStoreKeys.USAGE_ACCESS_DIALOG_SHOWN] == true)
+            assertEquals(true, dataStore.data.first()[DataStoreKeys.USAGE_ACCESS_DIALOG_SHOWN])
         }
 }

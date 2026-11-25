@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -253,7 +254,7 @@ class SimIdentityRepositoryImplPersistenceTest {
 
             // 3. Check again
             val id2 = repository.getSimIdentity(0)
-            assertTrue("Expected updated identity, got ${id2.stableId}", id2.stableId != id1.stableId)
+            assertNotEquals("Expected updated identity, got ${id2.stableId}", id1.stableId, id2.stableId)
             assertTrue("Expected icc_ prefix, got ${id2.stableId}", id2.stableId.startsWith("icc_"))
 
             collectJob.cancel()

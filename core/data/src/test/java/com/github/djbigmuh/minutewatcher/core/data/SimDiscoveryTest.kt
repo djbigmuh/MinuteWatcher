@@ -7,6 +7,7 @@ import com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import com.github.djbigmuh.minutewatcher.core.model.SimDiscoveryResult
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -113,7 +114,7 @@ class SimDiscoveryTest {
                 ?.identity
                 ?.stableId
 
-        assertTrue(id1 != id2)
+        assertNotEquals(id2, id1)
     }
 
     @Test
@@ -136,7 +137,7 @@ class SimDiscoveryTest {
                 .first()
                 .identity.stableId
 
-        assertTrue(id1 != id2)
+        assertNotEquals(id2, id1)
     }
 
     @Test

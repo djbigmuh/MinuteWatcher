@@ -65,7 +65,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
                     manager.status.value is TrackingStatus.Error,
                 )
                 val status = manager.status.value as TrackingStatus.Error
-                assertTrue(status.message?.contains("Recovery blocked") == true)
+                assertEquals(true, status.message?.contains("Recovery blocked"))
             } finally {
                 manager.indexMutex.unlock()
             }
@@ -128,7 +128,7 @@ class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
 
             // 3. Verify status is Error and message contains the error
             val status = manager.status.value as TrackingStatus.Error
-            assertTrue(status.message?.contains("Simulated failure with code") == true)
+            assertEquals(true, status.message?.contains("Simulated failure with code"))
         }
 
     @Test

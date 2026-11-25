@@ -9,6 +9,7 @@ import com.github.djbigmuh.minutewatcher.core.model.SimLayoutComponent
 import com.github.djbigmuh.minutewatcher.core.model.SimLayoutRow
 import com.github.djbigmuh.minutewatcher.core.model.SimLayoutSpec
 import com.github.djbigmuh.minutewatcher.core.model.SimUiState
+import com.github.djbigmuh.minutewatcher.core.model.WidgetStrings
 import com.github.djbigmuh.minutewatcher.core.model.WidgetUiState
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -145,7 +146,7 @@ class WidgetPreviewLayoutTest {
         val uiState =
             createWidgetUiState(listOf(sim0), isHorizontal = true).copy(
                 strings =
-                    com.github.djbigmuh.minutewatcher.core.model.WidgetStrings(
+                    WidgetStrings(
                         usedText = "",
                         minutesAbbr = "",
                         limitText = "",
@@ -167,7 +168,7 @@ class WidgetPreviewLayoutTest {
         val uiState =
             createWidgetUiState(emptyList(), isHorizontal = true).copy(
                 strings =
-                    com.github.djbigmuh.minutewatcher.core.model.WidgetStrings(
+                    WidgetStrings(
                         usedText = "",
                         minutesAbbr = "",
                         limitText = "",
@@ -189,7 +190,7 @@ class WidgetPreviewLayoutTest {
         val uiState =
             createWidgetUiState(emptyList(), isHorizontal = true).copy(
                 strings =
-                    com.github.djbigmuh.minutewatcher.core.model.WidgetStrings(
+                    WidgetStrings(
                         usedText = "",
                         minutesAbbr = "",
                         limitText = "",
@@ -215,7 +216,7 @@ class WidgetPreviewLayoutTest {
             createWidgetUiState(listOf(sim0, sim1), isHorizontal = true).copy(
                 refreshFailed = true,
                 strings =
-                    com.github.djbigmuh.minutewatcher.core.model.WidgetStrings(
+                    WidgetStrings(
                         usedText = "",
                         minutesAbbr = "",
                         limitText = "",

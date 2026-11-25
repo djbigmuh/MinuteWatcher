@@ -2,9 +2,11 @@
 
 import androidx.lifecycle.SavedStateHandle
 import com.github.djbigmuh.minutewatcher.core.android.testing.SingletonResetRule
+import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
+import com.github.djbigmuh.minutewatcher.core.domain.AppInfoProvider
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.github.djbigmuh.minutewatcher.core.domain.AutoResetUseCase
@@ -93,7 +95,7 @@ abstract class MainViewModelTestFixtures {
         MutableSharedFlow<DataRefreshNotifier.RefreshEvent>(replay = 1)
 
     @Before
-    @com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge("Test fixture setup bridge")
+    @RunBlockingBridge("Test fixture setup bridge")
     open fun setup() {
         initTestLogger()
         phonePermissionFlow.value = false
@@ -175,7 +177,7 @@ abstract class MainViewModelTestFixtures {
                 refreshController = refreshController,
             )
 
-        val appInfoProvider: com.github.djbigmuh.minutewatcher.core.domain.AppInfoProvider = mock()
+        val appInfoProvider: AppInfoProvider = mock()
         whenever(appInfoProvider.versionName).thenReturn("1.0.0")
         whenever(appInfoProvider.versionCode).thenReturn(1)
 

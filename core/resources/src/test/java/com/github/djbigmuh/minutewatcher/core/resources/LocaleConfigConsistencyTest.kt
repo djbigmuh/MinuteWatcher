@@ -4,6 +4,7 @@ import com.github.djbigmuh.minutewatcher.core.resources.testing.LocaleResourceDi
 import com.github.djbigmuh.minutewatcher.core.resources.testing.ProjectPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -200,7 +201,7 @@ class LocaleConfigConsistencyTest {
 
         val urText = urFile.readText()
         val arText = arFile.readText()
-        assertFalse("Urdu strings must not be identical to Arabic strings", urText == arText)
+        assertNotEquals("Urdu strings must not be identical to Arabic strings", arText, urText)
         assertFalse("Urdu strings must not contain Arabic-specific strings", urText.contains("بطاقات SIM"))
         assertTrue("Urdu strings must contain correct parameter formatting", urText.contains("%1\$d"))
     }
@@ -227,7 +228,8 @@ class LocaleConfigConsistencyTest {
         }
 
         assertEquals("dj.bigmuh@gmail.com", emailValue)
-        assertTrue(emailValue?.contains("@") == true && emailValue.contains(".") == true)
+        assertEquals(true, emailValue?.contains("@"))
+        assertEquals(true, emailValue?.contains("."))
     }
 
     @Test

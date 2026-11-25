@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -98,7 +99,7 @@ class EphemeralSeedGatingTest {
         // 2. Add an unstable identity
         val unstable = SimIdentity("unstable", 99, 99, IdentitySource.ICCID, isStable = false)
         val canonicalUnstable = cache.getOrCreateCanonical(unstable)
-        assertTrue("Unstable identity should be cached initially", canonicalUnstable === unstable)
+        assertSame("Unstable identity should be cached initially", unstable, canonicalUnstable)
 
         // 3. Add another unstable identity to trigger eviction (size is now >= maxCacheSize)
         val unstable2 = SimIdentity("unstable2", 100, 100, IdentitySource.ICCID, isStable = false)
@@ -108,7 +109,7 @@ class EphemeralSeedGatingTest {
         val unstableAgain = SimIdentity("unstable", 99, 99, IdentitySource.ICCID, isStable = false)
         val result = cache.getOrCreateCanonical(unstableAgain)
 
-        assertTrue("Previous unstable should have been evicted", result === unstableAgain)
+        assertSame("Previous unstable should have been evicted", unstableAgain, result)
         assertFalse("Should not be the old object from cache", result === unstable)
 
         // 5. Stable ones should NOT be evicted

@@ -3,8 +3,7 @@
 import android.content.Context
 import android.content.pm.PackageManager
 import com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,10 +31,11 @@ class SemanticCapabilitiesTest {
         whenever(packageManager.hasSystemFeature("android.hardware.telephony.multisim")).thenReturn(false)
 
         val capabilities = SemanticCapabilities(context, permissionManager).getCapabilities()
+        val capMap = capabilities.associate { it.type to it.isSupported }
 
-        assertFalse(capabilities.find { it.type == "MINUTES_TRACKING" }!!.isSupported)
-        assertFalse(capabilities.find { it.type == "DATA_TRACKING" }!!.isSupported)
-        assertFalse(capabilities.find { it.type == "DUAL_SIM" }!!.isSupported)
+        assertEquals(false, capMap["MINUTES_TRACKING"])
+        assertEquals(false, capMap["DATA_TRACKING"])
+        assertEquals(false, capMap["DUAL_SIM"])
     }
 
     @Test
@@ -44,25 +44,28 @@ class SemanticCapabilitiesTest {
         whenever(packageManager.hasSystemFeature("android.hardware.telephony.multisim")).thenReturn(true)
 
         val capabilities = SemanticCapabilities(context, permissionManager).getCapabilities()
+        val capMap = capabilities.associate { it.type to it.isSupported }
 
-        assertTrue(capabilities.find { it.type == "MINUTES_TRACKING" }!!.isSupported)
-        assertTrue(capabilities.find { it.type == "DATA_TRACKING" }!!.isSupported)
-        assertTrue(capabilities.find { it.type == "DUAL_SIM" }!!.isSupported)
+        assertEquals(true, capMap["MINUTES_TRACKING"])
+        assertEquals(true, capMap["DATA_TRACKING"])
+        assertEquals(true, capMap["DUAL_SIM"])
     }
 
     @Test
     fun `API 26 features are always enabled`() {
         val capabilities = SemanticCapabilities(context, permissionManager).getCapabilities()
+        val capMap = capabilities.associate { it.type to it.isSupported }
 
-        assertTrue(capabilities.find { it.type == "DYNAMIC_SHORTCUTS" }!!.isSupported)
-        assertTrue(capabilities.find { it.type == "QUICK_SETTINGS_TILE" }!!.isSupported)
+        assertEquals(true, capMap["DYNAMIC_SHORTCUTS"])
+        assertEquals(true, capMap["QUICK_SETTINGS_TILE"])
     }
 
     @Test
     fun `app search capability is enabled using bundled local storage without system service lookup`() {
         val capabilities = SemanticCapabilities(context, permissionManager).getCapabilities()
+        val capMap = capabilities.associate { it.type to it.isSupported }
 
-        assertTrue(capabilities.find { it.type == "APP_SEARCH" }!!.isSupported)
+        assertEquals(true, capMap["APP_SEARCH"])
         verify(context, never()).getSystemService(any<Class<*>>())
     }
 }

@@ -25,6 +25,7 @@ import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.IdentitySource
 import com.github.djbigmuh.minutewatcher.core.model.MigrationSkipReason
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
+import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.SimIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -794,8 +795,7 @@ class InitialSetupWorkerTest {
         }
 
     private open class FakeUsageStateRepository : UsageStateRepository {
-        override fun observeSimCardUiModels(): Flow<List<com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel>> =
-            flowOf(emptyList())
+        override fun observeSimCardUiModels(): Flow<List<SimCardUiModel>> = flowOf(emptyList())
 
         override fun observeSnapshot(): StateFlow<GlobalSnapshot> = MutableStateFlow(mock())
 
