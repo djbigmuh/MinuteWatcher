@@ -6,6 +6,7 @@ import androidx.annotation.VisibleForTesting
 import com.github.djbigmuh.minutewatcher.core.common.BuildConfig
 import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger.logger
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -87,8 +88,7 @@ object AppLogger {
     @VisibleForTesting
     internal val droppedEntries: Long get() = droppedEntryCount.get()
 
-    @Suppress("UnusedReceiverParameter")
-    private val Channel<*>.isFull: Boolean
+    private val isLogQueueFull: Boolean
         get() = queuedCount.get() >= LOG_QUEUE_CAPACITY
 
     private val logChannel =
@@ -97,7 +97,7 @@ object AppLogger {
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
 
-    private var dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    private var dispatcher: CoroutineDispatcher = Dispatchers.IO
     private var logScope: CoroutineScope = CoroutineScope(dispatcher + SupervisorJob())
     private var workerJob: Job? = null
 
@@ -146,7 +146,7 @@ object AppLogger {
     fun init(
         context: Context,
         customLogger: Logger = AndroidLogger(),
-        customDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+        customDispatcher: CoroutineDispatcher = Dispatchers.IO,
         customScope: CoroutineScope = CoroutineScope(customDispatcher + SupervisorJob()),
     ) {
         val filesDir = context.filesDir
@@ -302,7 +302,7 @@ object AppLogger {
         message: String,
     ) {
         if (!isFileLoggingEnabled || isShutdown || logDir == null) return
-        if (logChannel.isFull) {
+        if (isLogQueueFull) {
             val total = droppedEntryCount.incrementAndGet()
             if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
                 runCatching {
@@ -490,7 +490,7 @@ object AppLogger {
     @VisibleForTesting
     internal fun initForTest(
         dir: File,
-        customDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+        customDispatcher: CoroutineDispatcher = Dispatchers.IO,
         customScope: CoroutineScope = CoroutineScope(customDispatcher + SupervisorJob()),
     ) {
         synchronized(this) {

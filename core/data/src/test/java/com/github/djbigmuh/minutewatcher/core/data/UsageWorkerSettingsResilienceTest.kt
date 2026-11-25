@@ -12,10 +12,8 @@ import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.AutoResetUseCase
 import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.RefreshResult
-import com.github.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageRepository
-import com.github.djbigmuh.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageStateRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageUseCase
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
@@ -50,8 +48,6 @@ class UsageWorkerSettingsResilienceTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val simUsageRepository: SimUsageRepository = mock()
-    private val simIdentityRepository: SimIdentityRepository = mock()
-    private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository = mock()
     private val simNotificationFlagsRepository: SimNotificationFlagsRepository = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val autoResetUseCase: AutoResetUseCase = mock()

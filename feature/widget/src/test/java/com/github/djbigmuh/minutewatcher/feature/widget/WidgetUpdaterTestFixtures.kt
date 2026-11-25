@@ -17,10 +17,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.mockito.kotlin.mock
 
-class TestCrashException(
-    message: String,
-) : RuntimeException(message)
-
 class FakeAppSettingsRepository(
     initialSettings: AppSettings = AppSettings(),
 ) : AppSettingsRepository,

@@ -35,6 +35,7 @@ import javax.inject.Singleton
 /**
  * Centralized Hilt module for binding data layer implementations to their domain interfaces.
  */
+@Suppress("unused")
 @Module
 @InstallIn(SingletonComponent::class)
 internal interface UsageDataModule {

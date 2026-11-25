@@ -2,8 +2,6 @@ package com.github.djbigmuh.minutewatcher.core.data.testing
 
 import android.content.Context
 import android.telephony.SubscriptionManager
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import com.github.djbigmuh.minutewatcher.core.common.util.PermissionManager
 import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import com.github.djbigmuh.minutewatcher.core.data.CallTracker
@@ -11,8 +9,6 @@ import com.github.djbigmuh.minutewatcher.core.data.IdentityMigrationService
 import com.github.djbigmuh.minutewatcher.core.data.InitialSetupWorkerDependencies
 import com.github.djbigmuh.minutewatcher.core.data.NotificationHelper
 import com.github.djbigmuh.minutewatcher.core.data.SimDiscoveryDependencies
-import com.github.djbigmuh.minutewatcher.core.data.SimIdentityRepositoryImpl
-import com.github.djbigmuh.minutewatcher.core.data.SimIdentityRepositoryTestHelper
 import com.github.djbigmuh.minutewatcher.core.data.TrafficBaselineManager
 import com.github.djbigmuh.minutewatcher.core.data.TrafficDeltaCalculator
 import com.github.djbigmuh.minutewatcher.core.data.TrafficPermissionChecker
@@ -32,16 +28,11 @@ import com.github.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.MigrationFlagsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
-import com.github.djbigmuh.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageStateRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageUseCase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.TestScope
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
 fun createSimDiscoveryDependencies(
@@ -151,24 +142,4 @@ fun createUsageWorkerDependencies(
         usageStateRepository = usageStateRepository,
         usageUseCase = usageUseCase,
         timeProvider = timeProvider,
-    )
-
-fun createTestSimIdentityRepository(
-    discoveryDeps: SimDiscoveryDependencies = createSimDiscoveryDependencies(),
-    dataStore: DataStore<Preferences> = createTestDataStore(),
-    seedRepository: SimIdentitySeedRepository = FakeSimIdentitySeedRepository(),
-    migrationService: IdentityMigrationService =
-        mock {
-            on { migrateLegacyData(any()) } doReturn IdentityMigrationService.MigrationOutcome()
-        },
-    timeProvider: TimeProvider = createFixedTimeProvider(),
-    scope: CoroutineScope = TestScope(),
-): SimIdentityRepositoryImpl =
-    SimIdentityRepositoryTestHelper.createRepository(
-        discoveryDeps = discoveryDeps,
-        dataStore = dataStore,
-        seedRepository = seedRepository,
-        migrationService = migrationService,
-        timeProvider = timeProvider,
-        scope = scope,
     )
