@@ -21,7 +21,11 @@ fun AppSectionHeader(
         Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
         if (description != null) {
             Spacer(Modifier.height(MwSpacing.xs))
-            Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         if (content != null) {
             Spacer(Modifier.height(MwSpacing.md))
