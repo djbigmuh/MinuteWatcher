@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCheckbox
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 
 /**
  * Returns the content color based on the enabled state.
@@ -31,8 +32,9 @@ fun enabledContentColor(enabled: Boolean): Color =
 fun SettingLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.padding(top = 8.dp),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = MwSpacing.sm, bottom = MwSpacing.xs),
     )
 }
 
@@ -53,7 +55,7 @@ fun CheckboxSetting(
             modifier
                 .fillMaxWidth()
                 .clickable(enabled = enabled, onClick = { onCheckedChange(!checked) })
-                .padding(vertical = 4.dp),
+                .padding(vertical = MwSpacing.xs),
     ) {
         AppCheckbox(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
         Text(
