@@ -1,6 +1,5 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,6 +7,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.MaterialTheme
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,12 +21,13 @@ import com.github.djbigmuh.minutewatcher.feature.settings.ui.components.WidgetPr
 
 @Composable
 fun BottomPreviewBar(uiState: WidgetUiState?) {
-    Column(
-        modifier =
-            Modifier
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .navigationBarsPadding()
-                .padding(16.dp),
+    AppCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = MwSpacing.md),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(MwSpacing.lg),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         // Text is used for headers and setting labels.
         // style = MaterialTheme.typography.titleSmall for section headers.
@@ -33,7 +35,7 @@ fun BottomPreviewBar(uiState: WidgetUiState?) {
         Text(
             text = stringResource(id = R.string.preview),
             style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = MwSpacing.sm),
         )
 
         // Box provides widget preview centering.
@@ -45,13 +47,13 @@ fun BottomPreviewBar(uiState: WidgetUiState?) {
                 Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
-                    .background(MaterialTheme.colorScheme.surface),
+                    ,
             contentAlignment = Alignment.Center,
         ) {
             uiState?.let {
                 WidgetPreview(
                     uiState = it,
-                    modifier = Modifier.padding(8.dp),
+                    modifier = Modifier.padding(MwSpacing.sm),
                 )
             }
         }
