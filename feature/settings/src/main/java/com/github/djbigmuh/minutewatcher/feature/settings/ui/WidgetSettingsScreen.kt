@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -50,6 +48,9 @@ import com.github.djbigmuh.minutewatcher.core.android.ui.resolveNavigationSwipeD
 import com.github.djbigmuh.minutewatcher.core.android.util.WidgetStringsFactory
 import com.github.djbigmuh.minutewatcher.core.android.util.WidgetUiMapper
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
+import androidx.compose.foundation.layout.PaddingValues
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTopBar
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
@@ -328,8 +329,8 @@ private fun WidgetSettingsList(
     Column(
         modifier = modifier
             .verticalScroll(scrollState)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = MwSpacing.screenHorizontal, vertical = MwSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(MwSpacing.md),
     ) {
         SettingsGroup {
             GeneralSettingsSection(
@@ -414,14 +415,10 @@ private fun WidgetSettingsScreenPreview() {
 
 @Composable
 private fun SettingsGroup(content: @Composable () -> Unit) {
-    Surface(
+    AppCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 1.dp,
+        contentPadding = PaddingValues(MwSpacing.lg),
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            content()
-        }
+        content()
     }
 }
