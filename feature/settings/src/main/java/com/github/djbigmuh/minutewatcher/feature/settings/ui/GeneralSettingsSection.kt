@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSliderState
@@ -29,6 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDropdownMenu
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppOutlinedButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import com.github.djbigmuh.minutewatcher.core.resources.R
@@ -68,14 +68,16 @@ private fun LayoutModeSetting(
     val layoutModes = stringArrayResource(id = R.array.layout_modes)
     var layoutExpanded by remember { mutableStateOf(value = false) }
     Box(modifier = Modifier.fillMaxWidth()) {
-        OutlinedButton(
+        AppOutlinedButton(
+            text = layoutModes.getOrNull(state.layoutMode).orEmpty(),
             onClick = { layoutExpanded = true },
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
+        )
+        AppDropdownMenu(
+            expanded = layoutExpanded && enabled,
+            onDismissRequest = { layoutExpanded = false },
         ) {
-            Text(text = layoutModes.getOrNull(state.layoutMode).orEmpty())
-        }
-        DropdownMenu(expanded = layoutExpanded && enabled, onDismissRequest = { layoutExpanded = false }) {
             layoutModes.forEachIndexed { index, name ->
                 DropdownMenuItem(
                     text = { Text(text = name) },
@@ -98,7 +100,8 @@ private fun SimArrangementSetting(
 ) {
     SettingLabel(stringResource(id = R.string.sim_arrangement_prompt))
     val arrangements = stringArrayResource(id = R.array.sim_arrangements)
-    OutlinedButton(
+    AppOutlinedButton(
+        text = arrangements.getOrNull(state.simArrangement).orEmpty(),
         onClick = {
             val next =
                 if (state.simArrangement == Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL) {
@@ -110,12 +113,7 @@ private fun SimArrangementSetting(
         },
         modifier = Modifier.fillMaxWidth(),
         enabled = enabled,
-    ) {
-        Text(
-            text = arrangements.getOrNull(state.simArrangement).orEmpty(),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
+    )
 }
 
 @Composable
@@ -180,7 +178,7 @@ private fun BackgroundColorSetting(
                     .size(40.dp)
                     .background(
                         color = Color(state.backgroundColor).copy(alpha = if (enabled) 1f else 0.5f),
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(MwShape.extraSmall),
                     ),
         )
         Spacer(modifier = Modifier.width(12.dp))
