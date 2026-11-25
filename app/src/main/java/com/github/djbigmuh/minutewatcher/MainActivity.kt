@@ -1,4 +1,4 @@
-﻿package com.github.djbigmuh.minutewatcher
+package com.github.djbigmuh.minutewatcher
 
 import android.Manifest
 import android.content.Intent
@@ -33,7 +33,7 @@ import com.github.djbigmuh.minutewatcher.core.resources.R
 import com.github.djbigmuh.minutewatcher.feature.main.MainViewModel
 import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreen
 import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreenActions
-import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.MinuteWatcherTheme
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.github.djbigmuh.minutewatcher.feature.widget.MinutesGlanceWidget
 import dagger.hilt.android.AndroidEntryPoint
