@@ -37,6 +37,7 @@ import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppOutlined
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppSwitch
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSize
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.core.model.Constants
@@ -151,8 +152,8 @@ private fun SimCardHeader(
             contentDescription = stringResource(id = R.string.sim_icon_content_desc),
             modifier =
                 Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .size(MwSize.operatorIconSize)
+                    .clip(RoundedCornerShape(MwShape.operatorIcon))
                     .background(MaterialTheme.colorScheme.primaryContainer)
                     .padding(7.dp),
         )
@@ -174,7 +175,7 @@ private fun SimCardHeader(
             contentPadding = PaddingValues(horizontal = 13.dp, vertical = 5.dp),
             modifier =
                 Modifier
-                    .height(36.dp)
+                    .height(MwSize.limitButtonHeight)
                     .semantics { contentDescription = setLimitsDesc },
         )
     }

@@ -34,12 +34,17 @@ object MwShape {
     val medium = 16.dp
     val large = 20.dp
     val extraLarge = 28.dp
+    val operatorIcon = 14.dp
     val full = 100.dp
 }
 
 /** Shared dimensions for recurring component geometry. */
 object MwSize {
     val usageProgressIndicatorHeight = 6.dp
+    val operatorIconSize = 44.dp
+    val limitButtonHeight = 36.dp
+    val trafficInfoButtonSize = 28.dp
+    val trafficInfoIconSize = 17.dp
 }
 
 object MwSpacing {
