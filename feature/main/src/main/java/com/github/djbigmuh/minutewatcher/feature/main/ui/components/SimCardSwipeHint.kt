@@ -3,17 +3,21 @@ package com.github.djbigmuh.minutewatcher.feature.main.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -24,12 +28,12 @@ import com.github.djbigmuh.minutewatcher.core.android.ui.SwipeHintSide
 import com.github.djbigmuh.minutewatcher.core.android.ui.resolveSwipeHintSide
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
-private val SWIPE_HINT_SIZE = 24.dp
-private val SWIPE_HINT_EDGE_PADDING = 16.dp
-private const val SWIPE_HINT_ALPHA = 0.6f
+private val SWIPE_HINT_EDGE_PADDING = 12.dp
+private val SWIPE_HINT_CONTAINER_SIZE = 34.dp
+private val SWIPE_HINT_ICON_SIZE = 20.dp
 
 /**
- * Renders a subtle swipe affordance hint indicator at the screen edge where the navigation swipe gesture starts.
+ * Renders a subtle, direction-aware swipe hint at the screen edge where navigation starts.
  *
  * @param isSwipeAvailable Whether swipe navigation is currently available on the screen.
  * @param isSwipeHintDismissed Whether the hint has already been dismissed by the user.
@@ -47,19 +51,17 @@ fun SimCardSwipeHint(
 
     AnimatedVisibility(
         visible = showHint,
-        enter = fadeIn(),
-        exit = fadeOut(),
+        enter = fadeIn() + scaleIn(initialScale = 0.92f),
+        exit = fadeOut() + scaleOut(targetScale = 0.96f),
         modifier = modifier.fillMaxSize(),
     ) {
         val layoutDirection = LocalLayoutDirection.current
         val hintSide = resolveSwipeHintSide(swipeDirection, layoutDirection)
-
         val alignment =
             when (hintSide) {
                 SwipeHintSide.START -> Alignment.CenterStart
                 SwipeHintSide.END -> Alignment.CenterEnd
             }
-
         val rotationDegrees =
             when (swipeDirection) {
                 HorizontalSwipeDirection.RIGHT_TO_LEFT -> 0f
@@ -67,23 +69,35 @@ fun SimCardSwipeHint(
             }
 
         Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = SWIPE_HINT_EDGE_PADDING),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = SWIPE_HINT_EDGE_PADDING),
             contentAlignment = alignment,
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_swipe_hint),
-                contentDescription = stringResource(id = R.string.swipe_hint_content_desc),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier =
-                    Modifier
-                        .size(SWIPE_HINT_SIZE)
-                        .rotate(rotationDegrees)
-                        .graphicsLayer { alpha = SWIPE_HINT_ALPHA }
-                        .testTag("swipe_hint_indicator"),
-            )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f),
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
+                ),
+                shadowElevation = 2.dp,
+                modifier = Modifier
+                    .size(SWIPE_HINT_CONTAINER_SIZE)
+                    .testTag("swipe_hint_indicator"),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_swipe_hint),
+                        contentDescription = stringResource(id = R.string.swipe_hint_content_desc),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier
+                            .size(SWIPE_HINT_ICON_SIZE)
+                            .rotate(rotationDegrees),
+                    )
+                }
+            }
         }
     }
 }
