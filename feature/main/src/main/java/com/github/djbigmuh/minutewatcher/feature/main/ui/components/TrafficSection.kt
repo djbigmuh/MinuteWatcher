@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.common.util.NumberInputNormalizer
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
@@ -44,15 +45,15 @@ fun TrafficSection(
     val context = LocalContext.current
 
     HorizontalDivider(
-        modifier = Modifier.padding(vertical = 16.dp),
+        modifier = Modifier.padding(vertical = MwSpacing.lg),
         color = MaterialTheme.colorScheme.outlineVariant,
     )
     Column(modifier = Modifier.fillMaxWidth()) {
         TrafficHeader(onShowTrafficInfo)
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(MwSpacing.xxs))
         TrafficUsageRow(context, model)
         if (model.isTrafficLimitSet && model.effectiveTrafficLimitGb > 0f) {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(MwSpacing.sm))
             LinearProgressIndicator(
                 progress = {
                     ((model.trafficUsedMb / Constants.MB_PER_GB) / model.effectiveTrafficLimitGb).coerceIn(0f, 1f)
@@ -62,7 +63,7 @@ fun TrafficSection(
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
         }
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(MwSpacing.md))
         TrafficRemainingRow(context, model, statusColor, onAdjustTraffic)
         TrafficAdjustment(model)
     }
@@ -77,7 +78,7 @@ private fun TrafficHeader(onShowTrafficInfo: () -> Unit) {
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,
         )
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(MwSpacing.xs))
         IconButton(onClick = onShowTrafficInfo, modifier = Modifier.size(28.dp)) {
             Icon(
                 Icons.Default.Info,
@@ -142,7 +143,7 @@ private fun TrafficRemainingRow(
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(MwSpacing.sm))
 
         if (model.trafficRemainingGb == null) {
             Text(text = stringResource(id = R.string.value_placeholder), style = MaterialTheme.typography.bodyLarge)
