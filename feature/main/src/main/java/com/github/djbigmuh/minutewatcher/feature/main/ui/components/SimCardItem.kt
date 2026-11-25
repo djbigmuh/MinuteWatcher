@@ -72,12 +72,20 @@ fun SimCardItem(
                 .padding(vertical = 7.dp)
                 .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border =
             BorderStroke(
                 width = if (highlighted) 2.dp else 1.dp,
-                color = if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                color =
+                    if (highlighted) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    },
             ),
     ) {
         SimCardContent(

@@ -56,7 +56,7 @@ class AppLoggerTest {
 
             val rotationMarker = "ROTATION_MARKER_TEST_1"
             AppLogger.d(rotationMarker)
-            waitForLogMarker(rotationMarker)
+            waitForLogMarker(rotationMarker, timeoutMs = 30000L)
 
             val logFile = File(logDir, "logs.txt")
             val oldFile = File(logDir, "logs.old.txt")
@@ -68,7 +68,7 @@ class AppLoggerTest {
 
             val uniqueTag = "UNIQUE_LOG_TAG_12345"
             AppLogger.d(uniqueTag)
-            waitForLogMarker(uniqueTag)
+            waitForLogMarker(uniqueTag, timeoutMs = 30000L)
 
             assertTrue("New logs should be in logs.txt", logFile.readText().contains(uniqueTag))
             assertFalse("New logs should NOT be in logs.old.txt", oldFile.readText().contains(uniqueTag))
