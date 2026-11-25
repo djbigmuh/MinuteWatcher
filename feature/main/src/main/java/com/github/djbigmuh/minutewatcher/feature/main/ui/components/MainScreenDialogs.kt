@@ -14,11 +14,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +24,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppDialog
+import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 @Composable
@@ -41,14 +41,16 @@ fun ResetConfirmationDialog(
         title = { Text(stringResource(id = titleRes)) },
         text = { Text(stringResource(id = textRes)) },
         confirmButton = {
-            Button(onClick = onConfirm) {
-                Text(stringResource(id = R.string.reset_label))
-            }
+            AppButton(
+                text = stringResource(id = R.string.reset_label),
+                onClick = onConfirm,
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(id = R.string.cancel_button))
-            }
+            AppTextButton(
+                text = stringResource(id = R.string.cancel_button),
+                onClick = onDismiss,
+            )
         },
     )
 }
@@ -59,16 +61,15 @@ fun SimpleMessageDialog(
     text: String,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = {
-            Button(onClick = onDismiss) {
-                Text(stringResource(id = R.string.action_ok))
-            }
+            AppButton(
+                text = stringResource(id = R.string.action_ok),
+                onClick = onDismiss,
+            )
         },
     )
 }
@@ -85,9 +86,10 @@ fun UsageAccessDialog(
         title = { Text(stringResource(id = R.string.usage_access_dialog_title)) },
         text = { Text(stringResource(id = R.string.usage_access_dialog_description)) },
         confirmButton = {
-            Button(onClick = onSettings) {
-                Text(stringResource(id = R.string.action_settings))
-            }
+            AppButton(
+                text = stringResource(id = R.string.action_settings),
+                onClick = onSettings,
+            )
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
@@ -164,13 +166,11 @@ fun OnboardingDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            Button(
+            AppButton(
+                text = stringResource(id = R.string.onboarding_button),
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Text(stringResource(id = R.string.onboarding_button))
-            }
+            )
         },
     )
 }
@@ -262,9 +262,11 @@ fun AboutDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(id = R.string.action_ok))
-            }
+            AppButton(
+                text = stringResource(id = R.string.action_ok),
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+            )
         },
     )
 }
