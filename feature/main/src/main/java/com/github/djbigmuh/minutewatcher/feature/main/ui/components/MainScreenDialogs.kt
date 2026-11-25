@@ -79,10 +79,8 @@ fun UsageAccessDialog(
     onDismiss: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = R.string.usage_access_dialog_title)) },
         text = { Text(stringResource(id = R.string.usage_access_dialog_description)) },
         confirmButton = {
@@ -92,19 +90,18 @@ fun UsageAccessDialog(
             )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(id = R.string.cancel_button))
-            }
+            AppTextButton(
+                text = stringResource(id = R.string.cancel_button),
+                onClick = onDismiss,
+            )
         },
     )
 }
 
 @Composable
 fun OnboardingDialog(onDismiss: () -> Unit) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = null,
         text = {
             Column(
@@ -232,10 +229,8 @@ fun AboutDialog(
     onDismiss: () -> Unit,
     versionCode: Int,
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(stringResource(id = R.string.about_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
