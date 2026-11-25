@@ -1,5 +1,6 @@
 package com.github.djbigmuh.minutewatcher.core.designsystem.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
@@ -19,13 +21,17 @@ import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 fun AppCard(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(MwSpacing.cardContent),
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    border: BorderStroke? = null,
+    shape: RoundedCornerShape = RoundedCornerShape(MwShape.large),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(MwShape.large),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = border,
     ) {
         Column(modifier = Modifier.padding(contentPadding), content = content)
     }
