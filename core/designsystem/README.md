@@ -29,7 +29,7 @@ These components keep shape, surface, typography and state colors consistent whi
 
 ## Layout tokens
 
-Use `MwSpacing` and `MwShape` for common spacing and corner radii. A feature may still define a local measurement when it is genuinely specific to that feature, but repeated values belong here.
+Use `MwSpacing` and `MwShape` for common spacing and corner radii, and `MwSize` for recurring component dimensions (for example, usage progress indicators). A feature may still define a local measurement when it is genuinely specific to that feature, but repeated values belong here.
 
 ## Adding a new component
 
