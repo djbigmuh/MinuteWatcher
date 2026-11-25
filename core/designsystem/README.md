@@ -22,7 +22,7 @@ Prefer the shared components in `component` over styling Material components loc
 - `AppCard`, `AppDialog`, `AppDropdownMenu`
 - `AppButton`, `AppOutlinedButton`, `AppTextButton`, `AppExtendedFab`
 - `AppTextField`, `AppTextFieldValue`
-- `AppCheckbox`, `AppSwitch`, `AppTopBar`
+- `AppCheckbox`, `AppCheckboxRow`, `AppSettingLabel`, `AppSwitch`, `AppTopBar`
 - `AppSectionHeader`
 
 These components keep shape, surface, typography and state colors consistent while preserving normal Compose callbacks and slots.
