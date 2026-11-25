@@ -3,7 +3,6 @@ package com.github.djbigmuh.minutewatcher.core.designsystem.component
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,5 +37,5 @@ fun AppOutlinedButton(
         modifier = modifier,
         enabled = enabled,
         shape = RoundedCornerShape(MwShape.medium),
-    ) { Text(text = text, color = MaterialTheme.colorScheme.primary) }
+    ) { Text(text = text) }
 }
