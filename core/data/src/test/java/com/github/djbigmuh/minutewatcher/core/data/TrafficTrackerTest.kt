@@ -152,7 +152,7 @@ class TrafficTrackerTest {
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf("sim_0")))
     }
 
-    private suspend fun setupUsageMocks() {
+    private fun setupUsageMocks() {
         whenever(simUsageRepository.getSimUsage("sim_0")).thenReturn(
             flowOf(
                 SimUsage(
