@@ -93,6 +93,15 @@ object AppLogger {
         Channel<LogEntry>(
             capacity = LOG_QUEUE_CAPACITY,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            onUndeliveredElement = {
+                queuedCount.updateAndGet { maxOf(0, it - 1) }
+                val total = droppedEntryCount.incrementAndGet()
+                if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
+                    runCatching {
+                        logger.w(TAG, "AppLogger: log queue full, oldest entry dropped (total dropped: $total)")
+                    }
+                }
+            },
         )
 
     private var dispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -301,17 +310,9 @@ object AppLogger {
         message: String,
     ) {
         if (!isFileLoggingEnabled || isShutdown || logDir == null) return
-        val queuedBeforeSend =
-            queuedCount.getAndUpdate { minOf(LOG_QUEUE_CAPACITY, it + 1) }
+        queuedCount.incrementAndGet()
         val result = logChannel.trySend(LogEntry(level, message))
-        if (queuedBeforeSend >= LOG_QUEUE_CAPACITY) {
-            val total = droppedEntryCount.incrementAndGet()
-            if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
-                runCatching {
-                    logger.w(TAG, "AppLogger: log queue full, oldest entry dropped (total dropped: $total)")
-                }
-            }
-        } else if (result.isFailure) {
+        if (result.isFailure) {
             queuedCount.updateAndGet { maxOf(0, it - 1) }
         }
     }
@@ -400,6 +401,7 @@ object AppLogger {
             closeWriter()
             while (true) {
                 val next = logChannel.tryReceive().getOrNull() ?: break
+                queuedCount.updateAndGet { maxOf(0, it - 1) }
                 drainedEntries.add(next)
             }
         }
