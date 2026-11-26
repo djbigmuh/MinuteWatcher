@@ -122,7 +122,7 @@ class UpdateCoordinatorTest : UpdateCoordinatorTestFixtures() {
 
             snapshotFlow.value = createSnapshot(timestamp = 1000L, content = "PersistentFail")
             testScheduler.advanceTimeBy(80.seconds)
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
 
             verify(widgetUpdater, times(5)).updateAll()
 
@@ -197,19 +197,19 @@ class UpdateCoordinatorTest : UpdateCoordinatorTestFixtures() {
 
             failNext = false
             testScheduler.advanceTimeBy(40.seconds)
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
             assertEquals("Status should be Active", TrackingStatus.Active, coordinator.status.value)
             assertEquals(5, callCount)
 
             failNext = true
             snapshotFlow.value = createSnapshot(timestamp = 2000L, content = "FailAgain")
             testScheduler.advanceTimeBy(1.seconds)
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
             assertEquals(6, callCount)
             assertTrue(coordinator.status.value is TrackingStatus.Error)
 
             testScheduler.advanceTimeBy(5.seconds)
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
             assertEquals("Should have restarted after 5s", 7, callCount)
 
             supervisorJob.cancel()
@@ -490,9 +490,11 @@ class UpdateCoordinatorTest : UpdateCoordinatorTestFixtures() {
     @Test
     fun `T2 recover cancels old observation job and creates single new observation job`() {
         runTest {
+            snapshotFlow.value = createSnapshot(timestamp = 500L, content = "T2Initial")
             val coordinator = createCoordinator(backgroundScope)
             coordinator.start()
             testScheduler.advanceTimeBy(200.milliseconds)
+            testScheduler.runCurrent()
 
             val oldJob = coordinator.currentObservationJob.get()
             assertTrue("Old job should exist", oldJob != null)
