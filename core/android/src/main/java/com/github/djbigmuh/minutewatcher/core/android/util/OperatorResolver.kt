@@ -6,13 +6,13 @@ import com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import org.json.JSONObject
-import withContext
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.text.Normalizer
 import java.util.Locale
-import ConcurrentHashMap
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Immutable result type for operator resolution containing display name and brand key.
