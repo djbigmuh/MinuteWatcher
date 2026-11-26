@@ -2,13 +2,17 @@
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import org.json.JSONObject
+import withContext
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
+import java.text.Normalizer
 import java.util.Locale
+import ConcurrentHashMap
 
 /**
  * Immutable result type for operator resolution containing display name and brand key.
@@ -72,7 +76,7 @@ object OperatorResolver {
     suspend fun preload(context: Context) {
         if (db != null) return
         kotlinx.coroutines.withContext(
-            com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback.io,
+            IoDispatcherFallback.io,
         ) {
             loadDb(context)
         }
@@ -267,7 +271,7 @@ object OperatorResolver {
     private const val MIN_MCC_MNC_LENGTH = 5
 
     private fun String.stripDiacritics(): String {
-        val nfd = java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
+        val nfd = Normalizer.normalize(this, Normalizer.Form.NFD)
         return nfd.replace(Regex("\\p{M}+"), "")
     }
 
