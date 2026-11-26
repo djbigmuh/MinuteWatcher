@@ -30,7 +30,6 @@ import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
 class UpdateCoordinatorTest : UpdateCoordinatorTestFixtures() {
-
     @Test
     fun `snapshot change triggers widget update with debounce`() {
         runTest {
@@ -587,7 +586,10 @@ class UpdateCoordinatorTest : UpdateCoordinatorTestFixtures() {
             testScheduler.advanceUntilIdle()
 
             val status = coordinator.status.value
-            assertTrue("Coordinator remains operational despite settings error", status is TrackingStatus.Idle || status is TrackingStatus.Active)
+            assertTrue(
+                "Coordinator remains operational despite settings error",
+                status is TrackingStatus.Idle || status is TrackingStatus.Active,
+            )
         }
     }
 
