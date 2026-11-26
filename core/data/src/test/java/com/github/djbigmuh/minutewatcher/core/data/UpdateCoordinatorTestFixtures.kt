@@ -36,7 +36,9 @@ class FakeAppSettingsRepositoryForCoordinator(
     val settingsFlow = MutableStateFlow(initialSettings)
 
     override fun observeAppSettings(): StateFlow<AppSettings> = settingsFlow
+
     override fun getAppSettings(): Flow<AppSettings> = settingsFlow
+
     override suspend fun updateAppSettings(transform: (AppSettings) -> AppSettings) {
         settingsFlow.value = transform(settingsFlow.value)
     }
@@ -46,8 +48,10 @@ class FakeSimWidgetVisibilityRepositoryForCoordinator : SimWidgetVisibilityRepos
     val simSettingsFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 10)
 
     override fun observeSimSettings(): Flow<Unit> = simSettingsFlow
+
     override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
         MutableStateFlow(emptyMap())
+
     override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) = Unit
 }
 
