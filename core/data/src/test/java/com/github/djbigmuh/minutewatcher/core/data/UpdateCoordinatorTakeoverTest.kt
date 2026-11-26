@@ -17,7 +17,6 @@ import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -38,7 +37,6 @@ import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class UpdateCoordinatorTakeoverTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
