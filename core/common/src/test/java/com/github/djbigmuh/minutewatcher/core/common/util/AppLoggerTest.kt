@@ -3,6 +3,7 @@
 import android.content.Context
 import com.github.djbigmuh.minutewatcher.core.common.testing.AppLoggerResetRule
 import com.github.djbigmuh.minutewatcher.core.common.testing.DefaultTimeZoneRule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -266,11 +267,11 @@ class AppLoggerTest {
             val dir1 = tmpFolder.newFolder("logs1")
             val dir2 = tmpFolder.newFolder("logs2")
 
-            AppLogger.initForTest(dir1)
+            AppLogger.initForTest(dir1, Dispatchers.Unconfined)
             AppLogger.d("Log in dir1")
             waitForLogMarker("Log in dir1", targetDir = dir1)
 
-            AppLogger.initForTest(dir2)
+            AppLogger.initForTest(dir2, Dispatchers.Unconfined)
             AppLogger.d("Log in dir2")
             waitForLogMarker("Log in dir2", targetDir = dir2)
 
@@ -405,11 +406,14 @@ class AppLoggerTest {
             }
             AppLogger.init(ctx2)
 
-            val marker = "Batch entry"
-            waitForLogMarker(marker, targetDir = dir2)
-
-            val logFile2 = File(dir2, "logs.txt")
-            assertTrue(logFile2.exists())
+            val logFiles = listOf(File(dir1, "logs.txt"), File(dir2, "logs.txt"))
+            pollUntil(10000L, "all batch entries across logger generations") {
+                val combined =
+                    logFiles.joinToString("\\n") { file ->
+                        if (file.exists()) runCatching { file.readText() }.getOrDefault("") else ""
+                    }
+                (0 until 50).all { index -> combined.contains("Batch entry $index") }
+            }
         }
 
     @Test
@@ -421,7 +425,7 @@ class AppLoggerTest {
                     on { filesDir } doReturn dir
                 }
 
-            backgroundScope.launch {
+            backgroundScope.launch(Dispatchers.Unconfined) {
                 AppLogger.init(mockContext)
                 AppLogger.d("Non-blocking test log")
             }

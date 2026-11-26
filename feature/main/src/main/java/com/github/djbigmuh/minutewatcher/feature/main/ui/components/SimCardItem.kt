@@ -1,28 +1,28 @@
 package com.github.djbigmuh.minutewatcher.feature.main.ui.components
 
 import android.content.res.Configuration
-import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -36,10 +36,10 @@ import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppOutlinedButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppSwitch
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSize
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
-import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.util.ColorProvider
@@ -68,15 +68,24 @@ fun SimCardItem(
     onShowTrafficInfo: () -> Unit = {},
 ) {
     AppCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MwSpacing.sm)
-            .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = MwSpacing.sm)
+                .then(
+                    if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier,
+                ),
         contentPadding = PaddingValues(0.dp),
-        border = BorderStroke(
-            width = if (highlighted) 2.dp else 1.dp,
-            color = if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-        ),
+        border =
+            BorderStroke(
+                width = if (highlighted) 2.dp else 1.dp,
+                color =
+                    if (highlighted) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    },
+            ),
         shape = RoundedCornerShape(MwShape.extraLarge),
     ) {
         SimCardContent(

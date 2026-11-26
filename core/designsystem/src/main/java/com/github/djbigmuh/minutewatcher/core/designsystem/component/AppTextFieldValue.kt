@@ -41,9 +41,10 @@ fun AppTextFieldValue(
         keyboardOptions = keyboardOptions,
         visualTransformation = visualTransformation,
         shape = RoundedCornerShape(MwShape.medium),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
-        ),
+        colors =
+            OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+            ),
     )
 }

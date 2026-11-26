@@ -18,9 +18,10 @@ fun AppCheckbox(
         onCheckedChange = onCheckedChange,
         modifier = modifier,
         enabled = enabled,
-        colors = CheckboxDefaults.colors(
-            checkedColor = MaterialTheme.colorScheme.primary,
-            checkmarkColor = MaterialTheme.colorScheme.onPrimary,
-        ),
+        colors =
+            CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.primary,
+                checkmarkColor = MaterialTheme.colorScheme.onPrimary,
+            ),
     )
 }

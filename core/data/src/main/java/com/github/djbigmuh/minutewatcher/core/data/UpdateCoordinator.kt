@@ -64,7 +64,6 @@ class UpdateCoordinator
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : WidgetUpdateCoordinator {
-
         override val key: TrackingKey = TrackingKey.WIDGET_OBSERVATION
 
         private val statusMachine = TrackingStatusMachine()
@@ -504,11 +503,9 @@ class UpdateCoordinator
                 }
 
                 if (newHash == lastSnapshotHash) {
-                    println("TRACE_CHECK: hash match, newHash=$newHash, lastHash=$lastSnapshotHash")
                     AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
                     return@withLock false
                 }
-                println("TRACE_CHECK: should update, newHash=$newHash")
                 true
             }
 

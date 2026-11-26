@@ -68,4 +68,3 @@ The following Android Lint checks are globally disabled in `minutewatcher.androi
 - The IDE inspection "Unnecessary module dependency" does not resolve generated R classes and
   reports false positives on the edges above; it is disabled in the committed project inspection
   profile (`.idea/inspectionProfiles/Project_Default.xml`).
-

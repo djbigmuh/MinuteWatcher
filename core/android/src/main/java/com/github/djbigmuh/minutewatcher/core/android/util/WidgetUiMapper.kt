@@ -26,6 +26,7 @@ object WidgetUiMapper {
         state: WidgetSettingsState,
         operatorNames: Map<Int, String>,
         refreshFailed: Boolean = false,
+        includeUnconfiguredSims: Boolean = false,
     ): WidgetUiState {
         val luminance = ColorUtils.calculateLuminance(state.backgroundColor)
         val (textColor, secondaryTextColor) = WidgetColorResolver.resolveTextColors(luminance)
@@ -36,7 +37,7 @@ object WidgetUiMapper {
 
         val simUiStates =
             activeSims
-                .filter { state.simStates.containsKey(it.slot) || state.simListLoadFailed }
+                .filter { includeUnconfiguredSims || state.simStates.containsKey(it.slot) || state.simListLoadFailed }
                 .sortedBy { it.slot }
                 .map { sim ->
                     val simConfig = state.simStates[sim.slot]

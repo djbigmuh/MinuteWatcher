@@ -13,32 +13,31 @@ val mockitoAgentConfig = project.configurations.create("mockitoAgentConfig") {
 }
 project.dependencies.add("mockitoAgentConfig", libs.findLibrary("byteBuddyAgent").get())
 
-val robolectricAndroidAll = project.configurations.create("robolectricAndroidAll") {
-    isCanBeConsumed = false
-    isCanBeResolved = true
-}
-
-listOf(
-    "robolectricAndroidAllSdk28",
-    "robolectricAndroidAllSdk29",
-    "robolectricAndroidAllSdk30",
-    "robolectricAndroidAllSdk31",
-    "robolectricAndroidAllSdk34",
-    "robolectricAndroidAllSdk35",
-    "robolectricAndroidAllSdk35Alt",
-    "robolectricAndroidAllSdk36",
-    "robolectricAndroidAllSdk36Alt",
-    "robolectricAndroidAllSdk37",
-    "robolectricAndroidAllSdk37Alt",
-).forEach { libName ->
-    project.dependencies.add("robolectricAndroidAll", libs.findLibrary(libName).get())
-}
+val robolectricAndroidAllConfigurations =
+    listOf(
+        "robolectricAndroidAllSdk28",
+        "robolectricAndroidAllSdk29",
+        "robolectricAndroidAllSdk30",
+        "robolectricAndroidAllSdk31",
+        "robolectricAndroidAllSdk34",
+        "robolectricAndroidAllSdk35",
+        "robolectricAndroidAllSdk35Alt",
+        "robolectricAndroidAllSdk36",
+        "robolectricAndroidAllSdk36Alt",
+        "robolectricAndroidAllSdk37",
+        "robolectricAndroidAllSdk37Alt",
+    ).map { configurationName ->
+        project.configurations.create(configurationName) {
+            isCanBeConsumed = false
+            isCanBeResolved = true
+        }.also {
+            project.dependencies.add(configurationName, libs.findLibrary(configurationName).get())
+        }
+    }
 
 val prepareRobolectricJars = tasks.register<Sync>("prepareRobolectricJars") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from(fileTree(rootProject.layout.projectDirectory.dir(".robolectric")) {
-        include("**/android-all-instrumented/**/*.jar")
-    })
+    from(robolectricAndroidAllConfigurations)
     into(project.layout.buildDirectory.dir("robolectric-jars"))
     eachFile {
         path = name
@@ -53,7 +52,7 @@ tasks.withType<Test>().configureEach {
     // Centralized Robolectric configuration
     systemProperty("robolectric.graphicsMode", "NATIVE")
     systemProperty("robolectric.offline", "true")
-    inputs.files(robolectricAndroidAll)
+    inputs.files(robolectricAndroidAllConfigurations)
         .withPathSensitivity(PathSensitivity.NAME_ONLY)
 
     systemProperty("minutewatcher.projectRoot", rootProject.layout.projectDirectory.asFile.absolutePath)

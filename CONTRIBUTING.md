@@ -208,5 +208,3 @@ External task files, instruction documents, and audit requirements must never be
   safely stored by the project owner.
 - **Unsigned Build Fallback:** If `release.keystore` or any of the required environment variables are absent, the
   release build produces an unsigned APK (`app-release-unsigned.apk`). No debug key fallback is used for release builds.
-
-

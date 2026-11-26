@@ -35,6 +35,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -79,7 +80,8 @@ class UpdateCoordinatorTakeoverTest {
             coordinator.start()
 
             // 1. Initial update
-            testScheduler.advanceUntilIdle()
+            testScheduler.advanceTimeBy(200.milliseconds)
+            testScheduler.runCurrent()
             assertEquals("Initial update should have happened", 1, widgetUpdater.callCount)
 
             // 2. Trigger reactive update that will hang
@@ -111,7 +113,8 @@ class UpdateCoordinatorTakeoverTest {
 
             // 4. Check observation cycle is still alive by emitting another snapshot
             snapshotFlow.value = createSnapshot(2000L, "B", used = 20)
-            testScheduler.advanceUntilIdle()
+            testScheduler.advanceTimeBy(200.milliseconds)
+            testScheduler.runCurrent()
 
             assertEquals("Observation cycle should still be alive", 4, widgetUpdater.callCount)
         }
@@ -126,7 +129,8 @@ class UpdateCoordinatorTakeoverTest {
             coordinator.start()
 
             // 1. Initial update
-            testScheduler.advanceUntilIdle()
+            testScheduler.advanceTimeBy(200.milliseconds)
+            testScheduler.runCurrent()
             assertEquals("Initial update should have happened", 1, widgetUpdater.callCount)
 
             // 2. Trigger reactive update that will hang
@@ -162,7 +166,8 @@ class UpdateCoordinatorTakeoverTest {
 
             // 4. Emit another snapshot and verify observation cycle continues immediately
             snapshotFlow.value = createSnapshot(2000L, "B", used = 20)
-            testScheduler.advanceUntilIdle()
+            testScheduler.advanceTimeBy(200.milliseconds)
+            testScheduler.runCurrent()
 
             assertEquals(
                 "Observation cycle should still be alive and handle snapshot change",

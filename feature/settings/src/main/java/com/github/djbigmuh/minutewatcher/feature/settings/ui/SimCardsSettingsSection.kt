@@ -1,6 +1,7 @@
 package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -101,26 +103,26 @@ fun SimSettingsSection(
 ) {
     AppCard(
         modifier = Modifier.padding(vertical = SIM_CARD_VERTICAL_PADDING),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(SIM_CARD_CONTENT_PADDING),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(MwShape.large),
+        contentPadding = PaddingValues(SIM_CARD_CONTENT_PADDING),
+        shape = RoundedCornerShape(MwShape.large),
     ) {
-            SimHeaderRow(
-                slot = slot,
-                operatorName = operatorName,
-                operatorIconRes = operatorIconRes,
-                showSim = sim.showSim,
+        SimHeaderRow(
+            slot = slot,
+            operatorName = operatorName,
+            operatorIconRes = operatorIconRes,
+            showSim = sim.showSim,
+            enabled = enabled,
+        ) { v -> onUpdate { it.copy(showSim = v) } }
+
+        if (sim.showSim) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = SIM_DIVIDER_VERTICAL_PADDING))
+
+            SimDetailsSettings(
+                sim = sim,
                 enabled = enabled,
-            ) { v -> onUpdate { it.copy(showSim = v) } }
-
-            if (sim.showSim) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = SIM_DIVIDER_VERTICAL_PADDING))
-
-                SimDetailsSettings(
-                    sim = sim,
-                    enabled = enabled,
-                    onUpdate = onUpdate,
-                )
-            }
+                onUpdate = onUpdate,
+            )
+        }
     }
 }
 

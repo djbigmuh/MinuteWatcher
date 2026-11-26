@@ -484,7 +484,7 @@ class ModelDataClassesCoverageTest {
         assertEquals(6, Constants.UI.MAX_MINUTES_INPUT_CHARS)
         assertEquals(10, Constants.UI.MAX_TRAFFIC_INPUT_CHARS)
         assertEquals(14f, Constants.Widget.FONT_SIZE_MEDIUM, 0.001f)
-        assertEquals(300L, Constants.Widget.DEBOUNCE_MS)
+        assertEquals(150L, Constants.Widget.DEBOUNCE_MS)
         assertEquals(0.01f, Constants.Traffic.MIN_DELTA_MB, 0.001f)
         assertEquals(2000L, Constants.Data.SNAPSHOT_TIMEOUT_MS)
         assertEquals(60_000L, Constants.Data.STALE_SNAPSHOT_THRESHOLD_MS)
