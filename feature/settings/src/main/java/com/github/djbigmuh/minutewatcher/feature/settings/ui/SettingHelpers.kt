@@ -1,9 +1,9 @@
-﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
+package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCheckboxRow
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppSettingLabel
 
