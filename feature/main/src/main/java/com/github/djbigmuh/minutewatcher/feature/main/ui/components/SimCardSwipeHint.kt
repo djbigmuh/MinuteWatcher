@@ -72,22 +72,23 @@ fun SimCardSwipeHint(
             modifier =
                 Modifier
                     .fillMaxSize()
-                .padding(horizontal = SWIPE_HINT_EDGE_PADDING),
+                    .padding(horizontal = SWIPE_HINT_EDGE_PADDING),
             contentAlignment = alignment,
         ) {
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f),
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                border = BorderStroke(
-                    width = 1.dp,
+                border =
+                    BorderStroke(
+                        width = 1.dp,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
                 ),
                 shadowElevation = 2.dp,
                 modifier =
                     Modifier
                         .size(SWIPE_HINT_CONTAINER_SIZE)
-                    .testTag("swipe_hint_indicator"),
+                        .testTag("swipe_hint_indicator"),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -97,7 +98,7 @@ fun SimCardSwipeHint(
                         modifier =
                             Modifier
                                 .size(SWIPE_HINT_ICON_SIZE)
-                            .rotate(rotationDegrees),
+                                .rotate(rotationDegrees),
                     )
                 }
             }
