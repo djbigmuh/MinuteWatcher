@@ -305,7 +305,7 @@ class UsageStateRepositoryImpl
                 deps.dataRefreshNotifier.notifyRefresh(isManual = true)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: java.io.IOException) {
+            } catch (e: IOException) {
                 AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
             } catch (e: SecurityException) {
                 AppLogger.w("UsageStateRepository: notifyRefresh failed, continuing with snapshot wait", e)
