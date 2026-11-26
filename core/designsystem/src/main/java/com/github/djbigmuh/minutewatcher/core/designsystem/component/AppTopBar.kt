@@ -28,6 +28,6 @@ fun AppTopBar(
             titleContentColor = MaterialTheme.colorScheme.onBackground,
             navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
             actionIconContentColor = MaterialTheme.colorScheme.onBackground,
-        ),
+            ),
     )
 }
