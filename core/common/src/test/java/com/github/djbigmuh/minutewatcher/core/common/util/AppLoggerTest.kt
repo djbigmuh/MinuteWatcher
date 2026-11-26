@@ -458,7 +458,7 @@ class AppLoggerTest {
             waitForChannelDrain()
             assertTrue(
                 "Dropped entries counter should record evicted messages",
-                AppLogger.droppedEntries >= initialDropped,
+                AppLogger.droppedEntries > initialDropped,
             )
         }
 
