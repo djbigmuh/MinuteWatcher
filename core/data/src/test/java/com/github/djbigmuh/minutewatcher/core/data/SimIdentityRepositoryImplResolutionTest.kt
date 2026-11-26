@@ -17,7 +17,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.SeedResolutionResult
 import com.github.djbigmuh.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -38,7 +37,6 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityRepositoryImplResolutionTest {
     private lateinit var context: Context
     private lateinit var subscriptionManager: SubscriptionManager
