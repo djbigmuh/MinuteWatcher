@@ -5,11 +5,11 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme as SharedMinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.core.model.AppTheme
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.util.UsageColors
 import com.github.djbigmuh.minutewatcher.core.model.util.UsageStatus
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme as SharedMinuteWatcherTheme
 
 /** Compatibility entry point. The actual theme implementation lives in core:designsystem. */
 @Composable
