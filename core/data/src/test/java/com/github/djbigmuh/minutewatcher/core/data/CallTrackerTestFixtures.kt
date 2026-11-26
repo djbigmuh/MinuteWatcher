@@ -17,7 +17,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestDispatcher
@@ -28,7 +27,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 abstract class CallTrackerTestFixtures {
     @get:Rule
     val singletonResetRule = SingletonResetRule()
