@@ -106,7 +106,9 @@ object WidgetSimUiFactory {
         val status = UsageLevelResolver.resolve(rem, limit)
 
         val showMinutes = (config?.showMinutes ?: true) && entity != null && hasData
-        val showLimit = (config?.showMinutesLimit ?: false) && limit > 0
+        val showLimit = config?.showMinutesLimit ?: false
+
+        val limitStr = if (limit > 0) limit.toString() else strings.valuePlaceholder
 
         return PackageUiData(
             show = showMinutes,
@@ -114,7 +116,7 @@ object WidgetSimUiFactory {
             suffix = strings.minutesAbbr,
             color = WidgetColorResolver.getStatusColor(status, luminance),
             showLimit = showLimit,
-            limitText = if (showLimit) String.format(strings.locale, strings.limitSuffixFormat, limit) else "",
+            limitText = if (showLimit) String.format(strings.locale, strings.limitSuffixFormat, limitStr) else "",
             usedFull =
                 String.format(
                     strings.locale,
@@ -127,7 +129,7 @@ object WidgetSimUiFactory {
                     strings.locale,
                     strings.labelValueFormat,
                     strings.limitText,
-                    formatWithSuffix(limit.toString(), strings.minutesAbbr),
+                    formatWithSuffix(limitStr, strings.minutesAbbr),
                 ),
         )
     }
@@ -146,7 +148,14 @@ object WidgetSimUiFactory {
 
         val status = UsageLevelResolver.resolve(remBytes, limitBytes)
         val showTraffic = (config?.showTraffic ?: true) && entity != null && (limitGb > 0f || usedGb > 0f)
-        val showLimit = (config?.showTrafficLimit ?: false) && limitGb > 0f
+        val showLimit = config?.showTrafficLimit ?: false
+
+        val limitGbStr =
+            if (limitGb > 0f) {
+                FormatUtils.formatTrafficGb(strings.locale, limitGb)
+            } else {
+                strings.valuePlaceholder
+            }
 
         return PackageUiData(
             show = showTraffic,
@@ -159,7 +168,7 @@ object WidgetSimUiFactory {
                     String.format(
                         strings.locale,
                         strings.limitSuffixFormat,
-                        FormatUtils.formatTrafficGb(strings.locale, limitGb),
+                        limitGbStr,
                     )
                 } else {
                     ""
@@ -180,7 +189,7 @@ object WidgetSimUiFactory {
                     strings.labelValueFormat,
                     strings.limitText,
                     formatWithSuffix(
-                        FormatUtils.formatTrafficGb(strings.locale, limitGb),
+                        limitGbStr,
                         strings.gbAbbr,
                     ),
                 ),

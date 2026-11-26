@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import com.github.djbigmuh.minutewatcher.core.common.util.FormatUtils
 import com.github.djbigmuh.minutewatcher.core.common.util.NumberInputNormalizer
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSize
-import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSize
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel

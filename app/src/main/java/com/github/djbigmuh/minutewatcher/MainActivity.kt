@@ -37,8 +37,8 @@ import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreenActions
 import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.github.djbigmuh.minutewatcher.feature.widget.MinutesGlanceWidget
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {

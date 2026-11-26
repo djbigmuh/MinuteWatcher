@@ -105,8 +105,6 @@ class WidgetUiLayoutLimitMapperTest {
                 simStates =
                     mapOf(
                         0 to SimSettingsState(showSim = true),
-                        1 to SimSettingsState(showSim = false),
-                        2 to SimSettingsState(showSim = false),
                     ),
             )
 

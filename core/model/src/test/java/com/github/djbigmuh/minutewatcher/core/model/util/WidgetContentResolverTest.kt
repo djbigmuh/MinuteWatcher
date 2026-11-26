@@ -39,19 +39,17 @@ class WidgetContentResolverTest {
     @Test
     fun `priority 4 - visible SIMs returns Sims`() {
         val sim0 = createSimUiState(showSim = true, operatorName = "MTS")
-        val sim1 = createSimUiState(showSim = false, operatorName = "Hidden")
-        val sim2 = createSimUiState(showSim = true, operatorName = "Beeline")
-        val uiState = createUiState(simUiStates = listOf(sim0, sim1, sim2))
+        val sim1 = createSimUiState(showSim = true, operatorName = "Beeline")
+        val uiState = createUiState(simUiStates = listOf(sim0, sim1))
 
         val content = resolveWidgetContent(uiState)
         assertTrue(content is WidgetContent.Sims)
-        assertEquals(listOf(sim0, sim2), (content as WidgetContent.Sims).visible)
+        assertEquals(listOf(sim0, sim1), (content as WidgetContent.Sims).visible)
     }
 
     @Test
     fun `priority 5 - no visible SIMs returns NoSimFound`() {
-        val sim0 = createSimUiState(showSim = false)
-        val uiState = createUiState(simUiStates = listOf(sim0), isSnapshotEmpty = false)
+        val uiState = createUiState(simUiStates = emptyList(), isSnapshotEmpty = false)
         assertEquals(WidgetContent.NoSimFound, resolveWidgetContent(uiState))
     }
 

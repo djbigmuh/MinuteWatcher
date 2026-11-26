@@ -125,7 +125,7 @@ class WidgetUiSnapshotMapperTest {
                 backgroundColor = colorWhite,
                 notifyLowMinutes = true,
                 notifyLowTraffic = true,
-                simStates = emptyMap(),
+                simStates = mapOf(0 to SimSettingsState(showSim = true)),
             )
 
         val uiState =
@@ -334,7 +334,7 @@ class WidgetUiSnapshotMapperTest {
                                 backgroundColor = colorBlack,
                                 notifyLowMinutes = true,
                                 notifyLowTraffic = true,
-                                simStates = emptyMap(),
+                                simStates = mapOf(0 to SimSettingsState(showSim = true)),
                             )
                         val uiState =
                             WidgetUiMapper.mapFromSnapshot(

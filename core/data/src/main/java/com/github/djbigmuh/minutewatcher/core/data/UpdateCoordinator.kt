@@ -5,7 +5,9 @@ import com.github.djbigmuh.minutewatcher.core.common.di.ApplicationScope
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.common.util.FlowObservationScope
 import com.github.djbigmuh.minutewatcher.core.common.util.firstWithTimeoutOrLog
+import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.DataRefreshNotifier
+import com.github.djbigmuh.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageStateRepository
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetUpdateCoordinator
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetUpdateResult
@@ -50,6 +52,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * Single-owner reactive lifecycle state machine: observation jobs, generations and
  * update/takeover slots are mutated together under one ownership and one mutex.
  */
+@OptIn(FlowPreview::class)
 @Singleton
 class UpdateCoordinator
     @Inject
@@ -57,8 +60,11 @@ class UpdateCoordinator
         private val dataRefreshNotifier: DataRefreshNotifier,
         private val widgetUpdater: WidgetUpdater,
         private val usageStateRepository: UsageStateRepository,
+        private val appSettingsRepository: AppSettingsRepository,
+        private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : WidgetUpdateCoordinator {
+
         override val key: TrackingKey = TrackingKey.WIDGET_OBSERVATION
 
         private val statusMachine = TrackingStatusMachine()
@@ -113,6 +119,14 @@ class UpdateCoordinator
         @VisibleForTesting
         internal val takeoverUpdateJob get() = forcedUpdateFlow.takeoverUpdateJob
 
+        private val settingsChangeObserver =
+            SettingsChangeObserver(
+                scope = scope,
+                appSettingsRepository = appSettingsRepository,
+                simWidgetVisibilityRepository = simWidgetVisibilityRepository,
+                onSettingsChanged = { handleSettingsChanged() },
+            )
+
         private val restartScheduler =
             ObservationRestartScheduler(
                 scope = scope,
@@ -160,6 +174,14 @@ class UpdateCoordinator
          */
         fun start() {
             ensureObservationStarted()
+            settingsChangeObserver.start()
+        }
+
+        private suspend fun handleSettingsChanged() {
+            stateMutex.withLock {
+                lastSnapshotHash = null
+            }
+            notifyDataChanged(updateWidget = true, force = true)
         }
 
         private suspend fun reconcileObservationState() =
@@ -172,17 +194,8 @@ class UpdateCoordinator
             if (setup != null && setup.isActive) {
                 return
             }
-            val currentJob = observationScope.currentJob
-            if ((currentJob != null) && currentJob.isActive && (currentObservationJob.get() !== currentJob)) {
-                currentObservationJob.set(currentJob)
-                observationGeneration++
-                val currentGen = observationGeneration
-                val previousMonitoring = monitoringJob.getAndSet(null)
-                previousMonitoring?.cancel()
-                val newMonitoringJob = launchMonitoringJob(currentJob, currentGen)
-                if (!monitoringJob.compareAndSet(null, newMonitoringJob)) {
-                    newMonitoringJob.cancel()
-                }
+            val currentJob = currentObservationJob.get()
+            if (currentJob != null && currentJob.isActive) {
                 transitionStatus(TrackingStatus.Active)
             }
         }
@@ -206,27 +219,30 @@ class UpdateCoordinator
             AppLogger.d("UpdateCoordinator: recover() called, resetting all counters")
 
             // 1. Cancel and join pending setup (initial SIM wait) first
-            setupJob.get()?.let { job ->
+            setupJob.getAndSet(null)?.let { job ->
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     job.cancelAndJoin()
                 } ?: job.cancel()
             }
 
             // 2. Cancel and join monitoring job
-            monitoringJob.get()?.let { job ->
+            monitoringJob.getAndSet(null)?.let { job ->
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     job.cancelAndJoin()
                 } ?: job.cancel()
             }
 
             // 3. Cancel and join current observation
-            observationScope.currentJob?.let { job ->
+            currentObservationJob.getAndSet(null)?.let { job ->
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     job.cancelAndJoin()
                 } ?: job.cancel()
             }
 
-            // 4. Reset state under mutex
+            // 4. Restart settings observers
+            settingsChangeObserver.restart()
+
+            // 5. Reset state under mutex
             val stateResetSuccess =
                 withTimeoutOrNull(Constants.Flow.SHORT_TIMEOUT_MS.milliseconds) {
                     stateMutex.withLock {
@@ -260,13 +276,14 @@ class UpdateCoordinator
             synchronized(this) {
                 tryReconcileObservationState()
 
-                // Check if already active
-                val currentJob = observationScope.currentJob
+                val currentJob = currentObservationJob.get()
                 if ((currentJob != null) && currentJob.isActive) return@synchronized
 
-                // Setup already in progress?
                 val activeSetup = setupJob.get()
                 if ((activeSetup != null) && activeSetup.isActive) return@synchronized
+
+                val existingSetup = setupJob.get()
+                if (existingSetup != null && existingSetup.isActive) return@synchronized
 
                 val previousSetup = setupJob.getAndSet(null)
                 previousSetup?.cancel()
@@ -313,15 +330,12 @@ class UpdateCoordinator
             }
         }
 
-        @OptIn(FlowPreview::class)
         private suspend fun setupObservation() {
             val handler =
                 CoroutineExceptionHandler { _, cause ->
                     AppLogger.e("UpdateCoordinator: observation coroutine failed", cause)
                 }
 
-            // Operation must complete without propagating exception for observation setup;
-            // failures are handled by the restart and recovery path.
             @Suppress("TooGenericExceptionCaught")
             try {
                 val firstSnapshot = waitForInitialSnapshot()
@@ -336,36 +350,34 @@ class UpdateCoordinator
                     return
                 }
 
-                val flow =
+                val snapshotFlow =
                     usageStateRepository
                         .observeSnapshot()
                         .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
                         .debounce { snapshot ->
-                            if (snapshot.isManualUpdate) 0L else Constants.Widget.DEBOUNCE_MS
+                            if (snapshot.isManualUpdate) {
+                                0L.milliseconds
+                            } else {
+                                Constants.Widget.DEBOUNCE_MS.milliseconds
+                            }
                         }
 
-                var newJob: Job? = null
-                try {
-                    stateMutex.withLock {
-                        val job =
-                            observationScope.observe(flow, handler) { snapshot ->
-                                processSnapshotSafe(snapshot)
-                            }
-                        newJob = job
-                        currentObservationJob.set(job)
-                        observationGeneration++
-                        val currentGen = observationGeneration
-                        val previousMonitoring = monitoringJob.getAndSet(null)
-                        previousMonitoring?.cancel()
-                        val newMonitoringJob = launchMonitoringJob(job, currentGen)
-                        if (!monitoringJob.compareAndSet(null, newMonitoringJob)) {
-                            newMonitoringJob.cancel()
-                        }
-                        transitionStatus(TrackingStatus.Active)
+                val job =
+                    observationScope.observe(snapshotFlow, handler) { snapshot ->
+                        processSnapshotChange(snapshot)
                     }
-                } catch (e: CancellationException) {
-                    newJob?.cancel()
-                    throw e
+
+                stateMutex.withLock {
+                    currentObservationJob.set(job)
+                    observationGeneration++
+                    val currentGen = observationGeneration
+                    val previousMonitoring = monitoringJob.getAndSet(null)
+                    previousMonitoring?.cancel()
+                    val newMonitoringJob = launchMonitoringJob(job, currentGen)
+                    if (!monitoringJob.compareAndSet(null, newMonitoringJob)) {
+                        newMonitoringJob.cancel()
+                    }
+                    transitionStatus(TrackingStatus.Active)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -383,80 +395,48 @@ class UpdateCoordinator
         }
 
         private suspend fun waitForInitialSnapshot(): GlobalSnapshot? {
-            // Ensure flow produces at least one snapshot within timeout before starting monitoring.
-            // This prevents "silent hangs" if the data source is corrupted or inactive.
-            // We use a retry loop with exponential backoff to handle slow initial snapshots.
-            var firstSnapshot: GlobalSnapshot? = null
+            // Try to get the first snapshot immediately without timeout
+            val firstSnapshot = usageStateRepository.observeSnapshot().first()
+
+            if (firstSnapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                return firstSnapshot
+            }
+
+            // If timestamp is empty, wait for a valid one with timeout
             var attempt = 0
             var delayMs = Constants.Flow.RETRY_DELAY_MS
 
-            while ((attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) && (firstSnapshot == null)) {
-                val rawFlow =
+            while (attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) {
+                val snapshot =
                     usageStateRepository
                         .observeSnapshot()
                         .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-
-                firstSnapshot =
-                    rawFlow.firstWithTimeoutOrLog(
-                        timeoutMillis = Constants.Flow.LONG_TIMEOUT_MS,
-                        tag = "UpdateCoordinator",
-                        key = "initialSnapshot",
-                    )
-                if (firstSnapshot == null) {
-                    attempt++
-                    if (attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) {
-                        AppLogger.w(
-                            "UpdateCoordinator: snapshot not ready, retry " +
-                                "$attempt/$MAX_INITIAL_SNAPSHOT_ATTEMPTS",
+                        .firstWithTimeoutOrLog(
+                            timeoutMillis = Constants.Flow.LONG_TIMEOUT_MS,
+                            tag = "UpdateCoordinator",
+                            key = "initialSnapshot",
                         )
-                        delay(delayMs.milliseconds)
-                        delayMs *= 2
-                    }
+
+                if (snapshot != null) {
+                    return snapshot
+                }
+
+                attempt++
+                if (attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) {
+                    AppLogger.w(
+                        "UpdateCoordinator: snapshot not ready, retry " +
+                            "$attempt/$MAX_INITIAL_SNAPSHOT_ATTEMPTS",
+                    )
+                    delay(delayMs.milliseconds)
+                    delayMs *= 2
                 }
             }
 
-            if (firstSnapshot == null) {
-                AppLogger.e(
-                    "UpdateCoordinator: Widget observation failed to start " +
-                        "after $MAX_INITIAL_SNAPSHOT_ATTEMPTS attempts",
-                )
-            }
-            return firstSnapshot
-        }
-
-        @Suppress("ThrowsCount") // Terminal vs retryable errors
-        private suspend fun processSnapshotSafe(snapshot: GlobalSnapshot) {
-            @Suppress("TooGenericExceptionCaught")
-            try {
-                processSnapshot(snapshot)
-            } catch (e: TerminalUpdateException) {
-                // Terminal failure from within processSnapshot. Rethrow to fail observation job.
-                throw e
-            } catch (e: CancellationException) {
-                throw e
-            } catch (
-                e: Exception,
-            ) {
-                // Operation must complete without propagating exception before rethrow for logging.
-                AppLogger.e("UpdateCoordinator: Failed to process snapshot in observation loop", e)
-                val newHash =
-                    try {
-                        SnapshotUtils.calculateContentHash(snapshot)
-                    } catch (_: Exception) {
-                        0
-                    }
-                handleUpdateResult(
-                    WidgetUpdateResult.Failure(
-                        isRetryable = false,
-                        reason = WidgetUpdateResult.FailureReason.TERMINAL,
-                    ),
-                    newHash,
-                )
-                // Fail the observation loop to trigger monitoring-based restart.
-                // Rethrowing original exception instead of wrapping in CancellationException
-                // to ensure the observation Job fails correctly.
-                throw e
-            }
+            AppLogger.e(
+                "UpdateCoordinator: Widget observation failed to start " +
+                    "after $MAX_INITIAL_SNAPSHOT_ATTEMPTS attempts",
+            )
+            return null
         }
 
         private fun launchMonitoringJob(
@@ -464,29 +444,19 @@ class UpdateCoordinator
             generation: Long = observationGeneration,
         ): Job = restartScheduler.launchMonitoringJob(newJob, generation)
 
-        private suspend fun processSnapshot(snapshot: GlobalSnapshot) {
+        @Suppress("ThrowsCount", "TooGenericExceptionCaught")
+        private suspend fun processSnapshotChange(snapshot: GlobalSnapshot) {
             currentCoroutineContext().ensureActive()
-
             val newHash = SnapshotUtils.calculateContentHash(snapshot)
-
             val shouldUpdate = checkShouldUpdate(newHash)
             if (!shouldUpdate) return
 
-            if (snapshot.suppressWidgetUpdate) {
-                // Hash is NOT updated: widget is not updated, next data change should trigger update.
-                return
-            }
-
-            // Wrap update in coroutineScope to allocate a separate Job for this process.
-            // This allows external calls (performForcedUpdate) to cancel current update
-            // without interrupting the whole observation cycle.
             coroutineScope {
                 val updateJob = currentCoroutineContext().job
                 currentUpdateJob.set(updateJob)
                 try {
                     val result = performWidgetUpdate()
 
-                    // Check that the snapshot is still relevant.
                     ensureActive()
 
                     handleUpdateResult(result, newHash)
@@ -494,8 +464,6 @@ class UpdateCoordinator
                     if (result is WidgetUpdateResult.Failure &&
                         result.reason == WidgetUpdateResult.FailureReason.TERMINAL
                     ) {
-                        // Throwing non-cancellation exception here will fail the current observation job
-                        // and trigger the monitoring-based restart with backoffs.
                         throw TerminalUpdateException("Terminal widget update failure")
                     }
                 } catch (e: CancellationException) {
@@ -508,6 +476,17 @@ class UpdateCoordinator
                     } else {
                         throw e
                     }
+                } catch (e: TerminalUpdateException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("UpdateCoordinator: Exception during widget update", e)
+                    handleUpdateResult(
+                        WidgetUpdateResult.Failure(
+                            isRetryable = false,
+                            reason = WidgetUpdateResult.FailureReason.TERMINAL,
+                        ),
+                        newHash,
+                    )
                 } finally {
                     currentUpdateJob.compareAndSet(updateJob, null)
                 }
@@ -525,9 +504,11 @@ class UpdateCoordinator
                 }
 
                 if (newHash == lastSnapshotHash) {
+                    println("TRACE_CHECK: hash match, newHash=$newHash, lastHash=$lastSnapshotHash")
                     AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
                     return@withLock false
                 }
+                println("TRACE_CHECK: should update, newHash=$newHash")
                 true
             }
 
@@ -538,7 +519,6 @@ class UpdateCoordinator
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Operation must complete without propagating exception for widget update execution.
                 AppLogger.e("UpdateCoordinator: unexpected widget update failure", e)
                 WidgetUpdateResult.Failure(
                     isRetryable = false,
@@ -557,7 +537,6 @@ class UpdateCoordinator
                         observationRestartCount = 0
                         degradedCycleCount = 0
                         consecutiveUpdateFailures = 0
-                        // Update hash only for non-coalesced success.
                         if (!result.wasCoalesced) {
                             lastSnapshotHash = newHash
                         }
@@ -594,13 +573,12 @@ class UpdateCoordinator
                 }
 
                 WidgetUpdateResult.FailureReason.TERMINAL -> {
-                    // For terminal failures we reset hash to ensure the next data change
-                    // will trigger a fresh update attempt, bypassing the hash-match check.
                     AppLogger.w("UpdateCoordinator: terminal failure encountered, resetting hash")
                     transitionStatus(
                         TrackingStatus.Error(
                             TrackingStatus.ErrorType.UNKNOWN,
                             "Terminal widget update failure",
+                            code = TrackingStatus.ErrorCode.RENDER_FAILURE,
                         ),
                     )
                     lastSnapshotHash = null
@@ -647,15 +625,12 @@ class UpdateCoordinator
                     if (outcome.success) {
                         dataRefreshNotifier.notifyRefresh(
                             isManual = true,
-                            // Do not suppress widget update on forced/manual notifications (e.g. settings changes)
                             suppressWidgetUpdate = false,
                         )
                     }
                     outcome.success
                 } else {
                     dataRefreshNotifier.notifyRefresh(isManual = false, suppressWidgetUpdate = false)
-                    // Reactive path in init will handle the update if data changed.
-                    // We return true as the notification was successfully sent.
                     true
                 }
 
