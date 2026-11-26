@@ -68,17 +68,19 @@ fun SimCardItem(
     onShowTrafficInfo: () -> Unit = {},
 ) {
     AppCard(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier =
+            Modifier
+                .fillMaxWidth()
             .padding(vertical = MwSpacing.sm)
             .then(
                 if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier,
             ),
         contentPadding = PaddingValues(0.dp),
-        border = BorderStroke(
-            width = if (highlighted) 2.dp else 1.dp,
+        border =
+            BorderStroke(
+                width = if (highlighted) 2.dp else 1.dp,
             color =
-                if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                    if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
         ),
         shape = RoundedCornerShape(MwShape.extraLarge),
     ) {
