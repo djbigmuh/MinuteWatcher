@@ -57,6 +57,7 @@ object AppLogger {
     private const val LOG_BUFFER_SIZE = 8192
     private const val MAX_WRITE_FAILURES = 3
     private const val WORKER_JOIN_TIMEOUT_MS = 2_000L
+    private const val WORKER_POLL_INTERVAL_MS = 50L
     private const val DROP_WARNING_INTERVAL = 100L
 
     @Volatile
@@ -171,12 +172,12 @@ object AppLogger {
     }
 
     private fun restartWorker() {
-        val oldJob: Job?
         val newGen: Long
         synchronized(this) {
             workerGeneration++
             newGen = workerGeneration
-            oldJob = workerJob
+            // Do not cancel the old worker: cancellation can race with receive()
+            // after it has removed an entry from the channel.
             workerJob =
                 if (isWorkerStartAllowed(newGen)) {
                     logScope.launch { runWorker(newGen) }
@@ -184,7 +185,6 @@ object AppLogger {
                     null
                 }
         }
-        oldJob?.cancel()
     }
 
     @RunBlockingBridge("Synchronous logger worker shutdown bridge")
@@ -195,7 +195,6 @@ object AppLogger {
             oldJob = workerJob
             workerJob = null
         }
-        oldJob?.cancel()
         if (oldJob != null) {
             runBlocking { joinAndWarnTimeout(oldJob) }
         }
@@ -222,7 +221,10 @@ object AppLogger {
 
     private suspend fun runWorker(myGeneration: Long) {
         while (isCurrentGeneration(myGeneration)) {
-            val entry = logChannel.receiveCatching().getOrNull() ?: break
+            val entry =
+                withTimeoutOrNull(WORKER_POLL_INTERVAL_MS.milliseconds) {
+                    logChannel.receive()
+                } ?: continue
             handleReceivedEntry(entry, myGeneration)
         }
     }
