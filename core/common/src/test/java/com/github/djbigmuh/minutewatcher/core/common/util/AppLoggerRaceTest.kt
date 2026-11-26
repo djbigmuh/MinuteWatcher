@@ -2,7 +2,6 @@
 
 import com.github.djbigmuh.minutewatcher.core.common.testing.AppLoggerResetRule
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -16,7 +15,6 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class AppLoggerRaceTest {
     @get:Rule
     val loggerResetRule = AppLoggerResetRule()
