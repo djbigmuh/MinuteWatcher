@@ -10,7 +10,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.BufferOverflow
@@ -35,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class UsageStateRepositoryStressTest {
     private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
