@@ -36,10 +36,10 @@ import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppCard
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppOutlinedButton
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppSwitch
 import com.github.djbigmuh.minutewatcher.core.designsystem.component.AppTextButton
+import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSize
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwSpacing
-import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MinuteWatcherTheme
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.util.ColorProvider
@@ -71,11 +71,14 @@ fun SimCardItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = MwSpacing.sm)
-            .then(if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier),
+            .then(
+                if (highlighted) Modifier.testTag("sim_card_highlighted") else Modifier,
+            ),
         contentPadding = PaddingValues(0.dp),
         border = BorderStroke(
             width = if (highlighted) 2.dp else 1.dp,
-            color = if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+            color =
+                if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
         ),
         shape = RoundedCornerShape(MwShape.extraLarge),
     ) {
