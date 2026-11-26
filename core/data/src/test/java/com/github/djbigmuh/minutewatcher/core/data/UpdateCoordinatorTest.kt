@@ -576,7 +576,7 @@ class UpdateCoordinatorTest : UpdateCoordinatorTestFixtures() {
                     override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
                         MutableStateFlow(emptyMap())
 
-                    override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {}
+                    override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) = Unit
                 }
 
             val coordinator = createCoordinator(backgroundScope, customSimSettings = failingSimRepo)
