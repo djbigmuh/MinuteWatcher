@@ -5,7 +5,6 @@ import com.github.djbigmuh.minutewatcher.core.model.PackageType
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
 import com.github.djbigmuh.minutewatcher.core.model.util.SnapshotUtils
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -18,7 +17,6 @@ import org.junit.Assert.fail
 import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerErrorTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `tryLock failure does not reset or update lastSnapshotHash`() =
