@@ -64,7 +64,6 @@ class UpdateCoordinator
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) : WidgetUpdateCoordinator {
-
         override val key: TrackingKey = TrackingKey.WIDGET_OBSERVATION
 
         private val statusMachine = TrackingStatusMachine()
