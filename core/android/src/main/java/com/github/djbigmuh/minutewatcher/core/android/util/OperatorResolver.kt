@@ -5,6 +5,7 @@ import androidx.annotation.VisibleForTesting
 import com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.resources.R
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
@@ -12,7 +13,6 @@ import java.io.InputStreamReader
 import java.text.Normalizer
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.withContext
 
 /**
  * Immutable result type for operator resolution containing display name and brand key.
