@@ -10,7 +10,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.SimUsageAdjustmentRepositor
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
 import com.github.djbigmuh.minutewatcher.core.model.SimUsage
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -25,7 +24,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class UsageUseCaseImplTest {
     private val context: Context = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()
