@@ -10,11 +10,11 @@ import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
  * the content to a [android.service.quicksettings.Tile] never leaves a
  * stale value from a previous tile state.
  *
- * @property label Tile label text.
- * @property subtitle Tile subtitle text (applied on API 29+ only).
- * @property stateDescription Tile state description text (applied on API 30+ only).
- * @property contentDescription Tile content description text for accessibility.
- * @property isActive True when the tile shows remaining minutes of a SIM with a configured limit.
+ * @param label Tile label text.
+ * @param subtitle Tile subtitle text (applied on API 29+ only).
+ * @param stateDescription Tile state description text (applied on API 30+ only).
+ * @param contentDescription Tile content description text for accessibility.
+ * @param isActive True when the tile shows remaining minutes of a SIM with a configured limit.
  */
 internal data class TileContent(
     val label: String,
