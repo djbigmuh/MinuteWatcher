@@ -192,7 +192,7 @@ class UpdateCoordinatorTest : UpdateCoordinatorTestFixtures() {
 
             snapshotFlow.value = createSnapshot(timestamp = 1000L, content = "ResetTest")
             testScheduler.advanceTimeBy(50.seconds)
-            testScheduler.advanceUntilIdle()
+            testScheduler.runCurrent()
             assertEquals(4, callCount)
 
             failNext = false
