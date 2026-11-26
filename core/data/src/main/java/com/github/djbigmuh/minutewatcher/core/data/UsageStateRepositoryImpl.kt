@@ -25,6 +25,7 @@ import com.github.djbigmuh.minutewatcher.core.model.TrafficModel
 import com.github.djbigmuh.minutewatcher.core.model.util.SemanticMapper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
