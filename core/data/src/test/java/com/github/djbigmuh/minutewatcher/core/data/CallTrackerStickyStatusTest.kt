@@ -1,13 +1,11 @@
 ﻿package com.github.djbigmuh.minutewatcher.core.data
 
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackerStickyStatusTest : CallTrackerTestFixtures() {
     @Test
     fun `transient error UNKNOWN is cleared by successful non-forced refresh`() =
