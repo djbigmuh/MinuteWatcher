@@ -4,14 +4,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.github.djbigmuh.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SimLimitsRepositoryImplTest {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SimLimitsRepositoryImpl
