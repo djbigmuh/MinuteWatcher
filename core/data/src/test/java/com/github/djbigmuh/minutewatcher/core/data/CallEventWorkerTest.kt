@@ -12,7 +12,6 @@ import com.github.djbigmuh.minutewatcher.core.data.util.DataStoreWriteTimeoutExc
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -31,7 +30,6 @@ import java.io.IOException
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class CallEventWorkerTest {
     private val callTracker: CallTracker = mock()
     private val context: Context = mock()
