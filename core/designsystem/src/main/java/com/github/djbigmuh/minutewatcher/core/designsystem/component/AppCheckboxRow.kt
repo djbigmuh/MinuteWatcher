@@ -22,16 +22,14 @@ fun AppCheckboxRow(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .toggleable(
-                    value = checked,
-                    enabled = enabled,
-                    role = Role.Checkbox,
-                    onValueChange = onCheckedChange,
-                )
-                .padding(vertical = MwSpacing.xs),
+        modifier = modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Checkbox,
+                onValueChange = onCheckedChange,
+            ).padding(vertical = MwSpacing.xs),
     ) {
         AppCheckbox(
             checked = checked,
@@ -41,11 +39,12 @@ fun AppCheckboxRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = if (enabled) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            },
+            color =
+                if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
         )
     }
 }
