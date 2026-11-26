@@ -41,7 +41,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
  * - Pending-entry accounting ([hasPendingLogs]) covers queued and in-flight logs until processing completes.
  * - Entries are enqueued only if file logging is enabled, not shutdown, and log directory is set.
- * - Queue capacity is `LOG_QUEUE_CAPACITY` with `DROP_OLDEST` policy; evictions are counted (`droppedEntries`, approximate) and reported via throttled warning through [logger].
+ * - Queue capacity is `LOG_QUEUE_CAPACITY` with `DROP_OLDEST` policy; evictions are counted (`droppedEntries`) and reported via throttled warning through [logger].
  * - Failed file writes and drained entries on write failure threshold are routed to [logger] with `[DRAIN]` prefix
  *   outside state lock, guaranteeing no silent log losses.
  * - Rotation and file write operations are serialized using `synchronized(this)` monitor.
@@ -483,7 +483,6 @@ object AppLogger {
             while (logChannel.tryReceive().isSuccess) {
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
-            pendingCount.set(0)
         }
     }
 
