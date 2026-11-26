@@ -114,7 +114,7 @@ class TrafficInitialBaselineTest {
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(sim1Identity)))
     }
 
-    private suspend fun TestScope.createTracker(): TrafficTracker {
+    private fun TestScope.createTracker(): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
                 simIdentityRepository,
