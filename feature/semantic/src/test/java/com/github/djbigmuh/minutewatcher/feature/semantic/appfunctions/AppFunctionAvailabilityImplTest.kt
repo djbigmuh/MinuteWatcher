@@ -1,7 +1,6 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.semantic.appfunctions
 
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -12,7 +11,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class AppFunctionAvailabilityImplTest {
     private class FakeGateway : AppFunctionStateGateway {
         val calls = mutableListOf<Pair<String, Boolean>>()
