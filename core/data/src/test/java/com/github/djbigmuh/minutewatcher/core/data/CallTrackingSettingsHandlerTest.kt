@@ -5,7 +5,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -21,7 +20,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CallTrackingSettingsHandlerTest {
     private val appSettingsRepository: AppSettingsRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
