@@ -5,7 +5,6 @@ import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -23,7 +22,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelRefreshTest : MainViewModelTestFixtures() {
     @Test
     fun `onActivityResume triggers refresh on reboot (negative elapsed)`() =
