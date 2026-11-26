@@ -1,5 +1,8 @@
+@file:RunBlockingBridge("Mockito suspend setup bridge in shared test fixtures")
+
 package com.github.djbigmuh.minutewatcher.core.data
 
+import com.github.djbigmuh.minutewatcher.core.common.annotation.RunBlockingBridge
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
