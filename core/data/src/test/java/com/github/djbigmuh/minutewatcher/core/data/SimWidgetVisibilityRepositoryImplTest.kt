@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import com.github.djbigmuh.minutewatcher.core.common.testing.InMemoryPreferencesDataStore
 import com.github.djbigmuh.minutewatcher.core.data.di.DataStoreKeys
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -16,7 +15,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class SimWidgetVisibilityRepositoryImplTest {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SimWidgetVisibilityRepositoryImpl
