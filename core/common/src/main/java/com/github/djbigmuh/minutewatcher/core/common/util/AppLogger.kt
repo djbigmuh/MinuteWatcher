@@ -39,8 +39,7 @@ import kotlin.time.Duration.Companion.milliseconds
  *   returning unprocessed entries to the channel; teardown paths (`resetForTest`, `shutdown`)
  *   additionally perform a time-limited join (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
  * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
- * - In-flight entries counter ([hasPendingLogs]) tracks logs currently
- *   being processed by worker.
+ * - Pending-entry accounting ([hasPendingLogs]) covers queued and in-flight logs until processing completes.
  * - Entries are enqueued only if file logging is enabled, not shutdown, and log directory is set.
  * - Queue capacity is `LOG_QUEUE_CAPACITY` with `DROP_OLDEST` policy; evictions are counted (`droppedEntries`, approximate) and reported via throttled warning through [logger].
  * - Failed file writes and drained entries on write failure threshold are routed to [logger] with `[DRAIN]` prefix
@@ -76,16 +75,11 @@ object AppLogger {
 
     private var consecutiveWriteFailures = 0
 
-    private val inFlightCount = AtomicInteger(0)
     private val pendingCount = AtomicInteger(0)
     private val droppedEntryCount = AtomicLong(0)
-    private val queuedCount = AtomicInteger(0)
     private var workerGeneration = 0L
 
-    /**
-     * Approximate total of entries evicted by the DROP_OLDEST policy when the queue was full.
-     * Approximate because the fullness check and send are not a single atomic operation.
-     */
+    /** Total number of entries evicted by the DROP_OLDEST channel policy. */
     @VisibleForTesting
     internal val droppedEntries: Long get() = droppedEntryCount.get()
 
@@ -94,7 +88,6 @@ object AppLogger {
             capacity = LOG_QUEUE_CAPACITY,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
             onUndeliveredElement = {
-                queuedCount.updateAndGet { maxOf(0, it - 1) }
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
                 val total = droppedEntryCount.incrementAndGet()
                 if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
@@ -250,15 +243,11 @@ object AppLogger {
         entry: LogEntry,
         myGeneration: Long,
     ) {
-        queuedCount.updateAndGet { maxOf(0, it - 1) }
-        inFlightCount.incrementAndGet()
         var returnedToQueue = false
         try {
             if (!isCurrentGeneration(myGeneration)) {
-                queuedCount.incrementAndGet()
                 returnedToQueue = logChannel.trySend(entry).isSuccess
                 if (!returnedToQueue) {
-                    queuedCount.updateAndGet { maxOf(0, it - 1) }
                     Log.w(
                         TAG,
                         "AppLogger: failed to return log entry to channel " +
@@ -270,7 +259,6 @@ object AppLogger {
                 processLogEntry(entry)
             }
         } finally {
-            inFlightCount.decrementAndGet()
             if (!returnedToQueue) {
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
@@ -327,11 +315,9 @@ object AppLogger {
         message: String,
     ) {
         if (!isFileLoggingEnabled || isShutdown || logDir == null) return
-        queuedCount.incrementAndGet()
         pendingCount.incrementAndGet()
         val result = logChannel.trySend(LogEntry(level, message))
         if (result.isFailure) {
-            queuedCount.updateAndGet { maxOf(0, it - 1) }
             pendingCount.updateAndGet { maxOf(0, it - 1) }
         }
     }
@@ -420,7 +406,6 @@ object AppLogger {
             closeWriter()
             while (true) {
                 val next = logChannel.tryReceive().getOrNull() ?: break
-                queuedCount.updateAndGet { maxOf(0, it - 1) }
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
                 drainedEntries.add(next)
             }
@@ -492,7 +477,6 @@ object AppLogger {
             isFileLoggingEnabled = BuildConfig.DEBUG
             consecutiveWriteFailures = 0
             droppedEntryCount.set(0)
-            queuedCount.set(0)
             closeWriter()
             logDir = null
             logger = AndroidLogger()
@@ -524,7 +508,6 @@ object AppLogger {
             closeWriter()
             consecutiveWriteFailures = 0
             droppedEntryCount.set(0)
-            queuedCount.set(0)
             logDir = dir
             logger = AndroidLogger()
             dispatcher = customDispatcher
