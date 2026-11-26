@@ -9,7 +9,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger.logger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
@@ -78,6 +77,7 @@ object AppLogger {
     private var consecutiveWriteFailures = 0
 
     private val inFlightCount = AtomicInteger(0)
+    private val pendingCount = AtomicInteger(0)
     private val droppedEntryCount = AtomicLong(0)
     private val queuedCount = AtomicInteger(0)
     private var workerGeneration = 0L
@@ -95,6 +95,7 @@ object AppLogger {
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
             onUndeliveredElement = {
                 queuedCount.updateAndGet { maxOf(0, it - 1) }
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
                 val total = droppedEntryCount.incrementAndGet()
                 if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
                     runCatching {
@@ -241,10 +242,13 @@ object AppLogger {
     ) {
         queuedCount.updateAndGet { maxOf(0, it - 1) }
         inFlightCount.incrementAndGet()
+        var returnedToQueue = false
         try {
             if (!isCurrentGeneration(myGeneration)) {
-                val returned = logChannel.trySend(entry).isSuccess
-                if (!returned) {
+                queuedCount.incrementAndGet()
+                returnedToQueue = logChannel.trySend(entry).isSuccess
+                if (!returnedToQueue) {
+                    queuedCount.updateAndGet { maxOf(0, it - 1) }
                     Log.w(
                         TAG,
                         "AppLogger: failed to return log entry to channel " +
@@ -257,6 +261,9 @@ object AppLogger {
             }
         } finally {
             inFlightCount.decrementAndGet()
+            if (!returnedToQueue) {
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
+            }
         }
     }
 
@@ -311,9 +318,11 @@ object AppLogger {
     ) {
         if (!isFileLoggingEnabled || isShutdown || logDir == null) return
         queuedCount.incrementAndGet()
+        pendingCount.incrementAndGet()
         val result = logChannel.trySend(LogEntry(level, message))
         if (result.isFailure) {
             queuedCount.updateAndGet { maxOf(0, it - 1) }
+            pendingCount.updateAndGet { maxOf(0, it - 1) }
         }
     }
 
@@ -402,6 +411,7 @@ object AppLogger {
             while (true) {
                 val next = logChannel.tryReceive().getOrNull() ?: break
                 queuedCount.updateAndGet { maxOf(0, it - 1) }
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
                 drainedEntries.add(next)
             }
         }
@@ -482,9 +492,8 @@ object AppLogger {
         stopWorkerBlocking()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @VisibleForTesting
-    internal fun hasPendingLogs(): Boolean = !logChannel.isEmpty || inFlightCount.get() > 0
+    internal fun hasPendingLogs(): Boolean = pendingCount.get() > 0
 
     /**
      * Initializes the logger for testing with full state reset.
