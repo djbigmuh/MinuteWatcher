@@ -149,6 +149,6 @@ internal class ObservationRestartScheduler(
         private const val MAX_DEGRADED_CYCLES = 3
         private const val INITIAL_RESTART_DELAY_MS = 5000L
         private const val MAX_RESTART_DELAY_MS = 80_000L
-        private const val MAX_RESTART_COOLDOWN_MS = Long.MAX_VALUE
+        private const val MAX_RESTART_COOLDOWN_MS = 60_000L
     }
 }
