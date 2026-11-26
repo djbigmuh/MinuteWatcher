@@ -108,6 +108,7 @@ object AppLogger {
     private var dispatcher: CoroutineDispatcher = Dispatchers.IO
     private var logScope: CoroutineScope = CoroutineScope(dispatcher + SupervisorJob())
     private var workerJob: Job? = null
+    private val workerJobs = mutableSetOf<Job>()
 
     private class LogEntry(
         val level: String,
@@ -185,32 +186,41 @@ object AppLogger {
             newGen = workerGeneration
             // Do not cancel the old worker: cancellation can race with receive()
             // after it has removed an entry from the channel.
-            workerJob =
+            val newJob =
                 if (isWorkerStartAllowed(newGen)) {
                     logScope.launch { runWorker(newGen) }
                 } else {
                     null
                 }
+            workerJob = newJob
+            if (newJob != null) {
+                workerJobs.add(newJob)
+                newJob.invokeOnCompletion {
+                    synchronized(this) {
+                        workerJobs.remove(newJob)
+                    }
+                }
+            }
         }
     }
 
     @RunBlockingBridge("Synchronous logger worker shutdown bridge")
     private fun stopWorkerBlocking() {
-        val oldJob: Job?
+        val oldJobs: List<Job>
         synchronized(this) {
             workerGeneration++
-            oldJob = workerJob
+            oldJobs = workerJobs.toList()
             workerJob = null
         }
-        if (oldJob != null) {
-            runBlocking { joinAndWarnTimeout(oldJob) }
+        if (oldJobs.isNotEmpty()) {
+            runBlocking { joinAndWarnTimeout(oldJobs) }
         }
     }
 
-    private suspend fun joinAndWarnTimeout(oldJob: Job) {
+    private suspend fun joinAndWarnTimeout(oldJobs: List<Job>) {
         val joined =
             withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS.milliseconds) {
-                oldJob.join()
+                oldJobs.forEach { it.join() }
             }
         if (joined == null) {
             try {
@@ -476,6 +486,7 @@ object AppLogger {
 
     @VisibleForTesting
     internal fun resetForTest() {
+        stopWorkerBlocking()
         synchronized(this) {
             isShutdown = false
             isFileLoggingEnabled = BuildConfig.DEBUG
@@ -486,10 +497,10 @@ object AppLogger {
             logDir = null
             logger = AndroidLogger()
             while (logChannel.tryReceive().isSuccess) {
-                // Drain channel
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
+            pendingCount.set(0)
         }
-        stopWorkerBlocking()
     }
 
     @VisibleForTesting
@@ -507,6 +518,7 @@ object AppLogger {
         customDispatcher: CoroutineDispatcher = Dispatchers.IO,
         customScope: CoroutineScope = CoroutineScope(customDispatcher + SupervisorJob()),
     ) {
+        stopWorkerBlocking()
         synchronized(this) {
             isShutdown = false
             closeWriter()
@@ -519,8 +531,9 @@ object AppLogger {
             logScope = customScope
             isFileLoggingEnabled = true
             while (logChannel.tryReceive().isSuccess) {
-                // Drain channel
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
+            pendingCount.set(0)
         }
         restartWorker()
     }
