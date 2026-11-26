@@ -267,11 +267,11 @@ class AppLoggerTest {
             val dir1 = tmpFolder.newFolder("logs1")
             val dir2 = tmpFolder.newFolder("logs2")
 
-            AppLogger.initForTest(dir1)
+            AppLogger.initForTest(dir1, Dispatchers.Unconfined)
             AppLogger.d("Log in dir1")
             waitForLogMarker("Log in dir1", targetDir = dir1)
 
-            AppLogger.initForTest(dir2)
+            AppLogger.initForTest(dir2, Dispatchers.Unconfined)
             AppLogger.d("Log in dir2")
             waitForLogMarker("Log in dir2", targetDir = dir2)
 
