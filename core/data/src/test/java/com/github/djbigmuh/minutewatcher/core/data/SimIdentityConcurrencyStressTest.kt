@@ -11,7 +11,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.PermissionStateNotifier
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,7 +32,6 @@ import org.robolectric.RobolectricTestRunner
 import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityConcurrencyStressTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
