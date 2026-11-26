@@ -122,7 +122,7 @@ class TrafficOvercountTest {
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(sim1Identity, sim2Identity)))
     }
 
-    private suspend fun TestScope.createTracker(): TrafficTracker {
+    private fun TestScope.createTracker(): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
                 simIdentityRepository,
