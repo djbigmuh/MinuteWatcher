@@ -24,7 +24,6 @@ import com.github.djbigmuh.minutewatcher.core.model.PackageType
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
@@ -41,7 +40,6 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class UsageWorkerSettingsResilienceTest {
     @get:Rule
