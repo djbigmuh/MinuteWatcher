@@ -5,7 +5,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.domain.AutoResetScheduleRepository
 import com.github.djbigmuh.minutewatcher.core.domain.AutoResetUseCase
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -20,7 +19,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class AutoResetSchedulerTest {
     private val fakeRepository = FakeAutoResetScheduleRepository()
     private val autoResetUseCase: AutoResetUseCase = mock()
