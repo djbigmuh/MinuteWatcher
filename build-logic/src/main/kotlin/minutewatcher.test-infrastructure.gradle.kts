@@ -35,7 +35,6 @@ listOf(
 }
 
 val prepareRobolectricJars = tasks.register<Sync>("prepareRobolectricJars") {
-    description = ""
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(fileTree(rootProject.layout.projectDirectory.dir(".robolectric")) {
         include("**/android-all-instrumented/**/*.jar")

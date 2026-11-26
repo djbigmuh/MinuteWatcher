@@ -104,7 +104,7 @@ object Constants {
      */
     object Widget {
         const val FONT_SIZE_MEDIUM = 14f
-        const val DEBOUNCE_MS = 300L
+        const val DEBOUNCE_MS = 150L
         const val SIM_ARRANGEMENT_HORIZONTAL = 0
         const val SIM_ARRANGEMENT_VERTICAL = 1
         const val TRANSPARENCY_SYSTEM_COLORS_THRESHOLD = 80

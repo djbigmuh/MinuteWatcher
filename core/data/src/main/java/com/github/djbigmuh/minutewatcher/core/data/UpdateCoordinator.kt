@@ -282,6 +282,9 @@ class UpdateCoordinator
                 val activeSetup = setupJob.get()
                 if ((activeSetup != null) && activeSetup.isActive) return@synchronized
 
+                val existingSetup = setupJob.get()
+                if (existingSetup != null && existingSetup.isActive) return@synchronized
+
                 val previousSetup = setupJob.getAndSet(null)
                 previousSetup?.cancel()
 
@@ -335,7 +338,9 @@ class UpdateCoordinator
 
             @Suppress("TooGenericExceptionCaught")
             try {
+                println("TRACE_SETUP: setupObservation entered")
                 val firstSnapshot = waitForInitialSnapshot()
+                println("TRACE_SETUP: firstSnapshot=$firstSnapshot")
 
                 if (firstSnapshot == null) {
                     transitionStatus(
@@ -351,12 +356,17 @@ class UpdateCoordinator
                     usageStateRepository
                         .observeSnapshot()
                         .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
-                        .debounce(Constants.Widget.DEBOUNCE_MS.milliseconds)
+                        .debounce { snapshot ->
+                            if (snapshot.isManualUpdate) 0L.milliseconds
+                            else Constants.Widget.DEBOUNCE_MS.milliseconds
+                        }
+
 
                 val job =
                     observationScope.observe(snapshotFlow, handler) { snapshot ->
                         processSnapshotChange(snapshot)
                     }
+                println("TRACE_SETUP: observationScope.observe returned job=$job, isActive=${job.isActive}")
 
                 stateMutex.withLock {
                     currentObservationJob.set(job)
@@ -386,12 +396,24 @@ class UpdateCoordinator
         }
 
         private suspend fun waitForInitialSnapshot(): GlobalSnapshot? {
-            var firstSnapshot: GlobalSnapshot? = null
+            println("TRACE_WAIT: waitForInitialSnapshot started")
+
+            // Try to get the first snapshot immediately without timeout
+            val firstSnapshot = usageStateRepository.observeSnapshot().first()
+            println("TRACE_WAIT: first() returned snapshot with timestamp=${firstSnapshot.timestamp}")
+
+            if (firstSnapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
+                println("TRACE_WAIT: returning valid snapshot immediately")
+                return firstSnapshot
+            }
+
+            // If timestamp is empty, wait for a valid one with timeout
+            println("TRACE_WAIT: timestamp is empty, waiting with timeout")
             var attempt = 0
             var delayMs = Constants.Flow.RETRY_DELAY_MS
 
-            while ((attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) && (firstSnapshot == null)) {
-                firstSnapshot =
+            while (attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) {
+                val snapshot =
                     usageStateRepository
                         .observeSnapshot()
                         .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
@@ -400,26 +422,28 @@ class UpdateCoordinator
                             tag = "UpdateCoordinator",
                             key = "initialSnapshot",
                         )
-                if (firstSnapshot == null) {
-                    attempt++
-                    if (attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) {
-                        AppLogger.w(
-                            "UpdateCoordinator: snapshot not ready, retry " +
-                                "$attempt/$MAX_INITIAL_SNAPSHOT_ATTEMPTS",
-                        )
-                        delay(delayMs.milliseconds)
-                        delayMs *= 2
-                    }
+                println("TRACE_WAIT: firstWithTimeoutOrLog returned $snapshot")
+
+                if (snapshot != null) {
+                    return snapshot
+                }
+
+                attempt++
+                if (attempt < MAX_INITIAL_SNAPSHOT_ATTEMPTS) {
+                    AppLogger.w(
+                        "UpdateCoordinator: snapshot not ready, retry " +
+                            "$attempt/$MAX_INITIAL_SNAPSHOT_ATTEMPTS",
+                    )
+                    delay(delayMs.milliseconds)
+                    delayMs *= 2
                 }
             }
 
-            if (firstSnapshot == null) {
-                AppLogger.e(
-                    "UpdateCoordinator: Widget observation failed to start " +
-                        "after $MAX_INITIAL_SNAPSHOT_ATTEMPTS attempts",
-                )
-            }
-            return firstSnapshot
+            AppLogger.e(
+                "UpdateCoordinator: Widget observation failed to start " +
+                    "after $MAX_INITIAL_SNAPSHOT_ATTEMPTS attempts",
+            )
+            return null
         }
 
         private fun launchMonitoringJob(
@@ -429,6 +453,13 @@ class UpdateCoordinator
 
         private suspend fun processSnapshotChange(snapshot: GlobalSnapshot) {
             currentCoroutineContext().ensureActive()
+            println(
+                "TRACE_PROCESS: entered, timestamp=${snapshot.timestamp}, hash=${
+                    SnapshotUtils.calculateContentHash(
+                        snapshot,
+                    )
+                }",
+            )
 
             val newHash = SnapshotUtils.calculateContentHash(snapshot)
             val shouldUpdate = checkShouldUpdate(newHash)
@@ -487,9 +518,11 @@ class UpdateCoordinator
                 }
 
                 if (newHash == lastSnapshotHash) {
+                    println("TRACE_CHECK: hash match, newHash=$newHash, lastHash=$lastSnapshotHash")
                     AppLogger.d("UpdateCoordinator: skipping reactive update, hash match ($newHash)")
                     return@withLock false
                 }
+                println("TRACE_CHECK: should update, newHash=$newHash")
                 true
             }
 
