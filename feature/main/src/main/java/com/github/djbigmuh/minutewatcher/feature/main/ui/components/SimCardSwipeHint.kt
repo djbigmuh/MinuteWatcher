@@ -16,16 +16,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.github.djbigmuh.minutewatcher.core.android.ui.HorizontalSwipeDirection
-import com.github.djbigmuh.minutewatcher.core.android.ui.SwipeHintSide
 import com.github.djbigmuh.minutewatcher.core.android.ui.resolveSwipeHintSide
+import com.github.djbigmuh.minutewatcher.core.android.ui.SwipeHintSide
 import com.github.djbigmuh.minutewatcher.core.resources.R
 
 private val SWIPE_HINT_EDGE_PADDING = 12.dp
@@ -69,8 +69,9 @@ fun SimCardSwipeHint(
             }
 
         Box(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier =
+                Modifier
+                    .fillMaxSize()
                 .padding(horizontal = SWIPE_HINT_EDGE_PADDING),
             contentAlignment = alignment,
         ) {
@@ -83,8 +84,9 @@ fun SimCardSwipeHint(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
                 ),
                 shadowElevation = 2.dp,
-                modifier = Modifier
-                    .size(SWIPE_HINT_CONTAINER_SIZE)
+                modifier =
+                    Modifier
+                        .size(SWIPE_HINT_CONTAINER_SIZE)
                     .testTag("swipe_hint_indicator"),
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -92,8 +94,9 @@ fun SimCardSwipeHint(
                         painter = painterResource(id = R.drawable.ic_swipe_hint),
                         contentDescription = stringResource(id = R.string.swipe_hint_content_desc),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier
-                            .size(SWIPE_HINT_ICON_SIZE)
+                        modifier =
+                            Modifier
+                                .size(SWIPE_HINT_ICON_SIZE)
                             .rotate(rotationDegrees),
                     )
                 }
