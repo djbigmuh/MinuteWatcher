@@ -2,7 +2,6 @@
 
 import androidx.appsearch.app.AppSearchResult
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -14,7 +13,6 @@ import org.junit.Assert.fail
 import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SemanticSearchManagerRecoveryTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `recover after error reinitializes session`() =
