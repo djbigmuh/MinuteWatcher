@@ -23,6 +23,6 @@ fun AppSwitch(
             checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
             checkedTrackColor = MaterialTheme.colorScheme.primary,
             checkedBorderColor = MaterialTheme.colorScheme.primary,
-        ),
+            ),
     )
 }
