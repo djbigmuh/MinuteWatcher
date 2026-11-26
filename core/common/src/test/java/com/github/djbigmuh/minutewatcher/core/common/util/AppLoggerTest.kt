@@ -439,7 +439,11 @@ class AppLoggerTest {
                     on { filesDir } doReturn dir
                 }
             AppLogger.init(mockContext)
+            repeat(20) { index ->
+                AppLogger.d("Pending before shutdown $index")
+            }
             AppLogger.shutdown()
+            assertFalse("Shutdown should clear pending file-log entries", AppLogger.hasPendingLogs())
 
             AppLogger.d("Ignored message")
             waitForChannelDrain()
