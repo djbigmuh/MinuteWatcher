@@ -330,8 +330,8 @@ private fun WidgetSettingsList(
     Column(
         modifier =
             modifier
-            .verticalScroll(scrollState)
-            .padding(horizontal = MwSpacing.screenHorizontal, vertical = MwSpacing.md),
+                .verticalScroll(scrollState)
+                .padding(horizontal = MwSpacing.screenHorizontal, vertical = MwSpacing.md),
         verticalArrangement = Arrangement.spacedBy(MwSpacing.md),
     ) {
         SettingsGroup {
