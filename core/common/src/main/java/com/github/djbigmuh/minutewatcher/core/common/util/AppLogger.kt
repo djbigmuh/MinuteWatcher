@@ -520,7 +520,8 @@ object AppLogger {
             while (logChannel.tryReceive().isSuccess) {
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
-            pendingCount.set(0)
+            // Keep the atomic count derived from enqueue/receive completion events.
+            // A timed-out old worker may still finish after stopWorkerBlocking() returns.
         }
         restartWorker()
     }
