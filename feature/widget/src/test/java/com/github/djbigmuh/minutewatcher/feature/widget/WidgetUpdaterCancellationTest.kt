@@ -6,7 +6,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetUpdateResult
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -20,7 +19,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterCancellationTest {
     private val context: Context = mock()
     private val appSettingsRepository: AppSettingsRepository = mock()
