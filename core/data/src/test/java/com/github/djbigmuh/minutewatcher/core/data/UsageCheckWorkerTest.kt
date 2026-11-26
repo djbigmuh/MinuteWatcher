@@ -110,7 +110,7 @@ class UsageCheckWorkerTest {
                 ).thenReturn(TrafficUpdateOutcome.Completed)
         }
 
-    private suspend fun setupDefaultMocks() {
+    private fun setupDefaultMocks() {
         whenever(timeProvider.now()).thenReturn(1_700_000_000_000L)
         whenever(timeProvider.zoneId()).thenReturn(ZoneId.of("UTC"))
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
