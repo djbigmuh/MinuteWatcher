@@ -467,6 +467,11 @@ object AppLogger {
             closeWriter()
         }
         stopWorkerBlocking()
+        synchronized(this) {
+            while (logChannel.tryReceive().isSuccess) {
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
+            }
+        }
     }
 
     @VisibleForTesting
