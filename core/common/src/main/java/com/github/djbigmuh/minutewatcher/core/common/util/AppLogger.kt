@@ -14,10 +14,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.onReceiveCatching
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedWriter
 import java.io.File
@@ -59,6 +57,7 @@ object AppLogger {
     private const val LOG_BUFFER_SIZE = 8192
     private const val MAX_WRITE_FAILURES = 3
     private const val WORKER_JOIN_TIMEOUT_MS = 2_000L
+    private const val WORKER_POLL_INTERVAL_MS = 50L
     private const val DROP_WARNING_INTERVAL = 100L
 
     @Volatile
@@ -102,7 +101,6 @@ object AppLogger {
     private var dispatcher: CoroutineDispatcher = Dispatchers.IO
     private var logScope: CoroutineScope = CoroutineScope(dispatcher + SupervisorJob())
     private var workerJob: Job? = null
-    private var workerStopSignal: Channel<Unit>? = null
 
     private class LogEntry(
         val level: String,
@@ -174,39 +172,29 @@ object AppLogger {
     }
 
     private fun restartWorker() {
-        val oldStopSignal: Channel<Unit>?
         val newGen: Long
         synchronized(this) {
             workerGeneration++
             newGen = workerGeneration
-            oldStopSignal = workerStopSignal
-            val newStopSignal = Channel<Unit>(Channel.CONFLATED)
-            workerStopSignal = newStopSignal
+            // Do not cancel the old worker: cancellation can race with receive()
+            // after it has removed an entry from the channel.
             workerJob =
                 if (isWorkerStartAllowed(newGen)) {
-                    logScope.launch { runWorker(newGen, newStopSignal) }
+                    logScope.launch { runWorker(newGen) }
                 } else {
-                    newStopSignal.close()
                     null
                 }
         }
-        // Wake the previous worker without canceling a pending channel receive.
-        // Cancellation could win a receive race after removing an entry from the channel.
-        oldStopSignal?.close()
     }
 
     @RunBlockingBridge("Synchronous logger worker shutdown bridge")
     private fun stopWorkerBlocking() {
         val oldJob: Job?
-        val oldStopSignal: Channel<Unit>?
         synchronized(this) {
             workerGeneration++
             oldJob = workerJob
-            oldStopSignal = workerStopSignal
             workerJob = null
-            workerStopSignal = null
         }
-        oldStopSignal?.close()
         if (oldJob != null) {
             runBlocking { joinAndWarnTimeout(oldJob) }
         }
@@ -231,21 +219,13 @@ object AppLogger {
     private fun isWorkerStartAllowed(newGen: Long): Boolean =
         !(!isFileLoggingEnabled || isShutdown) && logDir != null && workerGeneration == newGen
 
-    private suspend fun runWorker(
-        myGeneration: Long,
-        stopSignal: Channel<Unit>,
-    ) {
-        try {
-            while (isCurrentGeneration(myGeneration)) {
-                val entry =
-                    select<LogEntry?> {
-                        logChannel.onReceiveCatching { it.getOrNull() }
-                        stopSignal.onReceiveCatching { null }
-                    } ?: break
-                handleReceivedEntry(entry, myGeneration)
-            }
-        } finally {
-            stopSignal.close()
+    private suspend fun runWorker(myGeneration: Long) {
+        while (isCurrentGeneration(myGeneration)) {
+            val entry =
+                withTimeoutOrNull(WORKER_POLL_INTERVAL_MS.milliseconds) {
+                    logChannel.receive()
+                } ?: continue
+            handleReceivedEntry(entry, myGeneration)
         }
     }
 
