@@ -11,7 +11,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
 import com.github.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,7 +24,6 @@ import org.mockito.kotlin.whenever
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.atomic.AtomicInteger
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class TrafficObserverConcurrencyTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()
