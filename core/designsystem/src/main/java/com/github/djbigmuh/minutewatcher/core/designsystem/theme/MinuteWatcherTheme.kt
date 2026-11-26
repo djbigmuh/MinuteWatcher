@@ -19,7 +19,8 @@ import androidx.compose.ui.unit.sp
 
 private val P = MinuteWatcherPalette
 
-private val MinuteWatcherShapes = Shapes(
+private val MinuteWatcherShapes =
+    Shapes(
     extraSmall = RoundedCornerShape(MwShape.extraSmall),
     small = RoundedCornerShape(MwShape.small),
     medium = RoundedCornerShape(MwShape.medium),
@@ -27,7 +28,8 @@ private val MinuteWatcherShapes = Shapes(
     extraLarge = RoundedCornerShape(MwShape.extraLarge),
 )
 
-private val LightScheme = lightColorScheme(
+private val LightScheme =
+    lightColorScheme(
     primary = P.teal700,
     onPrimary = P.white,
     primaryContainer = P.teal100,
@@ -49,7 +51,8 @@ private val LightScheme = lightColorScheme(
     surfaceContainerHigh = Color(0xFFE2EBE6),
 )
 
-private val DarkScheme = darkColorScheme(
+private val DarkScheme =
+    darkColorScheme(
     primary = P.teal100,
     onPrimary = P.teal900,
     primaryContainer = P.teal800,
@@ -71,53 +74,62 @@ private val DarkScheme = darkColorScheme(
     surfaceContainerHigh = Color(0xFF293A36),
 )
 
-val MinuteWatcherTypography = Typography(
-    displayLarge = TextStyle(
+val MinuteWatcherTypography =
+    Typography(
+    displayLarge = 
+        TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
         letterSpacing = (-0.25).sp,
     ),
-    headlineLarge = TextStyle(
+    headlineLarge = 
+        TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
     ),
-    headlineMedium = TextStyle(
+    headlineMedium = 
+        TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
     ),
-    titleLarge = TextStyle(
+    titleLarge = 
+        TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
     ),
-    titleMedium = TextStyle(
+    titleMedium = 
+        TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         lineHeight = 24.sp,
     ),
-    bodyLarge = TextStyle(
+    bodyLarge = 
+        TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.15.sp,
     ),
-    bodyMedium = TextStyle(
+    bodyMedium = 
+        TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.25.sp,
     ),
-    labelLarge = TextStyle(
+    labelLarge = 
+        TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
@@ -133,7 +145,8 @@ fun MinuteWatcherTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val scheme = when {
+    val scheme =
+        when {
         dynamicColor && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S ->
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         darkTheme -> DarkScheme
