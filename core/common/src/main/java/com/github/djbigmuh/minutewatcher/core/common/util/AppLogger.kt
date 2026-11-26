@@ -36,8 +36,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * **Invariants:**
  * - Single worker coroutine consumes log channel sequentially in FIFO order.
  * - New worker is registered synchronously under state lock (`init`, `initForTest`);
- *   previous worker is canceled and completes on generation check, returning
- *   unprocessed entries to the channel; teardown paths (`resetForTest`, `shutdown`)
+ *   previous worker exits cooperatively after its generation becomes obsolete,
+ *   returning unprocessed entries to the channel; teardown paths (`resetForTest`, `shutdown`)
  *   additionally perform a time-limited join (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
  * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
  * - In-flight entries counter ([hasPendingLogs]) tracks logs currently
@@ -88,9 +88,6 @@ object AppLogger {
      */
     @VisibleForTesting
     internal val droppedEntries: Long get() = droppedEntryCount.get()
-
-    private val isLogQueueFull: Boolean
-        get() = queuedCount.get() >= LOG_QUEUE_CAPACITY
 
     private val logChannel =
         Channel<LogEntry>(
@@ -304,15 +301,19 @@ object AppLogger {
         message: String,
     ) {
         if (!isFileLoggingEnabled || isShutdown || logDir == null) return
-        if (isLogQueueFull) {
+        val queuedBeforeSend =
+            queuedCount.getAndUpdate { minOf(LOG_QUEUE_CAPACITY, it + 1) }
+        val result = logChannel.trySend(LogEntry(level, message))
+        if (queuedBeforeSend >= LOG_QUEUE_CAPACITY) {
             val total = droppedEntryCount.incrementAndGet()
             if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
                 runCatching {
                     logger.w(TAG, "AppLogger: log queue full, oldest entry dropped (total dropped: $total)")
                 }
             }
+        } else if (result.isFailure) {
+            queuedCount.updateAndGet { maxOf(0, it - 1) }
         }
-        logChannel.trySend(LogEntry(level, message))
     }
 
     private fun openWriter(dir: File): BufferedWriter? =
