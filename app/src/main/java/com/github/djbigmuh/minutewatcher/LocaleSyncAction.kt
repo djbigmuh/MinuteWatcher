@@ -1,6 +1,6 @@
 ﻿package com.github.djbigmuh.minutewatcher
 
-import Locale
+import java.util.Locale
 
 internal sealed interface LocaleSyncAction {
     data object None : LocaleSyncAction
