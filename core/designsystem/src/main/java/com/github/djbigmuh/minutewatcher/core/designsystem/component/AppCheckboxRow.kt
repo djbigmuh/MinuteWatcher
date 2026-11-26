@@ -22,14 +22,15 @@ fun AppCheckboxRow(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = checked,
-                enabled = enabled,
-                role = Role.Checkbox,
-                onValueChange = onCheckedChange,
-            ).padding(vertical = MwSpacing.xs),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = checked,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onValueChange = onCheckedChange,
+                ).padding(vertical = MwSpacing.xs),
     ) {
         AppCheckbox(
             checked = checked,
