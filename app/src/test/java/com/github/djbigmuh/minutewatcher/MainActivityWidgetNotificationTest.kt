@@ -10,7 +10,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.resetAppLoggerForTest
 import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -29,7 +28,6 @@ import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, manifest = Config.NONE)
-@OptIn(ExperimentalCoroutinesApi::class)
 class MainActivityWidgetNotificationTest {
     private val testDispatcher = StandardTestDispatcher()
 

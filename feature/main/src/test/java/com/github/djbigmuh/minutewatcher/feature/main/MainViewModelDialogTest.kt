@@ -2,7 +2,6 @@
 
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.feature.main.controller.MainDialogController
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -11,7 +10,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelDialogTest : MainViewModelTestFixtures() {
     @Test
     fun `setLimitDialog updates showLimitDialog state`() =

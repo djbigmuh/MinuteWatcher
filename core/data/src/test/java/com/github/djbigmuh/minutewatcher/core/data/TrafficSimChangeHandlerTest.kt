@@ -4,7 +4,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
 import com.github.djbigmuh.minutewatcher.core.model.Constants
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
@@ -18,7 +17,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class TrafficSimChangeHandlerTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val simIdentityRepository: SimIdentityRepository = mock()

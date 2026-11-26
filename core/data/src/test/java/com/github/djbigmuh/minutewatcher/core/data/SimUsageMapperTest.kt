@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.data.di.DataStoreKeys
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -16,7 +15,6 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.util.UUID
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SimUsageMapperTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

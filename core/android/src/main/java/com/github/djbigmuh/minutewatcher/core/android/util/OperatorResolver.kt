@@ -2,13 +2,17 @@
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.resources.R
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
+import java.text.Normalizer
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Immutable result type for operator resolution containing display name and brand key.
@@ -51,7 +55,7 @@ object OperatorResolver {
     @VisibleForTesting
     val tokenToResKey = OperatorBrandDatabase.tokenToResKey
 
-    private val brandKeyCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val brandKeyCache = ConcurrentHashMap<String, String>()
     private const val MAX_BRAND_KEY_CACHE_SIZE = 128
 
     /**
@@ -71,8 +75,8 @@ object OperatorResolver {
      */
     suspend fun preload(context: Context) {
         if (db != null) return
-        kotlinx.coroutines.withContext(
-            com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback.io,
+        withContext(
+            IoDispatcherFallback.io,
         ) {
             loadDb(context)
         }
@@ -267,7 +271,7 @@ object OperatorResolver {
     private const val MIN_MCC_MNC_LENGTH = 5
 
     private fun String.stripDiacritics(): String {
-        val nfd = java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
+        val nfd = Normalizer.normalize(this, Normalizer.Form.NFD)
         return nfd.replace(Regex("\\p{M}+"), "")
     }
 

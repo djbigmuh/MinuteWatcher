@@ -338,7 +338,7 @@ class TrafficTracker
             return true
         }
 
-        private suspend fun handlePermissionChangeSafe() {
+        private fun handlePermissionChangeSafe() {
             @Suppress("TooGenericExceptionCaught")
             try {
                 handlePermissionChange()

@@ -7,7 +7,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -23,7 +22,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CallEndHandlerTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val timeProvider: TimeProvider = mock()

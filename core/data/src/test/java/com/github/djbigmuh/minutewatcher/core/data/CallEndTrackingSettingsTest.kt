@@ -4,7 +4,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.TimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -15,7 +14,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CallEndTrackingSettingsTest {
     private val callSessionRepository: CallSessionRepository = mock()
     private val timeProvider: TimeProvider = mock()

@@ -4,7 +4,6 @@ import android.content.Context
 import com.github.djbigmuh.minutewatcher.core.common.testing.AppLoggerResetRule
 import com.github.djbigmuh.minutewatcher.core.common.testing.DefaultTimeZoneRule
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -20,7 +19,6 @@ import org.mockito.kotlin.mock
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class AppLoggerTest {
     @get:Rule
     val loggerResetRule = AppLoggerResetRule()

@@ -17,7 +17,7 @@ suspend fun AppLogger.awaitQuiescent(timeoutMs: Long = 10_000L) {
     withContext(Dispatchers.Default) {
         withTimeout(timeoutMs.milliseconds) {
             while (hasPendingLogs()) {
-                delay(QUIESCENT_POLL_INTERVAL_MS)
+                delay(QUIESCENT_POLL_INTERVAL_MS.milliseconds)
             }
         }
     }

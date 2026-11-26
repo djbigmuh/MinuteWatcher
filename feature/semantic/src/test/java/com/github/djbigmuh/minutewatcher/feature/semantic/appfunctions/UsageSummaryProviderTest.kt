@@ -14,7 +14,6 @@ import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +32,6 @@ import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class UsageSummaryProviderTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

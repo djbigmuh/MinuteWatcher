@@ -9,7 +9,6 @@ import com.github.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import com.github.djbigmuh.minutewatcher.core.model.IdentitySource
 import com.github.djbigmuh.minutewatcher.core.model.SimIdentity
 import com.github.djbigmuh.minutewatcher.core.model.SimUsage
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
@@ -27,7 +26,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ResetManagerTest {
     private val trafficTracker: TrafficTracker = mock()
     private val dataChangeNotifier: DataChangeNotifier = mock()

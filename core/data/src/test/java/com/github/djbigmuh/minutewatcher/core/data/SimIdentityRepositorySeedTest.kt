@@ -13,7 +13,6 @@ import com.github.djbigmuh.minutewatcher.core.domain.SeedResolutionResult
 import com.github.djbigmuh.minutewatcher.core.domain.SimIdentitySeedRepository
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.IdentitySource
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -38,7 +37,6 @@ import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class SimIdentityRepositorySeedTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()

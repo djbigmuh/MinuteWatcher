@@ -8,7 +8,6 @@ import com.github.djbigmuh.minutewatcher.core.model.PackageType
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -20,7 +19,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SnapshotIndexerResilienceTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `performIndexUpdate skips processing for empty snapshot`() =

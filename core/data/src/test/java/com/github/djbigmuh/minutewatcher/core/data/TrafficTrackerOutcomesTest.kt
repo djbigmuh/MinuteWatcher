@@ -15,7 +15,6 @@ import com.github.djbigmuh.minutewatcher.core.model.IdentitySource
 import com.github.djbigmuh.minutewatcher.core.model.SimIdentity
 import com.github.djbigmuh.minutewatcher.core.model.SimUsage
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
@@ -33,7 +32,6 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class TrafficTrackerOutcomesTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

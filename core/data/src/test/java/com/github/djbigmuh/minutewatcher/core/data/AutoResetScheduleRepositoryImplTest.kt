@@ -6,7 +6,6 @@ import com.github.djbigmuh.minutewatcher.core.common.testing.InMemoryPreferences
 import com.github.djbigmuh.minutewatcher.core.common.testing.MainDispatcherRule
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.data.util.DataStoreWriteTimeoutException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,7 +22,6 @@ import org.robolectric.RobolectricTestRunner
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class AutoResetScheduleRepositoryImplTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

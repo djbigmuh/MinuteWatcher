@@ -3,7 +3,6 @@
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.github.djbigmuh.minutewatcher.core.data.util.DataStoreWriteTimeoutException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -15,7 +14,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CallSessionRepositoryTimeoutTest {
     private class HangingDataStore : DataStore<Preferences> {
         override val data: Flow<Preferences> = MutableSharedFlow()

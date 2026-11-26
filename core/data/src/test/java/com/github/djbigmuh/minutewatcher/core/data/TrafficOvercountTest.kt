@@ -17,12 +17,10 @@ import com.github.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.IdentitySource
 import com.github.djbigmuh.minutewatcher.core.model.SimIdentity
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -37,7 +35,6 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class TrafficOvercountTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -122,7 +119,7 @@ class TrafficOvercountTest {
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(sim1Identity, sim2Identity)))
     }
 
-    private suspend fun TestScope.createTracker(): TrafficTracker {
+    private fun TestScope.createTracker(): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
                 simIdentityRepository,

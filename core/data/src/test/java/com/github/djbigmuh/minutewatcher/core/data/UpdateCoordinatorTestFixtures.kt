@@ -22,7 +22,6 @@ import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -129,7 +128,6 @@ internal fun createSnapshot(
     capabilities = emptyList(),
 )
 
-@OptIn(ExperimentalCoroutinesApi::class)
 abstract class UpdateCoordinatorTestFixtures {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

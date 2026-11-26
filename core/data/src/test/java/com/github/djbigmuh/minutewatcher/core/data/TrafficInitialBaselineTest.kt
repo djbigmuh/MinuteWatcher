@@ -17,7 +17,6 @@ import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.IdentitySource
 import com.github.djbigmuh.minutewatcher.core.model.SimIdentity
 import com.github.djbigmuh.minutewatcher.core.model.SimUsage
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -39,7 +38,6 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class TrafficInitialBaselineTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -114,7 +112,7 @@ class TrafficInitialBaselineTest {
         whenever(simIdentityRepository.getActiveIdentities()).thenReturn(flowOf(listOf(sim1Identity)))
     }
 
-    private suspend fun TestScope.createTracker(): TrafficTracker {
+    private fun TestScope.createTracker(): TrafficTracker {
         val baselineManager =
             TrafficBaselineManager(
                 simIdentityRepository,

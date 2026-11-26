@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.TransactionTooLargeException
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetUpdateResult
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -17,7 +16,6 @@ import org.mockito.kotlin.whenever
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class WidgetUpdaterErrorTest : BaseWidgetUpdaterFixture() {
     @Test(timeout = 10000)
     fun `OutOfMemoryError thrown by renderer propagates out of updateAll`() =

@@ -26,28 +26,29 @@ internal data class TileContent(
 
 /**
  * Pure resolver for Quick Settings tile presentation values.
- *
- * Branches:
- * - No SIMs in the snapshot: every field carries the "no SIM" text, tile is inactive.
- * - Selected SIM has a minutes limit (limit > 0): subtitle, state description and
- *   content description carry the remaining-minutes text; label is the operator name,
- *   or a compact "operator: remaining" line when `supportsSubtitle` is false; tile is active.
- * - Selected SIM has no minutes limit: subtitle and state description carry the
- *   "no data" text, content description is "operator: no data"; tile is inactive.
- *
- * SIM selection is delegated to [TileSimSelector]; note that remaining == 0 with
- * limit == 0 means "no limit set", not "exhausted".
- *
- * @param sims SIM snapshots from the current global snapshot.
- * @param noSimText Localized "SIM cards not found" text.
- * @param noDataText Localized "no data" text.
- * @param supportsSubtitle True when the platform supports Tile subtitle (API 29+).
- * @param operatorNameOf Returns the localized short operator name for a SIM snapshot.
- * @param remainingTextOf Returns the localized remaining-minutes text (`remainingTextOf`) for a SIM snapshot.
- * @param formatOperatorValue Formats an "operator: value" pair via the localized format string.
- * @return Fully populated [TileContent].
  */
 internal object TileContentResolver {
+    /**
+     * Branches:
+     * - No SIMs in the snapshot: every field carries the "no SIM" text, tile is inactive.
+     * - Selected SIM has a minutes limit (limit > 0): subtitle, state description and
+     *   content description carry the remaining-minutes text; label is the operator name,
+     *   or a compact "operator: remaining" line when `supportsSubtitle` is false; tile is active.
+     * - Selected SIM has no minutes limit: subtitle and state description carry the
+     *   "no data" text, content description is "operator: no data"; tile is inactive.
+     *
+     * SIM selection is delegated to [TileSimSelector]; note that remaining == 0 with
+     * limit == 0 means "no limit set", not "exhausted".
+     *
+     * @param sims SIM snapshots from the current global snapshot.
+     * @param noSimText Localized "SIM cards not found" text.
+     * @param noDataText Localized "no data" text.
+     * @param supportsSubtitle True when the platform supports Tile subtitle (API 29+).
+     * @param operatorNameOf Returns the localized short operator name for a SIM snapshot.
+     * @param remainingTextOf Returns the localized remaining-minutes text (`remainingTextOf`) for a SIM snapshot.
+     * @param formatOperatorValue Formats an "operator: value" pair via the localized format string.
+     * @return Fully populated [TileContent].
+     */
     fun resolve(
         sims: List<SimSnapshot>,
         noSimText: String,

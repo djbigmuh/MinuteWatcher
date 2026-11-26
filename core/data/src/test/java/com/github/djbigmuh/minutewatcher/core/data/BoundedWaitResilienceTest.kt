@@ -11,7 +11,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.NoOpLogger
 import com.github.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import com.github.djbigmuh.minutewatcher.core.model.IdentitySource
 import com.github.djbigmuh.minutewatcher.core.model.SimIdentity
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
@@ -28,7 +27,6 @@ import java.io.IOException
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class BoundedWaitResilienceTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

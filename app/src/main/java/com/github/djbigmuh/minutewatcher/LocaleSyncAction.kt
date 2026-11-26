@@ -1,5 +1,7 @@
 ﻿package com.github.djbigmuh.minutewatcher
 
+import java.util.Locale
+
 internal sealed interface LocaleSyncAction {
     data object None : LocaleSyncAction
 
@@ -21,14 +23,14 @@ internal fun normalizeToSupportedLanguageCode(
     supportedCodes.firstOrNull { it.equals(rawTag, ignoreCase = true) }?.let { return it }
 
     val rawPrimary =
-        java.util.Locale
+        Locale
             .forLanguageTag(rawTag)
             .language
     if (rawPrimary.isNotEmpty()) {
         val matchingCodes =
             supportedCodes.filter { code ->
                 val codePrimary =
-                    java.util.Locale
+                    Locale
                         .forLanguageTag(code)
                         .language
                 codePrimary.isNotEmpty() && codePrimary.equals(rawPrimary, ignoreCase = true)

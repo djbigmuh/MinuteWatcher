@@ -14,7 +14,6 @@ import com.github.djbigmuh.minutewatcher.core.model.SimDiscoveryResult
 import com.github.djbigmuh.minutewatcher.core.model.SimIdentity
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -31,7 +30,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class EphemeralSeedGatingTest {
     private val simIdentityRepository: SimIdentityRepository = mock()
     private val simUsageRepository: SimUsageRepository = mock()

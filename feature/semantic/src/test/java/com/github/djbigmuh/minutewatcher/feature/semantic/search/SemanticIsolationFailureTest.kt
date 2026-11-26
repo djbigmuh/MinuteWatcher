@@ -1,7 +1,6 @@
 ﻿package com.github.djbigmuh.minutewatcher.feature.semantic.search
 
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -9,7 +8,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SemanticIsolationFailureTest : SemanticSearchManagerTestFixtures() {
     @Test
     fun `putDocuments failure transitions to Error state and clears Indexing`() =

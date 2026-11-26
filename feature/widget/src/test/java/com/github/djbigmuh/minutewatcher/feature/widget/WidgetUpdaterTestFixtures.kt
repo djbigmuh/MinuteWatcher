@@ -9,7 +9,6 @@ import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.TrackingKey
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +35,6 @@ class FakeAppSettingsRepository(
     }
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 abstract class BaseWidgetUpdaterFixture {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

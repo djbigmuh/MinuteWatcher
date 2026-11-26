@@ -3,7 +3,6 @@
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.github.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
@@ -19,7 +18,6 @@ import java.io.File
 import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class SimUsageRepositoryConcurrencyTest {
     @get:Rule
     val tmpFolder = TemporaryFolder()

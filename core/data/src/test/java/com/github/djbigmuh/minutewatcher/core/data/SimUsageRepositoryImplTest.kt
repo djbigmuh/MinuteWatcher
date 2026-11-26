@@ -9,7 +9,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.data.di.DataStoreKeys
 import com.github.djbigmuh.minutewatcher.core.model.Constants
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -24,7 +23,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class SimUsageRepositoryImplTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()

@@ -4,7 +4,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.FixedTimeProvider
 import com.github.djbigmuh.minutewatcher.core.common.util.initTestLogger
 import com.github.djbigmuh.minutewatcher.core.domain.CallSessionRepository
 import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -18,7 +17,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CallSessionCleanerTest {
     private val sessionRepository: CallSessionRepository = mock()
     private val attributionResolver: CallAttributionResolver = mock()

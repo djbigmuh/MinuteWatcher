@@ -29,7 +29,6 @@ import com.github.djbigmuh.minutewatcher.core.model.TrackingStatus
 import com.github.djbigmuh.minutewatcher.core.model.util.DateUtils
 import com.github.djbigmuh.minutewatcher.core.resources.R
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -53,7 +52,6 @@ import java.io.IOException
 import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
-@OptIn(ExperimentalCoroutinesApi::class)
 class UsageCheckWorkerTest {
     private val usageStateRepository: UsageStateRepository = mock()
     private val simNotificationFlagsRepository: SimNotificationFlagsRepository = mock()
@@ -110,7 +108,7 @@ class UsageCheckWorkerTest {
                 ).thenReturn(TrafficUpdateOutcome.Completed)
         }
 
-    private suspend fun setupDefaultMocks() {
+    private fun setupDefaultMocks() {
         whenever(timeProvider.now()).thenReturn(1_700_000_000_000L)
         whenever(timeProvider.zoneId()).thenReturn(ZoneId.of("UTC"))
         whenever(permissionManager.hasNotificationPermission()).thenReturn(true)
