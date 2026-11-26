@@ -86,6 +86,7 @@ fun WidgetSettingsScreen(
                 snapshot = snapshot,
                 state = settings,
                 operatorNames = operatorNames,
+                includeUnconfiguredSims = true,
             )
         }
 
