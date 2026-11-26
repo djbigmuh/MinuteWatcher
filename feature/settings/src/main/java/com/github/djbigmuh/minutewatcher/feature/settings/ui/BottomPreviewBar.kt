@@ -23,9 +23,9 @@ fun BottomPreviewBar(uiState: WidgetUiState?) {
     AppCard(
         modifier =
             Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = MwSpacing.md),
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = MwSpacing.md),
         contentPadding = PaddingValues(MwSpacing.lg),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
