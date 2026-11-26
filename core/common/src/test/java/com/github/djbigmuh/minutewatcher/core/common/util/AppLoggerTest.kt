@@ -408,7 +408,8 @@ class AppLoggerTest {
 
             val logFiles = listOf(File(dir1, "logs.txt"), File(dir2, "logs.txt"))
             pollUntil(10000L, "all batch entries across logger generations") {
-                val combined = logFiles.joinToString("\\n") { file ->
+                val combined =
+                    logFiles.joinToString("\\n") { file ->
                     if (file.exists()) runCatching { file.readText() }.getOrDefault("") else ""
                 }
                 (0 until 50).all { index -> combined.contains("Batch entry $index") }
