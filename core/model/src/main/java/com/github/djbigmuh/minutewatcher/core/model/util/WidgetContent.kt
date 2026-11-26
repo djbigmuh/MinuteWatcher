@@ -35,7 +35,7 @@ sealed interface WidgetContent {
  * 5. else -> NoSimFound
  */
 fun resolveWidgetContent(uiState: WidgetUiState): WidgetContent {
-    val visibleSims = uiState.simUiStates.filter { it.showSim }
+    val visibleSims = uiState.simUiStates
     return when {
         uiState.refreshFailed && uiState.isSnapshotEmpty -> WidgetContent.RefreshError
         uiState.settingsLoadFailed || uiState.simListLoadFailed -> WidgetContent.SettingsLoadError

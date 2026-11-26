@@ -73,4 +73,9 @@ class SimWidgetVisibilityRepositoryImpl
                 }
             }
         }
+
+        /**
+         * Returns a flow that emits whenever SIM widget settings or limit settings change.
+         */
+        override fun observeSimSettings(): Flow<Unit> = dataStore.data.map { }
     }

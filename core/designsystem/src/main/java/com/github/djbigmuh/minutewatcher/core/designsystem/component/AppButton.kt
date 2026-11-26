@@ -9,10 +9,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextButtonDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.github.djbigmuh.minutewatcher.core.designsystem.theme.MwShape
 
 @Composable
@@ -60,7 +59,7 @@ fun AppTextButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        colors = TextButtonDefaults.textButtonColors(contentColor = contentColor),
+        colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
     ) {
         Text(text = text)
     }

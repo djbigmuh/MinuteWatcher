@@ -13,6 +13,7 @@ import com.github.djbigmuh.minutewatcher.core.domain.SimLimitsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimNotificationFlagsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageRepository
 import com.github.djbigmuh.minutewatcher.core.domain.SimUsageResetRepository
+import com.github.djbigmuh.minutewatcher.core.domain.SimWidgetVisibilityRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageStateRepository
 import com.github.djbigmuh.minutewatcher.core.model.ActiveSimInfo
 import com.github.djbigmuh.minutewatcher.core.model.AppSettings
@@ -22,6 +23,7 @@ import com.github.djbigmuh.minutewatcher.core.model.MigrationSkipReason
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
 import com.github.djbigmuh.minutewatcher.core.model.SimCardUiModel
 import com.github.djbigmuh.minutewatcher.core.model.SimIdentity
+import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.SimUsage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 class FakeDataChangeNotifier : DataChangeNotifier {
     override suspend fun notifyDataChanged(
@@ -297,4 +300,17 @@ class FakeSimNotificationFlagsRepository : SimNotificationFlagsRepository {
         identity: String,
         notified: Boolean,
     ) {}
+}
+
+class FakeSimWidgetVisibilityRepository : SimWidgetVisibilityRepository {
+    private val simSettingsFlow = MutableStateFlow<Map<String, SimSettingsState>>(emptyMap())
+
+    override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
+        simSettingsFlow.asStateFlow()
+
+    override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {
+        simSettingsFlow.value = simSettingsFlow.value + settingsMap
+    }
+
+    override fun observeSimSettings(): Flow<Unit> = simSettingsFlow.map { }
 }

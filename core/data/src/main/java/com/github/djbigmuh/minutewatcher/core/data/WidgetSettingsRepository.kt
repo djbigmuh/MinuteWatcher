@@ -4,6 +4,7 @@ import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.common.util.firstWithTimeout
 import com.github.djbigmuh.minutewatcher.core.domain.AppFunctionAvailability
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
+import com.github.djbigmuh.minutewatcher.core.domain.DataChangeNotifier
 import com.github.djbigmuh.minutewatcher.core.domain.InvalidSlotException
 import com.github.djbigmuh.minutewatcher.core.domain.SeedUnavailableException
 import com.github.djbigmuh.minutewatcher.core.domain.SimIdentityRepository
@@ -34,6 +35,7 @@ class WidgetSettingsRepository
         private val simIdentityRepository: SimIdentityRepository,
         private val simWidgetVisibilityRepository: SimWidgetVisibilityRepository,
         private val appFunctionAvailability: AppFunctionAvailability,
+        private val dataChangeNotifier: dagger.Lazy<DataChangeNotifier>? = null,
     ) : WidgetSettingsLoader {
         /**
          * Loads the current unified widget settings state.
@@ -128,6 +130,27 @@ class WidgetSettingsRepository
             }
         }
 
+        private fun getFallbackWidgetSettings(
+            appSettings: AppSettings,
+            settingsLoadFailed: Boolean = true,
+            simListLoadFailed: Boolean = true,
+        ): WidgetSettingsState =
+            WidgetSettingsState(
+                layoutMode = appSettings.widgetLayoutMode,
+                simArrangement = appSettings.widgetSimArrangement,
+                transparency = appSettings.widgetTransparency,
+                fontSize = appSettings.widgetFontSize,
+                backgroundColor = appSettings.widgetBackgroundColor,
+                notifyLowMinutes = appSettings.notifyLowMinutes,
+                notifyLowTraffic = appSettings.notifyLowTraffic,
+                aodSummaryEnabled = appSettings.aodSummaryEnabled,
+                callTrackingEnabled = appSettings.callTrackingEnabled,
+                assistantAccessEnabled = appSettings.assistantAccessEnabled,
+                widgetLimitExceeded = appSettings.widgetLimitExceeded,
+                settingsLoadFailed = settingsLoadFailed,
+                simListLoadFailed = simListLoadFailed,
+            )
+
         /**
          * Saves general widget settings (layout, transparency, etc.) to DataStore.
          * Additionally applies assistant access state to system AppFunctions.
@@ -157,6 +180,7 @@ class WidgetSettingsRepository
                 )
             }
             appFunctionAvailability.setAssistantAccessEnabled(state.assistantAccessEnabled)
+            dataChangeNotifier?.get()?.notifyDataChanged(updateWidget = true, force = true)
         }
 
         /**
@@ -179,6 +203,7 @@ class WidgetSettingsRepository
             }
             if (simSettingsMap.isNotEmpty()) {
                 simWidgetVisibilityRepository.setSimSettingsBatch(simSettingsMap)
+                dataChangeNotifier?.get()?.notifyDataChanged(updateWidget = true, force = true)
             } else if (state.simStates.isNotEmpty() && failedSlots.isEmpty()) {
                 // If we have states to save but none could be mapped to an identity (and no exceptions were caught)
                 // this is also a failure.
@@ -222,30 +247,8 @@ class WidgetSettingsRepository
                     simSettingsMap[lastId] = simSettings
                 } ?: failedSlots.add(slot)
             } catch (e: InvalidSlotException) {
-                AppLogger.w("saveSimSettings: invalid slot $slot. Skipping.", e)
+                AppLogger.w("saveSimSettings: invalid slot $slot", e)
                 failedSlots.add(slot)
             }
         }
-
-        private fun getFallbackWidgetSettings(
-            settings: AppSettings,
-            settingsLoadFailed: Boolean = true,
-            simListLoadFailed: Boolean = true,
-        ): WidgetSettingsState =
-            WidgetSettingsState(
-                layoutMode = settings.widgetLayoutMode,
-                simArrangement = settings.widgetSimArrangement,
-                transparency = settings.widgetTransparency,
-                fontSize = settings.widgetFontSize,
-                backgroundColor = settings.widgetBackgroundColor,
-                notifyLowMinutes = settings.notifyLowMinutes,
-                notifyLowTraffic = settings.notifyLowTraffic,
-                aodSummaryEnabled = settings.aodSummaryEnabled,
-                callTrackingEnabled = settings.callTrackingEnabled,
-                assistantAccessEnabled = settings.assistantAccessEnabled,
-                simStates = emptyMap(),
-                widgetLimitExceeded = settings.widgetLimitExceeded,
-                settingsLoadFailed = settingsLoadFailed,
-                simListLoadFailed = simListLoadFailed,
-            )
     }

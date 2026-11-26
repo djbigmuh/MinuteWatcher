@@ -26,4 +26,9 @@ interface SimWidgetVisibilityRepository {
      * @throws CancellationException if the coroutine is canceled.
      */
     suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>)
+
+    /**
+     * Returns a flow that emits whenever SIM widget settings or limit settings change.
+     */
+    fun observeSimSettings(): Flow<Unit>
 }

@@ -142,9 +142,8 @@ class WidgetPreviewLayoutTest {
 
     @Test
     fun `preview shows noSimFoundText when snapshot is non-empty but all sims hidden`() {
-        val sim0 = createSimUiState(0, "MTS").copy(showSim = false)
         val uiState =
-            createWidgetUiState(listOf(sim0), isHorizontal = true).copy(
+            createWidgetUiState(emptyList(), isHorizontal = true).copy(
                 strings =
                     WidgetStrings(
                         usedText = "",

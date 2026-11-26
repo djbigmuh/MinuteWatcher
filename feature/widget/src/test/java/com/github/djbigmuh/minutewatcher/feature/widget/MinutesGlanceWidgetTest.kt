@@ -9,8 +9,14 @@ import com.github.djbigmuh.minutewatcher.core.domain.RefreshResult
 import com.github.djbigmuh.minutewatcher.core.domain.UsageStateRepository
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetSettingsLoader
 import com.github.djbigmuh.minutewatcher.core.model.Constants
+import com.github.djbigmuh.minutewatcher.core.model.DataSourceType
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
+import com.github.djbigmuh.minutewatcher.core.model.MeasurementUnit
+import com.github.djbigmuh.minutewatcher.core.model.PackageType
 import com.github.djbigmuh.minutewatcher.core.model.SchemaVersion
+import com.github.djbigmuh.minutewatcher.core.model.SemanticEntity
+import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
+import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,5 +131,91 @@ class MinutesGlanceWidgetTest {
             val widget = MinutesGlanceWidget()
             val uiState = widget.getUiStateInternal(context, usageRepo, settingsLoader, timeProvider)
             assertEquals(Constants.Widget.DEFAULT_LAYOUT_MODE, uiState.layoutMode)
+        }
+
+    @Test
+    fun `widget shows limits when limits display enabled`() =
+        runTest {
+            val settingsLoader = mock<WidgetSettingsLoader>()
+            val settings =
+                WidgetSettingsState(
+                    simStates =
+                        mapOf(
+                            0 to SimSettingsState(showSim = true, showMinutesLimit = true),
+                        ),
+                )
+            whenever(settingsLoader.load()).thenReturn(settings)
+
+            val minEntity =
+                SemanticEntity(
+                    id = "sim_minutes",
+                    simSlot = 0,
+                    operatorName = "Operator A",
+                    packageType = PackageType.MINUTES,
+                    limit = 500,
+                    used = 100,
+                    remaining = 400,
+                    unit = MeasurementUnit.MINUTES,
+                    periodStart = 0,
+                    periodEnd = 0,
+                    lastUpdateTime = 0,
+                    sourceType = DataSourceType.SYSTEM,
+                )
+            val snapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = System.currentTimeMillis(),
+                    simSnapshots = listOf(SimSnapshot(0, "sim_0", "MTS", mapOf(PackageType.MINUTES to minEntity), 1)),
+                    capabilities = emptyList(),
+                )
+
+            val usageRepo = mock<UsageStateRepository>()
+            whenever(usageRepo.observeSnapshot()).thenReturn(MutableStateFlow(snapshot))
+            whenever(usageRepo.refresh()).thenReturn(RefreshResult.Success(snapshot))
+            whenever(timeProvider.now()).thenReturn(System.currentTimeMillis())
+
+            val widget = MinutesGlanceWidget()
+            val uiState = widget.getUiStateInternal(context, usageRepo, settingsLoader, timeProvider)
+
+            assertEquals(1, uiState.simUiStates.size)
+            assertTrue(uiState.simUiStates.first().showMinutesLimit)
+        }
+
+    @Test
+    fun `widget omits sim with disabled visibility`() =
+        runTest {
+            val settingsLoader = mock<WidgetSettingsLoader>()
+            // Loader returns simStates containing only visible SIMs (slot 0)
+            val settings =
+                WidgetSettingsState(
+                    simStates =
+                        mapOf(
+                            0 to SimSettingsState(showSim = true),
+                        ),
+                )
+            whenever(settingsLoader.load()).thenReturn(settings)
+
+            val snapshot =
+                GlobalSnapshot(
+                    version = SchemaVersion(1, 0, 0),
+                    timestamp = System.currentTimeMillis(),
+                    simSnapshots =
+                        listOf(
+                            SimSnapshot(0, "sim_0", "MTS", emptyMap(), 1),
+                            SimSnapshot(1, "sim_1", "Beeline", emptyMap(), 2),
+                        ),
+                    capabilities = emptyList(),
+                )
+
+            val usageRepo = mock<UsageStateRepository>()
+            whenever(usageRepo.observeSnapshot()).thenReturn(MutableStateFlow(snapshot))
+            whenever(usageRepo.refresh()).thenReturn(RefreshResult.Success(snapshot))
+            whenever(timeProvider.now()).thenReturn(System.currentTimeMillis())
+
+            val widget = MinutesGlanceWidget()
+            val uiState = widget.getUiStateInternal(context, usageRepo, settingsLoader, timeProvider)
+
+            assertEquals(1, uiState.simUiStates.size)
+            assertEquals(0, uiState.simUiStates.first().slot)
         }
 }

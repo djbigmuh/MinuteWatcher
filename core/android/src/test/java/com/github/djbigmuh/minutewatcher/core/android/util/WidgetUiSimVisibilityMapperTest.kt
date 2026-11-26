@@ -7,7 +7,6 @@ import com.github.djbigmuh.minutewatcher.core.model.SimSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.SimSnapshot
 import com.github.djbigmuh.minutewatcher.core.model.WidgetSettingsState
 import com.github.djbigmuh.minutewatcher.core.model.resolveShowSim
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -32,7 +31,7 @@ class WidgetUiSimVisibilityMapperTest {
                 capabilities = emptyList(),
             )
 
-        // Scenario 1: Config missing, load succeeded -> showSim should be false
+        // Scenario 1: Config missing, load succeeded -> showSim should be false (SIM excluded)
         val settingsNormal = WidgetSettingsState(simStates = emptyMap(), simListLoadFailed = false)
         val uiStateNormal =
             WidgetUiMapper.mapFromSnapshot(
@@ -41,9 +40,9 @@ class WidgetUiSimVisibilityMapperTest {
                 state = settingsNormal,
                 operatorNames = emptyMap(),
             )
-        assertFalse(
-            "showSim should be false when config missing and load succeeded",
-            uiStateNormal.simUiStates[0].showSim,
+        assertTrue(
+            "simUiStates should be empty when config missing and load succeeded",
+            uiStateNormal.simUiStates.isEmpty(),
         )
 
         // Scenario 2: Config missing, load failed -> showSim should be true (fallback)

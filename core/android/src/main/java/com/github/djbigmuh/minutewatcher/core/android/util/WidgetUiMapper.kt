@@ -34,24 +34,9 @@ object WidgetUiMapper {
         val activeSims = snapshot.simSnapshots
         var currentLayoutMode = WidgetLayoutMode.fromValue(state.layoutMode)
 
-        val visibleSimCount =
-            activeSims.count { sim ->
-                WidgetSimUiFactory.resolveShowSim(state.simStates[sim.slot], state.simListLoadFailed)
-            }
-
-        val isPreemptivelyLimited =
-            visibleSimCount >= Constants.Widget.PREEMPTIVE_LAYOUT_LIMIT_SIMS &&
-                currentLayoutMode == WidgetLayoutMode.SIX_LINES
-
-        if (state.widgetLimitExceeded) {
-            currentLayoutMode = WidgetLayoutMode.SIMPLE
-        } else if (isPreemptivelyLimited) {
-            // Pre-emptive limit to avoid RemoteViews size issues on triple SIM setups with high complexity
-            currentLayoutMode = WidgetLayoutMode.THREE_LINES
-        }
-
         val simUiStates =
             activeSims
+                .filter { state.simStates.containsKey(it.slot) || state.simListLoadFailed }
                 .sortedBy { it.slot }
                 .map { sim ->
                     val simConfig = state.simStates[sim.slot]
@@ -71,6 +56,19 @@ object WidgetUiMapper {
                         layoutSpec = WidgetLayoutSpecBuilder.generateLayoutSpec(simUiState, currentLayoutMode),
                     )
                 }
+
+        val visibleSimCount = simUiStates.size
+
+        val isPreemptivelyLimited =
+            visibleSimCount >= Constants.Widget.PREEMPTIVE_LAYOUT_LIMIT_SIMS &&
+                currentLayoutMode == WidgetLayoutMode.SIX_LINES
+
+        if (state.widgetLimitExceeded) {
+            currentLayoutMode = WidgetLayoutMode.SIMPLE
+        } else if (isPreemptivelyLimited) {
+            // Pre-emptive limit to avoid RemoteViews size issues on triple SIM setups with high complexity
+            currentLayoutMode = WidgetLayoutMode.THREE_LINES
+        }
 
         return WidgetUiState(
             layoutMode = currentLayoutMode.value,
