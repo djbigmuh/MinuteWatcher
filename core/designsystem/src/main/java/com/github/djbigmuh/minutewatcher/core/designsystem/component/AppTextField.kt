@@ -42,6 +42,6 @@ fun AppTextField(
             OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             focusedLabelColor = MaterialTheme.colorScheme.primary,
-        ),
+            ),
     )
 }
