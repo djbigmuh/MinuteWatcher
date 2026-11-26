@@ -128,7 +128,8 @@ class UpdateCoordinatorTakeoverTest {
             coordinator.start()
 
             // 1. Initial update
-            testScheduler.advanceUntilIdle()
+            testScheduler.advanceTimeBy(200.milliseconds)
+            testScheduler.runCurrent()
             assertEquals("Initial update should have happened", 1, widgetUpdater.callCount)
 
             // 2. Trigger reactive update that will hang
