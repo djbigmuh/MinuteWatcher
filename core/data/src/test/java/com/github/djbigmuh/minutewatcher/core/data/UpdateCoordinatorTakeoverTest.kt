@@ -35,6 +35,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -79,7 +80,8 @@ class UpdateCoordinatorTakeoverTest {
             coordinator.start()
 
             // 1. Initial update
-            testScheduler.advanceUntilIdle()
+            testScheduler.advanceTimeBy(200.milliseconds)
+            testScheduler.runCurrent()
             assertEquals("Initial update should have happened", 1, widgetUpdater.callCount)
 
             // 2. Trigger reactive update that will hang
