@@ -40,8 +40,8 @@ fun AppTextField(
         shape = RoundedCornerShape(MwShape.medium),
         colors =
             OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
             ),
     )
 }
