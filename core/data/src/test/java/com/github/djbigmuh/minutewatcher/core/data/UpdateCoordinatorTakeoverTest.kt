@@ -166,7 +166,8 @@ class UpdateCoordinatorTakeoverTest {
 
             // 4. Emit another snapshot and verify observation cycle continues immediately
             snapshotFlow.value = createSnapshot(2000L, "B", used = 20)
-            testScheduler.advanceUntilIdle()
+            testScheduler.advanceTimeBy(200.milliseconds)
+            testScheduler.runCurrent()
 
             assertEquals(
                 "Observation cycle should still be alive and handle snapshot change",
