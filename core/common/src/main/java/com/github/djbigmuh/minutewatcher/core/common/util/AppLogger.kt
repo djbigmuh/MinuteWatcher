@@ -76,6 +76,7 @@ object AppLogger {
     private var consecutiveWriteFailures = 0
 
     private val pendingCount = AtomicInteger(0)
+    private val enqueueLock = Any()
     private val droppedEntryCount = AtomicLong(0)
     private var workerGeneration = 0L
 
@@ -314,11 +315,13 @@ object AppLogger {
         level: String,
         message: String,
     ) {
-        if (!isFileLoggingEnabled || isShutdown || logDir == null) return
-        pendingCount.incrementAndGet()
-        val result = logChannel.trySend(LogEntry(level, message))
-        if (result.isFailure) {
-            pendingCount.updateAndGet { maxOf(0, it - 1) }
+        synchronized(enqueueLock) {
+            if (!isFileLoggingEnabled || isShutdown || logDir == null) return
+            pendingCount.incrementAndGet()
+            val result = logChannel.trySend(LogEntry(level, message))
+            if (result.isFailure) {
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
+            }
         }
     }
 
@@ -461,13 +464,15 @@ object AppLogger {
      */
     @VisibleForTesting
     internal fun shutdown() {
-        synchronized(this) {
-            isShutdown = true
-            isFileLoggingEnabled = false
-            closeWriter()
+        synchronized(enqueueLock) {
+            synchronized(this) {
+                isShutdown = true
+                isFileLoggingEnabled = false
+                closeWriter()
+            }
         }
         stopWorkerBlocking()
-        synchronized(this) {
+        synchronized(enqueueLock) {
             while (logChannel.tryReceive().isSuccess) {
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
@@ -477,14 +482,16 @@ object AppLogger {
     @VisibleForTesting
     internal fun resetForTest() {
         stopWorkerBlocking()
-        synchronized(this) {
-            isShutdown = false
-            isFileLoggingEnabled = BuildConfig.DEBUG
-            consecutiveWriteFailures = 0
-            droppedEntryCount.set(0)
-            closeWriter()
-            logDir = null
-            logger = AndroidLogger()
+        synchronized(enqueueLock) {
+            synchronized(this) {
+                isShutdown = false
+                isFileLoggingEnabled = BuildConfig.DEBUG
+                consecutiveWriteFailures = 0
+                droppedEntryCount.set(0)
+                closeWriter()
+                logDir = null
+                logger = AndroidLogger()
+            }
             while (logChannel.tryReceive().isSuccess) {
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
@@ -507,16 +514,18 @@ object AppLogger {
         customScope: CoroutineScope = CoroutineScope(customDispatcher + SupervisorJob()),
     ) {
         stopWorkerBlocking()
-        synchronized(this) {
-            isShutdown = false
-            closeWriter()
-            consecutiveWriteFailures = 0
-            droppedEntryCount.set(0)
-            logDir = dir
-            logger = AndroidLogger()
-            dispatcher = customDispatcher
-            logScope = customScope
-            isFileLoggingEnabled = true
+        synchronized(enqueueLock) {
+            synchronized(this) {
+                isShutdown = false
+                closeWriter()
+                consecutiveWriteFailures = 0
+                droppedEntryCount.set(0)
+                logDir = dir
+                logger = AndroidLogger()
+                dispatcher = customDispatcher
+                logScope = customScope
+                isFileLoggingEnabled = true
+            }
             while (logChannel.tryReceive().isSuccess) {
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
