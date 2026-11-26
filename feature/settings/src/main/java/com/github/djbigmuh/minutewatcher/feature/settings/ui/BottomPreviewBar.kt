@@ -1,10 +1,10 @@
-﻿package com.github.djbigmuh.minutewatcher.feature.settings.ui
+package com.github.djbigmuh.minutewatcher.feature.settings.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,7 +21,8 @@ import com.github.djbigmuh.minutewatcher.feature.settings.ui.components.WidgetPr
 @Composable
 fun BottomPreviewBar(uiState: WidgetUiState?) {
     AppCard(
-        modifier = Modifier
+        modifier =
+            Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = MwSpacing.md),
