@@ -338,9 +338,7 @@ class UpdateCoordinator
 
             @Suppress("TooGenericExceptionCaught")
             try {
-                println("TRACE_SETUP: setupObservation entered")
                 val firstSnapshot = waitForInitialSnapshot()
-                println("TRACE_SETUP: firstSnapshot=$firstSnapshot")
 
                 if (firstSnapshot == null) {
                     transitionStatus(
@@ -357,16 +355,17 @@ class UpdateCoordinator
                         .observeSnapshot()
                         .filter { it.timestamp > Constants.Data.EMPTY_TIMESTAMP }
                         .debounce { snapshot ->
-                            if (snapshot.isManualUpdate) 0L.milliseconds
-                            else Constants.Widget.DEBOUNCE_MS.milliseconds
+                            if (snapshot.isManualUpdate) {
+                                0L.milliseconds
+                            } else {
+                                Constants.Widget.DEBOUNCE_MS.milliseconds
+                            }
                         }
-
 
                 val job =
                     observationScope.observe(snapshotFlow, handler) { snapshot ->
                         processSnapshotChange(snapshot)
                     }
-                println("TRACE_SETUP: observationScope.observe returned job=$job, isActive=${job.isActive}")
 
                 stateMutex.withLock {
                     currentObservationJob.set(job)
@@ -396,19 +395,14 @@ class UpdateCoordinator
         }
 
         private suspend fun waitForInitialSnapshot(): GlobalSnapshot? {
-            println("TRACE_WAIT: waitForInitialSnapshot started")
-
             // Try to get the first snapshot immediately without timeout
             val firstSnapshot = usageStateRepository.observeSnapshot().first()
-            println("TRACE_WAIT: first() returned snapshot with timestamp=${firstSnapshot.timestamp}")
 
             if (firstSnapshot.timestamp > Constants.Data.EMPTY_TIMESTAMP) {
-                println("TRACE_WAIT: returning valid snapshot immediately")
                 return firstSnapshot
             }
 
             // If timestamp is empty, wait for a valid one with timeout
-            println("TRACE_WAIT: timestamp is empty, waiting with timeout")
             var attempt = 0
             var delayMs = Constants.Flow.RETRY_DELAY_MS
 
@@ -422,7 +416,6 @@ class UpdateCoordinator
                             tag = "UpdateCoordinator",
                             key = "initialSnapshot",
                         )
-                println("TRACE_WAIT: firstWithTimeoutOrLog returned $snapshot")
 
                 if (snapshot != null) {
                     return snapshot
@@ -451,16 +444,9 @@ class UpdateCoordinator
             generation: Long = observationGeneration,
         ): Job = restartScheduler.launchMonitoringJob(newJob, generation)
 
+        @Suppress("ThrowsCount", "TooGenericExceptionCaught")
         private suspend fun processSnapshotChange(snapshot: GlobalSnapshot) {
             currentCoroutineContext().ensureActive()
-            println(
-                "TRACE_PROCESS: entered, timestamp=${snapshot.timestamp}, hash=${
-                    SnapshotUtils.calculateContentHash(
-                        snapshot,
-                    )
-                }",
-            )
-
             val newHash = SnapshotUtils.calculateContentHash(snapshot)
             val shouldUpdate = checkShouldUpdate(newHash)
             if (!shouldUpdate) return

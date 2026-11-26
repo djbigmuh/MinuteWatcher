@@ -48,7 +48,7 @@ class FakeSimWidgetVisibilityRepositoryForCoordinator : SimWidgetVisibilityRepos
     override fun observeSimSettings(): Flow<Unit> = simSettingsFlow
     override fun getSimSettingsBatch(identities: List<String>): Flow<Map<String, SimSettingsState>> =
         MutableStateFlow(emptyMap())
-    override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) {}
+    override suspend fun setSimSettingsBatch(settingsMap: Map<String, SimSettingsState>) = Unit
 }
 
 internal fun createTestSimCardUiModel(slot: Int = 0) =

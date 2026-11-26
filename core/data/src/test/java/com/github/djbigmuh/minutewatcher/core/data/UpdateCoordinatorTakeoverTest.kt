@@ -262,11 +262,7 @@ class UpdateCoordinatorTakeoverTest {
             if (shouldHang) {
                 val deferred = CompletableDeferred<Unit>()
                 hangingDeferred = deferred
-                try {
-                    deferred.await()
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                }
+                deferred.await()
             }
             return WidgetUpdateResult.Success()
         }
@@ -275,6 +271,6 @@ class UpdateCoordinatorTakeoverTest {
             hangingDeferred?.complete(Unit)
         }
 
-        override suspend fun recover() {}
+        override suspend fun recover() = Unit
     }
 }
