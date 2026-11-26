@@ -82,8 +82,8 @@ fun SimCardSwipeHint(
                 border =
                     BorderStroke(
                         width = 1.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
-                ),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
+                    ),
                 shadowElevation = 2.dp,
                 modifier =
                     Modifier
