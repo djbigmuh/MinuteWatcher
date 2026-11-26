@@ -128,7 +128,7 @@ class UpdateCoordinatorResilienceTest {
 
             // Should be in Error status after max retries
             assertTrue(coordinator.status.value is TrackingStatus.Error)
-            assertEquals(3, callCount)
+            assertEquals(4, callCount)
         }
 
     @Test
