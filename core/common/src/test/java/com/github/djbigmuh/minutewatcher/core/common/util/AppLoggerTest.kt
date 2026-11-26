@@ -3,6 +3,7 @@
 import android.content.Context
 import com.github.djbigmuh.minutewatcher.core.common.testing.AppLoggerResetRule
 import com.github.djbigmuh.minutewatcher.core.common.testing.DefaultTimeZoneRule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -421,7 +422,7 @@ class AppLoggerTest {
                     on { filesDir } doReturn dir
                 }
 
-            backgroundScope.launch {
+            backgroundScope.launch(Dispatchers.Unconfined) {
                 AppLogger.init(mockContext)
                 AppLogger.d("Non-blocking test log")
             }
