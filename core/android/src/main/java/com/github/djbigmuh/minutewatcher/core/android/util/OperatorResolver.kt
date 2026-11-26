@@ -5,14 +5,14 @@ import androidx.annotation.VisibleForTesting
 import com.github.djbigmuh.minutewatcher.core.common.di.IoDispatcherFallback
 import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger
 import com.github.djbigmuh.minutewatcher.core.resources.R
-import org.json.JSONObject
-import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.text.Normalizer
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 /**
  * Immutable result type for operator resolution containing display name and brand key.
@@ -55,7 +55,7 @@ object OperatorResolver {
     @VisibleForTesting
     val tokenToResKey = OperatorBrandDatabase.tokenToResKey
 
-    private val brandKeyCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val brandKeyCache = ConcurrentHashMap<String, String>()
     private const val MAX_BRAND_KEY_CACHE_SIZE = 128
 
     /**
@@ -75,7 +75,7 @@ object OperatorResolver {
      */
     suspend fun preload(context: Context) {
         if (db != null) return
-        kotlinx.coroutines.withContext(
+        withContext(
             IoDispatcherFallback.io,
         ) {
             loadDb(context)
