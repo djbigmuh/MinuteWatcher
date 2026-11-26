@@ -199,7 +199,7 @@ private fun OnboardingStep(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.secondaryContainer,
             ) {
-                androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = number,
                         style = MaterialTheme.typography.labelLarge,
