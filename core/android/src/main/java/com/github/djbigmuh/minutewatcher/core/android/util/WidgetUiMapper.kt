@@ -36,7 +36,6 @@ object WidgetUiMapper {
 
         val simUiStates =
             activeSims
-                .filter { state.simStates.containsKey(it.slot) || state.simListLoadFailed }
                 .sortedBy { it.slot }
                 .map { sim ->
                     val simConfig = state.simStates[sim.slot]
