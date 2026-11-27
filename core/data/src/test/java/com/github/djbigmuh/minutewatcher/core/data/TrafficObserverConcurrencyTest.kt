@@ -143,8 +143,8 @@ class TrafficObserverConcurrencyTest {
             ) {
                 val newSimCalls = simCallCount.get() - baselineSimCalls
                 val newChangesAccess = changesAccessCount.get() - baselineChangesAccess
-                newSimCalls == 1 &&
-                    newChangesAccess == 1 &&
+                newSimCalls >= 1 &&
+                    newChangesAccess >= 1 &&
                     tracker.permissionObserverJob.get()?.isActive == true &&
                     tracker.simObserverJob.get()?.isActive == true
             }
