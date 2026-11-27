@@ -204,24 +204,23 @@ object AppLogger {
     }
 
     @RunBlockingBridge("Synchronous logger worker shutdown bridge")
-    private fun stopWorkerBlocking() {
+    private fun stopWorkerBlocking(): Boolean {
         val oldJobs: List<Job>
         synchronized(this) {
             workerGeneration++
             oldJobs = workerJobs.toList()
             workerJob = null
         }
-        if (oldJobs.isNotEmpty()) {
-            runBlocking { joinAndWarnTimeout(oldJobs) }
-        }
+        return oldJobs.isEmpty() || runBlocking { joinAndWarnTimeout(oldJobs) }
     }
 
-    private suspend fun joinAndWarnTimeout(oldJobs: List<Job>) {
+    private suspend fun joinAndWarnTimeout(oldJobs: List<Job>): Boolean {
         val joined =
             withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS.milliseconds) {
                 oldJobs.forEach { it.join() }
-            }
-        if (joined == null) {
+                true
+            } ?: false
+        if (!joined) {
             try {
                 logger.w(
                     TAG,
@@ -230,6 +229,7 @@ object AppLogger {
             } catch (_: Exception) {
             }
         }
+        return joined
     }
 
     private fun isWorkerStartAllowed(newGen: Long): Boolean =
@@ -484,7 +484,9 @@ object AppLogger {
 
     @VisibleForTesting
     internal fun resetForTest() {
-        stopWorkerBlocking()
+        check(stopWorkerBlocking()) {
+            "AppLogger worker did not stop within $WORKER_JOIN_TIMEOUT_MS ms; refusing to reset test state"
+        }
         synchronized(enqueueLock) {
             synchronized(this) {
                 isShutdown = false
@@ -516,7 +518,9 @@ object AppLogger {
         customDispatcher: CoroutineDispatcher = Dispatchers.IO,
         customScope: CoroutineScope = CoroutineScope(customDispatcher + SupervisorJob()),
     ) {
-        stopWorkerBlocking()
+        check(stopWorkerBlocking()) {
+            "AppLogger worker did not stop within $WORKER_JOIN_TIMEOUT_MS ms; refusing to reinitialize test state"
+        }
         synchronized(enqueueLock) {
             synchronized(this) {
                 isShutdown = false
