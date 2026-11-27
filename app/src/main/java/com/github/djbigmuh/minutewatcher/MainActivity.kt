@@ -21,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.glance.appwidget.updateAll
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.github.djbigmuh.minutewatcher.controller.MainPermissionController
@@ -37,6 +40,10 @@ import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreenActions
 import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.github.djbigmuh.minutewatcher.feature.widget.MinutesGlanceWidget
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -62,6 +69,13 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var navigator: MainActivityNavigator
 
+    private val processLifecycleObserver =
+        object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                viewModel.resetSwipeHint()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -75,12 +89,21 @@ class MainActivity : AppCompatActivity() {
             widgetDataChangeDispatcher.notifyDataChanged("locale restore")
         }
         setupLocusContext()
+        ProcessLifecycleOwner.get().lifecycle.addObserver(processLifecycleObserver)
 
         setContent {
             AppContent()
         }
 
-        permissionHandler.checkPermissionsAndInit()
+        lifecycleScope.launch {
+            viewModel.appSettings
+                .map { settings -> settings.isLoaded && settings.onboardingCompleted }
+                .distinctUntilChanged()
+                .filter { it }
+                .collect {
+                    permissionHandler.checkPermissionsAndInit()
+                }
+        }
         handleIntent(intent)
     }
 
@@ -274,6 +297,11 @@ class MainActivity : AppCompatActivity() {
 
     private var lastPermissionState: Int = -1
 
+    override fun onDestroy() {
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(processLifecycleObserver)
+        super.onDestroy()
+    }
+
     private fun checkPermissionChanges() {
         val currentState =
             (if (permissionManager.hasPhoneStatePermission()) STATE_BIT_PHONE else 0) or
@@ -282,9 +310,11 @@ class MainActivity : AppCompatActivity() {
 
         if (lastPermissionState != -1 && (currentState != lastPermissionState)) {
             permissionStateNotifier.notifyChanged()
-            // If permissions changed, we might need a fresh setup run.
-            // KEEP policy in WorkScheduler will avoid duplication if it's already running.
-            permissionHandler.checkPermissionsAndInit()
+            // Permission prompts and setup are deferred until the welcome screen is completed.
+            // KEEP policy in WorkScheduler will avoid duplication if it is already running.
+            if (viewModel.appSettings.value.onboardingCompleted) {
+                permissionHandler.checkPermissionsAndInit()
+            }
         }
         lastPermissionState = currentState
     }

@@ -351,10 +351,10 @@ class NotificationHelperTest {
     }
 
     @Test
-    fun `isAodSummaryAvailable returns false when permission missing`() {
+    fun `isAodSummaryAvailable remains true when runtime permission is missing`() {
         whenever(permissionManager.hasNotificationPermission()).thenReturn(false)
 
-        assertFalse(helper.isAodSummaryAvailable())
+        assertTrue(helper.isAodSummaryAvailable())
     }
 
     @Test

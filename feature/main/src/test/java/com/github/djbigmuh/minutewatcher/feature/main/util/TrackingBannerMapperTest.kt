@@ -139,7 +139,12 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = true,
-                settings = AppSettings(onboardingCompleted = true, notificationPermissionPermanentlyDenied = true),
+                settings =
+                    AppSettings(
+                        onboardingCompleted = true,
+                        notifyLowMinutes = true,
+                        notificationPermissionPermanentlyDenied = true,
+                    ),
             )
         assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
 
@@ -150,7 +155,12 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = false,
-                settings = AppSettings(onboardingCompleted = true, notificationPermissionPermanentlyDenied = true),
+                settings =
+                    AppSettings(
+                        onboardingCompleted = true,
+                        notifyLowMinutes = true,
+                        notificationPermissionPermanentlyDenied = true,
+                    ),
             )
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.notificationPermissionState)
 
@@ -161,7 +171,12 @@ class TrackingBannerMapperTest {
                 phoneGranted = true,
                 usageGranted = true,
                 notificationsGranted = false,
-                settings = AppSettings(onboardingCompleted = true, notificationPermissionPermanentlyDenied = false),
+                settings =
+                    AppSettings(
+                        onboardingCompleted = true,
+                        notifyLowMinutes = true,
+                        notificationPermissionPermanentlyDenied = false,
+                    ),
             )
         assertEquals(PermissionUiState.NOT_REQUESTED, state.notificationPermissionState)
     }
@@ -198,7 +213,8 @@ class TrackingBannerMapperTest {
 
         assertEquals(PermissionUiState.PERMANENTLY_DENIED, state.phonePermissionState)
         assertFalse(state.showUsageAccessBanner) // Should be suppressed
-        assertEquals(PermissionUiState.NOT_REQUESTED, state.notificationPermissionState) // Default
+        // Notifications are disabled by default.
+        assertEquals(PermissionUiState.GRANTED, state.notificationPermissionState)
     }
 
     @Test

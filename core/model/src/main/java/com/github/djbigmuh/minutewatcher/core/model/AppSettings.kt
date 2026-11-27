@@ -30,8 +30,8 @@
 data class AppSettings(
     val theme: AppTheme = AppTheme.FOLLOW_SYSTEM,
     val language: String? = null,
-    val notifyLowMinutes: Boolean = true,
-    val notifyLowTraffic: Boolean = true,
+    val notifyLowMinutes: Boolean = false,
+    val notifyLowTraffic: Boolean = false,
     val widgetLayoutMode: Int = Constants.Widget.DEFAULT_LAYOUT_MODE,
     val widgetSimArrangement: Int = Constants.Widget.SIM_ARRANGEMENT_HORIZONTAL,
     val widgetTransparency: Int = Constants.Widget.DEFAULT_TRANSPARENCY,
