@@ -20,8 +20,8 @@ clean-clone build verification, store publishing procedures, and release prohibi
     - `MINUTEWATCHER_STORE_PASSWORD`: Keystore store password.
     - `MINUTEWATCHER_KEY_ALIAS`: Key alias.
     - `MINUTEWATCHER_KEY_PASSWORD`: Key password.
-- **Signing Requirement**: If any signing parameter or keystore file is missing, release builds will remain unsigned
-  (enforced by `app/build.gradle.kts`). Publishing unsigned builds is strictly prohibited.
+- **Signing Requirement**: Release build tasks fail fast if any signing parameter or the keystore file is missing
+  (enforced by `app/build.gradle.kts`). Configure signing before running `bundleRelease` or `assembleRelease`.
 - **Backup Policy**: `release.keystore` and signing passwords must be backed up securely in offline storage. Loss of the
   signing key permanently prevents updating the application on app stores.
 
