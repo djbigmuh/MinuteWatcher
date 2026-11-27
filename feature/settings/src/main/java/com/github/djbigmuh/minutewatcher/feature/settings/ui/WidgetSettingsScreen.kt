@@ -378,7 +378,10 @@ private fun WidgetSettingsList(
                     if (en) onRequestNotificationPermission()
                     onUpdateSettings { it.copy(notifyLowTraffic = en) }
                 },
-                onUpdateAodSummary = { en -> onUpdateSettings { it.copy(aodSummaryEnabled = en) } },
+                onUpdateAodSummary = { en ->
+                    if (en) onRequestNotificationPermission()
+                    onUpdateSettings { it.copy(aodSummaryEnabled = en) }
+                },
             )
         }
 
