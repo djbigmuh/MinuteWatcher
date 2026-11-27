@@ -433,6 +433,7 @@ class AppLoggerTest {
     @Test
     fun `worker generation changes preserve FIFO order`() =
         runTest {
+
             class FirstLogger : Logger by AndroidLogger()
             class SecondLogger : Logger by AndroidLogger()
 
