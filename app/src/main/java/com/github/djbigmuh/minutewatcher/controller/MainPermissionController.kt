@@ -10,6 +10,7 @@ import com.github.djbigmuh.minutewatcher.core.model.Constants
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +36,8 @@ class MainPermissionController
     ) {
         private val checkJob = AtomicReference<Job?>(null)
         private val notificationJob = AtomicReference<Job?>(null)
+        private val checkJobLock = Any()
+        private val notificationJobLock = Any()
 
         /**
          * Checks permissions and schedules background work if needed.
@@ -56,35 +59,36 @@ class MainPermissionController
             onRequestPhonePermission: () -> Unit,
             onCheckNotifications: (Boolean) -> Unit,
         ) {
-            val previous = checkJob.getAndSet(null)
-            previous?.cancel()
-            val newJob =
-                scope.launch {
-                    @Suppress("TooGenericExceptionCaught")
-                    try {
-                        if (permissionManager.hasPhoneStatePermission()) {
-                            handlePhoneStateGranted(
-                                this,
-                                isInitialSetupCompleted,
-                                appSettingsLoaded,
-                                lastPermissionState,
-                                onShowUsageAccessDialog,
-                                onCheckNotifications,
-                            )
-                        } else {
-                            handlePhoneStateDenied(appSettingsLoaded, onRequestPhonePermission)
+            synchronized(checkJobLock) {
+                val previous = checkJob.get()
+                val newJob =
+                    scope.launch(start = CoroutineStart.LAZY) {
+                        @Suppress("TooGenericExceptionCaught")
+                        try {
+                            if (permissionManager.hasPhoneStatePermission()) {
+                                handlePhoneStateGranted(
+                                    this,
+                                    isInitialSetupCompleted,
+                                    appSettingsLoaded,
+                                    lastPermissionState,
+                                    onShowUsageAccessDialog,
+                                    onCheckNotifications,
+                                )
+                            } else {
+                                handlePhoneStateDenied(appSettingsLoaded, onRequestPhonePermission)
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // Operation must complete without propagating exception for permission flow stability.
+                            AppLogger.e("MainPermissionController: Failed during checkPermissionsAndInit", e)
+                        } finally {
+                            checkJob.compareAndSet(currentCoroutineContext().job, null)
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // Operation must complete without propagating exception for permission flow stability.
-                        AppLogger.e("MainPermissionController: Failed during checkPermissionsAndInit", e)
-                    } finally {
-                        checkJob.compareAndSet(currentCoroutineContext().job, null)
                     }
-                }
-            if (!checkJob.compareAndSet(null, newJob)) {
-                newJob.cancel()
+                checkJob.set(newJob)
+                previous?.cancel()
+                newJob.start()
             }
         }
 
@@ -163,29 +167,30 @@ class MainPermissionController
             autoRequest: Boolean,
             onRequest: () -> Unit,
         ) {
-            val previous = notificationJob.getAndSet(null)
-            previous?.cancel()
-            val newJob =
-                scope.launch {
-                    @Suppress("TooGenericExceptionCaught")
-                    try {
-                        if (!permissionManager.hasNotificationPermission()) {
-                            val settings = readLoadedSettings(appSettingsLoaded, "checkNotifications")
-                            if (autoRequest && settings != null && !settings.notificationPermissionRequested) {
-                                onRequest()
+            synchronized(notificationJobLock) {
+                val previous = notificationJob.get()
+                val newJob =
+                    scope.launch(start = CoroutineStart.LAZY) {
+                        @Suppress("TooGenericExceptionCaught")
+                        try {
+                            if (!permissionManager.hasNotificationPermission()) {
+                                val settings = readLoadedSettings(appSettingsLoaded, "checkNotifications")
+                                if (autoRequest && settings != null && !settings.notificationPermissionRequested) {
+                                    onRequest()
+                                }
                             }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // Operation must complete without propagating exception for permission flow stability.
+                            AppLogger.e("MainPermissionController: Failed during checkNotifications", e)
+                        } finally {
+                            notificationJob.compareAndSet(currentCoroutineContext().job, null)
                         }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // Operation must complete without propagating exception for permission flow stability.
-                        AppLogger.e("MainPermissionController: Failed during checkNotifications", e)
-                    } finally {
-                        notificationJob.compareAndSet(currentCoroutineContext().job, null)
                     }
-                }
-            if (!notificationJob.compareAndSet(null, newJob)) {
-                newJob.cancel()
+                notificationJob.set(newJob)
+                previous?.cancel()
+                newJob.start()
             }
         }
 
