@@ -235,6 +235,7 @@ private fun WidgetSettingsContent(
             aodSummaryHasContent = aodSummaryHasContent,
             onUpdateSettings = onUpdateSettings,
             onUpdateSimSettings = onUpdateSimSettings,
+            onRequestNotificationPermission = onRequestNotificationPermission,
         ) {
             showColorPicker = true
         }
