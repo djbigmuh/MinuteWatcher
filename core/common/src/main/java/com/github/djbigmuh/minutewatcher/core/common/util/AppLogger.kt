@@ -242,18 +242,29 @@ object AppLogger {
         myGeneration: Long,
     ) {
         var returnedToQueue = false
+        var shouldProcess = true
         try {
             if (!isCurrentGeneration(myGeneration)) {
-                returnedToQueue = logChannel.trySend(entry).isSuccess
-                if (!returnedToQueue) {
+                // Serialize handoff with shutdown/reset drains. Otherwise a timed-out
+                // obsolete worker could put an entry back after teardown emptied the channel.
+                synchronized(enqueueLock) {
+                    val acceptsEntries = isFileLoggingEnabled && !isShutdown && logDir != null
+                    if (acceptsEntries) {
+                        returnedToQueue = logChannel.trySend(entry).isSuccess
+                        shouldProcess = !returnedToQueue
+                    } else {
+                        shouldProcess = false
+                    }
+                }
+                if (!returnedToQueue && shouldProcess) {
                     Log.w(
                         TAG,
                         "AppLogger: failed to return log entry to channel " +
                             "on obsolete worker generation, processing normally",
                     )
-                    processLogEntry(entry)
                 }
-            } else {
+            }
+            if (shouldProcess) {
                 processLogEntry(entry)
             }
         } finally {
