@@ -273,12 +273,10 @@ class TrafficTracker
             synchronized(observerLock) {
                 val existing = permissionObserverJob.get()
                 if (existing == null || !existing.isActive) {
-                    val previous = permissionObserverJob.getAndSet(null)
+                    val newJob = scope.launch(start = CoroutineStart.LAZY) { runPermissionObserver() }
+                    val previous = permissionObserverJob.getAndSet(newJob)
                     previous?.cancel()
-                    val newJob = scope.launch { runPermissionObserver() }
-                    if (!permissionObserverJob.compareAndSet(null, newJob)) {
-                        newJob.cancel()
-                    }
+                    newJob.start()
                 }
             }
         }
@@ -402,12 +400,10 @@ class TrafficTracker
             synchronized(observerLock) {
                 val existing = simObserverJob.get()
                 if (existing == null || !existing.isActive) {
-                    val previous = simObserverJob.getAndSet(null)
+                    val newJob = scope.launch(start = CoroutineStart.LAZY) { runSimObserver() }
+                    val previous = simObserverJob.getAndSet(newJob)
                     previous?.cancel()
-                    val newJob = scope.launch { runSimObserver() }
-                    if (!simObserverJob.compareAndSet(null, newJob)) {
-                        newJob.cancel()
-                    }
+                    newJob.start()
                 }
             }
         }
