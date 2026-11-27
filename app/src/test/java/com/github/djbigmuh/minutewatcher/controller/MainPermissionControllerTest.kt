@@ -73,7 +73,7 @@ class MainPermissionControllerTest {
             whenever(permissionManager.hasPhoneStatePermission()).thenReturn(true)
             whenever(permissionManager.hasUsageStatsPermission()).thenReturn(true)
 
-            var notificationsChecked = false
+            var notificationAutoRequest = true
             appSettingsFlow.value = AppSettings(isLoaded = true)
 
             controller.checkPermissionsAndInit(
@@ -83,12 +83,12 @@ class MainPermissionControllerTest {
                 lastPermissionState = -1,
                 onShowUsageAccessDialog = {},
                 onRequestPhonePermission = {},
-                onCheckNotifications = { notificationsChecked = true },
+                onCheckNotifications = { notificationAutoRequest = it },
             )
 
             advanceUntilIdle()
             verify(workScheduler).scheduleInitialSetup(any(), any())
-            assertTrue("Should check notifications if phone and usage granted", notificationsChecked)
+            assertFalse("Startup must not automatically request notification permission", notificationAutoRequest)
         }
 
     @Test
