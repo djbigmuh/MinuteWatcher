@@ -21,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.glance.appwidget.updateAll
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.github.djbigmuh.minutewatcher.controller.MainPermissionController
@@ -66,6 +69,13 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var navigator: MainActivityNavigator
 
+    private val processLifecycleObserver =
+        object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                viewModel.resetSwipeHint()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -79,6 +89,7 @@ class MainActivity : AppCompatActivity() {
             widgetDataChangeDispatcher.notifyDataChanged("locale restore")
         }
         setupLocusContext()
+        ProcessLifecycleOwner.get().lifecycle.addObserver(processLifecycleObserver)
 
         setContent {
             AppContent()
@@ -285,6 +296,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var lastPermissionState: Int = -1
+
+    override fun onDestroy() {
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(processLifecycleObserver)
+        super.onDestroy()
+    }
 
     private fun checkPermissionChanges() {
         val currentState =
