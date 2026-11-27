@@ -7,6 +7,14 @@ import org.junit.Test
 
 class WidgetSettingsStateTest {
     @Test
+    fun `notification settings are disabled by default`() {
+        val state = WidgetSettingsState()
+
+        assertFalse(state.notifyLowMinutes)
+        assertFalse(state.notifyLowTraffic)
+    }
+
+    @Test
     fun `validate should clamp values and preserve simStates`() {
         val simStates =
             mapOf(
