@@ -40,7 +40,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
-import java.io.IOException
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -147,15 +146,15 @@ class WidgetSettingsViewModel
          * Persists that the notification permission prompt has been shown from widget settings.
          */
         fun setNotificationPermissionRequested() {
-            updateNotificationPermissionSettings { copy(notificationPermissionRequested = true) }
+            updateNotificationPermissionSettings { settings -> settings.copy(notificationPermissionRequested = true) }
         }
 
         /**
          * Persists the result of the notification permission request.
          */
         fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
-            updateNotificationPermissionSettings {
-                copy(
+            updateNotificationPermissionSettings { settings ->
+                settings.copy(
                     notificationPermissionRequested = true,
                     notificationPermissionPermanentlyDenied = denied,
                 )
@@ -163,7 +162,7 @@ class WidgetSettingsViewModel
         }
 
         private fun updateNotificationPermissionSettings(
-            transform: AppSettings.() -> AppSettings,
+            transform: (AppSettings) -> AppSettings,
         ) {
             viewModelScope.launch {
                 try {
