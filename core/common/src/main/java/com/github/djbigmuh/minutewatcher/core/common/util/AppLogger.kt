@@ -36,10 +36,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * - Single worker coroutine consumes log channel sequentially in FIFO order.
  * - New worker is registered synchronously under state lock (`init`, `initForTest`)
  *   and waits for the previous worker generation to exit before consuming, preserving
- *   a single FIFO consumer; obsolete workers return unprocessed entries to the channel.
+ *   a single FIFO consumer; an obsolete worker completes any entry it already received.
  *   Teardown paths (`resetForTest`, `shutdown`) additionally perform a time-limited join
  *   (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
- * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
+ * - Monotonic generation numbers ensure obsolete workers stop after completing any entry already received.
  * - Pending-entry accounting ([hasPendingLogs]) covers queued and in-flight logs until processing completes.
  * - Entries are enqueued only if file logging is enabled, not shutdown, and log directory is set.
  * - Queue capacity is `LOG_QUEUE_CAPACITY` with `DROP_OLDEST` policy; evictions are counted (`droppedEntries`) and reported via throttled warning through [logger].
@@ -241,44 +241,18 @@ object AppLogger {
                 withTimeoutOrNull(WORKER_POLL_INTERVAL_MS.milliseconds) {
                     logChannel.receive()
                 } ?: continue
-            handleReceivedEntry(entry, myGeneration)
+            handleReceivedEntry(entry)
         }
     }
 
-    private fun handleReceivedEntry(
-        entry: LogEntry,
-        myGeneration: Long,
-    ) {
-        var returnedToQueue = false
-        var shouldProcess = true
+    private fun handleReceivedEntry(entry: LogEntry) {
+        // Once removed from the channel, an entry must be completed by this worker.
+        // Re-enqueuing an obsolete worker's entry would move it to the tail and break FIFO.
+        // The next generation waits for this worker to exit before consuming another entry.
         try {
-            if (!isCurrentGeneration(myGeneration)) {
-                // Serialize handoff with shutdown/reset drains. Otherwise a timed-out
-                // obsolete worker could put an entry back after teardown emptied the channel.
-                synchronized(enqueueLock) {
-                    val acceptsEntries = isFileLoggingEnabled && !isShutdown && logDir != null
-                    if (acceptsEntries) {
-                        returnedToQueue = logChannel.trySend(entry).isSuccess
-                        shouldProcess = !returnedToQueue
-                    } else {
-                        shouldProcess = false
-                    }
-                }
-                if (!returnedToQueue && shouldProcess) {
-                    Log.w(
-                        TAG,
-                        "AppLogger: failed to return log entry to channel " +
-                            "on obsolete worker generation, processing normally",
-                    )
-                }
-            }
-            if (shouldProcess) {
-                processLogEntry(entry)
-            }
+            processLogEntry(entry)
         } finally {
-            if (!returnedToQueue) {
-                pendingCount.updateAndGet { maxOf(0, it - 1) }
-            }
+            pendingCount.updateAndGet { maxOf(0, it - 1) }
         }
     }
 
