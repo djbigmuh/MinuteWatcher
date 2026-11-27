@@ -136,7 +136,8 @@ class MainPermissionController
                     onShowUsageAccessDialog(true)
                 }
             } else {
-                onCheckNotifications(true)
+                // Notification permission is requested only after the user enables notifications in settings.
+                onCheckNotifications(false)
             }
         }
 
