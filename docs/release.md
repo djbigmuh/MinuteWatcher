@@ -14,12 +14,14 @@ clean-clone build verification, store publishing procedures, and release prohibi
 ## 2. Release Signing
 
 - **Keystore File**: `app/release.keystore` located in the `app` module directory (excluded from VCS via `.gitignore`).
-- **Environment Variables**:
+- **Local Configuration**: An optional root-level `signing.properties` may hold `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. This file is ignored by Git and must never be committed. Use `app/release.keystore` for the default keystore location, or set `storeFile=app/release.keystore` explicitly.
+- **Environment Variables**: The following variables override matching values from the local properties file, making CI-provided secrets authoritative:
+    - `MINUTEWATCHER_STORE_FILE`: Optional path to the keystore (defaults to `app/release.keystore`).
     - `MINUTEWATCHER_STORE_PASSWORD`: Keystore store password.
     - `MINUTEWATCHER_KEY_ALIAS`: Key alias.
     - `MINUTEWATCHER_KEY_PASSWORD`: Key password.
-- **Signing Requirement**: If any signing parameter or keystore file is missing, release builds will remain unsigned
-  (enforced by `app/build.gradle.kts`). Publishing unsigned builds is strictly prohibited.
+- **Signing Requirement**: Release build tasks fail fast if any signing parameter or the keystore file is missing
+  (enforced by `app/build.gradle.kts`). Configure signing before running `bundleRelease` or `assembleRelease`.
 - **Backup Policy**: `release.keystore` and signing passwords must be backed up securely in offline storage. Loss of the
   signing key permanently prevents updating the application on app stores.
 

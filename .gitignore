@@ -29,6 +29,7 @@ Thumbs.db
 .robolectric/
 
 # Sensitive files and keys
+signing.properties
 **/local.properties
 **/google-services.json
 keystore.properties

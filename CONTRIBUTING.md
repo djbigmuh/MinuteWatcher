@@ -206,5 +206,6 @@ External task files, instruction documents, and audit requirements must never be
     - `MINUTEWATCHER_KEY_PASSWORD`
 - **Security Rule:** `release.keystore` and passwords must never be committed to version control. The key backup must be
   safely stored by the project owner.
-- **Unsigned Build Fallback:** If `release.keystore` or any of the required environment variables are absent, the
-  release build produces an unsigned APK (`app-release-unsigned.apk`). No debug key fallback is used for release builds.
+- **Release Signing Gate:** Release build tasks fail fast if `app/release.keystore` or any required signing
+  parameter is absent. Configure the release key and credentials before running `bundleRelease` or `assembleRelease`.
+  No debug key fallback is used for release builds.
