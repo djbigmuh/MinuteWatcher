@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -78,15 +77,8 @@ class MainViewModel
                     initialValue = true,
                 )
 
-        val isSwipeHintDismissed: StateFlow<Boolean> =
-            controllers.settings.appSettings
-                .map { settings: AppSettings -> settings.swipeHintDismissed }
-                .distinctUntilChanged()
-                .stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(Constants.Flow.WHILE_SUBSCRIBED_STOP_TIMEOUT_MS),
-                    initialValue = controllers.settings.appSettings.value.swipeHintDismissed,
-                )
+        private val _isSwipeHintDismissed = MutableStateFlow(false)
+        val isSwipeHintDismissed: StateFlow<Boolean> = _isSwipeHintDismissed.asStateFlow()
 
         private val _isRefreshing = MutableStateFlow(false)
         val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -231,7 +223,7 @@ class MainViewModel
 
         fun setLanguage(language: String?) = controllers.settings.setLanguage(language)
 
-        fun dismissSwipeHint() = controllers.settings.dismissSwipeHint()
+        fun dismissSwipeHint() { _isSwipeHintDismissed.value = true }
 
         // Delegate SIM Data Actions
         fun retrySimList() = controllers.simData.retrySimList()
