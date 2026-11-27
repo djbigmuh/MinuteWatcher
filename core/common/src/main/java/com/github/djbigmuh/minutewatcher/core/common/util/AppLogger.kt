@@ -34,10 +34,11 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * **Invariants:**
  * - Single worker coroutine consumes log channel sequentially in FIFO order.
- * - New worker is registered synchronously under state lock (`init`, `initForTest`);
- *   previous worker exits cooperatively after its generation becomes obsolete,
- *   returning unprocessed entries to the channel; teardown paths (`resetForTest`, `shutdown`)
- *   additionally perform a time-limited join (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
+ * - New worker is registered synchronously under state lock (`init`, `initForTest`)
+ *   and waits for the previous worker generation to exit before consuming, preserving
+ *   a single FIFO consumer; obsolete workers return unprocessed entries to the channel.
+ *   Teardown paths (`resetForTest`, `shutdown`) additionally perform a time-limited join
+ *   (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
  * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
  * - Pending-entry accounting ([hasPendingLogs]) covers queued and in-flight logs until processing completes.
  * - Entries are enqueued only if file logging is enabled, not shutdown, and log directory is set.
@@ -176,10 +177,17 @@ object AppLogger {
             workerGeneration++
             newGen = workerGeneration
             // Do not cancel the old worker: cancellation can race with receive()
-            // after it has removed an entry from the channel.
+            // after it has removed an entry from the channel. Chain generations so
+            // two workers never consume concurrently and reorder FIFO entries.
+            val previousJob = workerJob
             val newJob =
                 if (isWorkerStartAllowed(newGen)) {
-                    logScope.launch { runWorker(newGen) }
+                    logScope.launch {
+                        previousJob?.join()
+                        if (isCurrentGeneration(newGen)) {
+                            runWorker(newGen)
+                        }
+                    }
                 } else {
                     null
                 }
