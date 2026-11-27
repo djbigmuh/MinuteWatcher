@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -36,7 +37,7 @@ class TrafficObserverConcurrencyTest {
     private val permissionChecker: TrafficPermissionChecker = mock()
 
     private val permissionChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private val simFlow = MutableSharedFlow<List<ActiveSimInfo>>(extraBufferCapacity = 1)
+    private val simFlow = MutableStateFlow<List<ActiveSimInfo>>(emptyList())
 
     private val simCallCount = AtomicInteger(0)
     private val changesAccessCount = AtomicInteger(0)
@@ -99,7 +100,8 @@ class TrafficObserverConcurrencyTest {
                 simCallCount.get() >= 1 &&
                     changesAccessCount.get() >= 1 &&
                     tracker.permissionObserverJob.get()?.isActive == true &&
-                    tracker.simObserverJob.get()?.isActive == true
+                    tracker.simObserverJob.get()?.isActive == true &&
+                    tracker.initJob.get()?.isCompleted == true
             }
 
             assertEquals(true, tracker.permissionObserverJob.get()?.isActive)
