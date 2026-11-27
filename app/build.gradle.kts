@@ -28,7 +28,7 @@ val keystoreFile =
     if (storePath != null) {
         rootProject.file(storePath)
     } else {
-        rootProject.file("release.keystore")
+        rootProject.file("app/release.keystore")
     }
 
 val hasReleaseSigning =
