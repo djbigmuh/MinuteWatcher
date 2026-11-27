@@ -166,7 +166,7 @@ class WidgetSettingsViewModel
         ) {
             viewModelScope.launch {
                 try {
-                    appSettingsRepository.updateAppSettings(transform)
+                    appSettingsRepository.updateAppSettings { transform(this) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: IOException) {
