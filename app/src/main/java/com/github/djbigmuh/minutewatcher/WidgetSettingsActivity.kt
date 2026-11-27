@@ -2,13 +2,13 @@ package com.github.djbigmuh.minutewatcher
 
 import android.Manifest
 import android.appwidget.AppWidgetManager
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
