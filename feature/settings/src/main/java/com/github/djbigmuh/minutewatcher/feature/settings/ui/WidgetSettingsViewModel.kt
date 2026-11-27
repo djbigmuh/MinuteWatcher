@@ -161,9 +161,7 @@ class WidgetSettingsViewModel
             }
         }
 
-        private fun updateNotificationPermissionSettings(
-            transform: (AppSettings) -> AppSettings,
-        ) {
+        private fun updateNotificationPermissionSettings(transform: (AppSettings) -> AppSettings) {
             viewModelScope.launch {
                 try {
                     appSettingsRepository.updateAppSettings { transform(this) }
