@@ -9,6 +9,7 @@ import com.github.djbigmuh.minutewatcher.core.domain.AodSummaryAvailability
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageStateRepository
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetSettingsLoader
+import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.AppTheme
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
@@ -76,7 +77,7 @@ class WidgetSettingsViewModel
     constructor(
         private val loader: WidgetSettingsLoader,
         private val saver: WidgetSettingsSaver,
-        appSettingsRepository: AppSettingsRepository,
+        private val appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val appScope: CoroutineScope,
         usageStateRepository: UsageStateRepository,
         private val aodSummaryAvailability: AodSummaryAvailability,
@@ -139,6 +140,37 @@ class WidgetSettingsViewModel
             loadSettings()
             setupAutoSave()
             refreshAodSummaryAvailability()
+        }
+
+        /**
+         * Persists that the notification permission prompt has been shown from widget settings.
+         */
+        fun setNotificationPermissionRequested() {
+            updateNotificationPermissionSettings { settings -> settings.copy(notificationPermissionRequested = true) }
+        }
+
+        /**
+         * Persists the result of the notification permission request.
+         */
+        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
+            updateNotificationPermissionSettings { settings ->
+                settings.copy(
+                    notificationPermissionRequested = true,
+                    notificationPermissionPermanentlyDenied = denied,
+                )
+            }
+        }
+
+        private fun updateNotificationPermissionSettings(transform: (AppSettings) -> AppSettings) {
+            viewModelScope.launch {
+                try {
+                    appSettingsRepository.updateAppSettings { settings -> transform(settings) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: IOException) {
+                    AppLogger.e("Failed to persist notification permission state", e)
+                }
+            }
         }
 
         /**
