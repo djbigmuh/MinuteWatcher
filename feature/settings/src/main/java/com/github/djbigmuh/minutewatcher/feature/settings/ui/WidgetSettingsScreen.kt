@@ -66,6 +66,7 @@ private typealias SimSettingsTransform = (SimSettingsState) -> SimSettingsState
 fun WidgetSettingsScreen(
     viewModel: WidgetSettingsViewModel,
     onBack: () -> Unit,
+    onRequestNotificationPermission: () -> Unit = {},
 ) {
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
@@ -102,6 +103,7 @@ fun WidgetSettingsScreen(
         onUpdateSettings = viewModel::updateSettings,
         onUpdateSimSettings = viewModel::updateSimSettings,
         onBack = onBack,
+        onRequestNotificationPermission = onRequestNotificationPermission,
     )
 }
 
@@ -118,6 +120,7 @@ fun WidgetSettingsScreenBody(
     onUpdateSettings: ((WidgetSettingsState) -> WidgetSettingsState) -> Unit,
     onUpdateSimSettings: (slot: Int, transform: SimSettingsTransform) -> Unit,
     onBack: () -> Unit,
+    onRequestNotificationPermission: () -> Unit = {},
 ) {
     Box(
         modifier =
@@ -149,6 +152,7 @@ fun WidgetSettingsScreenBody(
                 onUpdateSettings = onUpdateSettings,
                 onUpdateSimSettings = onUpdateSimSettings,
                 onBack = onBack,
+                onRequestNotificationPermission = onRequestNotificationPermission,
             )
         }
     }
@@ -203,6 +207,7 @@ private fun WidgetSettingsContent(
     onUpdateSettings: ((WidgetSettingsState) -> WidgetSettingsState) -> Unit,
     onUpdateSimSettings: (slot: Int, transform: SimSettingsTransform) -> Unit,
     onBack: () -> Unit,
+    onRequestNotificationPermission: () -> Unit,
 ) {
     var showColorPicker by rememberSaveable { mutableStateOf(value = false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -324,6 +329,7 @@ private fun WidgetSettingsList(
     aodSummaryHasContent: Boolean,
     onUpdateSettings: ((WidgetSettingsState) -> WidgetSettingsState) -> Unit,
     onUpdateSimSettings: (slot: Int, transform: SimSettingsTransform) -> Unit,
+    onRequestNotificationPermission: () -> Unit,
     onShowColorPicker: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
@@ -363,8 +369,14 @@ private fun WidgetSettingsList(
                 enabled = true,
                 aodSummaryAvailable = aodSummaryAvailable,
                 aodSummaryHasContent = aodSummaryHasContent,
-                onUpdateNotifyMinutes = { en -> onUpdateSettings { it.copy(notifyLowMinutes = en) } },
-                onUpdateNotifyTraffic = { en -> onUpdateSettings { it.copy(notifyLowTraffic = en) } },
+                onUpdateNotifyMinutes = { en ->
+                    if (en) onRequestNotificationPermission()
+                    onUpdateSettings { it.copy(notifyLowMinutes = en) }
+                },
+                onUpdateNotifyTraffic = { en ->
+                    if (en) onRequestNotificationPermission()
+                    onUpdateSettings { it.copy(notifyLowTraffic = en) }
+                },
                 onUpdateAodSummary = { en -> onUpdateSettings { it.copy(aodSummaryEnabled = en) } },
             )
         }
