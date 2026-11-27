@@ -294,9 +294,11 @@ class MainActivity : AppCompatActivity() {
 
         if (lastPermissionState != -1 && (currentState != lastPermissionState)) {
             permissionStateNotifier.notifyChanged()
-            // If permissions changed, we might need a fresh setup run.
-            // KEEP policy in WorkScheduler will avoid duplication if it's already running.
-            permissionHandler.checkPermissionsAndInit()
+            // Permission prompts and setup are deferred until the welcome screen is completed.
+            // KEEP policy in WorkScheduler will avoid duplication if it is already running.
+            if (viewModel.appSettings.value.onboardingCompleted) {
+                permissionHandler.checkPermissionsAndInit()
+            }
         }
         lastPermissionState = currentState
     }
