@@ -14,7 +14,9 @@ clean-clone build verification, store publishing procedures, and release prohibi
 ## 2. Release Signing
 
 - **Keystore File**: `app/release.keystore` located in the `app` module directory (excluded from VCS via `.gitignore`).
-- **Environment Variables**:
+- **Local Configuration**: An optional root-level `signing.properties` may hold `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. This file is ignored by Git and must never be committed. Use `app/release.keystore` for the default keystore location, or set `storeFile=app/release.keystore` explicitly.
+- **Environment Variables**: The following variables override matching values from the local properties file, making CI-provided secrets authoritative:
+    - `MINUTEWATCHER_STORE_FILE`: Optional path to the keystore (defaults to `app/release.keystore`).
     - `MINUTEWATCHER_STORE_PASSWORD`: Keystore store password.
     - `MINUTEWATCHER_KEY_ALIAS`: Key alias.
     - `MINUTEWATCHER_KEY_PASSWORD`: Key password.
