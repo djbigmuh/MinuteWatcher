@@ -459,7 +459,7 @@ class AppLoggerTest {
                 File(dir, "logs.txt")
                     .readLines()
                     .mapNotNull { line ->
-                        Regex("""Generation FIFO entry (\\d+)""")
+                        Regex("""Generation FIFO entry (\d+)""")
                             .find(line)
                             ?.groupValues
                             ?.get(1)
