@@ -9,7 +9,6 @@ import com.github.djbigmuh.minutewatcher.core.common.util.AppLogger.logger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
@@ -35,15 +34,15 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * **Invariants:**
  * - Single worker coroutine consumes log channel sequentially in FIFO order.
- * - New worker is registered synchronously under state lock (`init`, `initForTest`);
- *   previous worker is canceled and completes on generation check, returning
- *   unprocessed entries to the channel; teardown paths (`resetForTest`, `shutdown`)
- *   additionally perform a time-limited join (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
- * - Monotonic generation numbers ensure obsolete workers stop and return unprocessed entries to the channel.
- * - In-flight entries counter ([hasPendingLogs]) tracks logs currently
- *   being processed by worker.
+ * - New worker is registered synchronously under state lock (`init`, `initForTest`)
+ *   and waits for the previous worker generation to exit before consuming, preserving
+ *   a single FIFO consumer; an obsolete worker completes any entry it already received.
+ *   Teardown paths (`resetForTest`, `shutdown`) additionally perform a time-limited join
+ *   (`WORKER_JOIN_TIMEOUT_MS`) outside state lock.
+ * - Monotonic generation numbers ensure obsolete workers stop after completing any entry already received.
+ * - Pending-entry accounting ([hasPendingLogs]) covers queued and in-flight logs until processing completes.
  * - Entries are enqueued only if file logging is enabled, not shutdown, and log directory is set.
- * - Queue capacity is `LOG_QUEUE_CAPACITY` with `DROP_OLDEST` policy; evictions are counted (`droppedEntries`, approximate) and reported via throttled warning through [logger].
+ * - Queue capacity is `LOG_QUEUE_CAPACITY` with `DROP_OLDEST` policy; evictions are counted (`droppedEntries`) and reported via throttled warning through [logger].
  * - Failed file writes and drained entries on write failure threshold are routed to [logger] with `[DRAIN]` prefix
  *   outside state lock, guaranteeing no silent log losses.
  * - Rotation and file write operations are serialized using `synchronized(this)` monitor.
@@ -77,30 +76,31 @@ object AppLogger {
 
     private var consecutiveWriteFailures = 0
 
-    private val inFlightCount = AtomicInteger(0)
+    private val pendingCount = AtomicInteger(0)
+    private val enqueueLock = Any()
     private val droppedEntryCount = AtomicLong(0)
-    private val queuedCount = AtomicInteger(0)
     private var workerGeneration = 0L
 
-    /**
-     * Approximate total of entries evicted by the DROP_OLDEST policy when the queue was full.
-     * Approximate because the fullness check and send are not a single atomic operation.
-     */
+    /** Total number of entries evicted by the DROP_OLDEST channel policy. */
     @VisibleForTesting
     internal val droppedEntries: Long get() = droppedEntryCount.get()
-
-    private val isLogQueueFull: Boolean
-        get() = queuedCount.get() >= LOG_QUEUE_CAPACITY
 
     private val logChannel =
         Channel<LogEntry>(
             capacity = LOG_QUEUE_CAPACITY,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            onUndeliveredElement = {
+                // Keep this callback non-blocking and free of external logger calls:
+                // Channel invokes it synchronously during DROP_OLDEST/send operations.
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
+                droppedEntryCount.incrementAndGet()
+            },
         )
 
     private var dispatcher: CoroutineDispatcher = Dispatchers.IO
     private var logScope: CoroutineScope = CoroutineScope(dispatcher + SupervisorJob())
     private var workerJob: Job? = null
+    private val workerJobs = mutableSetOf<Job>()
 
     private class LogEntry(
         val level: String,
@@ -177,35 +177,50 @@ object AppLogger {
             workerGeneration++
             newGen = workerGeneration
             // Do not cancel the old worker: cancellation can race with receive()
-            // after it has removed an entry from the channel.
-            workerJob =
+            // after it has removed an entry from the channel. Chain generations so
+            // two workers never consume concurrently and reorder FIFO entries.
+            val previousJob = workerJob
+            val newJob =
                 if (isWorkerStartAllowed(newGen)) {
-                    logScope.launch { runWorker(newGen) }
+                    logScope.launch {
+                        previousJob?.join()
+                        if (isCurrentGeneration(newGen)) {
+                            runWorker(newGen)
+                        }
+                    }
                 } else {
                     null
                 }
+            workerJob = newJob
+            if (newJob != null) {
+                workerJobs.add(newJob)
+                newJob.invokeOnCompletion {
+                    synchronized(this) {
+                        workerJobs.remove(newJob)
+                    }
+                }
+            }
         }
     }
 
     @RunBlockingBridge("Synchronous logger worker shutdown bridge")
-    private fun stopWorkerBlocking() {
-        val oldJob: Job?
+    private fun stopWorkerBlocking(): Boolean {
+        val oldJobs: List<Job>
         synchronized(this) {
             workerGeneration++
-            oldJob = workerJob
+            oldJobs = workerJobs.toList()
             workerJob = null
         }
-        if (oldJob != null) {
-            runBlocking { joinAndWarnTimeout(oldJob) }
-        }
+        return oldJobs.isEmpty() || runBlocking { joinAndWarnTimeout(oldJobs) }
     }
 
-    private suspend fun joinAndWarnTimeout(oldJob: Job) {
+    private suspend fun joinAndWarnTimeout(oldJobs: List<Job>): Boolean {
         val joined =
             withTimeoutOrNull(WORKER_JOIN_TIMEOUT_MS.milliseconds) {
-                oldJob.join()
-            }
-        if (joined == null) {
+                oldJobs.forEach { it.join() }
+                true
+            } ?: false
+        if (!joined) {
             try {
                 logger.w(
                     TAG,
@@ -214,6 +229,7 @@ object AppLogger {
             } catch (_: Exception) {
             }
         }
+        return joined
     }
 
     private fun isWorkerStartAllowed(newGen: Long): Boolean =
@@ -225,32 +241,18 @@ object AppLogger {
                 withTimeoutOrNull(WORKER_POLL_INTERVAL_MS.milliseconds) {
                     logChannel.receive()
                 } ?: continue
-            handleReceivedEntry(entry, myGeneration)
+            handleReceivedEntry(entry)
         }
     }
 
-    private fun handleReceivedEntry(
-        entry: LogEntry,
-        myGeneration: Long,
-    ) {
-        queuedCount.updateAndGet { maxOf(0, it - 1) }
-        inFlightCount.incrementAndGet()
+    private fun handleReceivedEntry(entry: LogEntry) {
+        // Once removed from the channel, an entry must be completed by this worker.
+        // Re-enqueuing an obsolete worker's entry would move it to the tail and break FIFO.
+        // The next generation waits for this worker to exit before consuming another entry.
         try {
-            if (!isCurrentGeneration(myGeneration)) {
-                val returned = logChannel.trySend(entry).isSuccess
-                if (!returned) {
-                    Log.w(
-                        TAG,
-                        "AppLogger: failed to return log entry to channel " +
-                            "on obsolete worker generation, processing normally",
-                    )
-                    processLogEntry(entry)
-                }
-            } else {
-                processLogEntry(entry)
-            }
+            processLogEntry(entry)
         } finally {
-            inFlightCount.decrementAndGet()
+            pendingCount.updateAndGet { maxOf(0, it - 1) }
         }
     }
 
@@ -303,16 +305,27 @@ object AppLogger {
         level: String,
         message: String,
     ) {
-        if (!isFileLoggingEnabled || isShutdown || logDir == null) return
-        if (isLogQueueFull) {
-            val total = droppedEntryCount.incrementAndGet()
-            if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
-                runCatching {
-                    logger.w(TAG, "AppLogger: log queue full, oldest entry dropped (total dropped: $total)")
-                }
+        var droppedTotal: Long? = null
+        synchronized(enqueueLock) {
+            if (!isFileLoggingEnabled || isShutdown || logDir == null) return
+            val previousDropped = droppedEntryCount.get()
+            pendingCount.incrementAndGet()
+            val result = logChannel.trySend(LogEntry(level, message))
+            if (result.isFailure) {
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
+            }
+            val currentDropped = droppedEntryCount.get()
+            if (currentDropped > previousDropped &&
+                (currentDropped == 1L || currentDropped % DROP_WARNING_INTERVAL == 0L)
+            ) {
+                droppedTotal = currentDropped
             }
         }
-        logChannel.trySend(LogEntry(level, message))
+        droppedTotal?.let { total ->
+            runCatching {
+                logger.w(TAG, "AppLogger: log queue full, oldest entry dropped (total dropped: $total)")
+            }
+        }
     }
 
     private fun openWriter(dir: File): BufferedWriter? =
@@ -399,6 +412,7 @@ object AppLogger {
             closeWriter()
             while (true) {
                 val next = logChannel.tryReceive().getOrNull() ?: break
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
                 drainedEntries.add(next)
             }
         }
@@ -453,35 +467,44 @@ object AppLogger {
      */
     @VisibleForTesting
     internal fun shutdown() {
-        synchronized(this) {
-            isShutdown = true
-            isFileLoggingEnabled = false
-            closeWriter()
+        synchronized(enqueueLock) {
+            synchronized(this) {
+                isShutdown = true
+                isFileLoggingEnabled = false
+                closeWriter()
+            }
         }
         stopWorkerBlocking()
+        synchronized(enqueueLock) {
+            while (logChannel.tryReceive().isSuccess) {
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
+            }
+        }
     }
 
     @VisibleForTesting
     internal fun resetForTest() {
-        synchronized(this) {
-            isShutdown = false
-            isFileLoggingEnabled = BuildConfig.DEBUG
-            consecutiveWriteFailures = 0
-            droppedEntryCount.set(0)
-            queuedCount.set(0)
-            closeWriter()
-            logDir = null
-            logger = AndroidLogger()
+        check(stopWorkerBlocking()) {
+            "AppLogger worker did not stop within $WORKER_JOIN_TIMEOUT_MS ms; refusing to reset test state"
+        }
+        synchronized(enqueueLock) {
+            synchronized(this) {
+                isShutdown = false
+                isFileLoggingEnabled = BuildConfig.DEBUG
+                consecutiveWriteFailures = 0
+                droppedEntryCount.set(0)
+                closeWriter()
+                logDir = null
+                logger = AndroidLogger()
+            }
             while (logChannel.tryReceive().isSuccess) {
-                // Drain channel
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
             }
         }
-        stopWorkerBlocking()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @VisibleForTesting
-    internal fun hasPendingLogs(): Boolean = !logChannel.isEmpty || inFlightCount.get() > 0
+    internal fun hasPendingLogs(): Boolean = pendingCount.get() > 0
 
     /**
      * Initializes the logger for testing with full state reset.
@@ -495,20 +518,26 @@ object AppLogger {
         customDispatcher: CoroutineDispatcher = Dispatchers.IO,
         customScope: CoroutineScope = CoroutineScope(customDispatcher + SupervisorJob()),
     ) {
-        synchronized(this) {
-            isShutdown = false
-            closeWriter()
-            consecutiveWriteFailures = 0
-            droppedEntryCount.set(0)
-            queuedCount.set(0)
-            logDir = dir
-            logger = AndroidLogger()
-            dispatcher = customDispatcher
-            logScope = customScope
-            isFileLoggingEnabled = true
-            while (logChannel.tryReceive().isSuccess) {
-                // Drain channel
+        check(stopWorkerBlocking()) {
+            "AppLogger worker did not stop within $WORKER_JOIN_TIMEOUT_MS ms; refusing to reinitialize test state"
+        }
+        synchronized(enqueueLock) {
+            synchronized(this) {
+                isShutdown = false
+                closeWriter()
+                consecutiveWriteFailures = 0
+                droppedEntryCount.set(0)
+                logDir = dir
+                logger = AndroidLogger()
+                dispatcher = customDispatcher
+                logScope = customScope
+                isFileLoggingEnabled = true
             }
+            while (logChannel.tryReceive().isSuccess) {
+                pendingCount.updateAndGet { maxOf(0, it - 1) }
+            }
+            // Keep the atomic count derived from enqueue/receive completion events.
+            // A timed-out old worker may still finish after stopWorkerBlocking() returns.
         }
         restartWorker()
     }
