@@ -50,8 +50,8 @@ class AppSettingsRepositoryImplTest {
             val settings = repository.getAppSettings().first()
 
             assertEquals(AppTheme.FOLLOW_SYSTEM, settings.theme)
-            assertTrue(settings.notifyLowMinutes)
-            assertTrue(settings.notifyLowTraffic)
+            assertFalse(settings.notifyLowMinutes)
+            assertFalse(settings.notifyLowTraffic)
             assertFalse(settings.aodSummaryEnabled)
             assertFalse(settings.assistantAccessEnabled)
             assertEquals(2, settings.widgetLayoutMode)
