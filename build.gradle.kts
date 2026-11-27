@@ -257,6 +257,7 @@ val verifyQuiet = tasks.register<VerifyQuietTask>("verifyQuiet") {
     description = "Aggregates static analysis, tests, and debug app assembly into a single compact verification task."
     projectRootDir.set(layout.projectDirectory)
     dependsOn(
+        verifyVersionCatalogConsistency,
         allKtlint,
         allDetekt,
         allUnitTests,
