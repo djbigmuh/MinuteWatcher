@@ -395,20 +395,18 @@ class NotificationHelper
         }
 
         /**
-         * Checks whether AOD summary notification can be posted.
+         * Checks whether the AOD summary notification channel is available for configuration.
          *
-         * @return true if NotificationManager is available, notification permission is granted,
-         * notifications are enabled, and AOD summary channel exists and is not blocked.
+         * This deliberately does not require notification permission or globally enabled notifications:
+         * the user grants runtime permission only after enabling an alert in settings.
+         *
+         * @return true if NotificationManager and the AOD summary channel are available and the channel is not blocked.
          */
         fun isAodSummaryAvailable(): Boolean {
             val manager = notificationManager ?: return false
             return try {
-                if (!permissionManager.hasNotificationPermission() || !areNotificationsEnabledSafe()) {
-                    false
-                } else {
-                    val channel = manager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2)
-                    channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE
-                }
+                val channel = manager.getNotificationChannel(Constants.Notifications.AOD_SUMMARY_CHANNEL_ID_V2)
+                channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE
             } catch (e: SecurityException) {
                 AppLogger.w("Error checking AOD summary availability: SecurityException: ${e.message}")
                 false
