@@ -76,7 +76,7 @@ class WidgetSettingsViewModel
     constructor(
         private val loader: WidgetSettingsLoader,
         private val saver: WidgetSettingsSaver,
-        appSettingsRepository: AppSettingsRepository,
+        private val appSettingsRepository: AppSettingsRepository,
         @ApplicationScope private val appScope: CoroutineScope,
         usageStateRepository: UsageStateRepository,
         private val aodSummaryAvailability: AodSummaryAvailability,
@@ -139,6 +139,39 @@ class WidgetSettingsViewModel
             loadSettings()
             setupAutoSave()
             refreshAodSummaryAvailability()
+        }
+
+        /**
+         * Persists that the notification permission prompt has been shown from widget settings.
+         */
+        fun setNotificationPermissionRequested() {
+            updateNotificationPermissionSettings { copy(notificationPermissionRequested = true) }
+        }
+
+        /**
+         * Persists the result of the notification permission request.
+         */
+        fun setNotificationPermissionPermanentlyDenied(denied: Boolean) {
+            updateNotificationPermissionSettings {
+                copy(
+                    notificationPermissionRequested = true,
+                    notificationPermissionPermanentlyDenied = denied,
+                )
+            }
+        }
+
+        private fun updateNotificationPermissionSettings(
+            transform: com.github.djbigmuh.minutewatcher.core.model.AppSettings.() -> com.github.djbigmuh.minutewatcher.core.model.AppSettings,
+        ) {
+            viewModelScope.launch {
+                try {
+                    appSettingsRepository.updateAppSettings(transform)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    AppLogger.e("Failed to persist notification permission state", e)
+                }
+            }
         }
 
         /**
