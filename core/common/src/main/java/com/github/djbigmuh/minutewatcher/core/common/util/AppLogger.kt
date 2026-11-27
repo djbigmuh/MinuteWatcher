@@ -89,13 +89,10 @@ object AppLogger {
             capacity = LOG_QUEUE_CAPACITY,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
             onUndeliveredElement = {
+                // Keep this callback non-blocking and free of external logger calls:
+                // Channel invokes it synchronously during DROP_OLDEST/send operations.
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
-                val total = droppedEntryCount.incrementAndGet()
-                if (total == 1L || total % DROP_WARNING_INTERVAL == 0L) {
-                    runCatching {
-                        logger.w(TAG, "AppLogger: log queue full, oldest entry dropped (total dropped: $total)")
-                    }
-                }
+                droppedEntryCount.incrementAndGet()
             },
         )
 
@@ -315,12 +312,25 @@ object AppLogger {
         level: String,
         message: String,
     ) {
+        var droppedTotal: Long? = null
         synchronized(enqueueLock) {
             if (!isFileLoggingEnabled || isShutdown || logDir == null) return
+            val previousDropped = droppedEntryCount.get()
             pendingCount.incrementAndGet()
             val result = logChannel.trySend(LogEntry(level, message))
             if (result.isFailure) {
                 pendingCount.updateAndGet { maxOf(0, it - 1) }
+            }
+            val currentDropped = droppedEntryCount.get()
+            if (currentDropped > previousDropped &&
+                (currentDropped == 1L || currentDropped % DROP_WARNING_INTERVAL == 0L)
+            ) {
+                droppedTotal = currentDropped
+            }
+        }
+        droppedTotal?.let { total ->
+            runCatching {
+                logger.w(TAG, "AppLogger: log queue full, oldest entry dropped (total dropped: $total)")
             }
         }
     }
