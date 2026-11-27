@@ -28,27 +28,23 @@ fun NotificationSettingsSection(
         checked = state.notifyLowTraffic,
         enabled = enabled,
     ) { onUpdateNotifyTraffic(it) }
-    CheckboxSetting(
-        label = stringResource(id = R.string.aod_summary_title),
-        checked = state.aodSummaryEnabled,
-        enabled = enabled && aodSummaryAvailable,
-    ) { onUpdateAodSummary(it) }
-    Text(
-        text = stringResource(id = R.string.aod_summary_description),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.outline,
-    )
-    if (!aodSummaryAvailable) {
+    if (aodSummaryAvailable) {
+        CheckboxSetting(
+            label = stringResource(id = R.string.aod_summary_title),
+            checked = state.aodSummaryEnabled,
+            enabled = enabled,
+        ) { onUpdateAodSummary(it) }
         Text(
-            text = stringResource(id = R.string.aod_summary_unavailable),
+            text = stringResource(id = R.string.aod_summary_description),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
+            color = MaterialTheme.colorScheme.outline,
         )
-    } else if (state.aodSummaryEnabled && !aodSummaryHasContent) {
-        Text(
-            text = stringResource(id = R.string.aod_summary_no_limits_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
+        if (state.aodSummaryEnabled && !aodSummaryHasContent) {
+            Text(
+                text = stringResource(id = R.string.aod_summary_no_limits_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
