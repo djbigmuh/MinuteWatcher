@@ -289,7 +289,7 @@ class WidgetSettingsScreenTest {
     }
 
     @Test
-    fun aodSummaryUnavailableTextDisplayedWhenAodSummaryAvailableIsFalse() {
+    fun aodSummaryOptionIsHiddenWhenAodSummaryIsUnavailable() {
         whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = testSettings)))
         whenever(viewModel.aodSummaryAvailable).doReturn(MutableStateFlow(false))
 
@@ -302,12 +302,13 @@ class WidgetSettingsScreenTest {
 
         composeTestRule
             .onNodeWithText(context.getString(R.string.aod_summary_title))
-            .performScrollTo()
-            .assertIsDisplayed()
+            .assertDoesNotExist()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.aod_summary_description))
+            .assertDoesNotExist()
         composeTestRule
             .onNodeWithText(context.getString(R.string.aod_summary_unavailable))
-            .performScrollTo()
-            .assertIsDisplayed()
+            .assertDoesNotExist()
     }
 
     @Test
@@ -348,7 +349,7 @@ class WidgetSettingsScreenTest {
     }
 
     @Test
-    fun aodSummaryUnavailableHasPriorityOverNoLimitsNote() {
+    fun aodSummaryOptionAndNoLimitsNoteAreHiddenWhenUnavailable() {
         val settings = testSettings.copy(aodSummaryEnabled = true)
         whenever(viewModel.state).doReturn(MutableStateFlow(WidgetSettingsUiState(settings = settings)))
         whenever(viewModel.aodSummaryAvailable).doReturn(MutableStateFlow(false))
@@ -362,9 +363,8 @@ class WidgetSettingsScreenTest {
         }
 
         composeTestRule
-            .onNodeWithText(context.getString(R.string.aod_summary_unavailable))
-            .performScrollTo()
-            .assertIsDisplayed()
+            .onNodeWithText(context.getString(R.string.aod_summary_title))
+            .assertDoesNotExist()
         composeTestRule
             .onNodeWithText(context.getString(R.string.aod_summary_no_limits_note))
             .assertDoesNotExist()
