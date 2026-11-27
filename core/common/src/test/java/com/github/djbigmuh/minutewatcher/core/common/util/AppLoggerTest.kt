@@ -431,6 +431,44 @@ class AppLoggerTest {
         }
 
     @Test
+    fun `worker generation changes preserve FIFO order`() =
+        runTest {
+            class FirstLogger : Logger by AndroidLogger()
+            class SecondLogger : Logger by AndroidLogger()
+
+            val dir = tmpFolder.newFolder("generation_fifo_dir")
+            val mockContext =
+                mock<Context> {
+                    on { filesDir } doReturn dir
+                }
+
+            AppLogger.init(mockContext, FirstLogger())
+            repeat(50) { index ->
+                AppLogger.d("Generation FIFO entry $index")
+            }
+
+            // A different logger implementation forces a worker-generation restart
+            // while keeping all entries in the same file for an order assertion.
+            AppLogger.init(mockContext, SecondLogger())
+
+            val marker = "GENERATION_FIFO_COMPLETE"
+            AppLogger.d(marker)
+            waitForLogMarker(marker, targetDir = dir)
+
+            val entries =
+                File(dir, "logs.txt")
+                    .readLines()
+                    .mapNotNull { line ->
+                        Regex("""Generation FIFO entry (\\d+)""")
+                            .find(line)
+                            ?.groupValues
+                            ?.get(1)
+                            ?.toInt()
+                    }
+            assertEquals((0 until 50).toList(), entries)
+        }
+
+    @Test
     fun `shutdown stops worker and subsequent logs are ignored`() =
         runTest {
             val dir = tmpFolder.newFolder("shutdown_dir")
