@@ -37,6 +37,10 @@ import com.github.djbigmuh.minutewatcher.feature.main.SimCardScreenActions
 import com.github.djbigmuh.minutewatcher.feature.main.ui.theme.rememberIsDarkTheme
 import com.github.djbigmuh.minutewatcher.feature.widget.MinutesGlanceWidget
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -80,7 +84,15 @@ class MainActivity : AppCompatActivity() {
             AppContent()
         }
 
-        permissionHandler.checkPermissionsAndInit()
+        lifecycleScope.launch {
+            viewModel.appSettings
+                .map { settings -> settings.isLoaded && settings.onboardingCompleted }
+                .distinctUntilChanged()
+                .filter { it }
+                .collect {
+                    permissionHandler.checkPermissionsAndInit()
+                }
+        }
         handleIntent(intent)
     }
 
