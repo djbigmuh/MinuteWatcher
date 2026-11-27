@@ -29,7 +29,12 @@ class WidgetSettingsActivity : AppCompatActivity() {
     private val viewModel: WidgetSettingsViewModel by viewModels()
 
     private val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            val permanentlyDenied =
+                !granted &&
+                    !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+            viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,6 +96,7 @@ class WidgetSettingsActivity : AppCompatActivity() {
         ) {
             return
         }
+        viewModel.setNotificationPermissionRequested()
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }
