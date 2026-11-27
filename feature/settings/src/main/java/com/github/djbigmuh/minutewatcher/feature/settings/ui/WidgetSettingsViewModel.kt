@@ -40,6 +40,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
+import java.io.IOException
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -169,7 +170,7 @@ class WidgetSettingsViewModel
                     appSettingsRepository.updateAppSettings(transform)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
+                } catch (e: IOException) {
                     AppLogger.e("Failed to persist notification permission state", e)
                 }
             }
