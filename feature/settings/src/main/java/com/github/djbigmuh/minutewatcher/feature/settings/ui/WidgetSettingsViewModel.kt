@@ -9,6 +9,7 @@ import com.github.djbigmuh.minutewatcher.core.domain.AodSummaryAvailability
 import com.github.djbigmuh.minutewatcher.core.domain.AppSettingsRepository
 import com.github.djbigmuh.minutewatcher.core.domain.UsageStateRepository
 import com.github.djbigmuh.minutewatcher.core.domain.WidgetSettingsLoader
+import com.github.djbigmuh.minutewatcher.core.model.AppSettings
 import com.github.djbigmuh.minutewatcher.core.model.AppTheme
 import com.github.djbigmuh.minutewatcher.core.model.Constants
 import com.github.djbigmuh.minutewatcher.core.model.GlobalSnapshot
@@ -161,7 +162,7 @@ class WidgetSettingsViewModel
         }
 
         private fun updateNotificationPermissionSettings(
-            transform: com.github.djbigmuh.minutewatcher.core.model.AppSettings.() -> com.github.djbigmuh.minutewatcher.core.model.AppSettings,
+            transform: AppSettings.() -> AppSettings,
         ) {
             viewModelScope.launch {
                 try {
