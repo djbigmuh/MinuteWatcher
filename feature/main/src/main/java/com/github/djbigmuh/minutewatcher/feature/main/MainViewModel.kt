@@ -223,7 +223,13 @@ class MainViewModel
 
         fun setLanguage(language: String?) = controllers.settings.setLanguage(language)
 
-        fun dismissSwipeHint() { _isSwipeHintDismissed.value = true }
+        fun dismissSwipeHint() {
+            _isSwipeHintDismissed.value = true
+        }
+
+        fun resetSwipeHint() {
+            _isSwipeHintDismissed.value = false
+        }
 
         // Delegate SIM Data Actions
         fun retrySimList() = controllers.simData.retrySimList()
