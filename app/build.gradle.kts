@@ -16,13 +16,13 @@ if (signingPropertiesFile.exists()) {
     signingPropertiesFile.inputStream().use { signingProps.load(it) }
 }
 val storePath =
-    signingProps.getProperty("storeFile") ?: providers.environmentVariable("MINUTEWATCHER_STORE_FILE").orNull
+    providers.environmentVariable("MINUTEWATCHER_STORE_FILE").orNull ?: signingProps.getProperty("storeFile")
 val storePass =
-    signingProps.getProperty("storePassword")
-        ?: providers.environmentVariable("MINUTEWATCHER_STORE_PASSWORD").orNull
-val keyAl = signingProps.getProperty("keyAlias") ?: providers.environmentVariable("MINUTEWATCHER_KEY_ALIAS").orNull
+    providers.environmentVariable("MINUTEWATCHER_STORE_PASSWORD").orNull
+        ?: signingProps.getProperty("storePassword")
+val keyAl = providers.environmentVariable("MINUTEWATCHER_KEY_ALIAS").orNull ?: signingProps.getProperty("keyAlias")
 val keyPass =
-    signingProps.getProperty("keyPassword") ?: providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull
+    providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull ?: signingProps.getProperty("keyPassword")
 
 val keystoreFile =
     if (storePath != null) {
