@@ -25,7 +25,8 @@ val keyAl =
     providers.environmentVariable("MINUTEWATCHER_KEY_ALIAS").orNull
         ?: signingProps.getProperty("keyAlias")
 val keyPass =
-    providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull ?: signingProps.getProperty("keyPassword")
+    providers.environmentVariable("MINUTEWATCHER_KEY_PASSWORD").orNull
+        ?: signingProps.getProperty("keyPassword")
 
 val keystoreFile =
     if (storePath != null) {
