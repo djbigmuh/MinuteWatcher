@@ -314,7 +314,9 @@ class NotificationHelper
                 // AOD channel availability is a settings capability check and intentionally
                 // does not include runtime permission. Delivery must check permission separately.
                 if (!permissionManager.hasNotificationPermission() || !areNotificationsEnabledSafe()) {
-                    AppLogger.d("AOD summary notification skipped: notification permission or app notifications disabled")
+                    AppLogger.d(
+                        "AOD summary notification skipped: notification permission or app notifications disabled",
+                    )
                     return false
                 }
 
