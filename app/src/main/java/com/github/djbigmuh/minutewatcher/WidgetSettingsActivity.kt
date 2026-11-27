@@ -1,6 +1,7 @@
 package com.github.djbigmuh.minutewatcher
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -30,10 +31,9 @@ class WidgetSettingsActivity : AppCompatActivity() {
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            val permanentlyDenied =
-                !granted &&
-                    !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
-            viewModel.setNotificationPermissionPermanentlyDenied(permanentlyDenied)
+            viewModel.setNotificationPermissionPermanentlyDenied(
+                !granted && isNotificationPermissionPermanentlyDenied(),
+            )
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,6 +88,10 @@ class WidgetSettingsActivity : AppCompatActivity() {
             }
         }
     }
+
+    @SuppressLint("InlinedApi")
+    private fun isNotificationPermissionPermanentlyDenied(): Boolean =
+        !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
 
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
